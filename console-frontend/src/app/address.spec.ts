@@ -1,4 +1,4 @@
-import { atRoot, inOrganization, organizationOf, withinOrganization } from './address';
+import { atRoot, contextOf, inOrganization, organizationOf, withinOrganization } from './address';
 
 describe('address', () => {
   it('reads the organization an address names', () => {
@@ -67,5 +67,20 @@ describe('address', () => {
   it('reads an address that names a page as naming one', () => {
     expect(atRoot('/clusters')).toBe(false);
     expect(atRoot('/organizations/gemeente-fundament')).toBe(false);
+  });
+
+  it('reads the cluster an address is in, and what is open under it', () => {
+    expect(contextOf('/clusters/c1/nodes?tab=2')).toEqual({
+      kind: 'clusters',
+      id: 'c1',
+      rest: '/nodes',
+    });
+    expect(contextOf('/projects/p1')).toEqual({ kind: 'projects', id: 'p1', rest: '' });
+  });
+
+  it('reads the new-project and new-cluster sheets as in no context', () => {
+    expect(contextOf('/clusters/new')).toBeNull();
+    expect(contextOf('/projects/new')).toBeNull();
+    expect(contextOf('/clusters')).toBeNull();
   });
 });

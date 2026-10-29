@@ -112,8 +112,8 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 ** `capabilities`: Simple string list (e.g. `internet_access`).
 ** `rbac`: Kubernetes PolicyRule structures declaring the API groups, resources, and verbs the plugin requires.
 * **menu**: How the plugin appears in the Fundament console.
-** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs), shown on the cluster page.
-** `project`: Menu entries visible to project members (namespace-scoped CRDs), shown on the project page.
+** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs), shown in the cluster's menu in the sidebar.
+** `project`: Menu entries visible to project members (namespace-scoped CRDs), shown in the project's menu in the sidebar.
 ** Each entry has: `crd` (fully-qualified CRD name), `list`, `detail`, `create` (booleans), and `icon`.
 * **customComponents**: Optional mapping of CRDs to custom UI component names (list/detail).
 * **uiHints**: Per-CRD form layout and status display hints.
@@ -237,10 +237,18 @@ Deletion is handled via a finalizer; the controller cleans up child resources be
 
 == Console integration
 
-When a Plugin is installed in a Cluster, the Console UI displays menu items based on the plugin's `menu` definition:
+The console sidebar follows the context you are in, so that what it offers exists there. Plugins differ per cluster and per plugin version, so one static menu could not list them:
 
-* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers), shown in a "Plugin resources" block on the cluster page of each cluster the plugin is installed on, at `clusters/:id/plugin-resources/...`.
-* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests), shown in the project sidebar. Lists contain only resources in the project's namespaces. The generated list has a namespace picker; custom list UIs receive the project's `namespaces`, `namespaceDisplayNames` and `projectId` and do their own filtering.
+* The **organization menu** is always there. Organization admins get the organization's pages, a Clusters section and a Projects section. Organization viewers get General, Members and the Projects section only.
+* Picking a cluster (organization admins only) opens the **cluster menu** beside it: General, Nodes, Namespaces and Plugins, then the plugin entries for that cluster.
+* Picking a project opens the **project menu** beside it: the project's pages, then the plugin entries for the cluster the project runs on.
+
+Hiding parts of the menu from viewers scopes the navigation; it is not access control. The backend enforces access as before, and viewers are, for instance, still allowed to list and view clusters through the API. An address for an admin-only page that a viewer opens anyway shows "Page not available".
+
+When a Plugin is installed in a Cluster, the Console UI displays menu items based on the plugin's `menu` definition, each under the plugin's name as a heading:
+
+* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. ClusterIssuers), shown in the cluster menu of each cluster the plugin is installed on, at `clusters/:id/plugin-resources/...`.
+* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests), shown in the project menu. Lists contain only resources in the project's namespaces. The generated list has a namespace picker; custom list UIs receive the project's `namespaces`, `namespaceDisplayNames` and `projectId` and do their own filtering.
 
 Entries whose CRD scope does not match their menu section are not shown (the console logs a warning).
 

@@ -25,7 +25,6 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
-import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
@@ -43,7 +42,6 @@ import '@nldd/design-system/list-item';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
 import '@nldd/design-system/rich-text';
-import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
@@ -52,13 +50,13 @@ import '@nldd/design-system/top-title-bar';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective],
+  imports: [ReactiveFormsModule, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',
 })
 export default class ClusterNamespacesComponent implements OnInit {
-  private pageNav = inject(PageNavService);
+  protected pageNav = inject(PageNavService);
 
   private titleService = inject(TitleService);
 
@@ -251,10 +249,6 @@ export default class ClusterNamespacesComponent implements OnInit {
   onBulkDeleteModalOpen(): void {
     const el = this.bulkDeleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
-  }
-
-  onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

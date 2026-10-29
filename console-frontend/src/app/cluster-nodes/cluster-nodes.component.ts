@@ -17,7 +17,6 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
-import SheetSyncDirective from '../sheet-sync.directive';
 import {
   ListNodePoolsRequestSchema,
   ExpectedNodePoolsSchema,
@@ -37,8 +36,8 @@ import { nodePoolsMatch } from '../utils/node-pools-match';
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
+import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/page';
-import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
@@ -67,13 +66,13 @@ function nodePoolChangeText(
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [SharedNodePoolsFormComponent, SheetSyncDirective],
+  imports: [SharedNodePoolsFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-nodes.component.html',
 })
 export default class ClusterNodesComponent implements OnInit {
-  private pageNav = inject(PageNavService);
+  protected pageNav = inject(PageNavService);
 
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
@@ -100,6 +99,10 @@ export default class ClusterNodesComponent implements OnInit {
   isSubmitting = signal(false);
 
   isLoading = signal(true);
+
+  /** The pools could not be read, so there is nothing to compare a save
+   *  against: the form would send pools the cluster may no longer have. */
+  loadFailed = signal(false);
 
   initialNodePools = signal<NodePoolData[]>([]);
 
@@ -145,6 +148,7 @@ export default class ClusterNodesComponent implements OnInit {
   async loadNodePools() {
     try {
       this.isLoading.set(true);
+      this.loadFailed.set(false);
       const request = create(ListNodePoolsRequestSchema, {
         clusterId: this.clusterId,
       });
@@ -160,12 +164,8 @@ export default class ClusterNodesComponent implements OnInit {
           autoscaleMax: pool.maxNodes,
         })),
       );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? `Failed to load node pools: ${error.message}`
-          : 'Failed to load node pools';
-      this.errorMessage.set(message);
+    } catch {
+      this.loadFailed.set(true);
     } finally {
       this.isLoading.set(false);
     }
@@ -234,13 +234,14 @@ export default class ClusterNodesComponent implements OnInit {
         }
       }
 
-      // The page behind this sheet is where the pools are listed, and it was
-      // never unmounted, so it hears from here that its cards are out of date.
+      // Anything else that lists the pools hears from here that it is out of
+      // date.
       this.organizationData.nodePoolsChanged.update((revision) => revision + 1);
       this.notificationService.success(nodePoolChangeText(created, updated, deleted));
 
-      // Navigate back to cluster overview on success
-      this.pageNav.goTo(`/clusters/${this.clusterId}`);
+      // A page now rather than a sheet, so it stays: what was saved becomes
+      // what the next save is compared against.
+      await this.loadNodePools();
     } catch (error) {
       // Only a refusal meant for the reader is shown; anything else carries
       // backend detail.
@@ -259,9 +260,5 @@ export default class ClusterNodesComponent implements OnInit {
       this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId: this.clusterId })),
     );
     return nodePoolsMatch(response.nodePools, desired);
-  }
-
-  onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 }

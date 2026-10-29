@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import AutofocusDirective from '../autofocus.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
+import OrganizationRoleService from '../organization-role.service';
 import { UpdateOrganizationRequestSchema } from '../../generated/v1/organization_pb';
 import { ORGANIZATION } from '../../connect/tokens';
 import { TitleService } from '../title.service';
@@ -55,6 +56,8 @@ export default class OrganizationComponent implements OnInit {
   private titleService = inject(TitleService);
 
   protected pageNav = inject(PageNavService);
+
+  protected orgRole = inject(OrganizationRoleService);
 
   private organizationClient = inject(ORGANIZATION);
 

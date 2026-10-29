@@ -40,7 +40,7 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/tooltip';
 import '@nldd/design-system/identity';
 import '@nldd/design-system/menu';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd, type ActivatedRouteSnapshot } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -50,7 +50,8 @@ import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
-import { inOrganization, organizationOf, withinOrganization } from './address';
+import { HOME, contextOf, inOrganization, organizationOf, withinOrganization } from './address';
+import OrganizationRoleService from './organization-role.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
 import ProfileComponent from './profile/profile.component';
@@ -79,27 +80,42 @@ const reloadApp = () => {
 };
 
 /**
- * How deep the stacked (narrow) view is for a path: the organization's own
- * address is the menu, `/projects/:id` the project's menu, and anything below or
- * beside those is a page.
+ * A project's or a cluster's own address, with nothing open under it: the
+ * secondary sidebar is its menu and the main pane is empty.
  */
-function depthForPath(url: string): number {
+function isContextRootPath(path: string): boolean {
+  return contextOf(path)?.rest === '';
+}
+
+/**
+ * How deep the stacked (narrow) view is for a path: the organization's own
+ * address is the menu, `/projects/:id` and `/clusters/:id` their own menus, and
+ * anything below or beside those is a page.
+ */
+export function depthForPath(url: string): number {
   const path = withinOrganization(url.split(/[?#]/)[0]);
   // Nothing chosen yet: the organization menu is the whole screen, not an empty
   // pane beside it. That is what the organization's own address shows.
   if (path === '/') return 0;
-  return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
+  return isContextRootPath(path) ? 1 : 2;
 }
 
 /** One step up from a page: the project or cluster it belongs to, or the
  *  organization when it belongs to none. Relative to the organization, which is
  *  what goTo takes. */
 export function parentOf(url: string): string {
-  const path = withinOrganization(url.split(/[?#]/)[0]);
-  const cluster = /^\/clusters\/([^/]+)\/plugin-resources\//.exec(path);
-  if (cluster) return `/clusters/${cluster[1]}`;
-  const project = /^\/projects\/([^/]+)\//.exec(path);
-  return project ? `/projects/${project[1]}` : '/';
+  const context = contextOf(withinOrganization(url.split(/[?#]/)[0]));
+  return context && context.rest !== '' ? `/${context.kind}/${context.id}` : '/';
+}
+
+/** Whether any level of the route in view is marked for organization admins
+ *  only. The mark sits on the route that owns the address, which for a page
+ *  under a componentless parent is the child. */
+export function isOrgAdminOnly(root: ActivatedRouteSnapshot | null): boolean {
+  for (let route = root; route; route = route.firstChild) {
+    if (route.data['orgAdminOnly']) return true;
+  }
+  return false;
 }
 
 /** Whether a router URL is the login page. The query does not count: another
@@ -145,6 +161,10 @@ export default class App implements OnInit {
   private configService = inject(ConfigService);
 
   protected organizationDataService = inject(OrganizationDataService);
+
+  /** Whether you are the organization's admin or one of its viewers, which
+   *  decides how much of the organization the menu offers. */
+  protected orgRole = inject(OrganizationRoleService);
 
   private organizationContextService = inject(OrganizationContextService);
 
@@ -248,15 +268,29 @@ export default class App implements OnInit {
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
     // so the cluster resolves later and has to bring the plugins with it.
-    // Outside a project, the cluster page in view decides.
+    // Outside a project, the cluster in view decides.
     effect(() => {
-      const clusterId = this.activeProjectClusterId() ?? this.activeClusterId();
+      const clusterId = this.contextClusterId();
 
       if (clusterId) {
         untracked(() => this.loadPluginsForCluster(clusterId));
       } else {
         untracked(() => this.pluginRegistry.reset());
       }
+    });
+
+    // The console opens on the clusters, which a viewer is not offered. Sent
+    // on to the organization's root instead, once it is known who they are, so
+    // the first thing they see is their menu rather than "Page not available".
+    // Replacing the address, so back does not lead here again.
+    effect(() => {
+      if (!this.orgRole.isOrgViewer()) return;
+      const within = withinOrganization(this.currentUrl());
+      const path = within.split(/[?#]/)[0];
+      if (path !== HOME) return;
+      // The query string belongs to the visit, so it comes along.
+      const visit = within.slice(path.length);
+      untracked(() => this.router.navigateByUrl(this.path(`/${visit}`), { replaceUrl: true }));
     });
   }
 
@@ -322,6 +356,7 @@ export default class App implements OnInit {
         }
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
+        this.onAdminOnlyRoute.set(isOrgAdminOnly(this.router.routerState.snapshot.root));
         this.updateSidebarStateFromRoute();
       });
 
@@ -332,6 +367,7 @@ export default class App implements OnInit {
     this.isLoginPage.set(isLoginUrl(this.router.url));
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
+    this.onAdminOnlyRoute.set(isOrgAdminOnly(this.router.routerState.snapshot.root));
 
     // Initialize sidebar state from current route
     this.updateSidebarStateFromRoute();
@@ -533,13 +569,15 @@ export default class App implements OnInit {
 
   // Update breadcrumbs based on current route data
 
-  // Check if current route is clusters or clusters/new
+  /** The clusters overview, or the new-cluster sheet over it. Not a single
+   *  cluster: that has its own row in the Clusters section, and lighting both
+   *  would mark two places as the one you are in. */
   isClustersActive(): boolean {
     if (!this.marksCurrent()) return false;
     // Compare on the path alone: the router url also carries the query string,
     // and the organization is the same for the link and the page.
     const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
-    return path === '/clusters' || path.startsWith('/clusters/');
+    return path === '/clusters' || path === '/clusters/new';
   }
 
   /** The selected row says what the pane beside it holds. Collapsed to a single
@@ -610,6 +648,12 @@ export default class App implements OnInit {
    * does nothing.
    */
   onPaneBack(event: Event): void {
+    // Every page a viewer is turned away from is the organization's or a
+    // cluster's, and a cluster's own address turns them away as well.
+    if (this.pageNotAvailable()) {
+      this.pageNav.goTo('/');
+      return;
+    }
     const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
     this.pageNav.goTo(
       pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : parentOf(this.router.url),
@@ -727,12 +771,12 @@ export default class App implements OnInit {
     this.selectedOrgId.set(orgId);
 
     // The address carries the organization, so switching rewrites it. A project
-    // belongs to the one you are leaving and has no counterpart here, so that
-    // address is dropped; every other page has the same one in both.
+    // or a cluster belongs to the one you are leaving and has no counterpart
+    // here, so that address is dropped; every other page has the same one in
+    // both. The new-cluster sheet is not a cluster.
     const within = withinOrganization(this.router.url);
-    const belongsToProject = /^\/projects\/[^/]+/.test(within);
     this.router.navigateByUrl(
-      inOrganization(this.organizationNameOf(orgId), belongsToProject ? '/' : within),
+      inOrganization(this.organizationNameOf(orgId), contextOf(within) ? '/' : within),
     );
   }
 
@@ -769,8 +813,8 @@ export default class App implements OnInit {
   /** The cluster page the URL is in, or null. `clusters/new` is the create
    *  sheet over the list, not a cluster. */
   activeClusterId = computed(() => {
-    const id = withinOrganization(this.currentUrl()).match(/^\/clusters\/([^/?#]+)/)?.[1];
-    return id && id !== 'new' ? id : null;
+    const context = contextOf(withinOrganization(this.currentUrl()));
+    return context?.kind === 'clusters' ? context.id : null;
   });
 
   /** The cluster the active project runs on, or null until the organization's
@@ -779,6 +823,64 @@ export default class App implements OnInit {
     const id = this.activeProjectId();
     return id ? (this.organizationDataService.getProjectById(id)?.cluster.id ?? null) : null;
   });
+
+  /**
+   * The cluster whose plugins the sidebar and the plugin pages read: the open
+   * project's, or the cluster in view. Not held back until the role is known,
+   * since on a refreshed cluster page that would only delay the plugins, but
+   * dropped for a known viewer, who gets no cluster column to show them in.
+   */
+  contextClusterId = computed(
+    () =>
+      this.activeProjectClusterId() ?? (this.orgRole.isOrgViewer() ? null : this.activeClusterId()),
+  );
+
+  /** The cluster whose menu fills the secondary sidebar: only for an admin, and
+   *  only once the cluster is known to exist. */
+  activeCluster = computed(() => {
+    const id = this.activeClusterId();
+    if (!id || !this.orgRole.isOrgAdmin()) return null;
+    return this.organizationDataService.clusterSummaries().find((c) => c.id === id) ?? null;
+  });
+
+  /** The cluster menu, the same shape as the project's. Namespaces has no count
+   *  because the cluster summary does not carry one. */
+  clusterNavItems = computed(() => {
+    const base = `/clusters/${this.activeClusterId()}`;
+    const cluster = this.activeCluster();
+
+    return [
+      { path: `${base}/general`, icon: 'kubernetes', label: 'General', count: null },
+      {
+        path: `${base}/nodes`,
+        icon: 'server',
+        label: 'Nodes',
+        count: cluster?.nodePoolCount ?? null,
+      },
+      { path: `${base}/namespaces`, icon: 'brackets-ellipsis', label: 'Namespaces', count: null },
+      { path: `${base}/plugins`, icon: 'plugin', label: 'Plugins', count: null },
+    ];
+  });
+
+  /** Whether the page in view is offered to organization admins only, read
+   *  from the route's `orgAdminOnly` mark on every arrival. A signal set there
+   *  rather than a computed over `currentUrl`: the first arrival can leave that
+   *  address unchanged, and a computed would keep the answer from before the
+   *  router had matched anything. */
+  private onAdminOnlyRoute = signal(false);
+
+  /** A viewer on a page the menu does not offer them. Says so rather than
+   *  rendering the page and letting its requests fail one by one. */
+  pageNotAvailable = computed(() => this.orgRole.isOrgViewer() && this.onAdminOnlyRoute());
+
+  /** An admin-only page while it is not yet known who you are: rendering it
+   *  would mount it, and fire its requests, for a viewer who then sees it go. */
+  pageAwaitsRole = computed(() => !this.orgRole.roleKnown() && this.onAdminOnlyRoute());
+
+  /** The main pane carries the page from depth 2, and also on "not available":
+   *  a viewer on a cluster's own address has no cluster column, so at depth 1
+   *  the narrow view would fall back to the organization menu instead. */
+  mainHasContent = computed(() => this.stackDepth() >= 2 || this.pageNotAvailable());
 
   /** Every project in the organization, for the primary sidebar. Carries the
    *  status of the cluster it runs on, so one glance over the list tells you
@@ -808,8 +910,16 @@ export default class App implements OnInit {
   showProjectsSection = computed(
     () =>
       this.organizationProjects().length > 0 ||
-      (this.organizationDataService.projectsLoaded() &&
+      (this.orgRole.isOrgAdmin() &&
+        this.organizationDataService.projectsLoaded() &&
         this.organizationDataService.clusterSummaries().length > 0),
+  );
+
+  /** The sidebar's clusters section: an admin's, also with no clusters yet so
+   *  its "New cluster" button is there for the first one. Not before the list
+   *  has loaded, or it flashes empty. */
+  showClustersSection = computed(
+    () => this.orgRole.isOrgAdmin() && this.organizationDataService.clustersLoaded(),
   );
 
   /** The project whose menu fills the secondary sidebar. */
@@ -855,8 +965,11 @@ export default class App implements OnInit {
     ];
   });
 
-  pluginResourcePath(pluginName: string, crdPlural: string): string {
-    return `/projects/${this.activeProjectId()}/plugin-resources/${pluginName}/${crdPlural}`;
+  /** A plugin resource list under the project or the cluster it belongs to:
+   *  `base` is `/projects/:id` or `/clusters/:id`. */
+  // eslint-disable-next-line class-methods-use-this
+  pluginResourcePath(base: string, pluginName: string, crdPlural: string): string {
+    return `${base}/plugin-resources/${pluginName}/${crdPlural}`;
   }
 
   /** The project menu route carries no page of its own, so the main pane would
@@ -883,8 +996,9 @@ export default class App implements OnInit {
     () =>
       !this.presentationEnabled &&
       !this.educationDismissed() &&
+      this.orgRole.isOrgAdmin() &&
       this.organizationDataService.clustersLoaded() &&
-      this.isProjectRoot() &&
+      this.isContextRoot() &&
       this.organizationDataService.clusterSummaries().length === 0,
   );
 
@@ -893,12 +1007,13 @@ export default class App implements OnInit {
     this.educationDismissed.set(true);
   }
 
-  isProjectRoot = computed(() => {
+  /** Nothing open in the main pane: the organization's, a project's or a
+   *  cluster's own address, whose menu is in the sidebar beside it. */
+  isContextRoot = computed(() => {
     const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
     // The app starts with nothing open: the organization's own address is that
     // empty pane, and it says "pick something from the menu".
-    if (path === '/') return true;
-    return path !== '/projects/new' && /^\/projects\/[^/]+$/.test(path);
+    return path === '/' || isContextRootPath(path);
   });
 
   /** The organization the sidebar and the header button name. The project no

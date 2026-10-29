@@ -1,16 +1,13 @@
-<!-- Same outer layout as the cluster list it belongs to. The back button is
-     forced visible: the split view hides a pane's back button on wide screens,
-     but on a detail page it is the way up to the parent, not a pane affordance. -->
-<nldd-page
-  sticky-header
-  style="--context-back-button-display: flex"
->
+<!-- The cluster's General page. No forced back button: the way up is the
+     cluster's menu, and on a wide screen that menu is the pane right next to
+     this one. The split view shows the button when the panes stack, and the
+     shell takes it from there. -->
+<nldd-page sticky-header>
   <nldd-top-title-bar
     slot="header"
     [attr.text]="clusterData.basics.name || 'Cluster'"
-    back-text="Clusters"
+    [attr.back-text]="pageNav.backText()"
     collapse-anchor="cluster-title"
-    (back)="$event.stopPropagation(); pageNav.goTo('/clusters')"
   ></nldd-top-title-bar>
   <nldd-simple-section>
     <!-- Loading State -->
@@ -514,9 +511,6 @@
             }
           </nldd-container>
         </nldd-box>
-        <app-cluster-plugin-resources-block
-          [clusterId]="clusterData.basics.id"
-        ></app-cluster-plugin-resources-block>
         <!-- Danger Zone -->
         <nldd-box background="critical">
           <nldd-container padding="16">
@@ -555,8 +549,6 @@
     }
   </nldd-simple-section>
 </nldd-page>
-<!-- The node pool and plugin editors, each opening as a sheet over this page. -->
-<router-outlet />
 <!-- Nothing was downloaded, so there is nothing to lay out: the alert says what
      went wrong and offers the way out. -->
 <nldd-modal-dialog

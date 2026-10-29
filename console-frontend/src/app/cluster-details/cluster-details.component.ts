@@ -13,7 +13,7 @@ import {
   effect,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError } from '@connectrpc/connect';
@@ -53,7 +53,6 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import ClusterDefaultsBlockComponent from '../container-defaults/cluster-defaults-block.component';
-import ClusterPluginResourcesBlockComponent from './cluster-plugin-resources-block.component';
 import { ConfigService } from '../config.service';
 import focusFirstModalInput from '../modal-focus';
 import {
@@ -272,14 +271,12 @@ const getEventLine = (event: ClusterEvent): string => {
 @Component({
   selector: 'app-cluster-details',
   imports: [
-    RouterOutlet,
     NgTemplateOutlet,
     DialogSyncDirective,
     SheetSyncDirective,
     PluginIconComponent,
     MockBadgeComponent,
     ClusterDefaultsBlockComponent,
-    ClusterPluginResourcesBlockComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',

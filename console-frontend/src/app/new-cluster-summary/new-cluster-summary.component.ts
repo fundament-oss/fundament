@@ -153,6 +153,11 @@ export default class NewClusterSummaryComponent {
     });
     const notCreated = await this.setNodePools(clusterId, formState.nodePools ?? []);
     await reloaded;
+    // The list that came back may predate the pools, and the cluster menu
+    // counts them.
+    if ((formState.nodePools ?? []).length > notCreated.length) {
+      this.organizationDataService.nodePoolsChanged.update((revision) => revision + 1);
+    }
 
     this.stateService.reset();
     this.isCreating.set(false);
@@ -162,7 +167,7 @@ export default class NewClusterSummaryComponent {
     // cluster page says it where the missing pool is, next to the section that
     // should have held it, and it stays there to be read instead of sliding
     // away on its own.
-    this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}`), {
+    this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}/general`), {
       state: notCreated.length > 0 ? { nodePoolsNotCreated: notCreated } : undefined,
     });
   }

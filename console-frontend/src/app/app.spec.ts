@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, type ActivatedRouteSnapshot } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
-import App, { parentOf } from './app';
+import App, { depthForPath, isOrgAdminOnly, parentOf } from './app';
+import OrganizationRoleService from './organization-role.service';
 import AuthnApiService from './authn-api.service';
 import {
   OrganizationService,
@@ -86,12 +87,13 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
   const userOrganizations = signal<Organization[]>([ORGANIZATION as Organization]);
   await configure([
     ...(extraProviders as never[]),
-    { provide: AuthnApiService, useValue: { refreshToken } },
+    { provide: AuthnApiService, useValue: { refreshToken, currentUser$: NEVER } },
     {
       provide: Router,
       useValue: {
         url,
         events: NEVER,
+        routerState: { snapshot: { root: null } },
         getCurrentNavigation: () => (arriving ? { finalUrl: arriving } : null),
         serializeUrl: (tree: unknown) => tree as string,
         navigateByUrl: (to: string) => {
@@ -106,6 +108,8 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
         setUserOrganizations: (orgs: Organization[]) => userOrganizations.set(orgs),
         organizations: signal([ORGANIZATION]),
         clusterSummaries: signal([]),
+        members: signal([]),
+        membersLoaded: signal(false),
         getOrganizationById: () => ORGANIZATION,
         getProjectById: () => undefined,
         getClusterById: () => undefined,
@@ -149,6 +153,67 @@ function memberOf(organizations: Organization[], invitations: Invitation[] = [])
     });
   });
   return [{ provide: ORGANIZATION_TRANSPORT, useValue: transport }];
+}
+
+/**
+ * The shell's effects and computed state with a role that is given rather than
+ * worked out, and a template that renders nothing: the sidebar would need the
+ * whole shell. `role` null is the time before the member list is in.
+ */
+async function setUpEffects(role: 'admin' | 'viewer' | null = 'admin') {
+  const loadPlugins = vi.fn(async () => {});
+  const reset = vi.fn();
+  const navigatedTo: string[] = [];
+  await configure([
+    {
+      provide: Router,
+      useValue: {
+        url: '/',
+        events: NEVER,
+        routerState: { snapshot: { root: null } },
+        getCurrentNavigation: () => null,
+        serializeUrl: (tree: unknown) => tree as string,
+        navigateByUrl: (to: string) => {
+          navigatedTo.push(to);
+        },
+      },
+    },
+    {
+      provide: OrganizationDataService,
+      useValue: {
+        userOrganizations: signal([]),
+        organizations: signal([]),
+        clusterSummaries: signal([{ id: 'c2', name: 'production', region: 'nl-ams' }]),
+        clustersLoaded: signal(false),
+        getOrganizationById: () => undefined,
+        getProjectById: (id: string) => (id === 'p1' ? { cluster: { id: 'c1' } } : undefined),
+        getClusterById: () => undefined,
+      },
+    },
+    {
+      provide: OrganizationContextService,
+      useValue: {
+        currentOrganizationId: signal<string | null>(null),
+        currentOrganizationName: signal<string | null>('acme-corp'),
+      },
+    },
+    {
+      provide: OrganizationRoleService,
+      useValue: {
+        roleKnown: signal(role !== null),
+        isOrgAdmin: signal(role === 'admin'),
+        isOrgViewer: signal(role === 'viewer'),
+      },
+    },
+    {
+      provide: PluginRegistryService,
+      useValue: { loadPlugins, reset, allPlugins: signal([]) },
+    },
+    { provide: KubeClusterContextService, useValue: { onClusterChange: () => {} } },
+  ]);
+  TestBed.overrideComponent(App, { set: { template: '' } });
+  const app = TestBed.createComponent(App).componentInstance;
+  return { app, loadPlugins, reset, navigatedTo };
 }
 
 describe('App', () => {
@@ -267,40 +332,7 @@ describe('App', () => {
   });
 
   it('follows the cluster in the URL when no project is active', async () => {
-    const loadPlugins = vi.fn(async () => {});
-    const reset = vi.fn();
-    await configure([
-      {
-        provide: Router,
-        useValue: {
-          url: '/',
-          events: NEVER,
-          getCurrentNavigation: () => null,
-          serializeUrl: (tree: unknown) => tree as string,
-          navigateByUrl: () => {},
-        },
-      },
-      {
-        provide: OrganizationDataService,
-        useValue: {
-          userOrganizations: signal([]),
-          organizations: signal([]),
-          clusterSummaries: signal([]),
-          clustersLoaded: signal(false),
-          getOrganizationById: () => undefined,
-          getProjectById: (id: string) => (id === 'p1' ? { cluster: { id: 'c1' } } : undefined),
-          getClusterById: () => undefined,
-        },
-      },
-      {
-        provide: PluginRegistryService,
-        useValue: { loadPlugins, reset, allPlugins: signal([]) },
-      },
-      { provide: KubeClusterContextService, useValue: { onClusterChange: () => {} } },
-    ]);
-    // Only the effects are under test; the sidebar would need the whole shell.
-    TestBed.overrideComponent(App, { set: { template: '' } });
-    const app = TestBed.createComponent(App).componentInstance;
+    const { app, loadPlugins, reset } = await setUpEffects();
 
     app.currentUrl.set('/organizations/acme-corp/clusters/c2');
     TestBed.tick();
@@ -325,6 +357,88 @@ describe('App', () => {
     expect(reset).toHaveBeenCalled();
     expect(loadPlugins).not.toHaveBeenCalled();
   });
+
+  it('loads no cluster plugins for a viewer, who gets no cluster menu', async () => {
+    const { app, loadPlugins } = await setUpEffects('viewer');
+
+    app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    TestBed.tick();
+    expect(loadPlugins).not.toHaveBeenCalled();
+
+    // A project still brings its cluster's plugins: that menu is theirs.
+    app.currentUrl.set('/organizations/acme-corp/projects/p1');
+    TestBed.tick();
+    expect(loadPlugins).toHaveBeenLastCalledWith('c1');
+  });
+
+  it('opens a cluster column for an admin only', async () => {
+    const admin = await setUpEffects('admin');
+    admin.app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    expect(admin.app.activeCluster()?.name).toBe('production');
+
+    TestBed.resetTestingModule();
+    const viewer = await setUpEffects('viewer');
+    viewer.app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    expect(viewer.app.activeCluster()).toBeNull();
+  });
+
+  it('says "not available" to a viewer on an admin-only page', async () => {
+    const { app } = await setUpEffects('viewer');
+    app.currentUrl.set('/organizations/acme-corp/quotas');
+    app['onAdminOnlyRoute'].set(true);
+
+    expect(app.pageNotAvailable()).toBe(true);
+    // Also where the address is a cluster's own: the narrow view has no
+    // cluster menu to show a viewer, so the main pane has to carry the message.
+    app.stackDepth.set(1);
+    expect(app.mainHasContent()).toBe(true);
+  });
+
+  it('leads a viewer back from "not available" to the organization, not the cluster', async () => {
+    const { app, navigatedTo } = await setUpEffects('viewer');
+    // The cluster's own address would turn them away a second time.
+    (TestBed.inject(Router) as { url: string }).url =
+      '/organizations/acme-corp/clusters/c2/general';
+    app['onAdminOnlyRoute'].set(true);
+
+    app.onPaneBack(new Event('back'));
+
+    expect(navigatedTo).toEqual(['/organizations/acme-corp']);
+  });
+
+  it('holds an admin-only page back until the role is known', async () => {
+    const { app } = await setUpEffects(null);
+    app['onAdminOnlyRoute'].set(true);
+
+    expect(app.pageNotAvailable()).toBe(false);
+    expect(app.pageAwaitsRole()).toBe(true);
+  });
+
+  it('shows an admin the admin-only page', async () => {
+    const { app } = await setUpEffects('admin');
+    app['onAdminOnlyRoute'].set(true);
+
+    expect(app.pageNotAvailable()).toBe(false);
+    expect(app.pageAwaitsRole()).toBe(false);
+  });
+
+  it('sends a viewer landing on the clusters to the organization root', async () => {
+    const { app, navigatedTo } = await setUpEffects('viewer');
+
+    app.currentUrl.set('/organizations/acme-corp/clusters?present=1');
+    TestBed.tick();
+
+    expect(navigatedTo).toEqual(['/organizations/acme-corp?present=1']);
+  });
+
+  it('leaves an admin on the clusters', async () => {
+    const { app, navigatedTo } = await setUpEffects('admin');
+
+    app.currentUrl.set('/organizations/acme-corp/clusters');
+    TestBed.tick();
+
+    expect(navigatedTo).toEqual([]);
+  });
 });
 
 describe('parentOf', () => {
@@ -334,8 +448,49 @@ describe('parentOf', () => {
     );
   });
 
+  it('leads every cluster page to its cluster', () => {
+    expect(parentOf('/organizations/acme-corp/clusters/c1/nodes')).toBe('/clusters/c1');
+    expect(parentOf('/organizations/acme-corp/clusters/c1/general')).toBe('/clusters/c1');
+  });
+
   it('keeps leading project pages to their project and others to the organization', () => {
     expect(parentOf('/organizations/acme-corp/projects/p1/members')).toBe('/projects/p1');
     expect(parentOf('/organizations/acme-corp/clusters/c1')).toBe('/');
+    expect(parentOf('/organizations/acme-corp/clusters/new')).toBe('/');
+  });
+});
+
+describe('depthForPath', () => {
+  it('puts a cluster, like a project, at its own menu', () => {
+    expect(depthForPath('/organizations/acme-corp/clusters/c1')).toBe(1);
+    expect(depthForPath('/organizations/acme-corp/projects/p1')).toBe(1);
+  });
+
+  it('puts the pages under a cluster at depth 2', () => {
+    expect(depthForPath('/organizations/acme-corp/clusters/c1/nodes')).toBe(2);
+    expect(depthForPath('/organizations/acme-corp/clusters')).toBe(2);
+  });
+
+  it('keeps the new-cluster sheet over the list rather than a cluster menu', () => {
+    expect(depthForPath('/organizations/acme-corp/clusters/new')).toBe(2);
+  });
+
+  it('opens on the organization menu', () => {
+    expect(depthForPath('/organizations/acme-corp')).toBe(0);
+  });
+});
+
+describe('isOrgAdminOnly', () => {
+  const level = (data: Record<string, unknown>, firstChild: unknown = null) =>
+    ({ data, firstChild }) as unknown as ActivatedRouteSnapshot;
+
+  it('finds the mark on any level of the route', () => {
+    expect(isOrgAdminOnly(level({}, level({}, level({ orgAdminOnly: true }))))).toBe(true);
+    expect(isOrgAdminOnly(level({}, level({ orgAdminOnly: true }, level({}))))).toBe(true);
+  });
+
+  it('is false for a route without it', () => {
+    expect(isOrgAdminOnly(level({}, level({ pluginScope: 'cluster' })))).toBe(false);
+    expect(isOrgAdminOnly(null)).toBe(false);
   });
 });

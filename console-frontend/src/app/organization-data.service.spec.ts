@@ -124,6 +124,19 @@ describe('OrganizationDataService reloadClusters', () => {
   // service's errors through the tests that follow the one being debugged.
   afterEach(() => vi.restoreAllMocks());
 
+  it('reloads the list when node pools change, for the pool counts it carries', async () => {
+    const { service, server } = build([alpha]);
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    server.listed = [
+      create(ListClustersResponse_ClusterSummarySchema, { ...alpha, nodePoolCount: 3 }),
+    ];
+    service.nodePoolsChanged.update((revision) => revision + 1);
+    TestBed.tick();
+
+    await vi.waitFor(() => expect(service.clusterSummaries()[0].nodePoolCount).toBe(3));
+  });
+
   it('keeps a soft-deleted cluster in the list, as the server reports it', async () => {
     const { service, server } = build([alpha, bravo]);
     await service.loadOrganizationData(ORGANIZATION_ID);
@@ -246,7 +259,10 @@ describe('OrganizationDataService setClusters', () => {
 describe('OrganizationDataService members', () => {
   const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 
   /** Load the organization and wait for its member list too, which the load
    *  itself does not wait for. */
@@ -263,6 +279,38 @@ describe('OrganizationDataService members', () => {
     await vi.waitFor(() => expect(service.membersLoaded()).toBe(true));
 
     expect(service.memberCount()).toBe(3);
+  });
+
+  it('asks again for a list that never came in, so the role does not stay unknown', async () => {
+    vi.useFakeTimers();
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+
+    server.membersFail = true;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    await vi.waitFor(() => expect(reported).toHaveBeenCalledTimes(1));
+    expect(service.membersLoaded()).toBe(false);
+
+    server.membersFail = false;
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(service.membersLoaded()).toBe(true);
+    expect(service.memberCount()).toBe(3);
+  });
+
+  it('stops asking once the organization it was for is gone', async () => {
+    vi.useFakeTimers();
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+
+    server.membersFail = true;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    await vi.waitFor(() => expect(reported).toHaveBeenCalledTimes(1));
+    const listed = vi.spyOn(TestBed.inject(MEMBER), 'listMembers');
+    service.clearAll();
+    await vi.advanceTimersByTimeAsync(60000);
+
+    expect(listed).not.toHaveBeenCalled();
   });
 
   it('follows the list a page fetched through it', async () => {

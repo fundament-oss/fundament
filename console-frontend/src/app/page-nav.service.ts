@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal, type WritableSignal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { inOrganization, withinOrganization } from './address';
+import { contextOf, inOrganization, withinOrganization } from './address';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import opensElsewhere from './opens-elsewhere';
@@ -35,10 +35,13 @@ export default class PageNavService {
   backText = computed(() => {
     const within = withinOrganization(this.currentUrl());
     const projectId = within.match(/^\/projects\/([^/?#]+)/)?.[1];
-    const pluginClusterId = within.match(/^\/clusters\/([^/?#]+)\/plugin-resources\//)?.[1];
+    // Any page under a cluster leads back to the cluster's own menu. Not the
+    // cluster's address itself, nor the new-cluster sheet: those sit beside
+    // the organization's menu.
+    const context = contextOf(within);
 
-    if (pluginClusterId) {
-      return this.organizationData.getClusterById(pluginClusterId)?.cluster.name ?? 'Cluster';
+    if (context?.kind === 'clusters' && context.rest !== '') {
+      return this.organizationData.getClusterById(context.id)?.cluster.name ?? 'Cluster';
     }
 
     if (projectId) {
@@ -46,6 +49,12 @@ export default class PageNavService {
       if (project) return project.project.alias || project.project.name;
     }
 
+    return this.organizationBackText();
+  });
+
+  /** The label of a back button that leads to the organization's menu, from
+   *  wherever it sits. */
+  organizationBackText = computed(() => {
     const orgId = this.organizationContext.currentOrganizationId();
     if (orgId) {
       const org = this.organizationData.getOrganizationById(orgId);

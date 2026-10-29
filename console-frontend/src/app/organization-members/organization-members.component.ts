@@ -18,6 +18,7 @@ import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import { OverlayService } from '../overlay.service';
+import OrganizationRoleService from '../organization-role.service';
 import { OrganizationDataService } from '../organization-data.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
@@ -144,6 +145,8 @@ export default class OrganizationMembersComponent implements OnInit {
   protected pageNav = inject(PageNavService);
 
   protected overlays = inject(OverlayService);
+
+  protected orgRole = inject(OrganizationRoleService);
 
   private organizationDataService = inject(OrganizationDataService);
 

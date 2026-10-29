@@ -83,8 +83,9 @@
             }
             <!-- Nothing to start before there is an organization to start it in:
                  the picker, and the wait for an operator behind it, have no
-                 place for a cluster to go. -->
-            @if (selectedOrgId()) {
+                 place for a cluster to go. Nor for a viewer in no project, whose
+                 menu would hold an empty Projects group and nothing else. -->
+            @if (selectedOrgId() && (orgRole.isOrgAdmin() || organizationProjects().length > 0)) {
               <!-- One place to start something, wherever you are: the pages that
                    own these actions each have their own button, but you have to be
                    on them first. Left of the organization and account controls,
@@ -113,26 +114,30 @@
                       placement="bottom-end"
                       accessible-label="Create"
                     >
-                      <nldd-menu-item
-                        icon="new-kubernetes"
-                        text="New cluster…"
-                        [attr.href]="path('/clusters/new')"
-                        (click)="pageNav.openHere($event, overlays.newCluster, true)"
-                      ></nldd-menu-item>
-                      <!-- Installing starts where plugins are found: the
-                           marketplace when there is one, since the console's
-                           page then lists only what is already installed. -->
-                      <nldd-menu-item
-                        icon="add-plugin"
-                        text="Install plugins…"
-                        [attr.href]="browsePluginsUrl || path('/plugins')"
-                      ></nldd-menu-item>
-                      <nldd-menu-item
-                        icon="add-user"
-                        text="Invite member…"
-                        [attr.href]="path('/members/invite')"
-                        (click)="pageNav.openHere($event, overlays.inviteMember, true)"
-                      ></nldd-menu-item>
+                      <!-- The organization's own things are an admin's to start;
+                           a viewer is left with what they can add to a project. -->
+                      @if (orgRole.isOrgAdmin()) {
+                        <nldd-menu-item
+                          icon="new-kubernetes"
+                          text="New cluster…"
+                          [attr.href]="path('/clusters/new')"
+                          (click)="pageNav.openHere($event, overlays.newCluster, true)"
+                        ></nldd-menu-item>
+                        <!-- Installing starts where plugins are found: the
+                             marketplace when there is one, since the console's
+                             page then lists only what is already installed. -->
+                        <nldd-menu-item
+                          icon="add-plugin"
+                          text="Install plugins…"
+                          [attr.href]="browsePluginsUrl || path('/plugins')"
+                        ></nldd-menu-item>
+                        <nldd-menu-item
+                          icon="add-user"
+                          text="Invite member…"
+                          [attr.href]="path('/members/invite')"
+                          (click)="pageNav.openHere($event, overlays.inviteMember, true)"
+                        ></nldd-menu-item>
+                      }
                       <!-- A project has two things you can add to it, so each one
                          carries its own submenu rather than a flat list that
                          repeats every project name twice. -->
@@ -162,22 +167,26 @@
                             </nldd-menu>
                           </nldd-menu-item>
                         }
-                        <nldd-menu-item
-                          icon="new-folder"
-                          text="New project…"
-                          [attr.href]="path('/projects/new')"
-                          (click)="openNewProject($event)"
-                        ></nldd-menu-item>
+                        @if (orgRole.isOrgAdmin()) {
+                          <nldd-menu-item
+                            icon="new-folder"
+                            text="New project…"
+                            [attr.href]="path('/projects/new')"
+                            (click)="openNewProject($event)"
+                          ></nldd-menu-item>
+                        }
                       </nldd-menu-group>
                     </nldd-menu>
                   </nldd-icon-button>
                 </nldd-just-in-time-education>
-                <nldd-menu-item
-                  slot="overflow"
-                  icon="plus-small"
-                  text="Create"
-                  [attr.href]="path('/clusters/new')"
-                ></nldd-menu-item>
+                @if (orgRole.isOrgAdmin()) {
+                  <nldd-menu-item
+                    slot="overflow"
+                    icon="plus-small"
+                    text="Create"
+                    [attr.href]="path('/clusters/new')"
+                  ></nldd-menu-item>
+                }
               </nldd-toolbar-item>
             }
             @if (true) {
@@ -412,89 +421,163 @@
                           <nldd-spacer-cell size="4"></nldd-spacer-cell>
                         }
                       </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/clusters')"
-                        [attr.current]="isClustersActive() ? '' : null"
-                        (click)="navigateFromSidebar($event, '/clusters')"
-                      >
-                        <nldd-icon-cell
-                          icon="kubernetes"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Clusters"></nldd-text-cell>
-                        <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                        <nldd-text-cell
-                          width="fit-content"
-                          horizontal-alignment="right"
-                          color="secondary"
-                          [attr.text]="organizationDataService.clusterSummaries().length"
-                        ></nldd-text-cell>
-                        <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/plugins')"
-                        [attr.current]="isNavActive('/plugins') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/plugins')"
-                      >
-                        <nldd-icon-cell
-                          icon="plugin"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Plugins"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/metrics')"
-                        [attr.current]="isNavActive('/metrics') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/metrics')"
-                      >
-                        <nldd-icon-cell
-                          icon="analytics"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Metrics"></nldd-text-cell>
-                        <!-- Only when it is unreachable: a dot that is always on
+                      <!-- The rest is the organization's to run, and so its
+                         admins' to see: a viewer works in projects, and every
+                         item here would lead them to a page that is not for
+                         them. Navigation only; the backend decides access. -->
+                      @if (orgRole.isOrgAdmin()) {
+                        <nldd-list-item
+                          [attr.href]="path('/clusters')"
+                          [attr.current]="isClustersActive() ? '' : null"
+                          (click)="navigateFromSidebar($event, '/clusters')"
+                        >
+                          <nldd-icon-cell
+                            icon="kubernetes"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell text="Clusters"></nldd-text-cell>
+                          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                          <nldd-text-cell
+                            width="fit-content"
+                            horizontal-alignment="right"
+                            color="secondary"
+                            [attr.text]="organizationDataService.clusterSummaries().length"
+                          ></nldd-text-cell>
+                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                        </nldd-list-item>
+                        <nldd-list-item
+                          [attr.href]="path('/plugins')"
+                          [attr.current]="isNavActive('/plugins') ? '' : null"
+                          (click)="navigateFromSidebar($event, '/plugins')"
+                        >
+                          <nldd-icon-cell
+                            icon="plugin"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell text="Plugins"></nldd-text-cell>
+                        </nldd-list-item>
+                        <nldd-list-item
+                          [attr.href]="path('/metrics')"
+                          [attr.current]="isNavActive('/metrics') ? '' : null"
+                          (click)="navigateFromSidebar($event, '/metrics')"
+                        >
+                          <nldd-icon-cell
+                            icon="analytics"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell text="Metrics"></nldd-text-cell>
+                          <!-- Only when it is unreachable: a dot that is always on
                            says nothing, and the count column next to it is
                            information rather than alarm. -->
-                        @if (metricsHealth.state() === 'down') {
-                          <nldd-cell width="fit-content">
-                            <nldd-tooltip text="Metrics connection lost">
-                              <nldd-badge
-                                color="warning"
-                                accessible-label="Metrics connection lost"
-                              ></nldd-badge>
-                            </nldd-tooltip>
-                          </nldd-cell>
-                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                        }
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/logs')"
-                        [attr.current]="isNavActive('/logs') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/logs')"
-                      >
-                        <nldd-icon-cell
-                          icon="bullet-list"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Logs"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/quotas')"
-                        [attr.current]="isNavActive('/quotas') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/quotas')"
-                      >
-                        <nldd-icon-cell
-                          icon="score-meter"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Quotas"></nldd-text-cell>
-                      </nldd-list-item>
+                          @if (metricsHealth.state() === 'down') {
+                            <nldd-cell width="fit-content">
+                              <nldd-tooltip text="Metrics connection lost">
+                                <nldd-badge
+                                  color="warning"
+                                  accessible-label="Metrics connection lost"
+                                ></nldd-badge>
+                              </nldd-tooltip>
+                            </nldd-cell>
+                            <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                          }
+                        </nldd-list-item>
+                        <nldd-list-item
+                          [attr.href]="path('/logs')"
+                          [attr.current]="isNavActive('/logs') ? '' : null"
+                          (click)="navigateFromSidebar($event, '/logs')"
+                        >
+                          <nldd-icon-cell
+                            icon="bullet-list"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell text="Logs"></nldd-text-cell>
+                        </nldd-list-item>
+                        <nldd-list-item
+                          [attr.href]="path('/quotas')"
+                          [attr.current]="isNavActive('/quotas') ? '' : null"
+                          (click)="navigateFromSidebar($event, '/quotas')"
+                        >
+                          <nldd-icon-cell
+                            icon="score-meter"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell text="Quotas"></nldd-text-cell>
+                        </nldd-list-item>
+                      }
                     </nldd-list>
+                    <!-- The clusters themselves, the way the projects are below:
+                       picking one opens its own menu beside this one, with its
+                       pages and the plugins installed on it. The overview item
+                       above stays for the cluster list as a page. -->
+                    @if (showClustersSection()) {
+                      <nldd-spacer size="24"></nldd-spacer>
+                      <nldd-title size="5">
+                        <h2>Clusters</h2>
+                      </nldd-title>
+                      <nldd-spacer size="8"></nldd-spacer>
+                      <nldd-toolbar
+                        label="Cluster actions"
+                        size="sm"
+                      >
+                        <nldd-toolbar-item slot="start">
+                          <nldd-button
+                            text="New cluster…"
+                            start-icon="plus-small"
+                            [attr.href]="path('/clusters/new')"
+                            (click)="pageNav.openHere($event, overlays.newCluster, true)"
+                          ></nldd-button>
+                          <nldd-menu-item
+                            slot="overflow"
+                            icon="plus-small"
+                            text="New cluster…"
+                            [attr.href]="path('/clusters/new')"
+                            (select)="pageNav.openHere($event, overlays.newCluster, true)"
+                          ></nldd-menu-item>
+                        </nldd-toolbar-item>
+                      </nldd-toolbar>
+                      @if (organizationDataService.clusterSummaries().length > 0) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-list
+                          type="navigation"
+                          dividers="on-touch"
+                          aria-label="Clusters"
+                        >
+                          @for (
+                            cluster of organizationDataService.clusterSummaries();
+                            track cluster.id
+                          ) {
+                            <nldd-list-item
+                              [attr.href]="path('/clusters/' + cluster.id)"
+                              [attr.current]="
+                                marksCurrent() && activeClusterId() === cluster.id ? '' : null
+                              "
+                              (click)="navigateFromSidebar($event, '/clusters/' + cluster.id)"
+                            >
+                              <nldd-icon-cell
+                                icon="kubernetes"
+                                size="20"
+                              ></nldd-icon-cell>
+                              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                              <nldd-text-cell [attr.text]="cluster.name"></nldd-text-cell>
+                              <nldd-cell width="fit-content">
+                                <nldd-tooltip [attr.text]="getStatusLabel(cluster.status)">
+                                  <nldd-badge
+                                    [attr.color]="getStatusBadgeColor(cluster.status)"
+                                    [attr.accessible-label]="getStatusLabel(cluster.status)"
+                                  ></nldd-badge>
+                                </nldd-tooltip>
+                              </nldd-cell>
+                              <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                            </nldd-list-item>
+                          }
+                        </nldd-list>
+                      }
+                    }
                     <!-- The projects themselves, not a link to a list of them: this
                        is where you pick one, and the status dot makes the whole
                        organization readable in one glance. -->
@@ -503,30 +586,32 @@
                       <nldd-title size="5">
                         <h2>Projects</h2>
                       </nldd-title>
-                      <nldd-spacer size="8"></nldd-spacer>
                       <!-- Under the heading rather than beside it: a named button
                          says what it makes, where an icon in the corner only
-                         says "plus". -->
-                      <nldd-toolbar
-                        label="Project actions"
-                        size="sm"
-                      >
-                        <nldd-toolbar-item slot="start">
-                          <nldd-button
-                            text="New project…"
-                            start-icon="plus-small"
-                            [attr.href]="path('/projects/new')"
-                            (click)="openNewProject($event)"
-                          ></nldd-button>
-                          <nldd-menu-item
-                            slot="overflow"
-                            icon="plus-small"
-                            text="New project…"
-                            [attr.href]="path('/projects/new')"
-                            (select)="openNewProject($event)"
-                          ></nldd-menu-item>
-                        </nldd-toolbar-item>
-                      </nldd-toolbar>
+                         says "plus". Only an admin creates projects. -->
+                      @if (orgRole.isOrgAdmin()) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-toolbar
+                          label="Project actions"
+                          size="sm"
+                        >
+                          <nldd-toolbar-item slot="start">
+                            <nldd-button
+                              text="New project…"
+                              start-icon="plus-small"
+                              [attr.href]="path('/projects/new')"
+                              (click)="openNewProject($event)"
+                            ></nldd-button>
+                            <nldd-menu-item
+                              slot="overflow"
+                              icon="plus-small"
+                              text="New project…"
+                              [attr.href]="path('/projects/new')"
+                              (select)="openNewProject($event)"
+                            ></nldd-menu-item>
+                          </nldd-toolbar-item>
+                        </nldd-toolbar>
+                      }
                       @if (organizationProjects().length > 0) {
                         <nldd-spacer size="8"></nldd-spacer>
                         <nldd-list
@@ -649,23 +734,104 @@
                         [attr.aria-label]="group.label"
                       >
                         @for (item of group.items; track item.crdPlural) {
+                          @let itemPath =
+                            pluginResourcePath(
+                              '/projects/' + project.id,
+                              group.installationName,
+                              item.crdPlural
+                            );
                           <nldd-list-item
-                            [attr.href]="
-                              path(pluginResourcePath(group.installationName, item.crdPlural))
-                            "
-                            [attr.current]="
-                              isNavActive(
-                                pluginResourcePath(group.installationName, item.crdPlural)
-                              )
-                                ? ''
-                                : null
-                            "
-                            (click)="
-                              navigateFromSidebar(
-                                $event,
-                                pluginResourcePath(group.installationName, item.crdPlural)
-                              )
-                            "
+                            [attr.href]="path(itemPath)"
+                            [attr.current]="isNavActive(itemPath) ? '' : null"
+                            (click)="navigateFromSidebar($event, itemPath)"
+                          >
+                            <nldd-icon-cell
+                              [attr.icon]="item.icon || 'circle-dashed'"
+                              size="20"
+                            ></nldd-icon-cell>
+                            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                            <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
+                          </nldd-list-item>
+                        }
+                      </nldd-list>
+                    }
+                  </nldd-simple-section>
+                </nldd-page>
+              </nldd-split-view-pane>
+            } @else if (activeCluster(); as cluster) {
+              <!-- A cluster's menu, the same pane as a project's: its own pages,
+                 then what the plugins installed on it add at cluster scope.
+                 Those differ per cluster and per plugin version, which is why
+                 they live here rather than in one menu for the organization. -->
+              <nldd-split-view-pane
+                slot="secondary-sidebar"
+                background="base"
+                [attr.has-content]="stackDepth() >= 1 ? '' : null"
+              >
+                <nldd-page sticky-header>
+                  <nldd-top-title-bar
+                    slot="header"
+                    [attr.back-text]="currentOrganization()?.alias || 'Menu'"
+                  ></nldd-top-title-bar>
+                  <nldd-simple-section>
+                    <nldd-title size="3">
+                      <h1>{{ cluster.name }}</h1>
+                      @if (cluster.region) {
+                        <span slot="subtitle">Region {{ cluster.region }}</span>
+                      }
+                    </nldd-title>
+                    <nldd-spacer size="16"></nldd-spacer>
+                    <nldd-list
+                      type="navigation"
+                      dividers="on-touch"
+                      aria-label="Cluster"
+                    >
+                      @for (item of clusterNavItems(); track item.path) {
+                        <nldd-list-item
+                          [attr.href]="path(item.path)"
+                          [attr.current]="isNavActive(item.path) ? '' : null"
+                          (click)="navigateFromSidebar($event, item.path)"
+                        >
+                          <nldd-icon-cell
+                            [attr.icon]="item.icon"
+                            size="20"
+                          ></nldd-icon-cell>
+                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                          <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
+                          @if (item.count !== null) {
+                            <nldd-text-cell
+                              width="fit-content"
+                              horizontal-alignment="right"
+                              color="secondary"
+                              [attr.text]="item.count"
+                            ></nldd-text-cell>
+                            <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                          }
+                        </nldd-list-item>
+                      }
+                    </nldd-list>
+                    @for (group of pluginNavService.clusterNav(); track group.installationName) {
+                      <nldd-spacer size="24"></nldd-spacer>
+                      <nldd-title size="5">
+                        <h2>{{ group.label }}</h2>
+                      </nldd-title>
+                      <nldd-spacer size="8"></nldd-spacer>
+                      <nldd-list
+                        type="navigation"
+                        dividers="on-touch"
+                        [attr.aria-label]="group.label"
+                      >
+                        @for (item of group.items; track item.crdPlural) {
+                          @let itemPath =
+                            pluginResourcePath(
+                              '/clusters/' + cluster.id,
+                              group.installationName,
+                              item.crdPlural
+                            );
+                          <nldd-list-item
+                            [attr.href]="path(itemPath)"
+                            [attr.current]="isNavActive(itemPath) ? '' : null"
+                            (click)="navigateFromSidebar($event, itemPath)"
                           >
                             <nldd-icon-cell
                               [attr.icon]="item.icon || 'circle-dashed'"
@@ -687,10 +853,31 @@
                steal the page's height. -->
             <nldd-split-view-pane
               slot="main"
-              [attr.has-content]="stackDepth() >= 2 ? '' : null"
+              [attr.has-content]="mainHasContent() ? '' : null"
             >
               @if (selectedOrgId()) {
-                @if (isProjectRoot()) {
+                <!-- "Not available" before "No selection": a viewer on a
+                   cluster's own address gets no cluster menu beside it, so an
+                   empty pane would only say to pick from a menu that is not
+                   there. -->
+                @if (pageNotAvailable()) {
+                  <!-- Back leads to the organization's menu (see onPaneBack),
+                       so the button names it rather than the cluster. -->
+                  <nldd-page sticky-header>
+                    <nldd-top-title-bar
+                      slot="header"
+                      [attr.back-text]="pageNav.organizationBackText()"
+                    ></nldd-top-title-bar>
+                    <nldd-simple-section width="full">
+                      <nldd-inline-dialog
+                        text="Page not available"
+                        supporting-text="This page is only available to organization admins."
+                      ></nldd-inline-dialog>
+                    </nldd-simple-section>
+                  </nldd-page>
+                } @else if (pageAwaitsRole()) {
+                  <nldd-page></nldd-page>
+                } @else if (isContextRoot()) {
                   <nldd-page>
                     <nldd-simple-section width="full">
                       <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
@@ -729,9 +916,12 @@
     (closed)="overlays.addProjectMember.set(null)"
   ></app-add-project-member-sheet>
 }
+<!-- The organization's own sheets open for an admin only. Their addresses open
+     them from a guard that redirects on the spot, so no route mark survives to
+     say "not available": the shell is the one place that sees every way in. -->
 @defer (when overlays.inviteMember()) {
   <app-invite-member-sheet
-    [show]="overlays.inviteMember()"
+    [show]="overlays.inviteMember() && orgRole.isOrgAdmin()"
     (closed)="overlays.inviteMember.set(false)"
   ></app-invite-member-sheet>
 }
@@ -744,13 +934,13 @@
 }
 @defer (when overlays.newCluster()) {
   <app-new-cluster-form
-    [show]="overlays.newCluster()"
+    [show]="overlays.newCluster() && orgRole.isOrgAdmin()"
     (closed)="overlays.newCluster.set(false)"
   ></app-new-cluster-form>
 }
 @defer (when overlays.newProject()) {
   <app-new-project
-    [show]="overlays.newProject()"
+    [show]="overlays.newProject() && orgRole.isOrgAdmin()"
     (closed)="overlays.newProject.set(false)"
   ></app-new-project>
 }

@@ -19,21 +19,24 @@
          actions slot: a toolbar takes a second and a third action without the
          title growing a row of controls. -->
     <nldd-toolbar label="Member actions">
-      <nldd-toolbar-item slot="start">
-        <nldd-button
-          type="button"
-          (click)="overlays.inviteMember.set(true)"
-          text="Invite member…"
-          start-icon="plus-small"
-          variant="primary"
-        ></nldd-button>
-        <nldd-menu-item
-          slot="overflow"
-          icon="plus-small"
-          text="Invite member…"
-          (select)="overlays.inviteMember.set(true)"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
+      <!-- Inviting is an admin's: a viewer reads the list. -->
+      @if (orgRole.isOrgAdmin()) {
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            type="button"
+            (click)="overlays.inviteMember.set(true)"
+            text="Invite member…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="Invite member…"
+            (select)="overlays.inviteMember.set(true)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      }
       <nldd-toolbar-item slot="start">
         <!-- Carries a real href: the sheet has its own URL, so this can be
              opened in a new tab and closed with the back button. In a toolbar it

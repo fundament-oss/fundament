@@ -44,17 +44,20 @@
             horizontal-alignment="right"
             [attr.text]="organization.alias"
           ></nldd-text-cell>
-          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-          <nldd-cell width="fit-content">
-            <nldd-icon-button
-              type="button"
-              (click)="startEdit()"
-              icon="edit"
-              size="sm"
-              variant="secondary"
-              accessible-label="Edit organization alias"
-            ></nldd-icon-button>
-          </nldd-cell>
+          <!-- Renaming is an admin's: a viewer reads the alias. -->
+          @if (orgRole.isOrgAdmin()) {
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-icon-button
+                type="button"
+                (click)="startEdit()"
+                icon="edit"
+                size="sm"
+                variant="secondary"
+                accessible-label="Edit organization alias"
+              ></nldd-icon-button>
+            </nldd-cell>
+          }
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell text="Organization name"></nldd-text-cell>

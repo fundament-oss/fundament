@@ -7,6 +7,7 @@ import ClusterPluginsComponent from './cluster-plugins.component';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
+import { NotificationService } from '../notification.service';
 import { CLUSTER, INSTALL, PLUGIN } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import { ClusterStatus } from '../../generated/v1/common_pb';
@@ -43,51 +44,75 @@ function build(
   },
   opts: {
     plugins?: PluginSummary[];
-    installations?: { metadata: { name: string }; spec: { definitionRef: { pluginName: string } } }[];
+    installations?: {
+      metadata: { name: string };
+      spec: { definitionRef: { pluginName: string } };
+    }[];
     status?: ClusterStatus;
   } = {},
 ) {
-    const installationService = {
-      listInstallations: () => Promise.resolve(opts.installations ?? []),
-      installPlugin: vi.fn().mockResolvedValue(undefined),
-      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
-    };
-    TestBed.configureTestingModule({
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: new Map([['id', 'c1']]) } },
-        },
-        { provide: TitleService, useValue: { setTitle: () => {} } },
-        { provide: PageNavService, useValue: { goTo: vi.fn() } },
-        {
-          provide: CLUSTER,
-          useValue: {
-            getCluster: () =>
-              of({ cluster: { name: 'production', status: opts.status ?? ClusterStatus.RUNNING } }),
-          } as unknown as ObservableClient<typeof ClusterService>,
-        },
-        {
-          provide: PLUGIN,
-          useValue: {
-            listPlugins: () => of({ plugins: opts.plugins ?? [cephRook] }),
-          } as unknown as ObservableClient<typeof PluginService>,
-        },
-        {
-          provide: INSTALL,
-          useValue: {
-            getPluginDefinition: () => of(definitionResponse),
-          } as unknown as ObservableClient<typeof InstallService>,
-        },
-        {
-          provide: PluginInstallationService,
-          useValue: installationService as unknown as PluginInstallationService,
-        },
-      ],
-    });
+  const installationService = {
+    listInstallations: () => Promise.resolve(opts.installations ?? []),
+    installPlugin: vi.fn().mockResolvedValue(undefined),
+    uninstallPlugin: vi.fn().mockResolvedValue(undefined),
+  };
+  TestBed.configureTestingModule({
+    providers: [
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: new Map([['id', 'c1']]) } },
+      },
+      { provide: TitleService, useValue: { setTitle: () => {} } },
+      { provide: PageNavService, useValue: { goTo: vi.fn(), backText: () => 'production' } },
+      { provide: NotificationService, useValue: { success: vi.fn() } },
+      {
+        provide: CLUSTER,
+        useValue: {
+          getCluster: () =>
+            of({ cluster: { name: 'production', status: opts.status ?? ClusterStatus.RUNNING } }),
+        } as unknown as ObservableClient<typeof ClusterService>,
+      },
+      {
+        provide: PLUGIN,
+        useValue: {
+          listPlugins: () => of({ plugins: opts.plugins ?? [cephRook] }),
+        } as unknown as ObservableClient<typeof PluginService>,
+      },
+      {
+        provide: INSTALL,
+        useValue: {
+          getPluginDefinition: () => of(definitionResponse),
+        } as unknown as ObservableClient<typeof InstallService>,
+      },
+      {
+        provide: PluginInstallationService,
+        useValue: installationService as unknown as PluginInstallationService,
+      },
+    ],
+  });
   const component = TestBed.createComponent(ClusterPluginsComponent).componentInstance;
-  return { component, installationService };
+  return {
+    component,
+    installationService,
+    pageNav: TestBed.inject(PageNavService) as unknown as { goTo: ReturnType<typeof vi.fn> },
+  };
 }
+
+// A page in the cluster's menu, not a sheet over the cluster page: saving
+// leaves you where you are, with the form reloaded from what is now installed.
+describe('ClusterPluginsComponent as a page', () => {
+  it('stays on the page and reloads after a save', async () => {
+    const { component, pageNav } = build({ configSchema: [] });
+    await component.load();
+    const reload = vi.spyOn(component, 'load');
+
+    await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
+
+    expect(pageNav.goTo).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalled();
+    expect(component.errorMessage()).toBeNull();
+  });
+});
 
 // This page's bulk form has no per-plugin config step, so a plugin whose
 // definition declares required config (or whose schema the catalog cannot
@@ -166,22 +191,18 @@ describe('ClusterPluginsComponent required-config guard', () => {
 // reachable status, not only RUNNING: starting, upgrading and unhealthy
 // clusters serve, while a stopped one does not.
 describe('ClusterPluginsComponent reachable gate', () => {
-  it.each([
-    ClusterStatus.STARTING,
-    ClusterStatus.UPGRADING,
-    ClusterStatus.UNHEALTHY,
-  ])('offers the form and submits on reachable status %i', async (status) => {
-    const { component, installationService } = build(
-      { configSchema: [] },
-      { status },
-    );
-    await component.load();
+  it.each([ClusterStatus.STARTING, ClusterStatus.UPGRADING, ClusterStatus.UNHEALTHY])(
+    'offers the form and submits on reachable status %i',
+    async (status) => {
+      const { component, installationService } = build({ configSchema: [] }, { status });
+      await component.load();
 
-    expect(component['notRunning']()).toBe(false);
+      expect(component['notRunning']()).toBe(false);
 
-    await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
-    expect(installationService.installPlugin).toHaveBeenCalled();
-  });
+      await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
+      expect(installationService.installPlugin).toHaveBeenCalled();
+    },
+  );
 
   it('shows the not-running notice for a stopped cluster', async () => {
     const { component } = build({ configSchema: [] }, { status: ClusterStatus.STOPPED });

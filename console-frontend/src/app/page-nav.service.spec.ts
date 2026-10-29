@@ -35,6 +35,16 @@ describe('PageNavService.backText', () => {
     expect(nav.backText()).toBe('Cluster');
   });
 
+  it('names the cluster on any page under it', () => {
+    expect(navAt('/clusters/c1/nodes', 'prod').backText()).toBe('prod');
+    expect(navAt('/clusters/c1/general', 'prod').backText()).toBe('prod');
+  });
+
+  it('names the organization on the clusters overview', () => {
+    expect(navAt('/clusters', 'prod').backText()).toBe('Menu');
+    expect(navAt('/clusters/new', 'prod').backText()).toBe('Menu');
+  });
+
   it('names the project on a project plugin route', () => {
     const nav = navAt('/projects/pr1/plugin-resources/p/databases', 'prod');
     expect(nav.backText()).toBe('Project one');
