@@ -175,6 +175,9 @@ func createDynamicAPIKey(ctx context.Context, endpoint, orgID, accessToken strin
 
 		createResp, err := apiKeyClient.CreateAPIKey(createCtx, organizationv1.CreateAPIKeyRequest_builder{
 			Name: "terraform-acc-test-" + acctest.RandString(6),
+			// Every key must expire within the operator's maximum. A day
+			// outlasts the suite, and bounds the key if cleanup fails.
+			ExpiresIn: "24h",
 		}.Build())
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodePermissionDenied {
