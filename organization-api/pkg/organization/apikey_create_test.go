@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -209,7 +210,8 @@ func Test_APIKey_Create_ExpiresIn_Validation(t *testing.T) {
 			var connectErr *connect.Error
 			require.ErrorAs(t, err, &connectErr)
 			assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
-			assert.Contains(t, connectErr.Message(), tc.wantMessage)
+			// Anchored: a longer message such as "at most 720h0m0s" must not pass for "at most 720h".
+			assert.Regexp(t, regexp.QuoteMeta(tc.wantMessage)+"$", connectErr.Message())
 		})
 	}
 }
