@@ -93,6 +93,9 @@ type BadRequest = ErrorResponse
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = ErrorResponse
 
+// LoginRefused defines model for LoginRefused.
+type LoginRefused = ErrorResponse
+
 // MethodNotAllowed defines model for MethodNotAllowed.
 type MethodNotAllowed = ErrorResponse
 
@@ -450,6 +453,8 @@ type BadRequestJSONResponse ErrorResponse
 
 type InternalServerErrorJSONResponse ErrorResponse
 
+type LoginRefusedJSONResponse ErrorResponse
+
 type MethodNotAllowedJSONResponse ErrorResponse
 
 type ServiceUnavailableJSONResponse ErrorResponse
@@ -494,6 +499,15 @@ type HandleCallback401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response HandleCallback401JSONResponse) VisitHandleCallbackResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleCallback403JSONResponse struct{ LoginRefusedJSONResponse }
+
+func (response HandleCallback403JSONResponse) VisitHandleCallbackResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -608,6 +622,15 @@ type HandlePasswordLogin401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response HandlePasswordLogin401JSONResponse) VisitHandlePasswordLoginResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandlePasswordLogin403JSONResponse struct{ LoginRefusedJSONResponse }
+
+func (response HandlePasswordLogin403JSONResponse) VisitHandlePasswordLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }

@@ -54,7 +54,7 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "oidc")
 	if err != nil {
-		s.writeErrorJSON(w, http.StatusInternalServerError, err.Error())
+		s.writeErrorJSON(w, loginErrorStatus(err), err.Error())
 		return
 	}
 

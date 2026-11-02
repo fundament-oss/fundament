@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -155,18 +156,22 @@ func TestProcessOIDCLogin_UnverifiedEmailDoesNotClaimInvite(t *testing.T) {
 	assert.Equal(t, inviteID, u.ID)
 }
 
-// Without an invite at it, an unverified address only stays off the new
-// account.
-func TestProcessOIDCLogin_UnverifiedEmailNotStoredOnNewUser(t *testing.T) {
+// Without an invite at it, an unverified address is refused the same way:
+// otherwise the refusal would tell whoever signs in which addresses were
+// invited.
+func TestProcessOIDCLogin_UnverifiedEmailRefusedWithoutInvite(t *testing.T) {
 	env := newLoginEnv(t)
 
-	u, _, err := env.server.processOIDCLogin(context.Background(), &oidcClaims{
+	_, _, err := env.server.processOIDCLogin(context.Background(), &oidcClaims{
 		Sub: "keycloak-sub-3", Name: "Someone", Email: "someone@example.com", EmailVerified: false,
 	}, "oidc")
-	require.NoError(t, err)
+	require.ErrorIs(t, err, errEmailNotVerified)
+}
 
-	_, email := userRow(t, env, u.ID)
-	assert.False(t, email.Valid, "the unverified address was stored on the new account")
+func TestLoginErrorStatus(t *testing.T) {
+	assert.Equal(t, http.StatusForbidden, loginErrorStatus(errEmailNotVerified))
+	assert.Equal(t, http.StatusForbidden, loginErrorStatus(errEmailInUse))
+	assert.Equal(t, http.StatusInternalServerError, loginErrorStatus(errors.New("database down")))
 }
 
 // An existing account keeps the address it has when the provider later

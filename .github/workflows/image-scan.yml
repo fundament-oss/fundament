@@ -55,7 +55,7 @@ jobs:
         run: |
           set -o pipefail
           mise exec -- helm template charts/fundament \
-              -f charts/fundament/values-production.yaml --set jwtSecret=unused \
+              -f charts/fundament/values-example-prod.yaml --set jwtSecret=unused \
             | grep -E '^\s*(image|imageName):' | sed -E 's/.*image(Name)?:[[:space:]]*"?//; s/"$//' \
             | grep -v '^ghcr.io/fundament-oss/' | sort -u > chart-images.txt
           for dockerfile in $(git ls-files '*Dockerfile' | grep -vE '(^|/)(hotreload|functl)/'); do

@@ -145,6 +145,12 @@ export type HandlePasswordLoginErrors = {
      */
     401: ErrorResponse;
     /**
+     * Sign-in refused: the identity provider has not verified the email
+     * address of a first sign-in, or the address belongs to another account
+     *
+     */
+    403: ErrorResponse;
+    /**
      * Password login is not enabled (the identity provider is not Dex)
      */
     404: ErrorResponse;
@@ -202,6 +208,12 @@ export type HandleCallbackErrors = {
      * Unauthorized
      */
     401: ErrorResponse;
+    /**
+     * Sign-in refused: the identity provider has not verified the email
+     * address of a first sign-in, or the address belongs to another account
+     *
+     */
+    403: ErrorResponse;
     /**
      * Internal server error
      */

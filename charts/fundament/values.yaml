@@ -128,7 +128,8 @@ authnApi:
     issuer: ""            # empty: Dex (dex.issuer)
     clientId: fundament
     displayName: ""       # required with an issuer
-    # Keycloak refuses a scope it does not define, such as Dex's "groups".
+    # Comma-separated, and must include openid. Keycloak refuses a scope it
+    # does not define, such as Dex's "groups".
     scopes: openid,profile,email
     # A confidential client's secret. Name empty: a public client.
     clientSecretRef:
@@ -258,7 +259,7 @@ consoleFrontend:
     #  - console.example.com
 
 # Console walkthrough (demo build on in-memory data; no backend required).
-# Not enabled in production — see values-production.yaml.
+# Not enabled in production — see values-example-prod.yaml.
 consoleDemoFrontend:
   enabled: false
   replicas: 1

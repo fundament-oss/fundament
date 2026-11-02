@@ -98,6 +98,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/LoginRefused"
         "404":
           description: Password login is not enabled (the identity provider is not Dex)
           content:
@@ -156,6 +158,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/LoginRefused"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -223,6 +227,15 @@ components:
         format: uri
 
   responses:
+    LoginRefused:
+      description: |
+        Sign-in refused: the identity provider has not verified the email
+        address of a first sign-in, or the address belongs to another account
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
     BadRequest:
       description: Bad request
       content:

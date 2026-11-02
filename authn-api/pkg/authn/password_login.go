@@ -56,7 +56,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "password")
 	if err != nil {
 		s.logger.Error("process oidc login", "error", err)
-		s.writeErrorJSON(w, http.StatusInternalServerError, err.Error())
+		s.writeErrorJSON(w, loginErrorStatus(err), err.Error())
 		return
 	}
 

@@ -1,193 +1,40 @@
-jwtSecretRef:
-  name: fundament-jwt
-  key: secret
-
-externalUrls:
-  authn: https://authn.fundament.projects.digilab.network
-  organization: https://organization.fundament.projects.digilab.network
-  kubeApiProxy: https://k8s-api.fundament.projects.digilab.network
-  pluginProxy: https://plugin-proxy.fundament.projects.digilab.network
-  console: https://console.fundament.projects.digilab.network
-  consoleDemo: https://console-demo.fundament.projects.digilab.network
-  docs: https://docs.fundament.projects.digilab.network
-  cookieDomain: fundament.projects.digilab.network
-  dcimApi: https://dcim-api.fundament.projects.digilab.network
-  dcim: https://dcim.fundament.projects.digilab.network
-  dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
-  marketplace: https://marketplace.fundament.projects.digilab.network
-  marketplaceCatalogApi: https://marketplace-catalog-api.fundament.projects.digilab.network
-  marketplaceRegistry: https://marketplace-registry.fundament.projects.digilab.network
-  marketplaceRegistryApi: https://marketplace-registry-api.fundament.projects.digilab.network
-  marketplaceAdmin: https://marketplace-admin.fundament.projects.digilab.network
-  marketplaceAdminApi: https://marketplace-admin-api.fundament.projects.digilab.network
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://marketplace-admin.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
-
-# Previews and the sandbox are not the real environment; say so on every site.
-environmentBanner:
-  enabled: true
+# Sandbox environment values
 
 db:
   enabled: true
-  instances: 1
+  instances: 2
   storageSize: 5Gi
 
 authnApi:
   enabled: true
-  replicas: 1
-  # No shoots in a preview; the cucumber suite exchanges HMAC mock tokens for
-  # the seeded cluster (e2e/features/exchange-workload-token.feature, FUN-22).
-  # The default mock secret is public, and so are the seeded logins a preview
-  # advertises: a forged mock token reads exactly what alice@acme-corp.com
-  # already can. Set authnApi.mockShootSecret where that is not true.
-  shootVerifierMode: mock
-  mockShootSecretAllowDefault: true
-
-kubeApiProxy:
-  enabled: true
-  replicas: 1
-  logLevel: info
-  mode: mock
-
-pluginProxy:
-  enabled: true
-  replicas: 1
-  logLevel: info
-  mode: mock
+  replicas: 2
+  # Fundament SSO (Keycloak) signs people in, not Dex. The client is
+  # confidential; its secret is created by secret management.
+  oidc:
+    issuer: https://login.example.com/realms/fundamentsso
+    clientId: fundament
+    displayName: Fundament SSO
+    clientSecretRef:
+      name: authn-api-oidc
+      key: client-secret
 
 organizationApi:
   enabled: true
-  replicas: 1
+  replicas: 2
+  # Read cluster system logs from each shoot's own Vali through the Plutono
+  # datasource proxy (ADR-0027) rather than serving generated data. Needs
+  # clusterWorker.gardenerKubeconfigSecret set: without it organization-api
+  # falls back to a noop Gardener client, resolution fails, and the console
+  # reports "No log backend is configured".
+  logsURL: per-shoot
 
 consoleFrontend:
   enabled: true
-  replicas: 1
-
-consoleDemoFrontend:
-  enabled: true
-  replicas: 1
+  replicas: 2
 
 docsFrontend:
   enabled: true
-  replicas: 1
-
-dex:
-  enabled: true
-  issuer: https://dex.projects.digilab.network
-  discoveryUrl: http://dex:5556
-  staticClients:
-    - id: fundament
-      name: Fundament
-      redirectURIs:
-        - https://fundament.projects.digilab.network/callback
-      public: true
-  staticPasswords:
-    # acme-corp users
-    - email: alice@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Alice
-      userID: "019b4000-1000-7000-8000-000000000001"
-    - email: bart@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Bart
-      userID: "019b4000-1000-7000-8000-000000000002"
-    - email: cindy@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Cindy
-      userID: "019b4000-1000-7000-8000-000000000003"
-    # globex users
-    - email: david@globex.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: David
-      userID: "019b4000-1000-7000-8000-000000000004"
-    - email: emily@globex.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Emily
-      userID: "019b4000-1000-7000-8000-000000000005"
-    # initech users
-    - email: frank@initech.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Frank
-      userID: "019b4000-1000-7000-8000-000000000006"
-    - email: grace@initech.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Grace
-      userID: "019b4000-1000-7000-8000-000000000007"
-
-dexDcim:
-  enabled: true
-  issuer: https://dex-dcim.fundament.projects.digilab.network
-  discoveryUrl: http://dex-dcim:5556
-  staticClients:
-    - id: dcim
-      name: "DCIM Auth API"
-      redirectURIs:
-        - https://dcim-authn.fundament.projects.digilab.network/callback
-      public: true
-  # DCIM is a separate trust domain from the console/tenant. The same test
-  # credentials work here, but each user gets a DCIM-specific userID (019d0000
-  # prefix) that is intentionally decoupled from the tenant userID in `dex`
-  # above. dcim-authn-api derives dcim.users.external_ref from the dex `sub`
-  # and never correlates it with tenant.users, so these IDs must stay distinct.
-  staticPasswords:
-    # acme-corp users
-    - email: alice@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Alice
-      userID: "019d0000-1000-7000-8000-000000000001"
-    - email: bart@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Bart
-      userID: "019d0000-1000-7000-8000-000000000002"
-    - email: cindy@acme-corp.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Cindy
-      userID: "019d0000-1000-7000-8000-000000000003"
-    # globex users
-    - email: david@globex.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: David
-      userID: "019d0000-1000-7000-8000-000000000004"
-    - email: emily@globex.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Emily
-      userID: "019d0000-1000-7000-8000-000000000005"
-    # initech users
-    - email: frank@initech.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Frank
-      userID: "019d0000-1000-7000-8000-000000000006"
-    - email: grace@initech.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: Grace
-      userID: "019d0000-1000-7000-8000-000000000007"
-
-dcimAuthnApi:
-  enabled: true
-  replicas: 1
-  # ROPC login against dex static passwords. Acceptable for the shared
-  # sandbox/PR test environments; keep disabled in production.
-  passwordLoginEnabled: true
-
-authzWorker:
-  enabled: true
-  replicas: 1
-  logLevel: debug
-  pollInterval: "2s"
-  batchSize: 100
-
-openfga:
-  enabled: true
-  # A non-standard API port, so the playground port-forward below does not
-  # take localhost:8080, which other local tools often use.
-  # The playground auto-detects the API port from the URL it's served from.
-  apiPort: 18080
-  playground:
-    # To use the playground, you must port-forward both the API and playground ports to localhost:
-    #   kubectl port-forward svc/openfga 18080:18080 3000:3000
-    # Then access the playground at http://localhost:3000/playground
-    # This is due to CSP restrictions in the embedded play.fga.dev iframe.
-    # See: https://github.com/openfga/openfga/issues/1174
-    enabled: true
+  replicas: 2
 
 dcimApi:
   enabled: true
@@ -197,42 +44,5 @@ dcimFrontend:
   enabled: true
   replicas: 2
 
-marketplaceFrontend:
-  enabled: true
-  replicas: 2
-  internalApiUrls:
-    catalog: http://marketplace-catalog-api:8080
-
-# Developer portal: the same image as marketplaceFrontend built for the
-# publishing audience (FUN-20). It holds the "Build a plugin" page the
-# storefront hands off to; without it, externalUrls.marketplaceRegistry is
-# empty and the storefront hides that hand-off altogether.
-marketplaceRegistryFrontend:
-  enabled: true
-  replicas: 2
-  internalApiUrls:
-    registry: http://marketplace-registry-api:8080
-
-# Review backoffice: the same image built for the reviewing audience (FUN-20).
-# Reviewers sign in through DCIM, so this stays behind the staff host.
-marketplaceAdminFrontend:
-  enabled: true
-  replicas: 2
-  internalApiUrls:
-    admin: http://marketplace-admin-api:8080
-
-# Anonymous storefront API: the console's plugins page reads catalog.v1 from it.
-marketplaceCatalogApi:
-  enabled: true
-  replicas: 2
-
-# Authenticated publishing surface behind the developer portal: validates the
-# developer's UserToken from authn-api.
-marketplaceRegistryApi:
-  enabled: true
-  replicas: 2
-
-# Review backoffice API: validates the reviewer's DCIM token (staff IDP).
-marketplaceAdminApi:
-  enabled: true
-  replicas: 2
+dex:
+  enabled: false

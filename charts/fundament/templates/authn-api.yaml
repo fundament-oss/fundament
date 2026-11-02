@@ -55,7 +55,7 @@ spec:
                   key: {{ .clientSecretRef.key }}
             {{- end }}
             - name: OIDC_SCOPES
-              value: {{ .scopes | quote }}
+              value: {{ if kindIs "string" .scopes }}{{ required "authnApi.oidc.scopes is required with authnApi.oidc.issuer" .scopes | quote }}{{ else }}{{ fail "authnApi.oidc.scopes must be a comma-separated string, such as openid,profile,email" }}{{ end }}
             - name: OIDC_DISPLAY_NAME
               value: {{ required "authnApi.oidc.displayName is required with authnApi.oidc.issuer: it is the only way in" .displayName | quote }}
             # Only Dex offers the password grant.
