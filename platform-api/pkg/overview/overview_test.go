@@ -145,7 +145,7 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 		namespaces += o.GetNamespaces()
 	}
 	totals := resp.GetTotals()
-	assert.Equal(t, int32(len(resp.GetOrganizations())), totals.GetOrganizations())
+	assert.Len(t, resp.GetOrganizations(), int(totals.GetOrganizations()))
 	assert.Equal(t, clusters, totals.GetClusters())
 	assert.Equal(t, projects, totals.GetProjects())
 	assert.Equal(t, namespaces, totals.GetNamespaces())
@@ -174,7 +174,7 @@ func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
 	for _, o := range resp.GetOrganizations() {
 		clusters += o.GetClusters()
 	}
-	assert.Equal(t, int32(len(resp.GetOrganizations())), resp.GetTotals().GetOrganizations())
+	assert.Len(t, resp.GetOrganizations(), int(resp.GetTotals().GetOrganizations()))
 	assert.Equal(t, clusters, resp.GetTotals().GetClusters(), "the unlisted cluster is not counted")
 }
 

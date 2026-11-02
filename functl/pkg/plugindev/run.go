@@ -26,7 +26,7 @@ func BuildConsole(ctx context.Context, l Layout) error {
 	}
 	dir := filepath.Join(l.PluginDir, "console-ui")
 	for _, args := range [][]string{{"install"}, {"run", "build"}} {
-		cmd := exec.CommandContext(ctx, "bun", args...)
+		cmd := exec.CommandContext(ctx, "bun", args...) //nolint:gosec // fixed binary and fixed argument lists
 		cmd.Dir = dir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -39,7 +39,7 @@ func BuildConsole(ctx context.Context, l Layout) error {
 
 // BuildImage builds and pushes the dev image and returns its repo@sha256 reference.
 func BuildImage(ctx context.Context, renderDir string, t Target) (string, error) {
-	cmd := exec.CommandContext(ctx, "skaffold", "build",
+	cmd := exec.CommandContext(ctx, "skaffold", "build", //nolint:gosec // fixed binary, argv only (no shell)
 		"-f", "skaffold.yaml",
 		"--default-repo", t.Registry,
 		"--file-output", "build.json",
@@ -51,7 +51,7 @@ func BuildImage(ctx context.Context, renderDir string, t Target) (string, error)
 		return "", fmt.Errorf("skaffold build: %w", err)
 	}
 
-	raw, err := os.ReadFile(filepath.Join(renderDir, "build.json"))
+	raw, err := os.ReadFile(filepath.Join(renderDir, "build.json")) //nolint:gosec // skaffold output in functl's own render dir
 	if err != nil {
 		return "", fmt.Errorf("read skaffold build output: %w", err)
 	}
@@ -96,7 +96,7 @@ func Dev(ctx, force context.Context, renderDir string, l Layout, t Target, names
 		cmds = append(cmds, vite)
 	}
 
-	skaffold := exec.Command("skaffold", "dev",
+	skaffold := exec.Command("skaffold", "dev", //nolint:gosec // fixed binary, argv only (no shell)
 		"-f", "skaffold.yaml",
 		"--default-repo", t.Registry,
 		"-n", namespace,

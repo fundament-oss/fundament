@@ -75,7 +75,7 @@ func signTestUserToken(t *testing.T) string {
 
 // withAuthCookie adds the console UserToken cookie to a request.
 func withAuthCookie(t *testing.T, r *http.Request) *http.Request {
-	r.AddCookie(&http.Cookie{Name: auth.ConsoleAuthCookieName, Value: signTestUserToken(t)})
+	r.AddCookie(&http.Cookie{Name: auth.ConsoleAuthCookieName, Value: signTestUserToken(t)}) //nolint:gosec // a request cookie; only name and value are sent
 	return r
 }
 

@@ -41,8 +41,8 @@ func main() {
 
 	// Probe 4: does the DEFAULT transport (what production uses) verify TLS?
 	fmt.Println("== probe 4: TLS with default transport ==")
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, http.NoBody)
-	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, http.NoBody) //nolint:gosec // probe target is operator-supplied
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)                             //nolint:gosec // probe target is operator-supplied
 	if err != nil {
 		fmt.Printf("FINDING: default transport fails: %v\n(expected: the ingress cert is signed by this shoot's own CA)\n\n", err)
 	} else {

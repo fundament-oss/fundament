@@ -24,7 +24,7 @@ func renderTo(t *testing.T, l Layout) string {
 
 func readFile(t *testing.T, dir, name string) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(dir, name))
+	b, err := os.ReadFile(filepath.Join(dir, name)) //nolint:gosec // test helper, paths are not user-controlled
 	require.NoError(t, err)
 	return string(b)
 }

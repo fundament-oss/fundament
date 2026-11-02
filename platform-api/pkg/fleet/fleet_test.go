@@ -310,7 +310,7 @@ func TestFleetSkipsSystemOrganization(t *testing.T) {
 
 	summary, err := client.GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, int32(len(all.GetClusters())), summary.GetSummary().GetClusters())
+	assert.Len(t, all.GetClusters(), int(summary.GetSummary().GetClusters()))
 }
 
 func TestGetClusterDetail(t *testing.T) {

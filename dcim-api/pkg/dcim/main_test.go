@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 		cacheDir = filepath.Join(userCache, "fundament-test-pg-dcim")
 	}
 
-	err := os.MkdirAll(cacheDir, 0o755)
+	err := os.MkdirAll(cacheDir, 0o750) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		log.Fatalf("failed to create cache directory: %v", err)
 	}
@@ -44,12 +44,12 @@ func TestMain(m *testing.M) {
 	var stopPostgres func()
 
 	if dirExists(dataDir) && dirExists(pgBin) {
-		log.Printf("existing embedded-postgres detected at %q", cacheDir)
+		log.Printf("existing embedded-postgres detected at %q", cacheDir) //nolint:gosec // test log
 		startExistingEmbeddedPostgres(pgBin, dataDir)
 
 		stopPostgres = func() {
 			pgCtl := filepath.Join(pgBin, "pg_ctl")
-			cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+			cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 	} else {
-		log.Printf("setting up new embedded-postgres installation at %q", cacheDir)
+		log.Printf("setting up new embedded-postgres installation at %q", cacheDir) //nolint:gosec // test log
 		epDB := createAndStartNewEmbeddedPostgres(cacheDir, dataDir)
 
 		stopPostgres = func() {
@@ -100,7 +100,7 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	removeStalePostmasterPID(pgBin, dataDir)
 
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl,
+	cmd := exec.Command(pgCtl, //nolint:gosec // test helper, paths are not user-controlled
 		"-D", dataDir,
 		"-w",
 		"-o", fmt.Sprintf("-p %d -c fsync=off -c synchronous_commit=off", testDBPort),
@@ -116,7 +116,7 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 func removeStalePostmasterPID(pgBin, dataDir string) {
 	pidFile := filepath.Join(dataDir, "postmaster.pid")
 
-	data, err := os.ReadFile(pidFile)
+	data, err := os.ReadFile(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		return
 	}
@@ -134,19 +134,19 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		_ = os.Remove(pidFile)
+		_ = os.Remove(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 		return
 	}
 
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		_ = os.Remove(pidFile)
+		_ = os.Remove(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 		return
 	}
 
 	log.Printf("stopping already-running postgres (pid %d) before restart", pid)
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -155,7 +155,7 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 }
 
 func createAndStartNewEmbeddedPostgres(runtimePath, dataDir string) *embeddedpostgres.EmbeddedPostgres {
-	err := os.RemoveAll(dataDir)
+	err := os.RemoveAll(dataDir) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		log.Fatalf("failed to remove old data directory: %v", err)
 	}
@@ -218,7 +218,7 @@ func findProjectRoot() string {
 }
 
 func dirExists(path string) bool {
-	info, err := os.Stat(path)
+	info, err := os.Stat(path) //nolint:gosec // test helper, paths are not user-controlled
 	return err == nil && info.IsDir()
 }
 
@@ -238,7 +238,7 @@ func trekApply(projectRoot string) {
 			filepath.Join(os.Getenv("HOME"), ".asdf/shims/trek"),
 		}
 		for _, c := range candidates {
-			if _, statErr := os.Stat(c); statErr == nil {
+			if _, statErr := os.Stat(c); statErr == nil { //nolint:gosec // test helper, paths are not user-controlled
 				trekBin = c
 				break
 			}
@@ -248,7 +248,7 @@ func trekApply(projectRoot string) {
 		}
 	}
 
-	cmd := exec.Command(trekBin, "apply",
+	cmd := exec.Command(trekBin, "apply", //nolint:gosec // test helper, paths are not user-controlled
 		"--reset-database",
 		"--insert-test-data",
 		"--postgres-host", "localhost",

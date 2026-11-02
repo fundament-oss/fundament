@@ -1055,7 +1055,7 @@ func startMockPluginServer(t *testing.T, handlers mockPluginHandlers) (connect.H
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(svc)
 	mux.Handle(path, rpcHandler)
 
-	server := &http.Server{Handler: mux}
+	server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 

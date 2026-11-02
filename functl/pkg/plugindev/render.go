@@ -66,7 +66,7 @@ func Render(outDir string, p RenderParams) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o755); err != nil { //nolint:gosec // rendered build files, not secret
 		return fmt.Errorf("create %s: %w", outDir, err)
 	}
 	absOut, err := filepath.Abs(outDir)
@@ -122,7 +122,7 @@ func execute(tmpl *template.Template, outDir string, data templateData, files ma
 		if err := tmpl.ExecuteTemplate(&sb, tmplName, data); err != nil {
 			return fmt.Errorf("render %s: %w", tmplName, err)
 		}
-		if err := os.WriteFile(filepath.Join(outDir, outName), []byte(sb.String()+"\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(outDir, outName), []byte(sb.String()+"\n"), 0o644); err != nil { //nolint:gosec // rendered build files, not secret
 			return fmt.Errorf("write %s: %w", outName, err)
 		}
 	}

@@ -209,7 +209,7 @@ func passwordLogin(authnEndpoint, email, password string) (loginResponse, error)
 		return loginResponse{}, fmt.Errorf("marshal request: %w", err)
 	}
 
-	resp, err := http.Post(authnEndpoint+"/login/password", "application/json", bytes.NewReader(body))
+	resp, err := http.Post(authnEndpoint+"/login/password", "application/json", bytes.NewReader(body)) //nolint:gosec // test helper, endpoint comes from the test environment
 	if err != nil {
 		return loginResponse{}, fmt.Errorf("http post: %w", err)
 	}

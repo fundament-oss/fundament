@@ -46,7 +46,7 @@ func Detect(dir string) (Layout, error) {
 		return Layout{}, fmt.Errorf("resolve plugin dir: %w", err)
 	}
 
-	src, err := os.ReadFile(filepath.Join(pluginDir, "definition.yaml"))
+	src, err := os.ReadFile(filepath.Join(pluginDir, "definition.yaml")) //nolint:gosec // reads the plugin dir the user pointed functl at
 	if err != nil {
 		return Layout{}, fmt.Errorf("read definition.yaml in %s: %w", pluginDir, err)
 	}
@@ -60,7 +60,7 @@ func Detect(dir string) (Layout, error) {
 		return Layout{}, err
 	}
 
-	goMod, err := os.ReadFile(filepath.Join(moduleRoot, "go.mod"))
+	goMod, err := os.ReadFile(filepath.Join(moduleRoot, "go.mod")) //nolint:gosec // reads the plugin's own module root
 	if err != nil {
 		return Layout{}, fmt.Errorf("read go.mod: %w", err)
 	}
@@ -131,7 +131,7 @@ func (l *Layout) ResolveSourceDirs() error {
 	if l.ModulePath != FundamentModule {
 		return nil
 	}
-	cmd := exec.Command("go", "list", "-deps",
+	cmd := exec.Command("go", "list", "-deps", //nolint:gosec // fixed binary, argv only (no shell); the package is the user's own plugin
 		"-f", `{{with .Module}}{{if eq .Path "`+FundamentModule+`"}}{{$.Dir}}{{end}}{{end}}`,
 		l.Package)
 	cmd.Dir = l.ModuleRoot

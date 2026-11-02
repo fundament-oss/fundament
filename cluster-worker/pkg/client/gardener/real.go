@@ -77,7 +77,7 @@ type ProviderConfig struct {
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
-	return ProviderConfig{
+	return ProviderConfig{ //nolint:gosec // G101: credential binding names, not credentials
 		Type:                     "local",
 		CloudProfile:             "local",
 		Region:                   "local",
