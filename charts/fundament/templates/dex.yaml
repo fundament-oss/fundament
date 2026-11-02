@@ -54,7 +54,7 @@ spec:
     spec:
       containers:
         - name: dex
-          image: ghcr.io/dexidp/dex:v2.46.0
+          image: ghcr.io/dexidp/dex:v2.46.1
           command:
             - /usr/local/bin/dex
             - serve
