@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 
@@ -144,7 +142,7 @@ func run() error {
 		return clusters, nil
 	})
 
-	opts := []organization.Option{}
+	opts := make([]organization.Option, 0, 1)
 
 	idempotencyStore := idempotency.NewStore(db.Pool, idempotency.Config{}, logger)
 	go idempotencyStore.StartCleanup(ctx)
@@ -234,9 +232,14 @@ func run() error {
 	})
 	outerMux.Handle("/", server.Handler())
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(outerMux, &http2.Server{}),
+		Handler:           outerMux,
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

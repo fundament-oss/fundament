@@ -41,9 +41,9 @@ func newProjectRBACFixture(t *testing.T, name string) *projectRBACFixture {
 	orgAdmin := insertUser(t, db, name+"-org-admin")
 	projAdmin := insertUser(t, db, name+"-proj-admin")
 	projViewer := insertUser(t, db, name+"-proj-viewer")
-	insertOrgUser(t, db, acmeCorpOrgID, orgAdmin, "admin", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projAdmin, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projViewer, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, orgAdmin, "admin")
+	insertOrgUser(t, db, acmeCorpOrgID, projAdmin, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projViewer, "viewer")
 
 	projectName := name + "-proj"
 	projectID := insertProjectWithMembersNamed(t, db, clusterID, projectName,

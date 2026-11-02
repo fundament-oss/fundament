@@ -103,7 +103,7 @@ func (h *mintHarness) userToken(t *testing.T) string {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 	}
@@ -170,7 +170,7 @@ func TestMintPluginToken_PluginAudienceRejected(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 	}
@@ -223,7 +223,7 @@ func TestMintPluginToken_WrongSecret_Unauthenticated(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 	}
@@ -242,7 +242,7 @@ func TestMintPluginToken_ExpiredToken_Unauthenticated(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
 		},
 	}

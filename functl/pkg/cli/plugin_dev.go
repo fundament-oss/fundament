@@ -180,7 +180,7 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l *plugindev.
 	if err := plugindev.CheckVersionBump(runCtx, cluster, installation, devVersion(l.Version)); err != nil {
 		return devSession{}, err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
-	if err := l.ResolveSourceDirs(); err != nil {
+	if err := l.ResolveSourceDirs(runCtx); err != nil {
 		return devSession{}, fmt.Errorf("resolve source dirs: %w", err)
 	}
 	if err := plugindev.BuildConsole(runCtx, l); err != nil {

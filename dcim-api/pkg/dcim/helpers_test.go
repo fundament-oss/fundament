@@ -73,19 +73,8 @@ func signTestToken(t *testing.T, subject string) string {
 	return s
 }
 
-type apiOptions struct {
-	t testing.TB
-}
-
-type APIOption func(*apiOptions)
-
-func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
+func newTestAPI(t *testing.T) *testEnv {
 	t.Helper()
-
-	opts := apiOptions{t: t}
-	for _, option := range options {
-		option(&opts)
-	}
 
 	testLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelError,

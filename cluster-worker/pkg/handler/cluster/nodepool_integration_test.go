@@ -89,15 +89,15 @@ func TestBothClusterIDAndNodePoolIDRejectedByConstraint(t *testing.T) {
 	require.Error(t, err, "both cluster_id and node_pool_id should be rejected by constraint")
 }
 
-// insertClusterOutboxRow adds a cluster outbox row in the given status, due at retryAfter.
-func insertClusterOutboxRow(t *testing.T, db *testDB, clusterID uuid.UUID, status, retryAfter string) uuid.UUID {
+// insertClusterOutboxRow adds a cluster outbox row in the given status, due at infinity.
+func insertClusterOutboxRow(t *testing.T, db *testDB, clusterID uuid.UUID, status string) uuid.UUID {
 	t.Helper()
 
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
 		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, retry_after)
-		 VALUES ($1, 'updated', 'trigger', $2, $3::timestamptz)
-		 RETURNING id`, clusterID, status, retryAfter).Scan(&id)
+		 VALUES ($1, 'updated', 'trigger', $2, 'infinity'::timestamptz)
+		 RETURNING id`, clusterID, status).Scan(&id)
 	require.NoError(t, err)
 	return id
 }
@@ -120,9 +120,9 @@ func TestNodePoolInsertWakesRunnableClusterRows(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-runnable")
 	markOutboxCompleted(t, db, clusterID)
 
-	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
-	backingOff := insertClusterOutboxRow(t, db, clusterID, "retrying", "infinity")
-	failed := insertClusterOutboxRow(t, db, clusterID, "failed", "infinity")
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending")
+	backingOff := insertClusterOutboxRow(t, db, clusterID, "retrying")
+	failed := insertClusterOutboxRow(t, db, clusterID, "failed")
 	require.False(t, outboxRowDue(t, db, parked))
 	require.False(t, outboxRowDue(t, db, backingOff))
 
@@ -140,7 +140,7 @@ func TestNodePoolInsertLeavesOtherClustersParked(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-this")
 	otherID := insertCluster(t, db, acmeCorpOrgID, "wake-other")
 	markOutboxCompleted(t, db, otherID)
-	otherParked := insertClusterOutboxRow(t, db, otherID, "pending", "infinity")
+	otherParked := insertClusterOutboxRow(t, db, otherID, "pending")
 
 	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 
@@ -154,7 +154,7 @@ func TestNodePoolUpdateAndDeleteDoNotWake(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-only-insert")
 	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	markOutboxCompleted(t, db, clusterID)
-	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending")
 
 	_, err := db.adminPool.Exec(t.Context(),
 		`UPDATE tenant.node_pools SET autoscale_max = 6 WHERE id = $1`, nodePoolID)
@@ -175,7 +175,7 @@ func TestClusterDeleteWakesParkedRows(t *testing.T) {
 	db := createTestDB(t)
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-on-delete")
 	markOutboxCompleted(t, db, clusterID)
-	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending")
 
 	_, err := db.adminPool.Exec(t.Context(),
 		`UPDATE tenant.clusters SET deleted = now() WHERE id = $1`, clusterID)

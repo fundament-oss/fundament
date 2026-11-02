@@ -212,7 +212,7 @@ func TestReconcileMassDeletionIgnoresShootsAlreadyDeleting(t *testing.T) {
 
 	// Four deleted clusters whose shoots are already being deleted, as after
 	// a user deleted them through the sync path.
-	var clusterIDs []uuid.UUID
+	clusterIDs := make([]uuid.UUID, 0, 4)
 	for i := range 4 {
 		name := fmt.Sprintf("reconcile-deleting-%d", i)
 		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
@@ -261,8 +261,9 @@ func TestClusterListActiveAgreesWithClusterSyncState(t *testing.T) {
 	require.NoError(t, db.adminPool.QueryRow(t.Context(),
 		`SELECT pg_get_constraintdef(pg_constraint.oid) FROM pg_constraint
 		 WHERE pg_constraint.conname = 'cluster_outbox_ck_event'`).Scan(&constraint))
-	var events []string
-	for _, match := range regexp.MustCompile(`'([a-z_]+)'::text`).FindAllStringSubmatch(constraint, -1) {
+	matches := regexp.MustCompile(`'([a-z_]+)'::text`).FindAllStringSubmatch(constraint, -1)
+	events := make([]string, 0, len(matches))
+	for _, match := range matches {
 		events = append(events, match[1])
 	}
 	require.NotEmpty(t, events)

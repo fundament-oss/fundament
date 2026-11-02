@@ -219,8 +219,9 @@ func TestListClustersPages(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("paged-org", "Paged Org")
-	var want []string
-	for _, name := range []string{"a", "b", "c", "d", "e"} {
+	names := []string{"a", "b", "c", "d", "e"}
+	want := make([]string, 0, len(names))
+	for _, name := range names {
 		want = append(want, seed.Cluster(org, name).String())
 	}
 	// Two of five in error, so a filtered page has to read past the first

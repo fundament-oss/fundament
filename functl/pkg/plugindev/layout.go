@@ -1,6 +1,7 @@
 package plugindev
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -127,11 +128,11 @@ func sdkReplace(mf *modfile.File, moduleRoot string) string {
 
 // ResolveSourceDirs sets SourceDirs from the plugin's in-module package deps.
 // It is a no-op outside the fundament monorepo.
-func (l *Layout) ResolveSourceDirs() error {
+func (l *Layout) ResolveSourceDirs(ctx context.Context) error {
 	if l.ModulePath != FundamentModule {
 		return nil
 	}
-	cmd := exec.Command("go", "list", "-deps", //nolint:gosec // fixed binary, argv only (no shell); the package is the user's own plugin
+	cmd := exec.CommandContext(ctx, "go", "list", "-deps", //nolint:gosec // fixed binary, argv only (no shell); the package is the user's own plugin
 		"-f", `{{with .Module}}{{if eq .Path "`+FundamentModule+`"}}{{$.Dir}}{{end}}{{end}}`,
 		l.Package)
 	cmd.Dir = l.ModuleRoot

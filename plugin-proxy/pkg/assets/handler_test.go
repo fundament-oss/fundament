@@ -33,12 +33,6 @@ func (stubFetcher) Fetch(_ context.Context, clusterID uuid.UUID, pluginName, plu
 var testJWTSecret = []byte("test-secret-for-handler-tests")
 var testUserID = uuid.MustParse("019b4000-1000-7000-8000-000000000001")
 
-type stubCanView struct{ allow bool }
-
-func (s stubCanView) CanViewCluster(_ context.Context, _, _ uuid.UUID) (bool, error) {
-	return s.allow, nil
-}
-
 func newTestHandler() http.Handler {
 	return newTestHandlerWithAuth(true)
 }
@@ -64,7 +58,7 @@ func signTestUserToken(t *testing.T) string {
 	claims := jwt.MapClaims{
 		"iss": auth.ConsoleIssuer,
 		"sub": testUserID.String(),
-		"aud": []string{string(auth.TokenTypeUser)},
+		"aud": []string{auth.TokenTypeUser},
 		"exp": time.Now().Add(15 * time.Minute).Unix(),
 		"iat": time.Now().Unix(),
 	}

@@ -12,8 +12,6 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/dcim"
@@ -72,9 +70,14 @@ func run() error {
 		AllowCredentials: true,
 	})
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(c.Handler(mux), &http2.Server{}),
+		Handler:           c.Handler(mux),
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

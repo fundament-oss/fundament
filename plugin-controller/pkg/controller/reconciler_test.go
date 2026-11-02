@@ -860,7 +860,7 @@ func TestPollInterval(t *testing.T) {
 	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseDeploying))
 
 	// Neither is one that has been coming up for too long (a crash loop).
-	crashLoop := make([]pluginsv1.PluginPhase, 11)
+	crashLoop := make([]pluginsv1.PluginPhase, 11, 13)
 	for i := range crashLoop {
 		crashLoop[i] = pluginsv1.PluginPhaseDeploying
 	}
@@ -1056,7 +1056,7 @@ func startMockPluginServer(t *testing.T, handlers mockPluginHandlers) (connect.H
 	mux.Handle(path, rpcHandler)
 
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	go func() { _ = server.Serve(listener) }()

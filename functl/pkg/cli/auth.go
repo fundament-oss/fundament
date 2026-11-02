@@ -80,7 +80,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	if err != nil {
 		fmt.Println("Not authenticated")
 		fmt.Println("Run 'functl auth login' to authenticate")
-		return nil
+		return nil //nolint:nilerr // status reports "not authenticated" as its answer, not as a command failure
 	}
 
 	// Try to get user info
@@ -94,7 +94,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	if err != nil {
 		fmt.Println("Authentication failed: credentials may be invalid or expired")
 		fmt.Println("Run 'functl auth login' to re-authenticate")
-		return nil
+		return nil //nolint:nilerr // status reports failed authentication as its answer, not as a command failure
 	}
 
 	user := resp.GetUser()

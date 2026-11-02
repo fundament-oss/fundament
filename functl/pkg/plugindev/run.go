@@ -90,13 +90,13 @@ func Dev(ctx, force context.Context, renderDir string, l *Layout, t Target, name
 	var cmds []*exec.Cmd
 
 	if l.Vite {
-		vite := exec.Command("bunx", "vite", "build", "--watch", "--emptyOutDir=false")
+		vite := exec.Command("bunx", "vite", "build", "--watch", "--emptyOutDir=false") //nolint:noctx // supervise stops the process group gracefully; CommandContext would SIGKILL on cancel
 		vite.Dir = filepath.Join(l.PluginDir, "console-ui")
 		prefixOutput(vite, "[vite] ", &mu)
 		cmds = append(cmds, vite)
 	}
 
-	skaffold := exec.Command("skaffold", "dev", //nolint:gosec // fixed binary, argv only (no shell)
+	skaffold := exec.Command("skaffold", "dev", //nolint:gosec,noctx // fixed binary, argv only (no shell); supervise stops the process group gracefully, CommandContext would SIGKILL on cancel
 		"-f", "skaffold.yaml",
 		"--default-repo", t.Registry,
 		"-n", namespace,

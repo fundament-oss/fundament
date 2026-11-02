@@ -65,7 +65,7 @@ func (c *fakeClock) Advance(d time.Duration) {
 }
 
 // getOverview calls the RPC the way the console does: an anonymous HTTP GET.
-func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOverviewResponse, *http.Response, string) {
+func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOverviewResponse, http.Header, string) {
 	t.Helper()
 
 	query := url.Values{"connect": {"v1"}, "encoding": {"json"}, "message": {"{}"}}
@@ -82,7 +82,7 @@ func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOver
 
 	out := &platformv1.GetPlatformOverviewResponse{}
 	require.NoError(t, protojson.Unmarshal(body, out))
-	return out, resp, string(body)
+	return out, resp.Header, string(body)
 }
 
 func findOrganization(resp *platformv1.GetPlatformOverviewResponse, name string) *platformv1.OrganizationOverview {
@@ -212,8 +212,8 @@ func TestOverviewIsCached(t *testing.T) {
 
 	clock := &fakeClock{now: time.Now()}
 	ts := newServerWithClock(t, env, clock.Now)
-	first, resp, _ := getOverview(t, ts)
-	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
+	first, header, _ := getOverview(t, ts)
+	assert.Equal(t, "public, max-age=60", header.Get("Cache-Control"))
 
 	seed.Cluster(org, "second")
 	second, _, _ := getOverview(t, ts)
@@ -222,14 +222,14 @@ func TestOverviewIsCached(t *testing.T) {
 
 	// A cached answer is advertised for what remains of the TTL, not afresh.
 	clock.Advance(cacheTTL - 1500*time.Millisecond)
-	_, resp, _ = getOverview(t, ts)
-	assert.Equal(t, "public, max-age=2", resp.Header.Get("Cache-Control"))
+	_, header, _ = getOverview(t, ts)
+	assert.Equal(t, "public, max-age=2", header.Get("Cache-Control"))
 
 	// Once the TTL has passed the server reads again.
 	clock.Advance(1500 * time.Millisecond)
-	fresh, resp, _ := getOverview(t, ts)
+	fresh, header, _ := getOverview(t, ts)
 	assert.Equal(t, int32(2), findOrganization(fresh, "cached").GetClusters())
-	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
+	assert.Equal(t, "public, max-age=60", header.Get("Cache-Control"))
 }
 
 // The console calls without credentials, so CORS allows its origin and never

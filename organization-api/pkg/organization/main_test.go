@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 
 		stopPostgres = func() {
 			pgCtl := filepath.Join(pgBin, "pg_ctl")
-			cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
+			cmd := exec.CommandContext(context.Background(), pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
@@ -102,7 +102,7 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	removeStalePostmasterPID(pgBin, dataDir)
 
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl, //nolint:gosec // test helper, paths are not user-controlled
+	cmd := exec.CommandContext(context.Background(), pgCtl, //nolint:gosec // test helper, paths are not user-controlled
 		"-D", dataDir,
 		"-w",
 		"-o", fmt.Sprintf("-p %d -c fsync=off -c synchronous_commit=off", testDBPort),
@@ -155,7 +155,7 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	// Process is still running — stop it gracefully before we start a fresh instance.
 	log.Printf("stopping already-running postgres (pid %d) before restart", pid)
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
+	cmd := exec.CommandContext(context.Background(), pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -286,7 +286,7 @@ func trekApply(projectRoot string) {
 		}
 	}
 
-	cmd := exec.Command(trekBin, "apply", //nolint:gosec // test helper, paths are not user-controlled
+	cmd := exec.CommandContext(context.Background(), trekBin, "apply", //nolint:gosec // test helper, paths are not user-controlled
 		"--reset-database",
 		"--insert-test-data",
 		"--postgres-host", "localhost",

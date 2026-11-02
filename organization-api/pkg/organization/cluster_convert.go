@@ -111,7 +111,7 @@ func clusterEventsFromRows(events []db.TenantClusterEvent) []*organizationv1.Clu
 func clusterEventFromRow(e *db.TenantClusterEvent) *organizationv1.ClusterEvent {
 	event := organizationv1.ClusterEvent_builder{
 		Id:        e.ID.String(),
-		EventType: string(e.EventType),
+		EventType: e.EventType,
 		CreatedAt: timestamppb.New(e.Created.Time),
 	}.Build()
 

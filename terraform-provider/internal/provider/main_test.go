@@ -209,7 +209,12 @@ func passwordLogin(authnEndpoint, email, password string) (loginResponse, error)
 		return loginResponse{}, fmt.Errorf("marshal request: %w", err)
 	}
 
-	resp, err := http.Post(authnEndpoint+"/login/password", "application/json", bytes.NewReader(body)) //nolint:gosec // test helper, endpoint comes from the test environment
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, authnEndpoint+"/login/password", bytes.NewReader(body)) //nolint:gosec // test helper, endpoint comes from the test environment
+	if err != nil {
+		return loginResponse{}, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // test helper, endpoint comes from the test environment
 	if err != nil {
 		return loginResponse{}, fmt.Errorf("http post: %w", err)
 	}

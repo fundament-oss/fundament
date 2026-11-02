@@ -410,7 +410,7 @@ func TestPutPluginDefinition_Replace(t *testing.T) {
 		PluginName:       testPluginName,
 		PluginVersion:    "v1",
 	}.Build()
-	getResp, err := client.GetPluginDefinition(ctx, getReq)
+	getResp, err := client.GetPluginDefinition(ctx, getReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.NoError(t, err)
 	assert.Equal(t, resp2.GetHash(), getResp.GetHash())
 }
@@ -445,7 +445,7 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 		ctx, callInfo := connect.NewClientContext(ctx)
 		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		resp, err := client.ListPlugins(ctx, req)
+		resp, err := client.ListPlugins(ctx, req) //nolint:staticcheck // covers the deprecated RPC until it is removed
 		require.NoError(t, err)
 		for _, p := range resp.GetPlugins() {
 			if p.GetName() == testPluginName {
@@ -492,7 +492,7 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	detailCtx, detailCallInfo := connect.NewClientContext(ctx)
 	detailCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 	detailCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-	detailResp, err := client.GetPluginDetail(detailCtx, detailReq)
+	detailResp, err := client.GetPluginDetail(detailCtx, detailReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.NoError(t, err)
 	assert.Equal(t, "v2", detailResp.GetPlugin().GetPluginVersion())
 	assert.Equal(t, v2Hash, detailResp.GetPlugin().GetDefinitionHash())
@@ -530,7 +530,7 @@ func TestListPluginDefinitions_LatestFirst(t *testing.T) {
 		ctx, callInfo := connect.NewClientContext(ctx)
 		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		resp, err := client.ListPluginDefinitions(ctx, req)
+		resp, err := client.ListPluginDefinitions(ctx, req) //nolint:staticcheck // covers the deprecated RPC until it is removed
 		require.NoError(t, err)
 		return resp.GetDefinitions()
 	}
@@ -604,7 +604,7 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 		PluginVersion:    "v1",
 	}.Build()
 
-	resp, err := client.GetPluginDefinition(ctx, getReq)
+	resp, err := client.GetPluginDefinition(ctx, getReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.NoError(t, err)
 	assert.NotEmpty(t, resp.GetManifest())
 	assert.True(t, strings.HasPrefix(resp.GetHash(), "sha256:"))
@@ -626,7 +626,7 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 		PluginVersion:    "v1",
 	}.Build()
 
-	_, err := client.GetPluginDefinition(ctx, getReq)
+	_, err := client.GetPluginDefinition(ctx, getReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
@@ -700,7 +700,7 @@ func TestListPlugins_GlobalVisibility(t *testing.T) {
 	listCtx, listCallInfo := connect.NewClientContext(context.Background())
 	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 	listCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
-	resp, err := client.ListPlugins(listCtx, req)
+	resp, err := client.ListPlugins(listCtx, req) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.NoError(t, err)
 
 	var found bool
@@ -750,7 +750,7 @@ func TestGetPluginDefinition_ResolvesWithinOrganization(t *testing.T) {
 	require.NoError(t, err)
 
 	// The owning organization resolves it.
-	got, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+	got, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
 		OrganizationName: "org-a",
 		PluginName:       "plugin-from-a",
 		PluginVersion:    "v1",
@@ -759,7 +759,7 @@ func TestGetPluginDefinition_ResolvesWithinOrganization(t *testing.T) {
 	assert.Equal(t, manifestA, got.GetManifest())
 
 	// A different organization does not — the name alone is no longer the key.
-	_, err = client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+	_, err = client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
 		OrganizationName: "org-b",
 		PluginName:       "plugin-from-a",
 		PluginVersion:    "v1",
@@ -824,12 +824,12 @@ func TestGetPluginDefinition_SameNameAcrossOrganizations(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	gotA, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+	gotA, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
 		OrganizationName: "org-alpha", PluginName: "shared-name", PluginVersion: "v1",
 	}.Build())
 	require.NoError(t, err)
 
-	gotB, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+	gotB, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
 		OrganizationName: "org-beta", PluginName: "shared-name", PluginVersion: "v1",
 	}.Build())
 	require.NoError(t, err)
@@ -846,7 +846,7 @@ func TestGetPluginDefinition_RequiresOrganizationName(t *testing.T) {
 	orgID := uuid.New()
 	env := newTestAPI(t, WithOrganization(orgID, "test-org"))
 
-	_, err := newPluginServiceClient(env).GetPluginDefinition(context.Background(),
+	_, err := newPluginServiceClient(env).GetPluginDefinition(context.Background(), //nolint:staticcheck // covers the deprecated RPC until it is removed
 		organizationv1.GetPluginDefinitionRequest_builder{
 			PluginName:    testPluginName,
 			PluginVersion: "v1",

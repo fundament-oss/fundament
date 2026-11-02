@@ -405,7 +405,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 // transport). It errors when the (organization, plugin) pair is not in the
 // catalog or has no published definition to pin.
 func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, organizationName, pluginName string) (string, string, error) {
-	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build())
+	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build()) //nolint:staticcheck // catalog.v1 ListPlugins lives in marketplace-api and omits RESTRICTED listings; migrating is not a drop-in swap
 	if err != nil {
 		return "", "", fmt.Errorf("list plugins: %w", err)
 	}

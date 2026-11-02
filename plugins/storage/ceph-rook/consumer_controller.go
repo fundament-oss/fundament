@@ -250,7 +250,7 @@ func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	if r.finalizer != "" && controllerutil.AddFinalizer(obj, r.finalizer) {
 		if err := r.Client.Update(ctx, obj); err != nil {
 			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // Requeue uses the rate limiter backoff; RequeueAfter is a fixed delay
 			}
 			return ctrl.Result{}, fmt.Errorf("add finalizer to %s %s: %w", r.kind, req.Name, err)
 		}
@@ -262,7 +262,7 @@ func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 		// reconcile's write can land before the informer delivers it. Retry
 		// against fresher state instead of flapping the consumer to Degraded.
 		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // Requeue uses the rate limiter backoff; RequeueAfter is a fixed delay
 		}
 		r.setDegraded(ctx, obj, err)
 		return ctrl.Result{}, err
@@ -297,7 +297,7 @@ func (r *ConsumerReconciler[T]) finalizeDeletion(ctx context.Context, obj T) (ct
 	controllerutil.RemoveFinalizer(obj, r.finalizer)
 	if err := r.Client.Update(ctx, obj); err != nil {
 		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // Requeue uses the rate limiter backoff; RequeueAfter is a fixed delay
 		}
 		return ctrl.Result{}, fmt.Errorf("remove finalizer from %s %s: %w", r.kind, obj.GetName(), err)
 	}

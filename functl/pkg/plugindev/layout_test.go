@@ -137,7 +137,7 @@ func TestResolveSourceDirsRepo(t *testing.T) {
 	}
 	l, err := Detect(filepath.Join("..", "..", "..", "plugins", "openfsc"))
 	require.NoError(t, err)
-	require.NoError(t, l.ResolveSourceDirs())
+	require.NoError(t, l.ResolveSourceDirs(t.Context()))
 	assert.Contains(t, l.SourceDirs, "openfsc-operator")
 	assert.Contains(t, l.SourceDirs, "plugin-sdk")
 	assert.Contains(t, l.SourceDirs, "plugins/openfsc")
@@ -145,6 +145,6 @@ func TestResolveSourceDirsRepo(t *testing.T) {
 
 func TestResolveSourceDirsStandaloneNoop(t *testing.T) {
 	l := Layout{ModulePath: "example.com/demo"}
-	require.NoError(t, l.ResolveSourceDirs())
+	require.NoError(t, l.ResolveSourceDirs(t.Context()))
 	assert.Empty(t, l.SourceDirs)
 }

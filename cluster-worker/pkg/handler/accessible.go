@@ -38,7 +38,7 @@ func ReconcileAccessible(
 	var errs []error
 	for _, cluster := range clusters {
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // documented: returns nil once ctx is done
 		}
 		err := reconcile(ctx, cluster.ID)
 		if err == nil {

@@ -82,7 +82,7 @@ func (m *MockClient) fscInstallationListJSON(clusterID string) string {
 func (m *MockClient) createFSCInstallation(clusterID, path string, body io.Reader, r func(string) io.ReadCloser) (int, io.ReadCloser, error) {
 	var obj map[string]any
 	if err := json.NewDecoder(body).Decode(&obj); err != nil {
-		return 400, r(`{"message":"invalid body"}`), nil
+		return 400, r(`{"message":"invalid body"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
 	}
 
 	meta, _ := obj["metadata"].(map[string]any)
@@ -106,7 +106,7 @@ func (m *MockClient) createFSCInstallation(clusterID, path string, body io.Reade
 
 	b, err := json.Marshal(obj)
 	if err != nil {
-		return 500, r(`{"message":"mock marshal error"}`), nil
+		return 500, r(`{"message":"mock marshal error"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
 	}
 	return 201, r(string(b)), nil
 }
@@ -139,7 +139,7 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 	case path == pluginInstallationsPath && method == http.MethodPost:
 		var obj map[string]any
 		if err := json.NewDecoder(body).Decode(&obj); err != nil {
-			return 400, r(`{"message":"invalid body"}`), nil
+			return 400, r(`{"message":"invalid body"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
 		}
 		// Stamp server-set metadata that a real apiserver would fill in.
 		// installationId is derived from metadata.uid downstream; without a
@@ -347,7 +347,7 @@ func resourceGetResponse(listJSON, name, namespace string, r func(string) io.Rea
 		Items []map[string]any `json:"items"`
 	}
 	if err := json.Unmarshal([]byte(listJSON), &data); err != nil {
-		return 500, r(`{"message":"mock list parse error"}`), nil
+		return 500, r(`{"message":"mock list parse error"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
 	}
 	for _, item := range data.Items {
 		meta, _ := item["metadata"].(map[string]any)
@@ -359,7 +359,7 @@ func resourceGetResponse(listJSON, name, namespace string, r func(string) io.Rea
 		}
 		b, err := json.Marshal(item)
 		if err != nil {
-			return 500, r(`{"message":"mock item marshal error"}`), nil
+			return 500, r(`{"message":"mock item marshal error"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
 		}
 		return 200, r(string(b)), nil
 	}

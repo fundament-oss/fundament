@@ -43,14 +43,14 @@ func TestLabelNamespaceIDMatchesProjectRBAC(t *testing.T) {
 	require.Equal(t, LabelNamespaceID, projectrbac.LabelNamespaceID)
 }
 
-func testRow(name string) *db.NamespaceGetForSyncRow {
+func testRow() *db.NamespaceGetForSyncRow {
 	return &db.NamespaceGetForSyncRow{
 		ID:             uuid.New(),
 		ProjectID:      uuid.New(),
 		ClusterID:      uuid.New(),
 		OrganizationID: uuid.New(),
 		ProjectName:    "proj",
-		Name:           name,
+		Name:           "team-a",
 		ShootStatus:    pgtype.Text{String: "ready", Valid: true},
 	}
 }
@@ -70,7 +70,7 @@ func nsLabels(t *testing.T, mock *shoot.MockShootAccess, clusterID uuid.UUID, na
 
 func TestDesiredLabels(t *testing.T) {
 	t.Parallel()
-	row := testRow("team-a")
+	row := testRow()
 
 	labels := desiredLabels(row)
 
@@ -85,7 +85,7 @@ func TestDesiredLabels(t *testing.T) {
 func TestEnsure_FreshCreate(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 
 	require.NoError(t, h.ensure(context.Background(), row))
 
@@ -99,7 +99,7 @@ func TestEnsure_FreshCreate(t *testing.T) {
 func TestEnsure_IdempotentRecreate(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 
 	require.NoError(t, h.ensure(context.Background(), row))
 	require.NoError(t, h.ensure(context.Background(), row), "re-applying must not error")
@@ -111,7 +111,7 @@ func TestEnsure_IdempotentRecreate(t *testing.T) {
 func TestEnsure_PatchesDriftedLabelsPreservingOperatorLabels(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	// Namespace exists with our id label and an operator-added label, but is
@@ -135,7 +135,7 @@ func TestEnsure_PatchesDriftedLabelsPreservingOperatorLabels(t *testing.T) {
 func TestEnsure_LostCreateRaceSurfacesError(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 
 	// Simulate the race: the name is absent at Get time, but Create conflicts.
 	mock.CreateNamespaceError = apierrors.NewAlreadyExists(corev1.Resource("namespaces"), clusterName(row))
@@ -147,7 +147,7 @@ func TestEnsure_LostCreateRaceSurfacesError(t *testing.T) {
 func TestEnsure_NameCollisionReturnsError(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	// A namespace with the target cluster name already exists without our label.
@@ -165,7 +165,7 @@ func TestEnsure_NameCollisionReturnsError(t *testing.T) {
 func TestEnsure_ManagedSiblingDefers(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	// A fundament-managed namespace holds the target name under a different id.
@@ -213,7 +213,7 @@ func newRaceHandler(t *testing.T, racedLabels map[string]string) (*Handler, *sho
 // by reconciling labels — not fail the row.
 func TestEnsure_CreateRaceAdoptsWhenNowOurs(t *testing.T) {
 	t.Parallel()
-	row := testRow("team-a")
+	row := testRow()
 	h, mock := newRaceHandler(t, map[string]string{LabelNamespaceID: row.ID.String()})
 
 	require.NoError(t, h.ensure(context.Background(), row))
@@ -229,7 +229,7 @@ func TestEnsure_CreateRaceAdoptsWhenNowOurs(t *testing.T) {
 // a real collision rather than adopt it.
 func TestEnsure_CreateRaceForeignReportsCollision(t *testing.T) {
 	t.Parallel()
-	row := testRow("team-a")
+	row := testRow()
 	h, _ := newRaceHandler(t, map[string]string{"someone": "else"})
 
 	err := h.ensure(context.Background(), row)
@@ -240,7 +240,7 @@ func TestEnsure_CreateRaceForeignReportsCollision(t *testing.T) {
 func TestDelete_AlreadyGoneIsNoop(t *testing.T) {
 	t.Parallel()
 	h, _ := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 
 	require.NoError(t, h.delete(context.Background(), row))
 }
@@ -248,7 +248,7 @@ func TestDelete_AlreadyGoneIsNoop(t *testing.T) {
 func TestDelete_MatchingLabelDeletes(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, clusterName(row), map[string]string{
@@ -265,7 +265,7 @@ func TestDelete_MatchingLabelDeletes(t *testing.T) {
 func TestDelete_LabelMismatchIsSkipped(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	// Same cluster name, but not ours (different id label).
@@ -288,7 +288,7 @@ const legacyName = "projab3a6357-team-a"
 func TestEnsure_KeepsLegacyNamedNamespace(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	row.ClusterDefaultCpuLimitM = i4(500)
 	ctx := context.Background()
 
@@ -309,7 +309,7 @@ func TestEnsure_KeepsLegacyNamedNamespace(t *testing.T) {
 func TestDelete_RemovesLegacyNamedNamespace(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	ctx := context.Background()
 
 	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{
@@ -326,7 +326,7 @@ func TestDelete_RemovesLegacyNamedNamespace(t *testing.T) {
 func TestEnsure_NewNamespaceUsesReadableName(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a") // project "proj"
+	row := testRow() // project "proj"
 	ctx := context.Background()
 
 	require.NoError(t, h.ensure(ctx, row))

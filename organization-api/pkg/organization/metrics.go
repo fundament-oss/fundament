@@ -427,15 +427,15 @@ func (s *Server) GetOrgWorkloadMetrics(
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
 
-	nsCPU := mergeSamples(allNsCPU, "namespace")
-	nsMem := mergeSamples(allNsMem, "namespace")
-	nsPods := mergeSamples(allNsPods, "namespace")
-	nsCPUReq := mergeSamples(allNsCPUReq, "namespace")
-	nsCPULim := mergeSamples(allNsCPULim, "namespace")
-	nsMemReq := mergeSamples(allNsMemReq, "namespace")
-	nsMemLim := mergeSamples(allNsMemLim, "namespace")
-	nsNetRx := mergeSamples(allNsNetRx, "namespace")
-	nsNetTx := mergeSamples(allNsNetTx, "namespace")
+	nsCPU := mergeSamples(allNsCPU)
+	nsMem := mergeSamples(allNsMem)
+	nsPods := mergeSamples(allNsPods)
+	nsCPUReq := mergeSamples(allNsCPUReq)
+	nsCPULim := mergeSamples(allNsCPULim)
+	nsMemReq := mergeSamples(allNsMemReq)
+	nsMemLim := mergeSamples(allNsMemLim)
+	nsNetRx := mergeSamples(allNsNetRx)
+	nsNetTx := mergeSamples(allNsNetTx)
 
 	return organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
@@ -914,8 +914,9 @@ func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organiza
 }
 
 // mergeSamples merges per-cluster sample sets by summing values with the same
-// label value (e.g. namespace name) across clusters.
-func mergeSamples(allSamples [][]prom.Sample, labelKey string) []prom.Sample {
+// namespace across clusters.
+func mergeSamples(allSamples [][]prom.Sample) []prom.Sample {
+	const labelKey = "namespace"
 	sums := make(map[string]float64)
 	for _, samples := range allSamples {
 		for _, s := range samples {
