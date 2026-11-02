@@ -51,6 +51,24 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /login/methods:
+    get:
+      tags:
+        - Authentication
+      summary: How this deployment signs people in
+      description: |
+        Tells the login page whether to show the password form (/login/password)
+        and whether to offer a button that starts /login at the identity
+        provider, and what that provider is called.
+      operationId: handleLoginMethods
+      responses:
+        "200":
+          description: The login methods
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginMethodsResponse"
+
   /login/password:
     post:
       tags:
@@ -80,6 +98,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Password login is not enabled (the identity provider is not Dex)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
         "500":
@@ -314,6 +338,21 @@ components:
         - organization_ids
         - name
         - groups
+    LoginMethodsResponse:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: boolean
+          description: Whether /login/password works (Dex's static users)
+        provider_name:
+          type: string
+          description: |
+            Name of the identity provider for a "Log in with" button that
+            starts /login. Absent means no button.
+          example: Pleio
+
     PasswordLoginRequest:
       type: object
       required:

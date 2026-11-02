@@ -72,10 +72,27 @@ func (s *AuthnServer) verifyAndParseIDToken(ctx context.Context, rawIDToken stri
 	return &claims, nil
 }
 
+// dropUnverifiedEmail clears an address the identity provider has not
+// verified. Such an address says nothing about who is signing in. Taken at its
+// word, it would claim the pending invite of whoever was invited at it, or end
+// up on a new account where a later `funops organization member add <email>`
+// hands that account the membership. Without it the sign-in goes ahead as one
+// without an email. Dex marks its static password users as verified.
+func (s *AuthnServer) dropUnverifiedEmail(claims *oidcClaims, loginMethod string) {
+	if claims.Email == "" || claims.EmailVerified {
+		return
+	}
+	s.logger.Warn("ignoring unverified email address from identity provider",
+		"login_method", loginMethod, "external_ref", claims.Sub, "email", claims.Email)
+	claims.Email = ""
+}
+
 // processOIDCLogin handles the common logic for processing an OIDC login,
 // including user lookup/creation and JWT generation.
 // Returns the user, groups, and access token on success.
 func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
+	s.dropUnverifiedEmail(claims, loginMethod)
+
 	// Try by external_ref
 	_, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
 		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},

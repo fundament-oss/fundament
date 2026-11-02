@@ -27,7 +27,11 @@ func NewSessionStore(secret []byte) *SessionStore {
 		MaxAge:   600, // 10 minutes for OAuth state
 		HttpOnly: true,
 		Secure:   false, // Set to true in production, this can be set with: ConfigureOptions
-		SameSite: http.SameSiteStrictMode,
+		// Lax, not Strict: the redirect back to /callback starts on the
+		// identity provider's site (Keycloak, Pleio), which makes it a
+		// cross-site navigation. A Strict cookie is withheld from it and every
+		// such login ends in "state not found".
+		SameSite: http.SameSiteLaxMode,
 	}
 	return &SessionStore{store: store}
 }

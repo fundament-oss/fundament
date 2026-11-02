@@ -4,7 +4,13 @@ import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN } from '../connect/tokens';
 import { ConfigService } from './config.service';
 import { client as authnRestClient } from '../generated/authn-api/client.gen';
-import { handlePasswordLogin, handleRefresh, handleLogout } from '../generated/authn-api';
+import {
+  handleLoginMethods,
+  handlePasswordLogin,
+  handleRefresh,
+  handleLogout,
+  type LoginMethodsResponse,
+} from '../generated/authn-api';
 import OrganizationContextService from './organization-context.service';
 
 const COOKIE_REQUEST_TIMEOUT_MS = 10_000;
@@ -63,6 +69,47 @@ export default class AuthnApiService {
 
     // Fetch user info immediately after successful login to populate state
     await this.getUserInfo();
+  }
+
+  /**
+   * How this deployment signs people in: the password form, a button to the
+   * identity provider, or both. When authn-api does not answer, the form: it
+   * is what every deployment had before there was a choice.
+   */
+  async getLoginMethods(): Promise<LoginMethodsResponse> {
+    try {
+      const { data } = await handleLoginMethods({ client: this.restClient });
+      return data ?? { password: true };
+    } catch {
+      return { password: true };
+    }
+  }
+
+  /**
+   * Where a login at the identity provider starts. Unlike the password login
+   * this is a page load: the provider's own pages come in between, and
+   * authn-api sends the visitor to `returnTo` once the cookie is set.
+   */
+  ssoLoginUrl(returnTo: string): string {
+    const query = new URLSearchParams({ return_to: returnTo });
+    return `${this.configService.getConfig().authnApiUrl}/login?${query}`;
+  }
+
+  /**
+   * Called on the way out to an external provider. The page that loads on the
+   * way back only asks authn-api for the session when the hint says there may
+   * be one, and nothing else sets it for this kind of login. If the login is
+   * abandoned instead, the next load asks once and clears it again.
+   */
+  // An instance method so the login page can call it on the injected (and in
+  // tests, faked) service.
+  // eslint-disable-next-line class-methods-use-this
+  expectSessionAfterRedirect(): void {
+    try {
+      localStorage.setItem('auth_hint', 'true');
+    } catch {
+      // Without the hint the visitor lands on the form and logs in again.
+    }
   }
 
   async getUserInfo(): Promise<User | undefined> {

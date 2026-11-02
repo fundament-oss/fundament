@@ -48,6 +48,19 @@ export type User = {
     groups: Array<string>;
 };
 
+export type LoginMethodsResponse = {
+    /**
+     * Whether /login/password works (Dex's static users)
+     */
+    password: boolean;
+    /**
+     * Name of the identity provider for a "Log in with" button that
+     * starts /login. Absent means no button.
+     *
+     */
+    provider_name?: string;
+};
+
 export type PasswordLoginRequest = {
     /**
      * User's email address
@@ -99,6 +112,22 @@ export type HandleLoginErrors = {
 
 export type HandleLoginError = HandleLoginErrors[keyof HandleLoginErrors];
 
+export type HandleLoginMethodsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/login/methods';
+};
+
+export type HandleLoginMethodsResponses = {
+    /**
+     * The login methods
+     */
+    200: LoginMethodsResponse;
+};
+
+export type HandleLoginMethodsResponse = HandleLoginMethodsResponses[keyof HandleLoginMethodsResponses];
+
 export type HandlePasswordLoginData = {
     body: PasswordLoginRequest;
     path?: never;
@@ -115,6 +144,10 @@ export type HandlePasswordLoginErrors = {
      * Unauthorized
      */
     401: ErrorResponse;
+    /**
+     * Password login is not enabled (the identity provider is not Dex)
+     */
+    404: ErrorResponse;
     /**
      * Method not allowed
      */

@@ -1,3 +1,24 @@
+{{- define "fundament.dex.config" -}}
+issuer: {{ $.Values.dex.issuer }}
+storage:
+  type: memory
+web:
+  http: 0.0.0.0:5556
+oauth2:
+  responseTypes: ["code"]
+  skipApprovalScreen: true
+  passwordConnector: local
+{{- if $.Values.dex.staticClients }}
+staticClients:
+  {{- toYaml $.Values.dex.staticClients | nindent 2 }}
+{{- end }}
+enablePasswordDB: true
+{{- if $.Values.dex.staticPasswords }}
+staticPasswords:
+  {{- toYaml $.Values.dex.staticPasswords | nindent 2 }}
+{{- end }}
+{{- end }}
+
 {{- if $.Values.dex.enabled }}
 ---
 apiVersion: v1
@@ -8,24 +29,7 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 4 }}
 data:
   config.yaml: |
-    issuer: {{ $.Values.dex.issuer }}
-    storage:
-      type: memory
-    web:
-      http: 0.0.0.0:5556
-    oauth2:
-      responseTypes: ["code"]
-      skipApprovalScreen: true
-      passwordConnector: local
-    {{- if $.Values.dex.staticClients }}
-    staticClients:
-      {{- toYaml $.Values.dex.staticClients | nindent 6 }}
-    {{- end }}
-    enablePasswordDB: true
-    {{- if $.Values.dex.staticPasswords }}
-    staticPasswords:
-      {{- toYaml $.Values.dex.staticPasswords | nindent 6 }}
-    {{- end }}
+    {{- include "fundament.dex.config" $ | nindent 4 }}
 
 ---
 apiVersion: apps/v1
@@ -42,7 +46,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ $.Values.dex.issuer | sha256sum }}
+        # The whole config, not only the issuer: Dex reads it once at start, so
+        # a new static user or client must roll the pod.
+        checksum/config: {{ include "fundament.dex.config" $ | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "backend") | nindent 8 }}
     spec:

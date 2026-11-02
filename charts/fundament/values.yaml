@@ -115,6 +115,23 @@ authnApi:
   # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets the local
   # plugin sandbox cluster (same Secret plugin-proxy and kube-api-proxy use).
   sandboxKubeconfigSecret: ""
+  # oidc: an external identity provider in place of the chart's Dex, such as
+  # Fundament SSO (Keycloak). Set issuer and turn dex.enabled off. authn-api
+  # then signs everyone in through the provider, behind a "Log in with
+  # <displayName>" button, and the console drops the password form: only Dex
+  # offers the password grant it needs. The provider's client must accept
+  # exactly <externalUrls.authn>/callback as redirect URI.
+  # authn-api stores the provider's `sub` as each user's external_ref, so
+  # switching providers later turns every user into a new identity whose
+  # email is already taken.
+  oidc:
+    issuer: ""            # empty: Dex (dex.issuer)
+    clientId: fundament
+    displayName: ""       # required with an issuer
+    # A confidential client's secret. Name empty: a public client.
+    clientSecretRef:
+      name: ""
+      key: client-secret
   httproute:
     enabled: false
     parentRefs: []
