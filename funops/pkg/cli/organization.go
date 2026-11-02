@@ -260,7 +260,10 @@ func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) 
 				return fmt.Errorf("writing output: %w", err)
 			}
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
 	default:
 		panic(fmt.Sprintf("unknown output format: %s", format))
 	}

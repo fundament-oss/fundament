@@ -365,7 +365,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 
 			if err := sub.Wait(); err != nil {
 				if isPromBadQuery(err) {
-					return err
+					return err //nolint:wrapcheck // already labelled per query
 				}
 				s.logger.WarnContext(gctx, "cluster metrics queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterResult{id: r.id, name: r.name, unavailable: true}
@@ -494,7 +494,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 
 			if err := sub.Wait(); err != nil {
 				if isPromBadQuery(err) {
-					return err
+					return err //nolint:wrapcheck // already labelled per query
 				}
 				s.logger.WarnContext(gctx, "cluster time-series queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterTSResult{}
@@ -745,7 +745,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 func querySingleValue(ctx context.Context, client prom.Client, query string, t time.Time) (float64, error) {
 	samples, err := client.Query(ctx, query, t)
 	if err != nil {
-		return 0, err
+		return 0, err //nolint:wrapcheck // callers label the query
 	}
 	if len(samples) == 0 {
 		return 0, nil
@@ -1111,16 +1111,19 @@ func (s *Server) sendOrgSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:      workload.GetTotals(),
 		Clusters:    workload.GetClusters(),
 		Namespaces:  workload.GetNamespaces(),
 		TimeSeries:  ts,
 		RefreshedAt: timestamppb.Now(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) sendClusterSnapshot(
@@ -1153,17 +1156,20 @@ func (s *Server) sendClusterSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Nodes:              workload.GetNodes(),
 		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) sendProjectSnapshot(
@@ -1196,16 +1202,19 @@ func (s *Server) sendProjectSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 // resolveStreamTimeRange computes start/end/step for a streaming snapshot.

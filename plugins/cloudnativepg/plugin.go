@@ -117,7 +117,7 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	kube, err := p.newClient()
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
-		return pluginerrors.NewPermanent(err)
+		return pluginerrors.NewPermanent(err) //nolint:wrapcheck // newClient already names the failure; NewPermanent only marks it
 	}
 	data, err := os.ReadFile(p.catalogPath)
 	if err == nil {

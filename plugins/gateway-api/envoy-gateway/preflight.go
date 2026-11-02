@@ -26,7 +26,7 @@ type serverVersioner interface {
 
 // newDiscoveryClient builds a discovery client from the rest config.
 func newDiscoveryClient(cfg *rest.Config) (*discovery.DiscoveryClient, error) {
-	return discovery.NewDiscoveryClientForConfig(cfg)
+	return discovery.NewDiscoveryClientForConfig(cfg) //nolint:wrapcheck // Start wraps it with context
 }
 
 // checkKubernetesVersion fails fast, with an actionable message, when the cluster

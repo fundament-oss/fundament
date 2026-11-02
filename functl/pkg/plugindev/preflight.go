@@ -52,7 +52,10 @@ const deployFix = "run `just plugins deploy` from a fundament checkout"
 func DockerInfo() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return exec.CommandContext(ctx, "docker", "info").Run()
+	if err := exec.CommandContext(ctx, "docker", "info").Run(); err != nil {
+		return fmt.Errorf("docker info: %w", err)
+	}
+	return nil
 }
 
 // CheckTools verifies the required local tools exist and docker is running.
@@ -105,7 +108,7 @@ func CheckCluster(ctx context.Context, c Cluster, t Target, functlOrgID string) 
 
 	env, err := c.ControllerEnv(ctx)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 	if env["PLUGIN_CONTROLLER_ALLOW_DEV_MODE"] != "true" {
 		return fail("the plugin controller does not allow dev mode", deployFix)
@@ -178,7 +181,7 @@ func WaitGone(ctx context.Context, c Cluster, name string, out io.Writer, interv
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("wait for teardown of %s: %w", name, ctx.Err())
 		case <-deadline.C:
 			return fmt.Errorf("timed out after %s waiting for the controller to tear down %s; check the plugin controller logs", timeout, name)
 		case <-tick.C:
@@ -212,7 +215,7 @@ func DevDown(ctx context.Context, c Cluster, name string, out io.Writer, interva
 		return notDevError(name)
 	}
 	if err := c.DeleteInstallation(ctx, name); err != nil {
-		return err
+		return fmt.Errorf("remove dev installation: %w", err)
 	}
 	if err := WaitGone(ctx, c, name, out, interval, timeout); err != nil {
 		return err

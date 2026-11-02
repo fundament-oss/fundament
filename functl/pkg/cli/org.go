@@ -56,7 +56,10 @@ func (c *OrgListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // OrgSetCmd handles selecting the active organization.
@@ -93,7 +96,7 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 	cfg.Organization = match.GetId()
 	if err := config.SaveConfig(cfg); err != nil {
@@ -111,7 +114,7 @@ type OrgUnsetCmd struct{}
 func (c *OrgUnsetCmd) Run(ctx *Context) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	if cfg.Organization == "" {

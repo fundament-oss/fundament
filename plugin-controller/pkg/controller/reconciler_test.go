@@ -1073,7 +1073,7 @@ type mockPluginHandler struct {
 
 func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 	if m.handlers.requestUninstall == nil {
-		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req)
+		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req) //nolint:wrapcheck // test double passes through
 	}
 	return m.handlers.requestUninstall(ctx, req)
 }

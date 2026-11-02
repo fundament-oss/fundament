@@ -63,7 +63,10 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 				created,
 			)
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
 	}
 
 	// List by project
@@ -99,7 +102,10 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // NamespaceCreateCmd handles the namespace create command.

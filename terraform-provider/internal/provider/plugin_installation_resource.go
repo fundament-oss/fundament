@@ -704,12 +704,12 @@ func (r *PluginInstallationResource) resourceURL(clusterID, name string) string 
 func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, name string) (*pluginInstallationCRD, error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, name), http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	httpResp, err := r.client.KubeProxyHTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get plugin installation: %w", err)
 	}
 	defer func() { _ = httpResp.Body.Close() }()
 
@@ -720,7 +720,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 
 	var crd pluginInstallationCRD
 	if err := json.NewDecoder(httpResp.Body).Decode(&crd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode plugin installation: %w", err)
 	}
 
 	return &crd, nil

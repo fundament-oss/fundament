@@ -25,7 +25,10 @@ const TimeFormat = "2006-01-02T15:04:05Z07:00"
 func PrintJSON(v any) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	return enc.Encode(v)
+	if err := enc.Encode(v); err != nil {
+		return fmt.Errorf("encoding JSON output: %w", err)
+	}
+	return nil
 }
 
 // NewTableWriter creates a new tabwriter for formatted table output.

@@ -42,7 +42,7 @@ func Test_Plugins_RLS_Policies(t *testing.T) {
 		_, err := conn.Exec(t.Context(),
 			"INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash) VALUES ($1, 'v1', $2, 'sha256:x')",
 			pluginID, []byte("m"))
-		return err
+		return err //nolint:wrapcheck // isRLSDenied inspects the raw pg error
 	}
 	isRLSDenied := func(err error) bool {
 		var pgErr *pgconn.PgError

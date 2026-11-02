@@ -63,7 +63,10 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // OrgMemberInviteCmd handles inviting a member to the organization.

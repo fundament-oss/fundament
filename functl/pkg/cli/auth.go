@@ -46,7 +46,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 	// Validate the API key by trying to get user info
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL, "")
@@ -60,7 +60,7 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 		APIKey: apiKey,
 	}
 	if err := config.SaveCredentials(creds); err != nil {
-		return err
+		return fmt.Errorf("failed to save credentials: %w", err)
 	}
 
 	fmt.Printf("Logged in as %s\n", resp.GetUser().GetName())
@@ -86,7 +86,7 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	// Try to get user info
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, "")
@@ -133,7 +133,7 @@ type AuthLogoutCmd struct{}
 // Run executes the logout command.
 func (c *AuthLogoutCmd) Run(ctx *Context) error {
 	if err := config.DeleteCredentials(); err != nil {
-		return err
+		return fmt.Errorf("failed to delete credentials: %w", err)
 	}
 	fmt.Println("Logged out successfully")
 	return nil

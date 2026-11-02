@@ -144,7 +144,7 @@ func (m *MockShootAccess) CreateNamespace(_ context.Context, clusterID uuid.UUID
 	if _, ok := m.Namespaces[clusterID][name]; ok {
 		// Mirror the real client: Create on an existing name is a conflict, not a
 		// no-op. The handler relies on this to detect a lost create race.
-		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name)
+		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name) //nolint:wrapcheck // mock mirrors the real client's raw apierrors AlreadyExists
 	}
 	m.Namespaces[clusterID][name] = ResourceInfo{Name: name, Labels: maps.Clone(labels)}
 	m.logger.Debug("MOCK: created namespace", "cluster_id", clusterID, "namespace", name)

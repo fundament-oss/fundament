@@ -70,7 +70,10 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 			revoked,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // APIKeyCreateCmd handles the apikey create command.

@@ -77,13 +77,13 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 	idToken, err := s.oidcVerifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
 		s.logger.Info("ID token verification failed", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("verify ID token: %w", err)
 	}
 
 	var claims oidcClaims
 	if err := idToken.Claims(&claims); err != nil {
 		s.logger.Error("failed to parse claims", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("parse ID token claims: %w", err)
 	}
 
 	return &claims, nil

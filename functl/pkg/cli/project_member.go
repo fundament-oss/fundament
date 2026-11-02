@@ -63,7 +63,10 @@ func (c *ProjectMemberListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // ProjectMemberAddCmd handles adding a member to a project.

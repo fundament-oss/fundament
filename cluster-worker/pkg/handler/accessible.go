@@ -51,5 +51,5 @@ func ReconcileAccessible(
 		logger.ErrorContext(ctx, "failed to reconcile cluster", "cluster_id", cluster.ID, "error", err)
 		errs = append(errs, err)
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...) //nolint:wrapcheck // aggregates the per-cluster errors unchanged
 }

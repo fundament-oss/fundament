@@ -112,7 +112,10 @@ func EnsureConfigDir() error {
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(dir, 0o700)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	return nil
 }
 
 // LoadConfig loads the configuration from the config file.

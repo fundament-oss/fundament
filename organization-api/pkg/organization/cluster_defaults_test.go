@@ -73,7 +73,7 @@ func (d *defaultsEnv) setClusterDefaults(t *testing.T, defaults *organizationv1.
 	_, err := d.clusters.UpdateClusterDefaults(d.ctx(), organizationv1.UpdateClusterDefaultsRequest_builder{
 		ClusterId: d.clusterID, Defaults: defaults,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func (d *defaultsEnv) setProjectDefaults(t *testing.T, defaults *organizationv1.ContainerDefaults) error {
@@ -81,7 +81,7 @@ func (d *defaultsEnv) setProjectDefaults(t *testing.T, defaults *organizationv1.
 	_, err := d.projects.UpdateProjectDefaults(d.ctx(), organizationv1.UpdateProjectDefaultsRequest_builder{
 		ProjectId: d.projectID, Defaults: defaults,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func (d *defaultsEnv) clusterDefaults(t *testing.T) *organizationv1.GetClusterDefaultsResponse {

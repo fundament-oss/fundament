@@ -34,5 +34,5 @@ type sandboxClient struct {
 // ResolvePluginSA delegates to the shared resolver so the sandbox matches the
 // production path exactly. clusterID is ignored — every cluster is the sandbox.
 func (s *sandboxClient) ResolvePluginSA(ctx context.Context, _, installationID, installationName string) (*gardener.PluginSAToken, error) {
-	return gardener.ResolvePluginSAFromRESTConfig(ctx, s.restConfig, installationID, installationName)
+	return gardener.ResolvePluginSAFromRESTConfig(ctx, s.restConfig, installationID, installationName) //nolint:wrapcheck // passthrough so the sandbox matches the production path
 }

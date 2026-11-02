@@ -42,5 +42,5 @@ type sandboxClient struct {
 // delegates to the shared SAR helper so the sandbox matches the production path
 // exactly.
 func (s *sandboxClient) SubjectAccessReview(ctx context.Context, _ string, user string, groups []string, attrs authorizationv1.ResourceAttributes) (bool, error) {
-	return gardener.SubjectAccessReviewWithClientset(ctx, s.cs, user, groups, attrs)
+	return gardener.SubjectAccessReviewWithClientset(ctx, s.cs, user, groups, attrs) //nolint:wrapcheck // passthrough so the sandbox matches the production path
 }

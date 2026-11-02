@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -40,7 +41,7 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	token, err := t.TokenSource.GetToken(req.Context())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get token: %w", err)
 	}
 
 	if token != "" {
@@ -55,7 +56,7 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-	return transport.RoundTrip(reqClone)
+	return transport.RoundTrip(reqClone) //nolint:wrapcheck // decorating RoundTripper passes the inner transport's error through
 }
 
 // tokenTransport is an http.RoundTripper that adds only a Bearer token — no org header.
@@ -69,7 +70,7 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	clone := req.Clone(req.Context())
 	token, err := t.tokenSource.GetToken(req.Context())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get token: %w", err)
 	}
 	if token != "" {
 		clone.Header.Set("Authorization", "Bearer "+token)
@@ -78,7 +79,7 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if tr == nil {
 		tr = http.DefaultTransport
 	}
-	return tr.RoundTrip(clone)
+	return tr.RoundTrip(clone) //nolint:wrapcheck // decorating RoundTripper passes the inner transport's error through
 }
 
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.

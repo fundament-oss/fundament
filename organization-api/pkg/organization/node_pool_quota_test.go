@@ -38,7 +38,7 @@ func (q *quotaEnv) createNodePool(clusterID, name, machineType string, maxNodes 
 		AutoscaleMax: maxNodes,
 	}.Build())
 	if err != nil {
-		return "", err
+		return "", err //nolint:wrapcheck // tests assert on the raw connect error
 	}
 	return res.GetNodePoolId(), nil
 }
@@ -49,7 +49,7 @@ func (q *quotaEnv) updateNodePool(nodePoolID string, minNodes, maxNodes int32) e
 		AutoscaleMin: minNodes,
 		AutoscaleMax: maxNodes,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func (q *quotaEnv) livePools(t *testing.T) int {

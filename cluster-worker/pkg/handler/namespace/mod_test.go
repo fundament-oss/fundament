@@ -193,11 +193,11 @@ func (s *raceCreateShoot) CreateNamespace(ctx context.Context, clusterID uuid.UU
 		s.fired = true
 		// The racer wins: store their namespace, then fail our own create.
 		if err := s.MockShootAccess.CreateNamespace(ctx, clusterID, name, s.racedLabels); err != nil {
-			return err
+			return err //nolint:wrapcheck // test double passes through
 		}
-		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name)
+		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name) //nolint:wrapcheck // test double returns the raw apierrors AlreadyExists the handler checks
 	}
-	return s.MockShootAccess.CreateNamespace(ctx, clusterID, name, labels)
+	return s.MockShootAccess.CreateNamespace(ctx, clusterID, name, labels) //nolint:wrapcheck // test double passes through
 }
 
 func newRaceHandler(t *testing.T, racedLabels map[string]string) (*Handler, *shoot.MockShootAccess) {

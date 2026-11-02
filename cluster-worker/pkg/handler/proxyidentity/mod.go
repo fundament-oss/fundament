@@ -58,7 +58,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 		err := h.Provision(ctx, id)
 		// Announced before its API server answers from here: wait for it.
 		if shoot.IsUnreachable(err) {
-			return handler.NewShootUnreachableError(err)
+			return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 		}
 		return err
 	default:

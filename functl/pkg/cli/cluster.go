@@ -52,7 +52,10 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 			cluster.GetRegion(),
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // ClusterGetCmd handles the cluster get command.
@@ -131,7 +134,10 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 			)
 		}
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // formatClusterStatus formats a cluster status for display.

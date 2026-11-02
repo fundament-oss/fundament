@@ -115,13 +115,13 @@ func run() error {
 	mockClient := prom.NewMockClient(func(ctx context.Context) ([]prom.ClusterInfo, error) {
 		rows, err := q.ClusterList(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("list clusters: %w", err)
 		}
 		clusters := make([]prom.ClusterInfo, 0, len(rows))
 		for _, row := range rows {
 			pools, err := q.NodePoolListByClusterID(ctx, dbgen.NodePoolListByClusterIDParams{ClusterID: row.ID})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("list node pools: %w", err)
 			}
 			nodePools := make([]prom.NodePoolInfo, 0, len(pools))
 			for _, p := range pools {
@@ -154,7 +154,7 @@ func run() error {
 	cbfn := func(ctx context.Context) (bool, error) {
 		lag, err := q.AuthzOutboxLagSeconds(ctx)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("query authz outbox lag: %w", err)
 		}
 		return lag > cfg.CircuitBreakerThreshold.Seconds(), nil
 	}

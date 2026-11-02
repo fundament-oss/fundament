@@ -51,7 +51,7 @@ type authTransport struct {
 func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	req.Header.Set("Authorization", "Bearer "+t.token)
-	return t.base.RoundTrip(req)
+	return t.base.RoundTrip(req) //nolint:wrapcheck // RoundTripper passthrough
 }
 
 func (e *testEnv) client() *http.Client {

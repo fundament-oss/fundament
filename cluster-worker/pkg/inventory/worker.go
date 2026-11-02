@@ -197,7 +197,7 @@ func (w *Worker) recordError(ctx context.Context, clusterID uuid.UUID, err error
 		LastError:   pgtype.Text{String: truncate(err.Error(), maxErrorLength), Valid: true},
 		LastErrorAt: pgtype.Timestamptz{Time: w.clock(), Valid: true},
 	}); recordErr != nil {
-		return errors.Join(err, fmt.Errorf("record error: %w", recordErr))
+		return errors.Join(err, fmt.Errorf("record error: %w", recordErr)) //nolint:wrapcheck // joins the collection error with the wrapped record error
 	}
 	return err
 }
