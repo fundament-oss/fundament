@@ -239,7 +239,7 @@ consoleFrontend:
     #  - console.example.com
 
 # Console walkthrough (demo build on in-memory data; no backend required).
-# Not enabled in production — see values-production.yaml.
+# Not enabled in production — see values-example-prod.yaml.
 consoleDemoFrontend:
   enabled: false
   replicas: 1
