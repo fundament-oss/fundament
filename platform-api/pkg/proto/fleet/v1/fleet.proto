@@ -1,0 +1,311 @@
+edition = "2023";
+
+package fleet.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1;fleetv1";
+
+// FleetService is the staff view of every organization's clusters (FUN-23).
+// It accepts only the DCIM staff token and runs on the admin host. It reads the
+// database and nothing else: node, pod and namespace numbers come from the
+// snapshots cluster-worker stores, and drift from the findings its reconcile
+// loop records. Deleted organizations, clusters, node pools, projects and
+// namespaces are left out everywhere except in drift findings, and so is the
+// system organization, which is no tenant.
+//
+// The list RPCs are paged: page_size is capped at 500 and defaults to 100, and
+// a response carries next_page_token while more may follow.
+service FleetService {
+  // Platform-wide totals for the overview tiles.
+  rpc GetFleetSummary(GetFleetSummaryRequest) returns (GetFleetSummaryResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Live organizations with their aggregates, by alias.
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // One live organization with its aggregates.
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Live clusters, optionally of one organization and narrowed by a filter,
+  // by organization alias and cluster name.
+  rpc ListClusters(ListClustersRequest) returns (ListClustersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // One live cluster with its node pools, projects and namespaces.
+  rpc GetCluster(GetClusterRequest) returns (GetClusterResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Open disagreements between the database and Gardener, by kind and then
+  // oldest first.
+  rpc ListDriftFindings(ListDriftFindingsRequest) returns (ListDriftFindingsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+// ClusterStatus is the status the console shows for the same cluster: both
+// derive it with common/clusterstatus. Values mirror organization.v1.
+enum ClusterStatus {
+  CLUSTER_STATUS_UNSPECIFIED = 0;
+  CLUSTER_STATUS_PROVISIONING = 10;
+  CLUSTER_STATUS_RUNNING = 20;
+  // Running while an update fundament pushed rolls out.
+  CLUSTER_STATUS_UPGRADING = 30;
+  CLUSTER_STATUS_ERROR = 40;
+  CLUSTER_STATUS_DELETING = 50;
+  CLUSTER_STATUS_STOPPED = 60;
+  // Ready, while the first health checks have not passed yet.
+  CLUSTER_STATUS_STARTING = 70;
+  CLUSTER_STATUS_UNHEALTHY = 80;
+  // The shoot disappeared from Gardener after it was seen.
+  CLUSTER_STATUS_LOST = 90;
+}
+
+enum ClusterFilter {
+  CLUSTER_FILTER_UNSPECIFIED = 0;
+  CLUSTER_FILTER_ALL = 10;
+  // Unhealthy, in error, or lost.
+  CLUSTER_FILTER_UNHEALTHY = 20;
+  // Ready, with no snapshot or a stale one (ClusterSummary.stale).
+  CLUSTER_FILTER_STALE = 30;
+}
+
+// DriftKind is a disagreement between the database and Gardener that
+// cluster-worker's reconcile loop observed and recorded.
+enum DriftKind {
+  reserved 40;
+  reserved DRIFT_KIND_SNAPSHOT_STALE;
+  DRIFT_KIND_UNSPECIFIED = 0;
+  // Gardener has a shoot whose cluster id matches no cluster at all.
+  DRIFT_KIND_SHOOT_WITHOUT_CLUSTER = 10;
+  // Gardener still has the shoot of a deleted cluster. Usually short-lived:
+  // the reconcile loop deletes orphaned shoots.
+  DRIFT_KIND_SHOOT_OF_DELETED_CLUSTER = 20;
+  // A cluster whose latest sync completed has no shoot.
+  DRIFT_KIND_CLUSTER_WITHOUT_SHOOT = 30;
+  // A ready cluster that is not updating runs another Kubernetes minor
+  // version than the database holds. Patch versions are not compared:
+  // Gardener's maintenance moves them on its own.
+  DRIFT_KIND_KUBERNETES_VERSION_MISMATCH = 50;
+  // Gardener has a shoot whose fundament.io/cluster-id label is no id.
+  DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID = 60;
+}
+
+// WorkerHeartbeat is when one of cluster-worker's periodic loops last
+// completed a pass, and how often it runs.
+message WorkerHeartbeat {
+  google.protobuf.Timestamp last_pass = 10;
+  int32 interval_seconds = 20;
+}
+
+message FleetSummary {
+  int32 organizations = 10;
+  int32 clusters = 20;
+  int32 clusters_unhealthy = 30;
+  int32 clusters_updating = 40;
+  int32 nodes = 50;
+  int32 nodes_ready = 60;
+  int32 pods = 70;
+  int32 pod_allocatable = 80;
+  int64 cpu_allocatable_m = 90;
+  int64 memory_allocatable_mi = 100;
+  reserved 130, 140;
+  reserved gardener_inventory_refreshed, stale_after_seconds;
+  // Open drift findings.
+  int32 drift_findings = 110;
+  // Clusters with ClusterSummary.stale set.
+  int32 stale_snapshots = 120;
+  // The reconcile loop, which records the drift findings; absent before its
+  // first pass. Findings are only as current as its last pass.
+  WorkerHeartbeat reconcile = 150;
+  // The inventory loop, which collects the snapshots; absent before its first
+  // pass, or when collection is off.
+  WorkerHeartbeat inventory = 160;
+  // How old a snapshot may get before it counts as stale: three inventory
+  // intervals. Zero while the inventory loop has not run.
+  int32 snapshot_stale_after_seconds = 170;
+}
+
+message OrganizationSummary {
+  string id = 10;
+  string name = 20;
+  string alias = 30;
+  google.protobuf.Timestamp created = 40;
+  int32 clusters = 60;
+  int32 clusters_unhealthy = 70;
+  int32 nodes = 80;
+  int32 nodes_ready = 90;
+  int32 pods = 100;
+  int32 namespaces = 110;
+}
+
+// ClusterSnapshot is the latest observation cluster-worker stored. observed is
+// absent when every collection so far has failed.
+message ClusterSnapshot {
+  google.protobuf.Timestamp observed = 10 [features.field_presence = EXPLICIT];
+  int32 nodes = 20;
+  int32 nodes_ready = 30;
+  int32 pods = 40;
+  int32 pod_allocatable = 50;
+  int64 cpu_allocatable_m = 60;
+  int64 memory_allocatable_mi = 70;
+  // The last collection error; cleared by the next successful collection.
+  string last_error = 80 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp last_error_at = 90 [features.field_presence = EXPLICIT];
+}
+
+message ClusterSummary {
+  string id = 10;
+  string organization_id = 20;
+  string organization_name = 30;
+  string name = 40;
+  string region = 50;
+  reserved 80;
+  reserved health;
+  string kubernetes_version = 60;
+  ClusterStatus status = 70;
+  string status_message = 90;
+  google.protobuf.Timestamp created = 100;
+  int32 node_pools = 110;
+  // Sums of the live node pools' autoscaler bounds.
+  int32 nodes_min = 120;
+  int32 nodes_max = 130;
+  // Absent until cluster-worker first tried to collect this cluster.
+  ClusterSnapshot snapshot = 140;
+  // Ready with no snapshot, or one older than three inventory intervals. A
+  // cluster that turned ready less than that ago is given time for its first
+  // collection.
+  bool stale = 150;
+}
+
+message NodePool {
+  string id = 10;
+  string name = 20;
+  string machine_type = 30;
+  int32 autoscale_min = 40;
+  int32 autoscale_max = 50;
+  int32 nodes = 60;
+  int32 nodes_ready = 70;
+  google.protobuf.Timestamp observed = 80 [features.field_presence = EXPLICIT];
+}
+
+message Namespace {
+  string id = 10;
+  string name = 20;
+  int32 pods = 30;
+  google.protobuf.Timestamp observed = 40 [features.field_presence = EXPLICIT];
+}
+
+message Project {
+  string id = 10;
+  string name = 20;
+  string alias = 30;
+  repeated Namespace namespaces = 40;
+}
+
+// GardenerShoot is what cluster-worker last saw of the cluster's shoot.
+message GardenerShoot {
+  string name = 10;
+  string namespace = 20;
+  string kubernetes_version = 30;
+  string region = 40;
+  google.protobuf.Timestamp created = 50;
+  google.protobuf.Timestamp last_seen = 60;
+}
+
+message DriftFinding {
+  reserved 80;
+  reserved since;
+  string id = 120;
+  DriftKind kind = 10;
+  // Absent when the cluster id matches no cluster.
+  string organization_id = 20 [features.field_presence = EXPLICIT];
+  string organization_name = 30 [features.field_presence = EXPLICIT];
+  // Absent when the shoot's label is no cluster id.
+  string cluster_id = 40 [features.field_presence = EXPLICIT];
+  string cluster_name = 50 [features.field_presence = EXPLICIT];
+  string shoot_name = 60 [features.field_presence = EXPLICIT];
+  string shoot_namespace = 70 [features.field_presence = EXPLICIT];
+  // The first reconcile pass that saw the disagreement.
+  google.protobuf.Timestamp first_detected = 100;
+  // The latest pass that saw it.
+  google.protobuf.Timestamp last_detected = 110;
+  string detail = 90;
+}
+
+message GetFleetSummaryRequest {}
+
+message GetFleetSummaryResponse {
+  FleetSummary summary = 10;
+}
+
+message ListOrganizationsRequest {
+  // Above 500 is read as 500; zero is 100.
+  int32 page_size = 10 [(buf.validate.field).int32.gte = 0];
+  // A next_page_token from an earlier response, or empty for the first page.
+  string page_token = 20;
+}
+
+message ListOrganizationsResponse {
+  repeated OrganizationSummary organizations = 10;
+  // Empty on the last page.
+  string next_page_token = 20;
+}
+
+message GetOrganizationRequest {
+  string organization_id = 10 [(buf.validate.field).string.uuid = true];
+}
+
+message GetOrganizationResponse {
+  OrganizationSummary organization = 10;
+}
+
+message ListClustersRequest {
+  string organization_id = 10 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.uuid = true
+  ];
+  ClusterFilter filter = 20 [(buf.validate.field).enum.defined_only = true];
+  // Above 500 is read as 500; zero is 100.
+  int32 page_size = 30 [(buf.validate.field).int32.gte = 0];
+  // A next_page_token from an earlier response with the same organization_id
+  // and filter, or empty for the first page.
+  string page_token = 40;
+}
+
+message ListClustersResponse {
+  repeated ClusterSummary clusters = 10;
+  // Empty on the last page.
+  string next_page_token = 20;
+}
+
+message GetClusterRequest {
+  string cluster_id = 10 [(buf.validate.field).string.uuid = true];
+}
+
+message GetClusterResponse {
+  ClusterSummary cluster = 10;
+  // Absent when cluster-worker has not seen a shoot for this cluster.
+  GardenerShoot shoot = 30;
+  repeated NodePool node_pools = 40;
+  repeated Project projects = 50;
+}
+
+message ListDriftFindingsRequest {
+  // Above 500 is read as 500; zero is 100.
+  int32 page_size = 10 [(buf.validate.field).int32.gte = 0];
+  // A next_page_token from an earlier response, or empty for the first page.
+  string page_token = 20;
+}
+
+message ListDriftFindingsResponse {
+  repeated DriftFinding findings = 10;
+  // Empty on the last page.
+  string next_page_token = 20;
+}

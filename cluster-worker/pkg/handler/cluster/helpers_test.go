@@ -86,6 +86,11 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 func newTestHandlerWithConfig(t *testing.T, db *testDB, mock *gardener.MockClient, cfg cluster.Config) *cluster.Handler {
 	t.Helper()
 
+	// The app sets it from the reconcile loop's config; a pass is recorded
+	// with it.
+	if cfg.ReconcileInterval == 0 {
+		cfg.ReconcileInterval = 5 * time.Minute
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }

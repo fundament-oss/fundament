@@ -384,6 +384,8 @@ SELECT
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.kubernetes_version,
     tenant.organizations.name AS organization_name,
     COALESCE((
         SELECT tenant.cluster_outbox.status
@@ -407,6 +409,8 @@ type ClusterListActiveRow struct {
 	Name                string
 	Deleted             pgtype.Timestamptz
 	ShootStatus         pgtype.Text
+	ShootUpdating       bool
+	KubernetesVersion   string
 	OrganizationName    string
 	LatestSyncCompleted bool
 }
@@ -416,6 +420,7 @@ type ClusterListActiveRow struct {
 // missing Shoot is not one a queued or failing sync has yet to create. "Latest
 // sync row" is the cluster_sync_state view's row
 // (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
+// The version and update flag feed the drift findings reconcile records.
 func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
 	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
@@ -430,6 +435,8 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 			&i.Name,
 			&i.Deleted,
 			&i.ShootStatus,
+			&i.ShootUpdating,
+			&i.KubernetesVersion,
 			&i.OrganizationName,
 			&i.LatestSyncCompleted,
 		); err != nil {

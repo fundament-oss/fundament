@@ -1,0 +1,49 @@
+edition = "2023";
+
+package platform.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/platform/v1;platformv1";
+
+// OverviewService serves the public platform page (FUN-23). It is anonymous
+// and reads only through tenant.platform_overview(), so it returns
+// organization names and live counts and nothing else: no ids, and no cluster,
+// project or namespace names.
+service OverviewService {
+  // The platform totals and one row per live organization. Cacheable: the
+  // console calls it over HTTP GET and the response may be up to a minute old.
+  rpc GetPlatformOverview(GetPlatformOverviewRequest) returns (GetPlatformOverviewResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetPlatformOverviewRequest {}
+
+message GetPlatformOverviewResponse {
+  PlatformTotals totals = 10;
+  // Ordered by alias, then name.
+  repeated OrganizationOverview organizations = 20;
+  // When the counts were read from the database.
+  google.protobuf.Timestamp generated_at = 30;
+}
+
+message PlatformTotals {
+  int32 organizations = 10;
+  int32 clusters = 20;
+  int32 projects = 30;
+  int32 namespaces = 40;
+}
+
+// OrganizationOverview counts live clusters, projects and namespaces; a
+// project or namespace under a deleted parent does not count.
+message OrganizationOverview {
+  string name = 10;
+  string alias = 20;
+  int32 clusters = 30;
+  int32 projects = 40;
+  int32 namespaces = 50;
+}

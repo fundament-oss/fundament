@@ -34,7 +34,7 @@ import (
 // records the fundament-side name as informational metadata so operators can
 // correlate the resource back to fundament without parsing the generated name.
 const (
-	LabelNamespaceID    = "fundament.io/namespace-id"
+	LabelNamespaceID    = shoot.LabelNamespaceID
 	LabelNamespaceName  = "fundament.io/namespace-name"
 	LabelProjectID      = shootidentity.LabelProjectID
 	LabelOrganizationID = "fundament.io/organization-id"

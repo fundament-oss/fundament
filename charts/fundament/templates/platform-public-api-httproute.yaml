@@ -1,0 +1,18 @@
+{{- if and $.Values.platformPublicApi.enabled $.Values.platformPublicApi.httproute.enabled }}
+{{- if not $.Values.platformPublicApi.httproute.parentRefs }}{{ fail "platformPublicApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-platform-public-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "platform-public-api" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.platformPublicApi.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.platformPublicApi.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: platform-public-api
+          port: 8080
+{{- end }}

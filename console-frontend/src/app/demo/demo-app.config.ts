@@ -8,6 +8,7 @@ import {
   MARKETPLACE_TRANSPORT,
   INSTALL_TRANSPORT,
   ORGANIZATION_TRANSPORT,
+  PLATFORM_TRANSPORT,
 } from '../../connect/connect.module';
 import { PRESENTATION_ENABLED } from '../presentation/presentation.tokens';
 import createDemoTransport from './mock-transport';
@@ -36,6 +37,7 @@ const demoConfig: AppConfiguration = {
   authnApiUrl: 'demo://authn',
   organizationApiUrl: 'demo://organization',
   marketplaceApiUrl: 'demo://marketplace',
+  platformApiUrl: 'demo://platform',
   kubeApiProxyUrl: 'demo://kube',
   pluginProxyUrl: 'demo://plugin-proxy',
   marketplaceUrl: `${window.location.origin}/marketplace/#`,
@@ -88,6 +90,7 @@ const demoAppConfig: ApplicationConfig = {
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: MARKETPLACE_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: INSTALL_TRANSPORT, useFactory: () => createDemoTransport() },
+    { provide: PLATFORM_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: PRESENTATION_ENABLED, useValue: true },
   ],
 };

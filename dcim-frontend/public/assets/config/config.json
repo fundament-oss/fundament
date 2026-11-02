@@ -1,4 +1,5 @@
 {
   "authnApiUrl": "",
-  "apiUrl": ""
+  "apiUrl": "",
+  "platformApiUrl": ""
 }

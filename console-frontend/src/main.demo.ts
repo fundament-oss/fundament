@@ -2,7 +2,7 @@
 // mounts the walkthrough overlay. Never imported by the production entrypoint (main.ts).
 import { bootstrapApplication } from '@angular/platform-browser';
 import { createComponent } from '@angular/core';
-import App from './app/app';
+import App, { isBarePageUrl } from './app/app';
 import demoAppConfig from './app/demo/demo-app.config';
 import PresentationOverlayComponent from './app/presentation/presentation-overlay.component';
 import PresentationService from './app/presentation/presentation.service';
@@ -27,7 +27,11 @@ bootstrapApplication(App, demoAppConfig)
     // The deck's arrow keys are not the console's, so a sheet they open is not
     // ringed as though the viewer had tabbed to it.
     enableSheetFocusRingSuppression();
-    appRef.injector.get(PresentationService).initFromUrl();
+    // A bare page (the public platform overview, login) is opened for itself,
+    // not as the first slide of a tour.
+    if (!isBarePageUrl(window.location.pathname)) {
+      appRef.injector.get(PresentationService).initFromUrl();
+    }
   })
   // eslint-disable-next-line no-console
   .catch((err) => console.error(err));
