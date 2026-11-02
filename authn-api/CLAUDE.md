@@ -87,7 +87,7 @@ Optional with defaults:
 - `OIDC_DISCOVERY_URL` (defaults to OIDC_ISSUER) - Internal URL for OIDC discovery in k8s
 - `OIDC_CLIENT_ID` (authn-api)
 - `OIDC_CLIENT_SECRET` - for a confidential client (Fundament SSO / Keycloak); empty for Dex's public client
-- `OIDC_SCOPES` (openid,profile,email,groups) - an external provider leaves out `groups`, which Keycloak does not define
+- `OIDC_SCOPES` (openid,profile,email,groups) - set it for an external provider, as the Helm chart does (`authnApi.oidc.scopes`, default openid,profile,email): Keycloak refuses `groups`, which it does not define
 - `OIDC_DISPLAY_NAME` - name on the console's "Log in with" button; empty means no button
 - `PASSWORD_LOGIN_ENABLED` (true) - serves `/login/password`; false with an external provider, which then needs `OIDC_DISPLAY_NAME`
 - `OIDC_REDIRECT_URL` (https://authn.fundament.localhost:8443/callback)

@@ -71,9 +71,14 @@ async function openLogin(signedIn: boolean, methods: LoginMethodsResponse = { pa
   };
 }
 
-/** The page as rendered once `ngOnInit` has loaded the login methods. */
+/**
+ * The page as rendered once `ngOnInit` has loaded the login methods. The first
+ * `detectChanges` runs `ngOnInit`; nothing Angular tracks waits for the
+ * promise it returns, so the wait is for what it sets.
+ */
 async function render(fixture: ComponentFixture<LoginComponent>) {
-  await fixture.componentInstance.ngOnInit();
+  fixture.detectChanges();
+  await vi.waitFor(() => expect(fixture.componentInstance.methods()).not.toBeNull());
   fixture.detectChanges();
   const page = fixture.nativeElement as HTMLElement;
   return {
@@ -132,10 +137,11 @@ describe('LoginComponent', () => {
   });
 
   it('shows only the form where Dex is the identity provider', async () => {
-    const { fixture } = await openLogin(false, { password: true });
+    const { fixture, getLoginMethods } = await openLogin(false, { password: true });
 
     const { ssoButtons, form, divider } = await render(fixture);
 
+    expect(getLoginMethods).toHaveBeenCalledTimes(1);
     expect(ssoButtons).toHaveLength(0);
     expect(form).not.toBeNull();
     expect(divider).toBeNull();

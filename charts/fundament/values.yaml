@@ -128,6 +128,8 @@ authnApi:
     issuer: ""            # empty: Dex (dex.issuer)
     clientId: fundament
     displayName: ""       # required with an issuer
+    # Keycloak refuses a scope it does not define, such as Dex's "groups".
+    scopes: openid,profile,email
     # A confidential client's secret. Name empty: a public client.
     clientSecretRef:
       name: ""

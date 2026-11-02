@@ -158,11 +158,20 @@ describe('AuthnApiService', () => {
   });
 
   // The page still needs a way in when authn-api has no answer.
-  it('falls back to the password form when authn-api does not answer', async () => {
+  it('falls back to the password form when authn-api answers with an error', async () => {
     const methods = service.getLoginMethods();
     await settle();
     held.answer(500);
 
+    expect(await methods).toEqual({ password: true });
+  });
+
+  it('falls back to the password form when authn-api does not answer', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const methods = service.getLoginMethods();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(held.sent).toEqual(['/login/methods']);
     expect(await methods).toEqual({ password: true });
   });
 });

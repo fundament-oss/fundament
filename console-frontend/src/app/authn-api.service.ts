@@ -74,14 +74,19 @@ export default class AuthnApiService {
   /**
    * How this deployment signs people in: the password form, a button to the
    * identity provider, or both. When authn-api does not answer, the form: it
-   * is what every deployment had before there was a choice.
+   * is what every deployment had before there was a choice. The page shows
+   * nothing until this settles, so a request that hangs is given up on.
    */
   async getLoginMethods(): Promise<LoginMethodsResponse> {
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), COOKIE_REQUEST_TIMEOUT_MS);
     try {
-      const { data } = await handleLoginMethods({ client: this.restClient });
+      const { data } = await handleLoginMethods({ client: this.restClient, signal: abort.signal });
       return data ?? { password: true };
     } catch {
       return { password: true };
+    } finally {
+      clearTimeout(timer);
     }
   }
 

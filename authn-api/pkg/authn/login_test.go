@@ -129,21 +129,63 @@ func newLoginEnv(t *testing.T) *refreshEnv {
 
 // An address the identity provider has not verified must not claim the
 // invite registered at it: whoever controls an unverified address at the
-// provider is not necessarily the person who was invited.
+// provider is not necessarily the person who was invited. Nor may the sign-in
+// go ahead without the address: that account could never take it once it is
+// verified, because the invite holds it. Once verified, the invite is claimed.
 func TestProcessOIDCLogin_UnverifiedEmailDoesNotClaimInvite(t *testing.T) {
 	env := newLoginEnv(t)
 	inviteID := seedInvite(t, env, "participant@example.com")
+	claims := oidcClaims{Sub: "keycloak-sub-1", Name: "Participant", Email: "participant@example.com"}
+
+	unverified := claims
+	_, _, err := env.server.processOIDCLogin(context.Background(), &unverified, "oidc")
+	require.ErrorIs(t, err, errEmailNotVerified)
+
+	inviteRef, _ := userRow(t, env, inviteID)
+	assert.False(t, inviteRef.Valid, "the invite is no longer pending")
+	var accounts int
+	require.NoError(t, env.superPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM tenant.users WHERE external_ref = $1`, claims.Sub).Scan(&accounts))
+	assert.Zero(t, accounts, "the refused sign-in created an account")
+
+	verified := claims
+	verified.EmailVerified = true
+	u, _, err := env.server.processOIDCLogin(context.Background(), &verified, "oidc")
+	require.NoError(t, err)
+	assert.Equal(t, inviteID, u.ID)
+}
+
+// Without an invite at it, an unverified address only stays off the new
+// account.
+func TestProcessOIDCLogin_UnverifiedEmailNotStoredOnNewUser(t *testing.T) {
+	env := newLoginEnv(t)
 
 	u, _, err := env.server.processOIDCLogin(context.Background(), &oidcClaims{
-		Sub: "keycloak-sub-1", Name: "Someone", Email: "participant@example.com", EmailVerified: false,
+		Sub: "keycloak-sub-3", Name: "Someone", Email: "someone@example.com", EmailVerified: false,
 	}, "oidc")
 	require.NoError(t, err)
 
-	assert.NotEqual(t, inviteID, u.ID, "signed in as the invited account")
-	inviteRef, _ := userRow(t, env, inviteID)
-	assert.False(t, inviteRef.Valid, "the invite is no longer pending")
-	_, newEmail := userRow(t, env, u.ID)
-	assert.False(t, newEmail.Valid, "the unverified address was stored on the new account")
+	_, email := userRow(t, env, u.ID)
+	assert.False(t, email.Valid, "the unverified address was stored on the new account")
+}
+
+// An existing account keeps the address it has when the provider later
+// reports one it has not verified.
+func TestProcessOIDCLogin_UnverifiedEmailKeepsExistingAddress(t *testing.T) {
+	env := newLoginEnv(t)
+
+	u, _, err := env.server.processOIDCLogin(context.Background(), &oidcClaims{
+		Sub: "keycloak-sub-4", Name: "Someone", Email: "someone@example.com", EmailVerified: true,
+	}, "oidc")
+	require.NoError(t, err)
+
+	_, _, err = env.server.processOIDCLogin(context.Background(), &oidcClaims{
+		Sub: "keycloak-sub-4", Name: "Someone", Email: "changed@example.com", EmailVerified: false,
+	}, "oidc")
+	require.NoError(t, err)
+
+	_, email := userRow(t, env, u.ID)
+	assert.Equal(t, "someone@example.com", email.String)
 }
 
 func TestProcessOIDCLogin_VerifiedEmailClaimsInvite(t *testing.T) {
