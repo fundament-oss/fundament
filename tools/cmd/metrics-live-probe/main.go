@@ -46,7 +46,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("FINDING: default transport fails: %v\n(expected: the ingress cert is signed by this shoot's own CA)\n\n", err)
 	} else {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		fmt.Printf("default transport OK (status %d)\n\n", resp.StatusCode)
 	}
 

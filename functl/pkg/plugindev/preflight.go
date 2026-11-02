@@ -163,7 +163,7 @@ const (
 
 // WaitGone polls until the installation is NotFound, printing one waiting line to out.
 func WaitGone(ctx context.Context, c Cluster, name string, out io.Writer, interval, timeout time.Duration) error {
-	fmt.Fprintf(out, "waiting for the controller to tear down %s…\n", name)
+	_, _ = fmt.Fprintf(out, "waiting for the controller to tear down %s…\n", name)
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
 	tick := time.NewTicker(interval)
@@ -205,7 +205,7 @@ func DevDown(ctx context.Context, c Cluster, name string, out io.Writer, interva
 		return fmt.Errorf("read installation %q: %w", name, err)
 	}
 	if !found {
-		fmt.Fprintf(out, "PluginInstallation %s not found; nothing to remove\n", name)
+		_, _ = fmt.Fprintf(out, "PluginInstallation %s not found; nothing to remove\n", name)
 		return nil
 	}
 	if !state.Dev {
@@ -217,7 +217,7 @@ func DevDown(ctx context.Context, c Cluster, name string, out io.Writer, interva
 	if err := WaitGone(ctx, c, name, out, interval, timeout); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "PluginInstallation %s is gone\n", name)
+	_, _ = fmt.Fprintf(out, "PluginInstallation %s is gone\n", name)
 	return nil
 }
 

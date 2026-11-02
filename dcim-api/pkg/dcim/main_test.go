@@ -134,13 +134,13 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 

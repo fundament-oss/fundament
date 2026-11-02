@@ -341,7 +341,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		resp.Diagnostics.AddError("Unable to Create Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode == http.StatusConflict {
 		conflictBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
@@ -489,7 +489,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		resp.Diagnostics.AddError("Unable to Read Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode == http.StatusNotFound {
 		tflog.Info(ctx, "Plugin installation not found, removing from state", map[string]any{"name": name})
@@ -645,7 +645,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		resp.Diagnostics.AddError("Unable to Delete Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	switch httpResp.StatusCode {
 	case http.StatusOK, http.StatusAccepted, http.StatusNoContent, http.StatusNotFound:
@@ -711,7 +711,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 	if err != nil {
 		return nil, err
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))

@@ -199,7 +199,7 @@ func announceExit(cmd *exec.Cmd, name string) {
 		_, _ = w.Write([]byte(msg))
 		return
 	}
-	fmt.Fprint(os.Stdout, msg)
+	_, _ = fmt.Fprint(os.Stdout, msg)
 }
 
 // prefixOutput sends cmd's stdout and stderr through one line-buffered, prefixed writer.

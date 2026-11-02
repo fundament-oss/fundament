@@ -100,7 +100,8 @@ func TestSuperviseForceKillsWithoutGrace(t *testing.T) {
 	forceCancel()
 
 	select {
-	case <-done:
+	case err := <-done:
+		assert.NoError(t, err)
 		assert.Less(t, time.Since(start), stopGrace/2)
 	case <-time.After(stopGrace + 5*time.Second):
 		t.Fatal("supervise did not return after force")

@@ -42,7 +42,7 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
 	for _, key := range apiKeys {
 		created := ""
 		if key.GetCreated().IsValid() {
@@ -60,7 +60,7 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 		if key.GetRevoked().IsValid() {
 			revoked = key.GetRevoked().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
 			key.GetId(),
 			key.GetName(),
 			key.GetTokenPrefix(),

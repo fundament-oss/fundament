@@ -213,7 +213,7 @@ func passwordLogin(authnEndpoint, email, password string) (loginResponse, error)
 	if err != nil {
 		return loginResponse{}, fmt.Errorf("http post: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return loginResponse{}, fmt.Errorf("unexpected status %d", resp.StatusCode)

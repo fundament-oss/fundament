@@ -49,14 +49,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 		}
 
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ID\tNAME\tPROJECT_ID\tCREATED")
+		_, _ = fmt.Fprintln(w, "ID\tNAME\tPROJECT_ID\tCREATED")
 		for _, ns := range namespaces {
 			created := ""
 			if ns.GetCreated().IsValid() {
 				created = ns.GetCreated().AsTime().Format(TimeFormat)
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				ns.GetId(),
 				ns.GetName(),
 				ns.GetProjectId(),
@@ -86,14 +86,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tCREATED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tCREATED")
 	for _, ns := range namespaces {
 		created := ""
 		if ns.GetCreated().IsValid() {
 			created = ns.GetCreated().AsTime().Format(TimeFormat)
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n",
 			ns.GetId(),
 			ns.GetName(),
 			created,

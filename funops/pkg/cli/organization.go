@@ -247,14 +247,18 @@ func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) 
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED")
+		if _, err := fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
 		for _, org := range orgs {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				org.ID.String(),
 				org.Name,
 				org.Alias,
 				org.Created.Time.Format(TimeFormat),
-			)
+			); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 		}
 		return w.Flush()
 	default:

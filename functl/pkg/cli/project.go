@@ -46,13 +46,13 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tALIAS\tCLUSTER ID\tCREATED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tALIAS\tCLUSTER ID\tCREATED")
 	for _, project := range projects {
 		created := ""
 		if project.GetCreated() != nil {
 			created = project.GetCreated().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			project.GetId(),
 			project.GetName(),
 			project.GetAlias(),

@@ -43,13 +43,13 @@ func (c *OrgListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED")
 	for _, org := range orgs {
 		created := ""
 		if org.GetCreated().IsValid() {
 			created = org.GetCreated().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			org.GetId(),
 			org.GetName(),
 			org.GetAlias(),

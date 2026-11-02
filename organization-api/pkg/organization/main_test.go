@@ -140,14 +140,14 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 
 	// On Unix, FindProcess always succeeds. Send signal 0 to check if alive.
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return
 	}
 
@@ -219,7 +219,7 @@ func applyCatalogSeed(projectRoot string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to fundament db for seed: %w", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	for _, name := range []string{"0100-system-org.sql", "0101-appstore-catalog.sql"} {
 		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name))
