@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/circuitbreaker"

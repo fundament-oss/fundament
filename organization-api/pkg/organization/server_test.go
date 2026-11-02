@@ -11,12 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fundament-oss/fundament/common/auth"
-	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/idempotency"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"

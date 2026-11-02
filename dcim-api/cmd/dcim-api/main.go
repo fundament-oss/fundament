@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/fundament-oss/fundament/common/psqldb"
-	"github.com/fundament-oss/fundament/dcim-api/pkg/dcim"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/dcim-api/pkg/dcim"
 )
 
 type config struct {

@@ -12,10 +12,11 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/google/uuid"
+
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	pluginproxyv1 "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
-	"github.com/google/uuid"
 )
 
 // ClusterAccess resolves a cluster ID to the data plugin-proxy needs to read

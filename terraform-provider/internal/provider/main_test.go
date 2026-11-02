@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	authnv1connect "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	organizationv1connect "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 )
 
 const (
