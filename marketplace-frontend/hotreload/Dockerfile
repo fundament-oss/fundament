@@ -2,7 +2,7 @@
 # Node-compat version (24.3.0). Bun is still used as the package manager.
 FROM oven/bun:1.4.3-alpine AS bun
 
-FROM node:24.21-alpine
+FROM node:24.22-alpine
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
