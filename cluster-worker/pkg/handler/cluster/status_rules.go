@@ -97,7 +97,7 @@ func addProgressEvent(update *shootStatusUpdate, last progressRecord, now time.T
 func (u *shootStatusUpdate) unchanged(stored storedShootState) bool {
 	return u.Status == stored.Status && u.Message == stored.Message && u.Health == stored.Health &&
 		len(u.Events) == 0 && !u.InsertReady &&
-		!(u.APIAvailable && !stored.APIAvailable) && !u.APIGone
+		(!u.APIAvailable || stored.APIAvailable) && !u.APIGone
 }
 
 // nextShootStatus decides what a status check writes, given the stored row and

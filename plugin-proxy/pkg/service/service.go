@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -97,7 +96,7 @@ func (s *Service) findInstallation(
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("list installations: %w", err))
 	}
 	for i := range list.Items {
-		if strings.Compare(string(list.Items[i].UID), installationID.String()) == 0 {
+		if string(list.Items[i].UID) == installationID.String() {
 			return &list.Items[i], nil
 		}
 	}

@@ -130,7 +130,7 @@ func (c *HTTPClient) QueryRange(ctx context.Context, query string, start, end ti
 // idempotent GETs, so a connection torn down mid-flight (ingress or proxy
 // hiccup, stale keep-alive) is retried once before giving up.
 func (c *HTTPClient) do(ctx context.Context, url string) (*apiResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}

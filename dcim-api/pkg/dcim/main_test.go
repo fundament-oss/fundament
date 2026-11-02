@@ -185,14 +185,14 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err := pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = false WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to unmark fundament as template: %v", err)
+		return fmt.Errorf("failed to unmark fundament as template: %w", err)
 	}
 
 	trekApply(projectRoot)
 
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to mark fundament as template: %v", err)
+		return fmt.Errorf("failed to mark fundament as template: %w", err)
 	}
 
 	return nil

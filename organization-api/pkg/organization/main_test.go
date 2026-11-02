@@ -193,7 +193,7 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err := pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = false WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to unmark fundament as template: %v", err)
+		return fmt.Errorf("failed to unmark fundament as template: %w", err)
 	}
 
 	trekApply(projectRoot)
@@ -207,7 +207,7 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to mark fundament as template: %v", err)
+		return fmt.Errorf("failed to mark fundament as template: %w", err)
 	}
 
 	return nil
@@ -217,18 +217,18 @@ func applyCatalogSeed(projectRoot string) error {
 	conn, err := pgx.Connect(context.Background(),
 		fmt.Sprintf("postgres://postgres:postgres@localhost:%d/fundament?sslmode=disable", testDBPort))
 	if err != nil {
-		return fmt.Errorf("failed to connect to fundament db for seed: %v", err)
+		return fmt.Errorf("failed to connect to fundament db for seed: %w", err)
 	}
 	defer conn.Close(context.Background())
 
 	for _, name := range []string{"0100-system-org.sql", "0101-appstore-catalog.sql"} {
 		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name))
 		if err != nil {
-			return fmt.Errorf("failed to read seed %s: %v", name, err)
+			return fmt.Errorf("failed to read seed %s: %w", name, err)
 		}
 		// Simple protocol: whole multi-statement file in one implicit transaction.
 		if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
-			return fmt.Errorf("failed to apply seed %s: %v", name, err)
+			return fmt.Errorf("failed to apply seed %s: %w", name, err)
 		}
 	}
 	return nil

@@ -32,7 +32,7 @@ func (s *Server) GetClusterByName(
 	}
 
 	// Auth is done after the DB call because we dont know the cluster ID yet.
-	// This does leave us open for enumerate attackes because attackers can distinguise between not found and permission denied.
+	// This does leave us open for enumeration attacks because attackers can distinguish between not found and permission denied.
 	// We could always return cluster not found instead of permission errors.
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
 		return nil, err

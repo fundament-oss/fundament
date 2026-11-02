@@ -25,7 +25,7 @@ func TestIsResourceGet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := isResourceGet(tc.path, "cert-manager.io", "v1", "certificates")
 			gotCluster := isResourceGet(tc.path, "cert-manager.io", "v1", "clusterissuers")
-			if !(got || gotCluster) && tc.want {
+			if (!got && !gotCluster) && tc.want {
 				t.Fatalf("expected match, got none for %q", tc.path)
 			}
 			if (got || gotCluster) && !tc.want {

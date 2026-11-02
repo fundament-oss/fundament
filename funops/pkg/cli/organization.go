@@ -101,7 +101,7 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 	})
 	if err != nil {
 		// Check for unique constraint violation
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("organization '%s' already exists", c.Name)
 		}
 		// No row: a deleted organization that had clusters still holds the

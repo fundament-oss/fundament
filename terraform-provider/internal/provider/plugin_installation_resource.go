@@ -211,7 +211,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 					// not destroy and recreate a healthy installation.
 					mapplanmodifier.RequiresReplaceIf(
 						func(ctx context.Context, req planmodifier.MapRequest, resp *mapplanmodifier.RequiresReplaceIfFuncResponse) {
-							resp.RequiresReplace = !(configIsEmpty(req.StateValue) && configIsEmpty(req.PlanValue))
+							resp.RequiresReplace = !configIsEmpty(req.StateValue) || !configIsEmpty(req.PlanValue)
 						},
 						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (null and {}).",
 						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (`null` and `{}`).",
@@ -478,7 +478,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	}
 
 	getURL := r.resourceURL(clusterID, name)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, http.NoBody)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
 		return
@@ -634,7 +634,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	}
 
 	deleteURL := r.resourceURL(clusterID, name)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, http.NoBody)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
 		return
