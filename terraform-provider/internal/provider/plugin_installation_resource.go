@@ -243,7 +243,7 @@ func (r *PluginInstallationResource) Configure(ctx context.Context, req resource
 	r.client = client
 }
 
-func (r *PluginInstallationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *PluginInstallationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -422,7 +422,7 @@ func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context
 	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog", pluginName, organizationName)
 }
 
-func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -534,18 +534,19 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	} else {
 		state.DefinitionHash = types.StringValue(unpinnedDefinitionHash)
 	}
-	if len(crd.Spec.Config) > 0 {
+	switch {
+	case len(crd.Spec.Config) > 0:
 		configValue, diags := types.MapValueFrom(ctx, types.StringType, crd.Spec.Config)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		state.Config = configValue
-	} else if !state.Config.IsNull() && len(state.Config.Elements()) == 0 {
+	case !state.Config.IsNull() && len(state.Config.Elements()) == 0:
 		// `config = {}` in HCL round-trips: the CR omits an empty config, so
 		// keep the empty map rather than flapping to null and forcing a
 		// replacement on every refresh.
-	} else {
+	default:
 		state.Config = types.MapNull(types.StringType)
 	}
 	if crd.Status.Phase != "" {
@@ -561,7 +562,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 // spellings of "no config", which RequiresReplaceIf deliberately does not
 // replace on (every other attribute change forces a replacement). The CR is
 // identical either way, so just sync the state to the planned spelling.
-func (r *PluginInstallationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *PluginInstallationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan, state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -579,7 +580,7 @@ func (r *PluginInstallationResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -729,7 +730,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 // classifyPluginPhase maps a plugin installation status phase to a polling
 // decision: done signals success (Running), terminal signals an unrecoverable
 // phase. Any other phase (Pending, Deploying, or empty) means keep polling.
-func classifyPluginPhase(phase string) (done bool, terminal bool) {
+func classifyPluginPhase(phase string) (done, terminal bool) {
 	switch phase {
 	case "Running":
 		return true, false

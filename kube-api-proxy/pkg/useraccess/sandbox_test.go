@@ -36,7 +36,7 @@ func TestSandboxClient_PostsSARAndReturnsDecision(t *testing.T) {
 		"ignored-cluster",
 		"system:serviceaccount:fundament-system:fundament-abc",
 		[]string{"system:authenticated"},
-		attrs,
+		&attrs,
 	)
 	require.NoError(t, err)
 	assert.True(t, allowed)
@@ -64,7 +64,7 @@ func TestSandboxClient_DeniedIsNotError(t *testing.T) {
 		"ignored",
 		"system:serviceaccount:fundament-system:fundament-abc",
 		nil,
-		authorizationv1.ResourceAttributes{Verb: "delete", Resource: "secrets"},
+		&authorizationv1.ResourceAttributes{Verb: "delete", Resource: "secrets"},
 	)
 	require.NoError(t, err)
 	assert.False(t, allowed)

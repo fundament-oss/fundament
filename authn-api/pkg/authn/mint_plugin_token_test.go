@@ -29,7 +29,7 @@ type fakeAuthz struct {
 	calls int
 }
 
-func (f *fakeAuthz) Evaluate(_ context.Context, _ authz.EvaluationRequest) (authz.Decision, error) {
+func (f *fakeAuthz) Evaluate(_ context.Context, _ authz.EvaluationRequest) (authz.Decision, error) { //nolint:gocritic // signature fixed by authzEvaluator
 	f.calls++
 	if f.err != nil {
 		return authz.Decision{}, f.err

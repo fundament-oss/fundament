@@ -20,7 +20,7 @@ import (
 const stopGrace = 10 * time.Second
 
 // BuildConsole runs the initial Vite build so the first image has console assets.
-func BuildConsole(ctx context.Context, l Layout) error {
+func BuildConsole(ctx context.Context, l *Layout) error {
 	if !l.Vite {
 		return nil
 	}
@@ -85,7 +85,7 @@ func digestRef(tag string) (string, error) {
 
 // Dev runs the Vite watcher (for Vite plugins) and skaffold dev until either exits or ctx is done.
 // Once force is done, the children are killed without waiting out their grace period.
-func Dev(ctx, force context.Context, renderDir string, l Layout, t Target, namespace string, cleanup bool) error {
+func Dev(ctx, force context.Context, renderDir string, l *Layout, t Target, namespace string, cleanup bool) error {
 	var mu sync.Mutex
 	var cmds []*exec.Cmd
 

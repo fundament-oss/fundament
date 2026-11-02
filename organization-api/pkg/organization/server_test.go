@@ -68,19 +68,6 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 	}
 }
 
-type User struct {
-	id          uuid.UUID
-	name        string
-	email       string
-	externalRef *string
-	orgIDs      []uuid.UUID
-}
-
-func (u User) WithName(name string) User {
-	u.name = name
-	return u
-}
-
 type UserArgs struct {
 	ID          uuid.UUID
 	Name        string

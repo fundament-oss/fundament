@@ -77,12 +77,12 @@ func TestMain(m *testing.M) {
 	}()
 
 	adminPool := newAdminPool()
-	defer adminPool.Close()
 
 	testdb.UseGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
 	err = setupTemplateDatabaseWithMigrations(adminPool)
+	adminPool.Close()
 	if err != nil {
 		log.Fatalf("failed to setup template database: %v", err)
 	}
@@ -234,8 +234,8 @@ func trekApply(projectRoot string) {
 	trekBin, err := exec.LookPath("trek")
 	if err != nil {
 		candidates := []string{
-			filepath.Join(os.Getenv("HOME"), ".local/share/mise/shims/trek"),
-			filepath.Join(os.Getenv("HOME"), ".asdf/shims/trek"),
+			filepath.Join(os.Getenv("HOME"), ".local", "share", "mise", "shims", "trek"),
+			filepath.Join(os.Getenv("HOME"), ".asdf", "shims", "trek"),
 		}
 		for _, c := range candidates {
 			if _, statErr := os.Stat(c); statErr == nil { //nolint:gosec // test helper, paths are not user-controlled

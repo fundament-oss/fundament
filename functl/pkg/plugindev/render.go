@@ -58,7 +58,7 @@ func parseTemplates() (*template.Template, error) {
 
 // Render writes Dockerfile, Dockerfile.dockerignore and skaffold.yaml into
 // outDir. Air's config is rendered inside the image.
-func Render(outDir string, p RenderParams) error {
+func Render(outDir string, p *RenderParams) error {
 	if p.Layout.ModulePath == FundamentModule && len(p.Layout.SourceDirs) == 0 {
 		return errors.New("render: SourceDirs not resolved")
 	}
@@ -86,7 +86,7 @@ func Render(outDir string, p RenderParams) error {
 	}
 
 	data := templateData{
-		RenderParams:     p,
+		RenderParams:     *p,
 		FundamentModule:  FundamentModule,
 		InstallationName: InstallationName(p.OrgName, p.Layout.Name),
 		ImageName:        ImageName(p.Layout.Name),
@@ -94,7 +94,7 @@ func Render(outDir string, p RenderParams) error {
 		ProjectIgnore:    strings.TrimSpace(string(projectIgnore)),
 		ConsoleDir:       consoleDir,
 	}
-	return execute(tmpl, outDir, data, map[string]string{
+	return execute(tmpl, outDir, &data, map[string]string{
 		"Dockerfile.tmpl":              "Dockerfile",
 		"Dockerfile.dockerignore.tmpl": "Dockerfile.dockerignore",
 		"skaffold.yaml.tmpl":           "skaffold.yaml",
@@ -102,21 +102,21 @@ func Render(outDir string, p RenderParams) error {
 }
 
 // RenderInstallation writes installation.yaml for the published dev version.
-func RenderInstallation(outDir string, p RenderParams, version string) error {
+func RenderInstallation(outDir string, p *RenderParams, version string) error {
 	tmpl, err := parseTemplates()
 	if err != nil {
 		return err
 	}
 	data := templateData{
-		RenderParams:     p,
+		RenderParams:     *p,
 		InstallationName: InstallationName(p.OrgName, p.Layout.Name),
 		ImageName:        ImageName(p.Layout.Name),
 		Version:          version,
 	}
-	return execute(tmpl, outDir, data, map[string]string{"installation.yaml.tmpl": "installation.yaml"})
+	return execute(tmpl, outDir, &data, map[string]string{"installation.yaml.tmpl": "installation.yaml"})
 }
 
-func execute(tmpl *template.Template, outDir string, data templateData, files map[string]string) error {
+func execute(tmpl *template.Template, outDir string, data *templateData, files map[string]string) error {
 	for tmplName, outName := range files {
 		var sb strings.Builder
 		if err := tmpl.ExecuteTemplate(&sb, tmplName, data); err != nil {

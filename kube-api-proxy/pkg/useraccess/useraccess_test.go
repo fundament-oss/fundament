@@ -24,12 +24,12 @@ type fakeClient struct {
 	calls         int
 }
 
-func (f *fakeClient) SubjectAccessReview(_ context.Context, clusterID, user string, groups []string, attrs authorizationv1.ResourceAttributes) (bool, error) {
+func (f *fakeClient) SubjectAccessReview(_ context.Context, clusterID, user string, groups []string, attrs *authorizationv1.ResourceAttributes) (bool, error) {
 	f.calls++
 	f.lastClusterID = clusterID
 	f.lastUser = user
 	f.lastGroups = groups
-	f.lastAttrs = attrs
+	f.lastAttrs = *attrs
 	if f.err != nil {
 		return false, f.err
 	}

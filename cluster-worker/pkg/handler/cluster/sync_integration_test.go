@@ -189,7 +189,7 @@ func TestSyncUpdateLeavesClusterBeingCreated(t *testing.T) {
 
 	clusterID := syncedReadyCluster(t, db, h, "sync-creating")
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting for etcd", "", time.Minute)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Message: "Create: Waiting for etcd", Operation: gardener.OperationCreate,
 	})
 	require.NoError(t, checkStatus(t, h))

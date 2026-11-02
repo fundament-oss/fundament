@@ -75,8 +75,9 @@ func (s *Server) SetNodePools(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list node pools: %w", err))
 	}
 	byName := make(map[string]db.NodePoolListByClusterIDRow, len(current))
-	for _, pool := range current {
-		byName[pool.Name] = pool
+	for i := range current {
+		pool := &current[i]
+		byName[pool.Name] = *pool
 	}
 
 	// Aborted, the code for a concurrency conflict: the caller read an older
@@ -147,7 +148,8 @@ func (s *Server) SetNodePools(
 		}
 		creates[i].offering = offering
 	}
-	for _, pool := range current {
+	for i := range current {
+		pool := &current[i]
 		if !wanted[pool.Name] {
 			removes = append(removes, pool.ID)
 		}
@@ -216,7 +218,8 @@ func samePoolIDs(current []db.NodePoolListByClusterIDRow, expected []string) boo
 	for _, id := range expected {
 		want[id] = true
 	}
-	for _, pool := range current {
+	for i := range current {
+		pool := &current[i]
 		if !want[pool.ID.String()] {
 			return false
 		}

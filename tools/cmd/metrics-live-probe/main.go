@@ -127,11 +127,12 @@ func main() {
 		fmt.Printf("  %-10s %.4g (%d series)\n", label, samples[0].Value, len(samples))
 	}
 	series, err := client.QueryRange(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`, now.Add(-time.Hour), now, 5*time.Minute)
-	if err != nil {
+	switch {
+	case err != nil:
 		fmt.Printf("  range 1h    ERROR: %v\n", err)
-	} else if len(series) > 0 {
+	case len(series) > 0:
 		fmt.Printf("  range 1h    %d points\n", len(series[0].Samples))
-	} else {
+	default:
 		fmt.Println("  range 1h    empty")
 	}
 

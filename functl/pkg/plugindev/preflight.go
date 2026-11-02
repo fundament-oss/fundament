@@ -59,7 +59,7 @@ func DockerInfo() error {
 }
 
 // CheckTools verifies the required local tools exist and docker is running.
-func CheckTools(l Layout, lookPath func(string) (string, error), dockerInfo func() error) error {
+func CheckTools(l *Layout, lookPath func(string) (string, error), dockerInfo func() error) error {
 	tools := []struct{ name, url string }{
 		{"docker", "https://docker.com"},
 		{"skaffold", "https://skaffold.dev"},

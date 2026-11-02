@@ -83,7 +83,7 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
-func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string, kubeProxyURL string) *FundamentClient {
+func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID, kubeProxyURL string) *FundamentClient {
 	transport := &AuthTransport{
 		TokenSource:    tm,
 		OrganizationID: organizationID,
@@ -96,7 +96,7 @@ func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organ
 	return newFundamentClientWithTransport(endpoint, kubeProxyURL, transport, kubeProxyTransport)
 }
 
-func newFundamentClientWithTransport(endpoint string, kubeProxyURL string, transport http.RoundTripper, kubeProxyTransport http.RoundTripper) *FundamentClient {
+func newFundamentClientWithTransport(endpoint, kubeProxyURL string, transport, kubeProxyTransport http.RoundTripper) *FundamentClient {
 	httpClient := &http.Client{
 		Timeout:   30 * time.Second,
 		Transport: transport,

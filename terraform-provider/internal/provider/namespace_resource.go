@@ -211,7 +211,7 @@ func (r *NamespaceResource) populateProjectFields(ctx context.Context, state *Na
 }
 
 // Create creates a new namespace.
-func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -310,7 +310,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -367,7 +367,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 // Update is not supported for namespaces. Any change will force replacement.
-func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	resp.Diagnostics.AddError(
 		"Update Not Supported",
 		"Namespaces cannot be updated. Any changes require replacement.",
@@ -375,7 +375,7 @@ func (r *NamespaceResource) Update(ctx context.Context, req resource.UpdateReque
 }
 
 // Delete deletes the namespace.
-func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state NamespaceResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)

@@ -25,14 +25,14 @@ func TestListDriftFindings(t *testing.T) {
 	drifted := seed.Cluster(org, "drifted")
 	stray := uuid.New()
 
-	seed.DriftFinding(testpg.Finding{Kind: "cluster_without_shoot", ClusterID: missing, FirstDetectedAgo: time.Hour})
-	seed.DriftFinding(testpg.Finding{
+	seed.DriftFinding(&testpg.Finding{Kind: "cluster_without_shoot", ClusterID: missing, FirstDetectedAgo: time.Hour})
+	seed.DriftFinding(&testpg.Finding{
 		Kind: "kubernetes_version_mismatch", ClusterID: drifted, ShootName: "drifted-shoot",
 		Expected: "1.31.1", Observed: "1.32.0", FirstDetectedAgo: time.Minute,
 	})
-	seed.DriftFinding(testpg.Finding{Kind: "shoot_without_cluster", ClusterID: stray, ShootName: "stray-shoot", FirstDetectedAgo: time.Minute})
-	seed.DriftFinding(testpg.Finding{Kind: "shoot_invalid_cluster_id", ShootName: "odd-shoot", Observed: "not-a-uuid", FirstDetectedAgo: time.Minute})
-	seed.DriftFinding(testpg.Finding{Kind: "cluster_without_shoot", ClusterID: drifted, FirstDetectedAgo: 2 * time.Hour, Resolved: true})
+	seed.DriftFinding(&testpg.Finding{Kind: "shoot_without_cluster", ClusterID: stray, ShootName: "stray-shoot", FirstDetectedAgo: time.Minute})
+	seed.DriftFinding(&testpg.Finding{Kind: "shoot_invalid_cluster_id", ShootName: "odd-shoot", Observed: "not-a-uuid", FirstDetectedAgo: time.Minute})
+	seed.DriftFinding(&testpg.Finding{Kind: "cluster_without_shoot", ClusterID: drifted, FirstDetectedAgo: 2 * time.Hour, Resolved: true})
 
 	resp, err := client.ListDriftFindings(t.Context(), &fleetv1.ListDriftFindingsRequest{})
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestListDriftFindingsPages(t *testing.T) {
 	client := staffClient(t, env)
 
 	for i := range 5 {
-		seed.DriftFinding(testpg.Finding{Kind: "shoot_without_cluster", ClusterID: uuid.New(), ShootName: "stray", FirstDetectedAgo: time.Duration(i) * time.Minute})
+		seed.DriftFinding(&testpg.Finding{Kind: "shoot_without_cluster", ClusterID: uuid.New(), ShootName: "stray", FirstDetectedAgo: time.Duration(i) * time.Minute})
 	}
 
 	var seen []string
@@ -111,7 +111,7 @@ func TestListDriftFindingsSkipsSystemOrganization(t *testing.T) {
 	client := staffClient(t, env)
 
 	system := seed.Cluster(testpg.SystemOrganizationID, "plugins")
-	seed.DriftFinding(testpg.Finding{Kind: "cluster_without_shoot", ClusterID: system})
+	seed.DriftFinding(&testpg.Finding{Kind: "cluster_without_shoot", ClusterID: system})
 
 	resp, err := client.ListDriftFindings(t.Context(), &fleetv1.ListDriftFindingsRequest{})
 	require.NoError(t, err)

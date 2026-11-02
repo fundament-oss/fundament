@@ -255,7 +255,7 @@ func accessFromKubeconfig(kubeconfig []byte, wrap transport.WrapperFunc) (*Shoot
 	}
 	cfg.Wrap(wrap)
 
-	transport, err := rest.TransportFor(cfg)
+	rt, err := rest.TransportFor(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("build transport: %w", err)
 	}
@@ -269,7 +269,7 @@ func accessFromKubeconfig(kubeconfig []byte, wrap transport.WrapperFunc) (*Shoot
 
 	return &ShootAccess{
 		Host:       host,
-		Transport:  transport,
+		Transport:  rt,
 		RESTConfig: cfg,
 	}, nil
 }

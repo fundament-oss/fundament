@@ -128,7 +128,7 @@ func (s *AuthnServer) lookupAPIKey(ctx context.Context, token string) (*db.APIKe
 
 	if !decision.Decision {
 		s.logger.Debug("api key authorization denied", "api_key_id", apiKey.ID)
-		return nil, connect.NewError(connect.CodeUnauthenticated, s.apiKeyDenialReason(apiKey))
+		return nil, connect.NewError(connect.CodeUnauthenticated, s.apiKeyDenialReason(&apiKey))
 	}
 
 	if err := s.queries.APIKeyUpdateLastUsed(ctx, db.APIKeyUpdateLastUsedParams{PID: apiKey.ID}); err != nil {
@@ -139,7 +139,7 @@ func (s *AuthnServer) lookupAPIKey(ctx context.Context, token string) (*db.APIKe
 }
 
 // apiKeyDenialReason returns a user-facing error based on the API key's state.
-func (s *AuthnServer) apiKeyDenialReason(apiKey db.APIKeyGetByHashRow) error {
+func (s *AuthnServer) apiKeyDenialReason(apiKey *db.APIKeyGetByHashRow) error {
 	if apiKey.Revoked.Valid {
 		return fmt.Errorf("token revoked")
 	}

@@ -115,7 +115,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 		force()
 	}()
 
-	s, err := c.start(runCtx, ctx, l, config)
+	s, err := c.start(runCtx, ctx, &l, config)
 	if runCtx.Err() != nil {
 		// Interrupted before anything was installed.
 		return nil
@@ -133,7 +133,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	}
 
 	namespace := kubename.PluginNamespace(s.installation)
-	devErr := plugindev.Dev(runCtx, forceCtx, s.renderDir, s.layout, s.target, namespace, c.Cleanup)
+	devErr := plugindev.Dev(runCtx, forceCtx, s.renderDir, &s.layout, s.target, namespace, c.Cleanup)
 	if devErr != nil {
 		devErr = fmt.Errorf("dev loop: %w", devErr)
 	}
@@ -150,7 +150,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 
 // start runs the startup checks, builds the image, publishes the dev version
 // and renders the files skaffold dev needs.
-func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.Layout, config map[string]string) (devSession, error) {
+func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l *plugindev.Layout, config map[string]string) (devSession, error) {
 	apiClient, orgID, org, err := orgClient(runCtx, ctx)
 	if err != nil {
 		return devSession{}, err
@@ -195,8 +195,8 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.L
 	if err := os.MkdirAll(renderDir, 0o755); err != nil { //nolint:gosec // cache dir, not secret
 		return devSession{}, fmt.Errorf("create %s: %w", renderDir, err)
 	}
-	params := plugindev.RenderParams{Layout: l, Target: target, OrgName: org, Config: config}
-	if err := plugindev.Render(renderDir, params); err != nil {
+	params := plugindev.RenderParams{Layout: *l, Target: target, OrgName: org, Config: config}
+	if err := plugindev.Render(renderDir, &params); err != nil {
 		return devSession{}, fmt.Errorf("render dev files: %w", err)
 	}
 
@@ -209,14 +209,14 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.L
 	if err != nil {
 		return devSession{}, err
 	}
-	published, err := publishVersion(runCtx, pubClient, manifest, def, publishOptions{Create: true, Dev: true})
+	published, err := publishVersion(runCtx, pubClient, manifest, &def, publishOptions{Create: true, Dev: true})
 	if err != nil {
 		return devSession{}, err
 	}
-	if err := plugindev.RenderInstallation(renderDir, params, published.GetVersion()); err != nil {
+	if err := plugindev.RenderInstallation(renderDir, &params, published.GetVersion()); err != nil {
 		return devSession{}, fmt.Errorf("render installation: %w", err)
 	}
-	return devSession{layout: l, target: target, cluster: cluster, installation: installation, renderDir: renderDir}, nil
+	return devSession{layout: *l, target: target, cluster: cluster, installation: installation, renderDir: renderDir}, nil
 }
 
 // Run executes the plugin dev-down command.

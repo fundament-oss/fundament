@@ -104,7 +104,7 @@ func (d *ClusterDataSource) Configure(ctx context.Context, req datasource.Config
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var config ClusterDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)

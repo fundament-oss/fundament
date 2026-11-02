@@ -13,8 +13,8 @@ import (
 
 // clusterStatusFromDB derives the cluster's status the way every service
 // does (clusterstatus.FromDB) and maps it onto the console's API.
-func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, shootMessage pgtype.Text, shootHealth pgtype.Text, updating bool, outboxStatus pgtype.Text, reachedGardener bool) organizationv1.ClusterStatus {
-	status := clusterstatus.FromDB(clusterstatus.Input{
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus, shootMessage, shootHealth pgtype.Text, updating bool, outboxStatus pgtype.Text, reachedGardener bool) organizationv1.ClusterStatus {
+	status := clusterstatus.FromDB(&clusterstatus.Input{
 		Deleted:         deleted,
 		ShootStatus:     shootStatus,
 		ShootMessage:    shootMessage,

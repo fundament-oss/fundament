@@ -88,7 +88,7 @@ func (d *NamespaceDataSource) Configure(ctx context.Context, req datasource.Conf
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var config NamespaceDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)

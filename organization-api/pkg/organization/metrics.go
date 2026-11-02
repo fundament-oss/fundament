@@ -308,7 +308,8 @@ func (s *Server) GetOrgWorkloadMetrics(
 	// that backend's connection pool.
 	g.SetLimit(10)
 
-	for i, cl := range clusters {
+	for i := range clusters {
+		cl := &clusters[i]
 		g.Go(func() error {
 			r := &results[i]
 			r.id = cl.ID.String()
@@ -391,7 +392,8 @@ func (s *Server) GetOrgWorkloadMetrics(
 	allNsNetRx := make([][]prom.Sample, len(results))
 	allNsNetTx := make([][]prom.Sample, len(results))
 
-	for i, r := range results {
+	for i := range results {
+		r := &results[i]
 		cpuUsed += r.cpuUsed
 		cpuTotal += r.cpuTotal
 		memUsed += r.memUsed
@@ -461,7 +463,8 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(10)
 
-	for i, cl := range clusters {
+	for i := range clusters {
+		cl := &clusters[i]
 		g.Go(func() error {
 			r := &results[i]
 
@@ -557,8 +560,8 @@ func (s *Server) GetProjectWorkloadMetrics(
 	// If cross-cluster projects are ever introduced, this must be updated to
 	// fan out per-cluster and aggregate results.
 	clusterID := namespaces[0].ClusterID
-	for _, ns := range namespaces[1:] {
-		if ns.ClusterID != clusterID {
+	for i := 1; i < len(namespaces); i++ {
+		if namespaces[i].ClusterID != clusterID {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
 		}
 	}
@@ -676,8 +679,8 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	// If cross-cluster projects are ever introduced, this must be updated to
 	// fan out per-cluster and aggregate results.
 	clusterID := namespaces[0].ClusterID
-	for _, ns := range namespaces[1:] {
-		if ns.ClusterID != clusterID {
+	for i := 1; i < len(namespaces); i++ {
+		if namespaces[i].ClusterID != clusterID {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
 		}
 	}
@@ -981,7 +984,7 @@ func buildNamespaceFilter(names []string) string {
 	for i, n := range names {
 		escaped[i] = promEscapeLabelValue(n)
 	}
-	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(escaped, "|"))
+	return `namespace=~"` + strings.Join(escaped, "|") + `"`
 }
 
 // resolveTimeRange returns start, end, and step for a Prometheus range query,
@@ -1005,7 +1008,8 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 // namespaceNames extracts the name strings from a slice of namespace DB rows.
 func namespaceNames(rows []db.NamespaceListByProjectIDRow) []string {
 	names := make([]string, 0, len(rows))
-	for _, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		names = append(names, r.Name)
 	}
 	return names

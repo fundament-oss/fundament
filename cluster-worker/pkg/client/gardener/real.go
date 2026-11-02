@@ -113,7 +113,7 @@ type RealClient struct {
 
 // NewReal creates a new RealClient that connects to Gardener.
 // If kubeconfigPath is empty, it uses in-cluster config.
-func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
+func NewReal(kubeconfigPath string, provider *ProviderConfig, logger *slog.Logger) (*RealClient, error) {
 	// Build REST config
 	var clientConfig clientcmd.ClientConfig
 
@@ -155,7 +155,7 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 
 	r := &RealClient{
 		client:   c,
-		provider: provider,
+		provider: *provider,
 		logger:   logger,
 	}
 

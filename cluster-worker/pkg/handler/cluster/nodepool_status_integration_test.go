@@ -30,7 +30,7 @@ func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	setShootState(t, db, clusterID, "ready", "Shoot is ready", "healthy", time.Minute)
 	setShootUpdating(t, db, clusterID, true)
 
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
@@ -83,7 +83,7 @@ func TestCheckStatusRecordsNodePoolRecovery(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Operation: gardener.OperationReconcile,
 		Message: "Shoot is ready", Healthy: true,
 	})
@@ -110,7 +110,7 @@ func TestCheckStatusClassifiesExistingPoolsSilently(t *testing.T) {
 	markClusterSyncsCompleted(t, db, clusterID)
 	setShootState(t, db, clusterID, "ready", "Shoot is ready", "healthy", time.Minute)
 
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Operation: gardener.OperationReconcile,
 		Message: "Shoot is ready", Healthy: true,
 	})
@@ -143,7 +143,7 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,

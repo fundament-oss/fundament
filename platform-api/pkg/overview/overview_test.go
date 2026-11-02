@@ -70,7 +70,7 @@ func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOver
 
 	query := url.Values{"connect": {"v1"}, "encoding": {"json"}, "message": {"{}"}}
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
-		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure+"?"+query.Encode(), nil)
+		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure+"?"+query.Encode(), http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := ts.Client().Do(req)
@@ -239,7 +239,7 @@ func TestOverviewCORS(t *testing.T) {
 	ts := newServer(t, env)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodOptions,
-		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure, nil)
+		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure, http.NoBody)
 	require.NoError(t, err)
 	req.Header.Set("Origin", consoleOrigin)
 	req.Header.Set("Access-Control-Request-Method", http.MethodGet)

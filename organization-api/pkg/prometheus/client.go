@@ -129,8 +129,8 @@ func (c *HTTPClient) QueryRange(ctx context.Context, query string, start, end ti
 // configured, and decodes the standard response envelope. Queries are
 // idempotent GETs, so a connection torn down mid-flight (ingress or proxy
 // hiccup, stale keep-alive) is retried once before giving up.
-func (c *HTTPClient) do(ctx context.Context, url string) (*apiResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+func (c *HTTPClient) do(ctx context.Context, rawURL string) (*apiResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}

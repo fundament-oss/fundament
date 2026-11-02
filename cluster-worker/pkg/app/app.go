@@ -225,7 +225,7 @@ func newProvisioning(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.Gardener, gardenerClient, logger)
+	shootAccess, err := createShootAccess(&cfg.Gardener, gardenerClient, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 			"kubeconfig", g.Kubeconfig,
 			"provider", providerCfg.Type,
 			"cloudProfile", providerCfg.CloudProfile)
-		client, err := gardener.NewReal(g.Kubeconfig, providerCfg, logger)
+		client, err := gardener.NewReal(g.Kubeconfig, &providerCfg, logger)
 		if err != nil {
 			return nil, fmt.Errorf("create gardener client: %w", err)
 		}
@@ -437,7 +437,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
+func createShootAccess(g *GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
 	switch g.Mode {
 	case "mock":
 		if g.SandboxKubeconfig != "" {
