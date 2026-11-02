@@ -3,12 +3,14 @@
 import { BehaviorSubject, Observable } from 'rxjs';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import type AuthnApiService from '../authn-api.service';
+import type { LoginMethodsResponse } from '../../generated/authn-api';
 import { demoUser } from './fixtures';
 
 export default class FakeAuthnApiService implements Pick<
   AuthnApiService,
   | 'currentUser$'
   | 'login'
+  | 'getLoginMethods'
   | 'getUserInfo'
   | 'initializeAuth'
   | 'refreshToken'
@@ -27,8 +29,8 @@ export default class FakeAuthnApiService implements Pick<
     return this.currentUserSubject.value;
   }
 
-  // Both must stay instance methods to match AuthnApiService's shape, and both are
-  // genuinely no-ops here: the subject is seeded at construction and never expires.
+  // These must stay instance methods to match AuthnApiService's shape. The first two
+  // are genuinely no-ops here: the subject is seeded at construction and never expires.
   /* eslint-disable class-methods-use-this */
   async initializeAuth(): Promise<void> {
     // Already authenticated via the seeded subject; nothing to do.
@@ -36,6 +38,11 @@ export default class FakeAuthnApiService implements Pick<
 
   async refreshToken(): Promise<void> {
     // No-op in the demo build.
+  }
+
+  // There is no identity provider to send a demo visitor to.
+  async getLoginMethods(): Promise<LoginMethodsResponse> {
+    return { password: true };
   }
   /* eslint-enable class-methods-use-this */
 

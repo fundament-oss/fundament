@@ -1,6 +1,7 @@
 import '@nldd/design-system/top-navigation-bar';
 import {
   Component,
+  computed,
   inject,
   OnInit,
   signal,
@@ -13,6 +14,7 @@ import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { ConfigService } from '../config.service';
+import type { LoginMethodsResponse } from '../../generated/authn-api';
 import { Handoff, resolveHandoff } from './login-handoff';
 import { HOME } from '../address';
 import '@nldd/design-system/password-field';
@@ -21,6 +23,7 @@ import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/container';
+import '@nldd/design-system/divider';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
@@ -83,6 +86,26 @@ export default class LoginComponent implements OnInit {
   error = signal<string | null>(null);
 
   isLoading = signal(false);
+
+  /**
+   * How authn-api signs people in here. Null until it has said: showing the
+   * form first would flash it on a deployment that has none.
+   */
+  readonly methods = signal<LoginMethodsResponse | null>(null);
+
+  /**
+   * The button to the identity provider, when there is one. It comes back to
+   * this page, hand-off and all: with the cookie set by then, `ngOnInit` sends
+   * the visitor on the way the password form would.
+   */
+  readonly ssoLogin = computed(() => {
+    const name = this.methods()?.provider_name;
+    if (!name) return null;
+    return {
+      text: `Log in with ${name}`,
+      url: this.apiService.ssoLoginUrl(window.location.href),
+    };
+  });
 
   /**
    * The line under the heading, which says who this login is for. Not a
@@ -151,7 +174,13 @@ export default class LoginComponent implements OnInit {
       // another surface still has to be sent back there rather than dropped on
       // the console's own default page.
       this.leave();
+      return;
     }
+    this.methods.set(await this.apiService.getLoginMethods());
+  }
+
+  onSsoLogin() {
+    this.apiService.expectSessionAfterRedirect();
   }
 
   async onSubmit(event?: Event) {

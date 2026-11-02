@@ -120,6 +120,26 @@ authnApi:
   # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets the local
   # plugin sandbox cluster (same Secret plugin-proxy and kube-api-proxy use).
   sandboxKubeconfigSecret: ""
+  # oidc: an external identity provider in place of the chart's Dex, such as
+  # Fundament SSO (Keycloak). Set issuer and turn dex.enabled off. authn-api
+  # then signs everyone in through the provider, behind a "Log in with
+  # <displayName>" button, and the console drops the password form: only Dex
+  # offers the password grant it needs. The provider's client must accept
+  # exactly <externalUrls.authn>/callback as redirect URI.
+  # authn-api stores the provider's `sub` as each user's external_ref, so
+  # switching providers later turns every user into a new identity whose
+  # email is already taken.
+  oidc:
+    issuer: ""            # empty: Dex (dex.issuer)
+    clientId: fundament
+    displayName: ""       # required with an issuer
+    # Comma-separated, and must include openid. Keycloak refuses a scope it
+    # does not define, such as Dex's "groups".
+    scopes: openid,profile,email
+    # A confidential client's secret. Name empty: a public client.
+    clientSecretRef:
+      name: ""
+      key: client-secret
   httproute:
     enabled: false
     parentRefs: []
@@ -253,7 +273,7 @@ consoleFrontend:
     #  - console.example.com
 
 # Console walkthrough (demo build on in-memory data; no backend required).
-# Not enabled in production — see values-production.yaml.
+# Not enabled in production — see values-example-prod.yaml.
 consoleDemoFrontend:
   enabled: false
   replicas: 1
@@ -335,7 +355,7 @@ authzWorker:
 # OpenFGA (Fine-Grained Authorization)
 openfga:
   enabled: true
-  image: openfga/openfga:v1.22.0
+  image: openfga/openfga:v1.22.1
   replicas: 1
   playground:
     enabled: false

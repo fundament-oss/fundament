@@ -8,6 +8,15 @@ db:
 authnApi:
   enabled: true
   replicas: 2
+  # Fundament SSO (Keycloak) signs people in, not Dex. The client is
+  # confidential; its secret is created by secret management.
+  oidc:
+    issuer: https://login.example.com/realms/fundamentsso
+    clientId: fundament
+    displayName: Fundament SSO
+    clientSecretRef:
+      name: authn-api-oidc
+      key: client-secret
 
 organizationApi:
   enabled: true
@@ -36,11 +45,4 @@ dcimFrontend:
   replicas: 2
 
 dex:
-  enabled: true
-  issuer: https://dex.sandbox.example.com
-  staticClients:
-    - id: fundament
-      name: Fundament
-      secret: "" # Set via secret management
-      redirectURIs:
-        - https://fundament.sandbox.example.com/callback
+  enabled: false
