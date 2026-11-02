@@ -377,7 +377,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off. Helm: `clusterWorker.maxReconcileDeletions`; see [Too many deletions in one pass](#too-many-deletions-in-one-pass) |
 | `INVENTORY_INTERVAL` | `15m` | how often every ready cluster is counted; see [Fleet inventory](#fleet-inventory) |
 | `INVENTORY_WORKERS` | `4` | clusters counted at once |
-| `INVENTORY_TIMEOUT` | `30s` | bound on one cluster's count, credentials included |
+| `INVENTORY_TIMEOUT` | `30s` | bound on one cluster's count, credentials and storing included; recording a failed count gets up to 10s more |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 
 ## Shoots the reconcile loop leaves alone

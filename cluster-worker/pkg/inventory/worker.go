@@ -44,7 +44,9 @@ type Config struct {
 	// Workers is how many clusters are collected at once.
 	Workers int `env:"WORKERS" envDefault:"4"`
 	// Timeout bounds one cluster's collection, credentials and storing
-	// included.
+	// included. Recording a failed collection gets recordErrorTimeout on
+	// top, so a worker can spend up to Timeout + recordErrorTimeout on one
+	// cluster.
 	Timeout time.Duration `env:"TIMEOUT" envDefault:"30s"`
 }
 

@@ -103,7 +103,7 @@ Collection runs as its own Deployment, `cluster-worker-inventory`: the cluster-w
 
 The chart renders the Deployment only while `platformAdminApi.enabled`: the staff view is the only reader, and an environment without it mints no kubeconfigs for data nobody reads. It runs one replica with a `Recreate` strategy and no leader election, so every shoot is read once per interval and a rollout never runs two collectors.
 
-Every `INVENTORY_INTERVAL` (15 minutes; 1 minute locally) it queues every ready cluster of a live organization, and `INVENTORY_WORKERS` (4) workers collect them, each bounded by `INVENTORY_TIMEOUT` (30 seconds) for reading and storing together. Per cluster it:
+Every `INVENTORY_INTERVAL` (15 minutes; 1 minute locally) it queues every ready cluster of a live organization, and `INVENTORY_WORKERS` (4) workers collect them, each bounded by `INVENTORY_TIMEOUT` (30 seconds) for reading and storing together. Recording a failed collection gets up to 10 seconds more of its own. Per cluster it:
 
 * lists nodes, grouped by Gardener's `worker.gardener.cloud/pool` label;
 * lists the namespaces carrying `fundament.io/namespace-id`;
