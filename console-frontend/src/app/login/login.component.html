@@ -32,6 +32,23 @@
             <p>{{ description }}</p>
           </nldd-rich-text>
           <nldd-spacer size="24"></nldd-spacer>
+          @if (ssoLogin(); as sso) {
+            <!-- Above the form, which is for the accounts Fundament keeps
+                 itself. Secondary when the form is there too, so its button
+                 stays the one primary action on the page. -->
+            <nldd-button
+              [attr.variant]="methods()?.password ? 'secondary' : 'primary'"
+              width="full"
+              [attr.text]="sso.text"
+              [attr.href]="sso.url"
+              (click)="onSsoLogin()"
+            ></nldd-button>
+            @if (methods()?.password) {
+              <nldd-spacer size="24"></nldd-spacer>
+              <nldd-divider></nldd-divider>
+              <nldd-spacer size="24"></nldd-spacer>
+            }
+          }
           @if (error(); as message) {
             <nldd-banner
               variant="critical"
@@ -40,61 +57,64 @@
             ></nldd-banner>
             <nldd-spacer size="16"></nldd-spacer>
           }
-          <nldd-form
-            [formGroup]="loginForm"
-            (submit)="onSubmit($event)"
-            (keydown.enter)="onSubmit($event)"
-          >
-            <nldd-form-field label="Email address">
-              <nldd-text-field
-                type="email"
-                id="email"
-                name="email"
-                autocomplete="email"
-                appAutofocus
-                [value]="email?.value ?? ''"
-                (input)="loginForm.get('email')!.setValue($any($event.target).value)"
-                [invalid]="!!(email?.invalid && formSubmitted())"
-                unmet="login-email-error"
-              ></nldd-text-field>
-              <nldd-validation-list>
-                <nldd-validation-item id="login-email-error">{{
-                  getEmailError()
-                }}</nldd-validation-item>
-              </nldd-validation-list>
-            </nldd-form-field>
-            <nldd-form-field label="Password">
-              <nldd-password-field
-                id="password"
-                autocomplete="current-password"
-                [value]="password?.value ?? ''"
-                (input)="loginForm.get('password')!.setValue($any($event.target).value)"
-                (blur)="loginForm.get('password')!.markAsTouched()"
-                show-button-text="Show"
-                show-button-accessible-label="Show password"
-                hide-button-text="Hide"
-                hide-button-accessible-label="Hide password"
-                [invalid]="!!(password?.invalid && formSubmitted())"
-                unmet="login-password-error"
-              ></nldd-password-field>
-              <nldd-validation-list>
-                <nldd-validation-item id="login-password-error">{{
-                  getPasswordError()
-                }}</nldd-validation-item>
-              </nldd-validation-list>
-            </nldd-form-field>
-            <nldd-form-actions>
-              <!-- Never disabled: a disabled button says nothing about what is
-                   missing, and the loading state already says it is busy. -->
-              <nldd-button
-                type="submit"
-                text="Sign in"
-                [attr.loading]="isLoading() ? '' : null"
-                variant="primary"
-                width="full"
-              ></nldd-button>
-            </nldd-form-actions>
-          </nldd-form>
+          <!-- Only where the identity provider takes passwords (Dex). -->
+          @if (methods()?.password) {
+            <nldd-form
+              [formGroup]="loginForm"
+              (submit)="onSubmit($event)"
+              (keydown.enter)="onSubmit($event)"
+            >
+              <nldd-form-field label="Email address">
+                <nldd-text-field
+                  type="email"
+                  id="email"
+                  name="email"
+                  autocomplete="email"
+                  appAutofocus
+                  [value]="email?.value ?? ''"
+                  (input)="loginForm.get('email')!.setValue($any($event.target).value)"
+                  [invalid]="!!(email?.invalid && formSubmitted())"
+                  unmet="login-email-error"
+                ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="login-email-error">{{
+                    getEmailError()
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-form-field label="Password">
+                <nldd-password-field
+                  id="password"
+                  autocomplete="current-password"
+                  [value]="password?.value ?? ''"
+                  (input)="loginForm.get('password')!.setValue($any($event.target).value)"
+                  (blur)="loginForm.get('password')!.markAsTouched()"
+                  show-button-text="Show"
+                  show-button-accessible-label="Show password"
+                  hide-button-text="Hide"
+                  hide-button-accessible-label="Hide password"
+                  [invalid]="!!(password?.invalid && formSubmitted())"
+                  unmet="login-password-error"
+                ></nldd-password-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="login-password-error">{{
+                    getPasswordError()
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-form-actions>
+                <!-- Never disabled: a disabled button says nothing about what is
+                     missing, and the loading state already says it is busy. -->
+                <nldd-button
+                  type="submit"
+                  text="Sign in"
+                  [attr.loading]="isLoading() ? '' : null"
+                  variant="primary"
+                  width="full"
+                ></nldd-button>
+              </nldd-form-actions>
+            </nldd-form>
+          }
         </nldd-container>
       </nldd-box>
     </nldd-container>

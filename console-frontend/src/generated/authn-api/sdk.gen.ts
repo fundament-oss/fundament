@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen';
-import type { HandleCallbackData, HandleCallbackErrors, HandleLoginData, HandleLoginErrors, HandleLogoutData, HandleLogoutErrors, HandleLogoutResponses, HandlePasswordLoginData, HandlePasswordLoginErrors, HandlePasswordLoginResponses, HandleRefreshData, HandleRefreshErrors, HandleRefreshResponses } from './types.gen';
+import type { HandleCallbackData, HandleCallbackErrors, HandleLoginData, HandleLoginErrors, HandleLoginMethodsData, HandleLoginMethodsResponses, HandleLogoutData, HandleLogoutErrors, HandleLogoutResponses, HandlePasswordLoginData, HandlePasswordLoginErrors, HandlePasswordLoginResponses, HandleRefreshData, HandleRefreshErrors, HandleRefreshResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -27,6 +27,16 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  *
  */
 export const handleLogin = <ThrowOnError extends boolean = false>(options?: Options<HandleLoginData, ThrowOnError>) => (options?.client ?? client).get<unknown, HandleLoginErrors, ThrowOnError>({ url: '/login', ...options });
+
+/**
+ * How this deployment signs people in
+ *
+ * Tells the login page whether to show the password form (/login/password)
+ * and whether to offer a button that starts /login at the identity
+ * provider, and what that provider is called.
+ *
+ */
+export const handleLoginMethods = <ThrowOnError extends boolean = false>(options?: Options<HandleLoginMethodsData, ThrowOnError>) => (options?.client ?? client).get<HandleLoginMethodsResponses, unknown, ThrowOnError>({ url: '/login/methods', ...options });
 
 /**
  * Password-based login

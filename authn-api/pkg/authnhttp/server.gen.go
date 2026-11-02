@@ -27,6 +27,16 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// LoginMethodsResponse defines model for LoginMethodsResponse.
+type LoginMethodsResponse struct {
+	// Password Whether /login/password works (Dex's static users)
+	Password bool `json:"password"`
+
+	// ProviderName Name of the identity provider for a "Log in with" button that
+	// starts /login. Absent means no button.
+	ProviderName *string `json:"provider_name,omitempty"`
+}
+
 // PasswordLoginRequest defines model for PasswordLoginRequest.
 type PasswordLoginRequest struct {
 	// Email User's email address
@@ -83,6 +93,9 @@ type BadRequest = ErrorResponse
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = ErrorResponse
 
+// LoginRefused defines model for LoginRefused.
+type LoginRefused = ErrorResponse
+
 // MethodNotAllowed defines model for MethodNotAllowed.
 type MethodNotAllowed = ErrorResponse
 
@@ -127,6 +140,9 @@ type ServerInterface interface {
 	// Initiate OIDC login flow
 	// (GET /login)
 	HandleLogin(w http.ResponseWriter, r *http.Request, params HandleLoginParams)
+	// How this deployment signs people in
+	// (GET /login/methods)
+	HandleLoginMethods(w http.ResponseWriter, r *http.Request)
 	// Password-based login
 	// (POST /login/password)
 	HandlePasswordLogin(w http.ResponseWriter, r *http.Request)
@@ -230,6 +246,20 @@ func (siw *ServerInterfaceWrapper) HandleLogin(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.HandleLogin(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandleLoginMethods operation middleware
+func (siw *ServerInterfaceWrapper) HandleLoginMethods(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandleLoginMethods(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -411,6 +441,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc("GET "+options.BaseURL+"/callback", wrapper.HandleCallback)
 	m.HandleFunc("GET "+options.BaseURL+"/login", wrapper.HandleLogin)
+	m.HandleFunc("GET "+options.BaseURL+"/login/methods", wrapper.HandleLoginMethods)
 	m.HandleFunc("POST "+options.BaseURL+"/login/password", wrapper.HandlePasswordLogin)
 	m.HandleFunc("POST "+options.BaseURL+"/logout", wrapper.HandleLogout)
 	m.HandleFunc("POST "+options.BaseURL+"/refresh", wrapper.HandleRefresh)
@@ -421,6 +452,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 type BadRequestJSONResponse ErrorResponse
 
 type InternalServerErrorJSONResponse ErrorResponse
+
+type LoginRefusedJSONResponse ErrorResponse
 
 type MethodNotAllowedJSONResponse ErrorResponse
 
@@ -466,6 +499,15 @@ type HandleCallback401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response HandleCallback401JSONResponse) VisitHandleCallbackResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleCallback403JSONResponse struct{ LoginRefusedJSONResponse }
+
+func (response HandleCallback403JSONResponse) VisitHandleCallbackResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -525,6 +567,22 @@ func (response HandleLogin500JSONResponse) VisitHandleLoginResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
+type HandleLoginMethodsRequestObject struct {
+}
+
+type HandleLoginMethodsResponseObject interface {
+	VisitHandleLoginMethodsResponse(w http.ResponseWriter) error
+}
+
+type HandleLoginMethods200JSONResponse LoginMethodsResponse
+
+func (response HandleLoginMethods200JSONResponse) VisitHandleLoginMethodsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type HandlePasswordLoginRequestObject struct {
 	Body *HandlePasswordLoginJSONRequestBody
 }
@@ -564,6 +622,24 @@ type HandlePasswordLogin401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response HandlePasswordLogin401JSONResponse) VisitHandlePasswordLoginResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandlePasswordLogin403JSONResponse struct{ LoginRefusedJSONResponse }
+
+func (response HandlePasswordLogin403JSONResponse) VisitHandlePasswordLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandlePasswordLogin404JSONResponse ErrorResponse
+
+func (response HandlePasswordLogin404JSONResponse) VisitHandlePasswordLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -691,6 +767,9 @@ type StrictServerInterface interface {
 	// Initiate OIDC login flow
 	// (GET /login)
 	HandleLogin(ctx context.Context, request HandleLoginRequestObject) (HandleLoginResponseObject, error)
+	// How this deployment signs people in
+	// (GET /login/methods)
+	HandleLoginMethods(ctx context.Context, request HandleLoginMethodsRequestObject) (HandleLoginMethodsResponseObject, error)
 	// Password-based login
 	// (POST /login/password)
 	HandlePasswordLogin(ctx context.Context, request HandlePasswordLoginRequestObject) (HandlePasswordLoginResponseObject, error)
@@ -776,6 +855,30 @@ func (sh *strictHandler) HandleLogin(w http.ResponseWriter, r *http.Request, par
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(HandleLoginResponseObject); ok {
 		if err := validResponse.VisitHandleLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// HandleLoginMethods operation middleware
+func (sh *strictHandler) HandleLoginMethods(w http.ResponseWriter, r *http.Request) {
+	var request HandleLoginMethodsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.HandleLoginMethods(ctx, request.(HandleLoginMethodsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "HandleLoginMethods")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(HandleLoginMethodsResponseObject); ok {
+		if err := validResponse.VisitHandleLoginMethodsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
