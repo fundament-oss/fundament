@@ -1,4 +1,4 @@
-<nldd-page sticky-header>
+<nldd-page sticky-header accessible-label="Data centers">
   <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
   <nldd-simple-section>
     <nldd-title size="3">
@@ -7,10 +7,10 @@
     <nldd-spacer size="12"></nldd-spacer>
     <!-- Making one is an action on this list, not on the data center you have
          open, so it stands where the list does. -->
-    <nldd-toolbar label="Data center actions">
+    <nldd-toolbar accessible-label="Data center actions">
       <nldd-toolbar-item slot="start">
         <nldd-button
-          variant="secondary"
+          appearance="secondary"
           text="Add data center…"
           start-icon="plus-small"
           (click)="add.emit()"
@@ -32,12 +32,8 @@
            centers yet" underneath it would contradict it. A list held from
            before stays up. -->
       @if (!loading() && (!loadError() || datacenters().length)) {
-        <nldd-list
-          type="navigation"
-          dividers="on-touch"
-          accessible-label="Data centers"
-          empty-text="No data centers yet"
-        >
+        <nldd-list type="navigation" dividers="on-touch" accessible-label="Data centers">
+          <nldd-inline-dialog slot="empty" text="No data centers yet"></nldd-inline-dialog>
           @for (dc of datacenters(); track dc.id) {
             <nldd-list-item
               button

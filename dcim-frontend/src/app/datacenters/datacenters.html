@@ -19,16 +19,16 @@
             [attr.text]="statusLabel(dc.status)"
           ></nldd-badge>
         </h1>
-        <span slot="subtitle">{{ dc.fullName }}</span>
+        <span slot="supporting-text">{{ dc.fullName }}</span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <!-- Everything you can do here, in one bar: the two places this data
            center leads to, and editing it. Deleting is not among them, it waits
            at the bottom of the page. -->
-      <nldd-toolbar label="Data center actions">
+      <nldd-toolbar accessible-label="Data center actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Racks"
             start-icon="rack-servers"
             (click)="openRackView()"
@@ -42,7 +42,7 @@
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Tasks"
             start-icon="tasks"
             (click)="openTaskManagement(dc)"
@@ -56,7 +56,7 @@
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="end">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Edit"
             start-icon="pencil-on-square"
             (click)="openEditDc(dc)"
@@ -73,12 +73,7 @@
       <!-- Three numbers that say how full this hall is. Cards rather than a row
            of divs, and a horizontal scroll so they keep their size in a narrow
            pane instead of squeezing to three columns of nothing. -->
-      <nldd-collection
-        layout="horizontal-scroll"
-        item-width="160px"
-        gap="16"
-        accessible-label="Data center figures"
-      >
+      <nldd-collection layout="horizontal-scroll" item-min-width="160px" gap="16">
         <nldd-card background="tinted">
           <nldd-container padding="16">
             <nldd-text size="sm" color="secondary">Racks</nldd-text>
@@ -128,7 +123,7 @@
            other. -->
       <nldd-box>
         <nldd-container padding="16">
-          <nldd-toolbar label="Floor layout view">
+          <nldd-toolbar accessible-label="Floor layout view">
             <nldd-toolbar-item slot="start">
               <nldd-segmented-control
                 [value]="viewMode()"
@@ -153,7 +148,7 @@
                  with the layout and not with the data center. -->
             <nldd-toolbar-item slot="end">
               <nldd-button
-                variant="secondary"
+                appearance="secondary"
                 text="Edit layout"
                 start-icon="pencil-on-square"
                 (click)="openLayout(dc)"
@@ -190,7 +185,7 @@
                       class="w-16 shrink-0 bg-slate-300 dark:bg-gray-700 border-r-2 border-slate-400 flex items-center justify-center"
                     >
                       <nldd-icon
-                        name="apartment-building"
+                        icon="apartment-building"
                         style="width: 14px; height: 14px; color: #94a3b8"
                         aria-hidden="true"
                       ></nldd-icon>
@@ -200,7 +195,7 @@
                       class="w-14 shrink-0 bg-white/60 dark:bg-gray-950/60 border-x-2 border-dashed border-slate-400 flex items-center justify-center gap-1"
                     >
                       <nldd-icon
-                        name="arrow-right"
+                        icon="arrow-right"
                         class="w-4 h-4 text-[#94a3b8]"
                         aria-hidden="true"
                       ></nldd-icon>
@@ -250,7 +245,7 @@
                               <!-- Icon + short name -->
                               <div class="relative z-10 flex flex-col items-center gap-0.5 pb-2">
                                 <nldd-icon
-                                  name="cylinder-split"
+                                  icon="cylinder-split"
                                   class="w-3.5 h-3.5"
                                   aria-hidden="true"
                                 ></nldd-icon>
@@ -294,7 +289,7 @@
       <nldd-spacer size="8"></nldd-spacer>
       <!-- The same list a product page uses for its properties: label left,
            value right, no icons. An icon per row named the row twice. -->
-      <nldd-list variant="box-tinted" accessible-label="Data center properties">
+      <nldd-list appearance="box-tinted" accessible-label="Data center properties">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Address"></nldd-text-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -346,7 +341,7 @@
           </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
-            variant="destructive"
+            appearance="destructive"
             text="Delete data center"
             start-icon="delete"
             (click)="openDeleteDc(dc)"
@@ -385,13 +380,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep data center"
     (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete data center"
     (click)="confirmDeleteDc()"
   ></nldd-button>

@@ -16,7 +16,7 @@
       <h1>Project members</h1>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
-    <nldd-toolbar label="Member actions">
+    <nldd-toolbar accessible-label="Member actions">
       <nldd-toolbar-item slot="start">
         <!-- Add, not New: the person already exists in the organization, this
              puts them in the project. -->
@@ -25,7 +25,7 @@
           (click)="overlays.addProjectMember.set(projectId())"
           text="Add member…"
           start-icon="plus-small"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
@@ -39,7 +39,7 @@
           [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           text="About roles"
           start-icon="info"
-          variant="secondary"
+          appearance="secondary"
           (click)="openPermissions($event)"
         ></nldd-button>
         <nldd-menu-item
@@ -78,7 +78,7 @@
               type="button"
               (click)="loadMembers()"
               text="Try again"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
           </nldd-inline-dialog>
         </nldd-container>
@@ -99,14 +99,14 @@
                 (click)="overlays.addProjectMember.set(projectId())"
                 text="Add member…"
                 start-icon="plus-small"
-                variant="primary"
+                appearance="primary"
               ></nldd-button>
             </nldd-inline-dialog>
           </nldd-container>
         </nldd-box>
       } @else {
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Project members"
         >
           @for (view of visibleMembers(); track view.member.id) {
@@ -182,14 +182,14 @@
     (click)="retryAction()"
     [attr.loading]="retrying() ? '' : null"
     text="Try again"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="actionError.set(null)"
     text="Cancel"
-    variant="secondary"
+    appearance="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Add Member Sheet -->

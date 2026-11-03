@@ -23,7 +23,7 @@
           [attr.href]="browsePluginsUrl"
           text="Browse plugins"
           start-icon="search"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       }
     </nldd-title>
@@ -63,7 +63,7 @@
           [attr.href]="browsePluginsUrl"
           text="Browse plugins"
           start-icon="search"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       </nldd-inline-dialog>
     } @else {
@@ -81,12 +81,12 @@
       <!-- The filters were a sidebar of two lists; as menus they stay out of the
            way until you need them, and the button label reports the active
            filter so the current selection is readable without opening one. -->
-      <nldd-toolbar label="Plugin filters">
+      <nldd-toolbar accessible-label="Plugin filters">
         <nldd-toolbar-item slot="start">
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             [attr.text]="getSelectedPresetLabel()"
           >
             <nldd-menu
@@ -109,7 +109,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             [attr.text]="getSelectedCategoryLabel()"
           >
             <nldd-menu
@@ -152,7 +152,7 @@
       } @else {
         <nldd-collection
           layout="grid"
-          item-width="320px"
+          item-min-width="320px"
           gap="16"
         >
           @for (plugin of filteredPlugins; track plugin.id) {
@@ -181,7 +181,7 @@
                   <!-- Not a second green tag beside "Official": that one says what
                        the plugin is, this says what it does in your clusters. -->
                   @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
-                    <span slot="subtitle">
+                    <span slot="supporting-text">
                       Installed on
                       {{ runningInstallCount(plugin.organizationName, plugin.name) }}/{{
                         clusterCount
@@ -218,7 +218,7 @@
                         ? 'Manage'
                         : 'Install…'
                     "
-                    variant="primary"
+                    appearance="primary"
                   ></nldd-button>
                   <!-- A sheet rather than the page: the summary is what most
                        presses want, and it keeps the grid and its filters
@@ -227,7 +227,7 @@
                     type="button"
                     (click)="openPluginDetails(plugin)"
                     text="Details"
-                    variant="secondary"
+                    appearance="secondary"
                   ></nldd-button>
                 </nldd-button-group>
               </nldd-container>
@@ -275,7 +275,7 @@
       <nldd-icon-button
         icon="dismiss"
         text="Close"
-        variant="neutral-transparent"
+        appearance="neutral-transparent"
         size="sm"
         (click)="closePluginDetails()"
       ></nldd-icon-button>
@@ -294,7 +294,7 @@
             type="button"
             text="Installed"
             start-icon="check-mark"
-            variant="secondary"
+            appearance="secondary"
             width="full"
           ></nldd-button>
         } @else {
@@ -303,7 +303,7 @@
             type="button"
             text="Install"
             start-icon="cloud-arrow-down"
-            variant="primary"
+            appearance="primary"
             width="full"
           ></nldd-button>
         }
@@ -322,7 +322,7 @@
             target="_blank"
             text="View full details"
             start-icon="square-arrow-right-top"
-            variant="secondary"
+            appearance="secondary"
             width="full"
           ></nldd-button>
         } @else if (!plugin.unlisted) {
@@ -332,7 +332,7 @@
             (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
             text="View full details"
             start-icon="square-arrow-right-top"
-            variant="secondary"
+            appearance="secondary"
             width="full"
           ></nldd-button>
         }

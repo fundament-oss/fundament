@@ -31,7 +31,7 @@
       ></nldd-activity-indicator>
     } @else if (organization(); as organization) {
       <nldd-list
-        variant="box-tinted"
+        appearance="box-tinted"
         accessible-label="Organization details"
       >
         <!-- The alias is the only editable field, so the control sits on that
@@ -51,7 +51,7 @@
               (click)="startEdit()"
               icon="edit"
               size="sm"
-              variant="secondary"
+              appearance="secondary"
               accessible-label="Edit organization alias"
             ></nldd-icon-button>
           </nldd-cell>
@@ -133,8 +133,8 @@
         <nldd-spacer size="16"></nldd-spacer>
       }
       <nldd-form
-        (submit)="saveEdit()"
-        (keydown.enter)="saveEdit()"
+        (submit)="saveEdit($event)"
+        (keydown.enter)="saveEdit($event)"
         novalidate
       >
         <nldd-form-field label="Alias">
@@ -162,7 +162,7 @@
             (click)="saveEdit()"
             text="Save"
             [attr.loading]="loading() ? '' : null"
-            variant="primary"
+            appearance="primary"
             width="full"
           ></nldd-button>
         </nldd-form-actions>

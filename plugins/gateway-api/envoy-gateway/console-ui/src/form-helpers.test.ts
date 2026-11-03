@@ -36,7 +36,7 @@ describe('fieldError', () => {
   });
 
   it('checks a number against min and max', () => {
-    const attrs = 'type="number" min="1" max="65535"';
+    const attrs = 'keyboard="numeric" data-min="1" data-max="65535"';
     expect(fieldError(field(attrs, '1.5'))).toBe('Enter a whole number.');
     expect(fieldError(field(attrs, '70000'))).toBe(
       'Enter a number from 1 to 65535.',
@@ -45,10 +45,10 @@ describe('fieldError', () => {
   });
 
   it('names only the bound a number has', () => {
-    expect(fieldError(field('type="number" min="1"', '0'))).toBe(
+    expect(fieldError(field('keyboard="numeric" data-min="1"', '0'))).toBe(
       'Enter a number of at least 1.',
     );
-    expect(fieldError(field('type="number" max="10"', '11'))).toBe(
+    expect(fieldError(field('keyboard="numeric" data-max="10"', '11'))).toBe(
       'Enter a number of at most 10.',
     );
   });

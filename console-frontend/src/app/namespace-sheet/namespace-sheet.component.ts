@@ -278,6 +278,8 @@ export default class NamespaceSheetComponent implements OnInit {
     // See createNamespace: Enter picking an option in the token field is not a
     // submit, and the DS says so by marking the event handled.
     if (event?.defaultPrevented) return;
+    // The submit itself would otherwise leave the page.
+    event?.preventDefault();
 
     this.rolesSubmitted.set(true);
     const memberIds = this.editingMemberId() ? [this.editingMemberId()] : this.draftMemberIds();

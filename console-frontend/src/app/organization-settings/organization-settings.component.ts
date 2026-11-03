@@ -103,7 +103,11 @@ export default class OrganizationComponent implements OnInit {
     this.editingName.set('');
   }
 
-  async saveEdit() {
+  async saveEdit(event?: Event) {
+    // Enter in the only field submits the form itself and marks the keydown
+    // handled, so the keydown that follows is not a second submit.
+    if (event?.defaultPrevented) return;
+    event?.preventDefault();
     const currentOrganization = this.organization();
     const nameToSave = this.editingName();
 

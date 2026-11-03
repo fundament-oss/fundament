@@ -15,7 +15,7 @@
         <!-- Where it stands, then how full it is: the address comes before the
              measurements, and without it the name says nothing about which hall
              you are in. -->
-        <span slot="subtitle">
+        <span slot="supporting-text">
           {{ currentRackDcName() }} · {{ rackStats().usedU }}/{{ rackStats().totalU }}U ·
           {{ formatPowerKw(rackStats().totalPowerW) }}kW · {{ rackStats().deviceCount }} device{{
             rackStats().deviceCount === 1 ? '' : 's'
@@ -23,10 +23,10 @@
         </span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-toolbar label="Rack actions">
+      <nldd-toolbar accessible-label="Rack actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Edit rack"
             start-icon="pencil-on-square"
             (click)="openEditRack(rack)"
@@ -44,7 +44,7 @@
            in it beside that, and the one thing you can do to that unit on
            the right. A device fills several units and is one row, written
            down at the top unit of its span. -->
-      <nldd-list variant="box-tinted" [attr.accessible-label]="'Units in ' + rack.name">
+      <nldd-list appearance="box-tinted" [attr.accessible-label]="'Units in ' + rack.name">
         @for (row of rackRows(); track row.key) {
           @if (row.device; as device) {
             <nldd-list-item>
@@ -125,7 +125,7 @@
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-button
-                  variant="secondary"
+                  appearance="secondary"
                   size="sm"
                   text="Add…"
                   start-icon="plus-small"
@@ -150,7 +150,8 @@
           <nldd-text color="secondary">{{ notes.description }}</nldd-text>
           <nldd-spacer size="12"></nldd-spacer>
         }
-        <nldd-list variant="box-tinted" accessible-label="Notes" empty-text="No notes yet">
+        <nldd-list appearance="box-tinted" accessible-label="Notes">
+          <nldd-inline-dialog slot="empty" text="No notes yet"></nldd-inline-dialog>
           @for (comment of notes.comments; track $index) {
             <nldd-list-item>
               <nldd-cell width="fit-content" vertical-alignment="top">
@@ -178,7 +179,7 @@
           <!-- The same list as the history on an asset: the track carries the
                line between the events, so the rows need no dividers of their
                own. -->
-          <nldd-list variant="box-tinted" dividers="never" accessible-label="Rack history">
+          <nldd-list appearance="box-tinted" dividers="never" accessible-label="Rack history">
             @for (
               event of currentRackHistory();
               track event.daysAgo + event.description;
@@ -186,9 +187,7 @@
             ) {
               <nldd-list-item>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-timeline-track-cell
-                  [attr.position]="historyPosition(i)"
-                ></nldd-timeline-track-cell>
+                <nldd-step-cell [attr.position]="historyPosition(i)"></nldd-step-cell>
                 <nldd-spacer-cell size="16"></nldd-spacer-cell>
                 <nldd-text-cell
                   [attr.text]="event.description"
@@ -216,7 +215,7 @@
           </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
-            variant="destructive"
+            appearance="destructive"
             text="Delete rack"
             start-icon="delete"
             (click)="openDeleteRack(rack)"
@@ -251,13 +250,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep device"
     (click)="cancelDeleteDevice()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete device"
     (click)="confirmDeleteDevice()"
   ></nldd-button>
@@ -276,13 +275,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep rack"
     (click)="cancelDeleteRack()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete rack"
     (click)="confirmDeleteRack()"
   ></nldd-button>

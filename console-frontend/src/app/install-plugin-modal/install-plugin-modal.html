@@ -101,7 +101,7 @@
         <!-- data-tour: the per-cluster list the walkthrough installs from
              (src/app/presentation/tours.ts). Keep the attribute. -->
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Clusters"
           data-tour="install-clusters"
         >
@@ -165,7 +165,7 @@
                     type="button"
                     (click)="onRetry(cluster.id, cluster.version)"
                     text="Retry"
-                    variant="secondary"
+                    appearance="secondary"
                     size="sm"
                   ></nldd-button>
                 </nldd-cell>
@@ -184,7 +184,7 @@
                     type="button"
                     [attr.expandable]="isRemoving(cluster.phase) ? null : ''"
                     [attr.text]="isRemoving(cluster.phase) ? 'Uninstall' : 'Install'"
-                    [attr.variant]="isRemoving(cluster.phase) ? 'destructive' : 'primary'"
+                    [attr.appearance]="isRemoving(cluster.phase) ? 'destructive' : 'primary'"
                     size="sm"
                   ></nldd-button>
                 </nldd-cell>
@@ -194,7 +194,7 @@
                     type="button"
                     (click)="onUninstall(cluster.id)"
                     text="Uninstall"
-                    variant="destructive"
+                    appearance="destructive"
                     size="sm"
                   ></nldd-button>
                 </nldd-cell>
@@ -211,7 +211,7 @@
                     expandable
                     popup-type="menu"
                     text="Install"
-                    variant="primary"
+                    appearance="primary"
                     size="sm"
                     [attr.disabled]="versions().length === 0 || schemaLoading() ? '' : null"
                   >

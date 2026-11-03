@@ -19,7 +19,7 @@
             [attr.text]="deviceTypeLabel(dev.type)"
           ></nldd-tag>
         </h1>
-        <span slot="subtitle">
+        <span slot="supporting-text">
           {{ uRange(dev) }}
           @if (rack(); as r) {
             in {{ r.name }}
@@ -37,7 +37,7 @@
         <h2>Identity</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list variant="box-tinted" accessible-label="Device identity">
+      <nldd-list appearance="box-tinted" accessible-label="Device identity">
         @if (dev.model) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Model"></nldd-text-cell>
@@ -112,12 +112,7 @@
           <h2>Hardware</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-collection
-          layout="horizontal-scroll"
-          item-width="160px"
-          gap="16"
-          accessible-label="Hardware figures"
-        >
+        <nldd-collection layout="horizontal-scroll" item-min-width="160px" gap="16">
           <nldd-card background="tinted">
             <nldd-container padding="16">
               <nldd-text size="sm" color="secondary">CPU cores</nldd-text>
@@ -159,7 +154,7 @@
           <h2>IPMI and power</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" accessible-label="IPMI and power">
+        <nldd-list appearance="box-tinted" accessible-label="IPMI and power">
           <nldd-list-item>
             <nldd-text-cell width="180px" text="IPMI address"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -194,7 +189,7 @@
           <h2>Allocation</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" accessible-label="Allocation">
+        <nldd-list appearance="box-tinted" accessible-label="Allocation">
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Project"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -232,7 +227,7 @@
           <h2>Connections</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" accessible-label="Device connections">
+        <nldd-list appearance="box-tinted" accessible-label="Device connections">
           @for (conn of deviceConnections(); track conn.id) {
             <nldd-list-item [attr.href]="'/racks/device/' + conn.remoteDeviceId">
               <nldd-text-cell
@@ -263,10 +258,10 @@
         <h2>Ports</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-toolbar label="Port actions">
+      <nldd-toolbar accessible-label="Port actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Add port…"
             start-icon="plus-small"
             (click)="showAddPortForm.set(true)"
@@ -274,7 +269,8 @@
         </nldd-toolbar-item>
       </nldd-toolbar>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-list variant="box-tinted" accessible-label="Ports" empty-text="No ports on this device">
+      <nldd-list appearance="box-tinted" accessible-label="Ports">
+        <nldd-inline-dialog slot="empty" text="No ports on this device"></nldd-inline-dialog>
         @for (port of devicePorts(); track port.id) {
           @let cable = portCableMap().get(port.id);
           @let peer =
@@ -305,7 +301,7 @@
             <nldd-cell width="fit-content">
               @if (cable) {
                 <nldd-button
-                  variant="secondary"
+                  appearance="secondary"
                   size="sm"
                   text="Disconnect"
                   (click)="disconnectCable(port.id)"
@@ -313,7 +309,7 @@
                 ></nldd-button>
               } @else {
                 <nldd-button
-                  variant="secondary"
+                  appearance="secondary"
                   size="sm"
                   text="Connect"
                   (click)="openConnectForm(port)"
@@ -337,7 +333,7 @@
         <nldd-text color="secondary">{{ notesDescription() }}</nldd-text>
         <nldd-spacer size="12"></nldd-spacer>
       }
-      <nldd-list variant="box-tinted" accessible-label="Notes">
+      <nldd-list appearance="box-tinted" accessible-label="Notes">
         @for (comment of notes(); track comment.id) {
           <nldd-list-item>
             <nldd-cell width="fit-content" vertical-alignment="top">
@@ -362,7 +358,7 @@
           </nldd-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-cell width="fit-content" vertical-alignment="bottom">
-            <nldd-button variant="secondary" text="Send" (click)="addNote()"></nldd-button>
+            <nldd-button appearance="secondary" text="Send" (click)="addNote()"></nldd-button>
           </nldd-cell>
         </nldd-list-item>
       </nldd-list>
@@ -375,13 +371,11 @@
           <h2>History</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" dividers="never" accessible-label="Device history">
+        <nldd-list appearance="box-tinted" dividers="never" accessible-label="Device history">
           @for (entry of deviceHistory(); track entry.daysAgo + entry.description; let i = $index) {
             <nldd-list-item>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-timeline-track-cell
-                [attr.position]="historyPosition(i)"
-              ></nldd-timeline-track-cell>
+              <nldd-step-cell [attr.position]="historyPosition(i)"></nldd-step-cell>
               <nldd-spacer-cell size="16"></nldd-spacer-cell>
               <nldd-text-cell
                 [attr.text]="entry.description"
@@ -409,7 +403,7 @@
           </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
-            variant="destructive"
+            appearance="destructive"
             text="Remove from rack"
             start-icon="delete"
             (click)="removeFromRack()"
@@ -468,7 +462,12 @@
           </nldd-toggle-button-group>
         </nldd-form-field>
         <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Add" (click)="addPort()"></nldd-button>
+          <nldd-button
+            appearance="primary"
+            width="full"
+            text="Add"
+            (click)="addPort()"
+          ></nldd-button>
         </nldd-form-actions>
       </nldd-form>
     </nldd-simple-section>
@@ -495,13 +494,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep in rack"
     (click)="cancelRemove()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Remove from rack"
     (click)="confirmRemoveFromRack()"
   ></nldd-button>

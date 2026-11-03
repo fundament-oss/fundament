@@ -14,15 +14,15 @@
     <nldd-simple-section>
       <nldd-title id="cables-title" size="2">
         <h1>{{ viewTitle() }}</h1>
-        <span slot="subtitle">{{ dcLabel() }}</span>
+        <span slot="supporting-text">{{ dcLabel() }}</span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <!-- What this page can do, in one bar: add a cable, take the planned ones
            shopping, or look at the same cables as a drawing. -->
-      <nldd-toolbar label="Cable actions">
+      <nldd-toolbar accessible-label="Cable actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Add cable…"
             start-icon="plus-small"
             (click)="addCable.emit(newCableDraft())"
@@ -40,7 +40,7 @@
         @if (filterStatus() === 'to-order') {
           <nldd-toolbar-item slot="end">
             <nldd-button
-              variant="secondary"
+              appearance="secondary"
               text="Shopping list"
               start-icon="cart"
               (click)="showShoppingList.emit()"
@@ -55,7 +55,7 @@
         }
         <nldd-toolbar-item slot="end">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Topology"
             (click)="showTopology.emit()"
           ></nldd-button>
@@ -76,7 +76,7 @@
            not on what is left after searching, because a search that matched
            nothing still has to be clearable. -->
       @if (viewCables().length > 0) {
-        <nldd-toolbar label="Cable list">
+        <nldd-toolbar accessible-label="Cable list">
           <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
             <nldd-search-field
               accessible-label="Search cables"
@@ -88,7 +88,7 @@
           @if (filteredCables().length > 0) {
             <nldd-toolbar-item slot="end">
               <nldd-button
-                variant="secondary"
+                appearance="secondary"
                 text="Download CSV"
                 start-icon="arrow-down-in-bucket"
                 accessible-label="Export visible cables as CSV"
@@ -128,12 +128,12 @@
                      and not one of the system's: custom-color takes it as a CSS
                      value. -->
                   <nldd-icon
-                    name="circle-filled"
+                    icon="circle-filled"
                     size="24"
                     [attr.custom-color]="CABLE_COLOR_HEX[cable.color]"
                   ></nldd-icon>
                 } @else {
-                  <nldd-icon name="circle-dashed" size="24" color="secondary-content"></nldd-icon>
+                  <nldd-icon icon="circle-dashed" size="24" color="secondary-content"></nldd-icon>
                 }
               </nldd-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>

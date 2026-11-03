@@ -41,7 +41,7 @@
          states, which kinds. A container rather than a section, because this is
          a strip of controls over a canvas and not a piece of the page. -->
     <nldd-container padding-inline="16" padding-block="8">
-      <nldd-toolbar label="Topology">
+      <nldd-toolbar accessible-label="Topology">
         <!-- Which hall is drawn. The list can show every location at once, a
              drawing cannot: two data centers on one canvas are two islands, not
              a floor. So the topology picks one, the way the shopping list
@@ -70,7 +70,7 @@
              it in the first place. -->
         <nldd-toolbar-item slot="end">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             expandable
             popup-type="menu"
             [attr.text]="topologyStatusLabel()"
@@ -95,7 +95,7 @@
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="end">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             expandable
             popup-type="menu"
             [attr.text]="topologyTypeLabel()"
@@ -171,13 +171,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep cable"
     (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete cable"
     (click)="confirmDelete()"
   ></nldd-button>

@@ -6,7 +6,7 @@
 //
 // Its own module rather than the entrypoint: the demo build boots from
 // main.demo.ts, and two lists of the same components would drift apart.
-import '@nldd/design-system/app-view';
+import '@nldd/design-system/shell';
 import '@nldd/design-system/avatar';
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/badge';
@@ -67,7 +67,7 @@ import '@nldd/design-system/tag';
 import '@nldd/design-system/text';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/text-field';
-import '@nldd/design-system/timeline-track-cell';
+import '@nldd/design-system/step-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/title-cell';
 import '@nldd/design-system/toggle-button';

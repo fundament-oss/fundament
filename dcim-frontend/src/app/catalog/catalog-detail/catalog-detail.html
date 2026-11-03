@@ -22,13 +22,13 @@
             [attr.text]="e.category"
           ></nldd-tag>
         </h1>
-        <p slot="subtitle">{{ e.manufacturer }}</p>
+        <p slot="supporting-text">{{ e.manufacturer }}</p>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-toolbar label="Product actions">
+      <nldd-toolbar accessible-label="Product actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Edit product"
             start-icon="pencil-on-square"
             (click)="openEditEntry()"
@@ -43,7 +43,7 @@
       </nldd-toolbar>
       <nldd-spacer size="20"></nldd-spacer>
       <!-- No heading over this one: it is what the page is about. -->
-      <nldd-list variant="box-tinted" accessible-label="Product details">
+      <nldd-list appearance="box-tinted" accessible-label="Product details">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Manufacturer"></nldd-text-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -79,7 +79,7 @@
           <h2>Specifications</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" accessible-label="Specifications">
+        <nldd-list appearance="box-tinted" accessible-label="Specifications">
           @for (spec of specEntries(e.specs); track spec.key) {
             <nldd-list-item>
               <nldd-text-cell width="180px" [attr.text]="spec.key"></nldd-text-cell>
@@ -99,10 +99,10 @@
       <nldd-spacer size="12"></nldd-spacer>
       <!-- The button that adds one sits with them: it acts on this section, not
            on the product as a whole. -->
-      <nldd-toolbar label="Port actions">
+      <nldd-toolbar accessible-label="Port actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             text="Add port…"
             start-icon="plus-small"
             (click)="openCreatePortDef()"
@@ -116,12 +116,12 @@
            and deleting both sit behind the button on the right, and a row that
            picks one of them takes that choice out of your hands. Empty, the list
            stays and says so inside its own box. -->
-      <nldd-list
-        variant="box-tinted"
-        accessible-label="Port definitions"
-        empty-text="No ports"
-        empty-supporting-text='Use "Add port" to define one.'
-      >
+      <nldd-list appearance="box-tinted" accessible-label="Port definitions">
+        <nldd-inline-dialog
+          slot="empty"
+          text="No ports"
+          supporting-text='Use "Add port" to define one.'
+        ></nldd-inline-dialog>
         @for (pd of portDefs(); track pd.id) {
           <nldd-list-item>
             <!-- The type behind the name, in the same neutral tag a category
@@ -184,7 +184,7 @@
       <nldd-text color="secondary">{{ assetSummary() }}</nldd-text>
       <nldd-spacer size="8"></nldd-spacer>
       @if (assets().length > 0) {
-        <nldd-list variant="box-tinted" accessible-label="Assets of this product">
+        <nldd-list appearance="box-tinted" accessible-label="Assets of this product">
           @for (asset of assets(); track asset.id) {
             <!-- The same row as in the inventory list: category icon, name,
                  supporting line, status, chevron. The name is the asset number
@@ -232,7 +232,7 @@
           </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
-            variant="destructive"
+            appearance="destructive"
             text="Delete product"
             start-icon="delete"
             (click)="openDeleteEntry()"
@@ -251,7 +251,7 @@
       >
         <nldd-button
           slot="actions"
-          variant="primary"
+          appearance="primary"
           text="Back to catalog"
           start-icon="arrow-left"
           href="/catalog"
@@ -359,7 +359,7 @@
             #fPortSpeed
             [attr.value]="editPortDef()?.speedGbps ?? ''"
             min="0"
-            full-width
+            width="full"
             (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
@@ -368,7 +368,7 @@
             #fPortPower
             [attr.value]="editPortDef()?.powerWatts ?? ''"
             min="0"
-            full-width
+            width="full"
             (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
@@ -393,7 +393,7 @@
         </nldd-form-field>
         <nldd-form-actions>
           <nldd-button
-            variant="primary"
+            appearance="primary"
             width="full"
             text="Save"
             (click)="savePortDef()"
@@ -417,13 +417,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep port"
     (click)="cancelDeletePortDef()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete port"
     (click)="confirmDeletePortDef()"
   ></nldd-button>
@@ -446,13 +446,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep product"
     (click)="cancelDeleteEntry()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete product"
     (click)="confirmDeleteEntry()"
   ></nldd-button>

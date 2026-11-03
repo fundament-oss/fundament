@@ -36,7 +36,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   </head>
   <body>
     <EnvironmentBanner />
-    <nldd-app-view>
+    <nldd-shell>
       <nldd-page>
         <nldd-skip-link slot="header" text="Skip navigation">
           {
@@ -116,19 +116,19 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
           </nldd-page-footer-legal-bar>
         </nldd-page-footer>
       </nldd-page>
-    </nldd-app-view>
+    </nldd-shell>
   </body>
 </html>
 
 <script>
-  /* app-view before page, and both before the rest: nldd-page looks for its
-     scroll-mode provider (the nearest upgraded nldd-app-view) the moment it
+  /* shell before page, and both before the rest: nldd-page looks for its
+     scroll-mode provider (the nearest upgraded nldd-shell) the moment it
      upgrades. Define page first and that lookup finds a not-yet-upgraded
      element, so the page falls back to the stand-alone path, misses the `root`
-     mode the app-view derives, and stays an inner scroll container with
+     mode the shell derives, and stays an inner scroll container with
      `overscroll-behavior: contain` — which swallows the wheel instead of
      scrolling the document, until the first window resize re-reads the mode. */
-  import '@nldd/design-system/app-view';
+  import '@nldd/design-system/shell';
   import '@nldd/design-system/page';
   import '@nldd/design-system/button';
   import '@nldd/design-system/icon';

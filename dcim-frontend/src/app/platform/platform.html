@@ -26,7 +26,7 @@
           slot="end"
           type="button"
           text="Refresh"
-          variant="secondary"
+          appearance="secondary"
           (click)="refresh()"
         ></nldd-button>
       </nldd-title>
@@ -65,7 +65,7 @@
 <ng-template #overview>
   @if (api.summary(); as summary) {
     <nldd-container layout="stack" gap="24" sm-gap="16">
-      <nldd-collection layout="grid" item-width="180px" gap="16">
+      <nldd-collection layout="grid" item-min-width="180px" gap="16">
         @for (tile of tiles(); track tile.label) {
           <nldd-card background="base">
             <nldd-container padding="16">

@@ -42,7 +42,7 @@
       </h1>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
-    <nldd-toolbar label="Metrics">
+    <nldd-toolbar accessible-label="Metrics">
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
         <nldd-toolbar-item slot="start">
@@ -51,7 +51,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             start-icon="kubernetes"
             [attr.text]="clusterLabel()"
           >
@@ -102,7 +102,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             start-icon="brackets-ellipsis"
             [attr.text]="namespaceLabel()"
           >
@@ -397,7 +397,7 @@
                  happen to hold a bar. -->
             <nldd-collection
               layout="grid"
-              item-width="280px"
+              item-min-width="280px"
               gap="16"
             >
               @for (c of clusterSummaries(); track c.id) {
@@ -448,7 +448,7 @@
             @if (nodeUsage().length > 0) {
               <nldd-collection
                 layout="grid"
-                item-width="280px"
+                item-min-width="280px"
                 gap="16"
               >
                 @for (node of nodeUsage(); track node.name) {

@@ -48,14 +48,14 @@
           }
         </h1>
         @if (p.author?.name) {
-          <span slot="subtitle">by {{ p.author!.name }}</span>
+          <span slot="supporting-text">by {{ p.author!.name }}</span>
         }
         <nldd-button
           slot="end"
           type="button"
           (click)="openInstallModal()"
           [text]="hasInstalledClusters() ? 'Manage' : 'Install…'"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       </nldd-title>
       <nldd-spacer size="24"></nldd-spacer>
@@ -68,7 +68,7 @@
         <nldd-box>
           <nldd-container padding="16">
             <nldd-list
-              variant="simple"
+              appearance="simple"
               dividers="never"
               accessible-label="What this plugin offers"
             >
@@ -117,7 +117,7 @@
                    break after a slash), but a one-word label has nowhere to break
                    and would collapse into "Repo / sitor / y". -->
               <nldd-list
-                variant="simple"
+                appearance="simple"
                 accessible-label="Plugin information"
               >
                 <!-- First row: the only one about your own clusters rather than

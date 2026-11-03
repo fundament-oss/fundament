@@ -106,7 +106,7 @@
               [attr.value]="rack.totalU ?? 42"
               min="1"
               max="52"
-              full-width
+              width="full"
               [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
               unmet="error-rack-total-u"
               (keydown.enter)="save()"
@@ -118,7 +118,12 @@
             </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-actions>
-            <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+            <nldd-button
+              appearance="primary"
+              width="full"
+              text="Save"
+              (click)="save()"
+            ></nldd-button>
           </nldd-form-actions>
         </nldd-form>
       }

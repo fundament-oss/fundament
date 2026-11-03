@@ -109,11 +109,7 @@ function enumChoices(entry: ConfigSchemaEntry): string[] {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nldd-form
-      [formGroup]="form"
-      (submit)="onSubmit()"
-      (keydown.enter)="onEnter($event)"
-    >
+    <nldd-form [formGroup]="form" (submit)="onSubmit()">
       @for (entry of basicEntries(); track entry.name) {
         <ng-container
           [ngTemplateOutlet]="field"
@@ -123,7 +119,7 @@ function enumChoices(entry: ConfigSchemaEntry): string[] {
       @if (advancedEntries().length > 0) {
         <nldd-button
           type="button"
-          variant="secondary"
+          appearance="secondary"
           size="sm"
           width="full"
           [attr.text]="showAdvanced() ? 'Hide advanced options' : 'Show advanced options'"
@@ -146,22 +142,19 @@ function enumChoices(entry: ConfigSchemaEntry): string[] {
           type="button"
           (click)="onCancel()"
           text="Cancel"
-          variant="secondary"
+          appearance="secondary"
           width="full"
         ></nldd-button>
         <nldd-button
           type="submit"
           [attr.text]="submitLabel()"
-          variant="primary"
+          appearance="primary"
           width="full"
         ></nldd-button>
       </nldd-form-actions>
     </nldd-form>
 
-    <ng-template
-      #field
-      let-entry
-    >
+    <ng-template #field let-entry>
       <nldd-form-field
         [attr.label]="entry.required ? null : labelFor(entry)"
         [attr.optional]="entry.required ? null : ''"
@@ -288,14 +281,6 @@ export default class PluginConfigFormComponent implements OnInit {
 
   onCancel(): void {
     this.cancelled.emit();
-  }
-
-  onEnter(event: Event): void {
-    // Enter submits only from a text field; from buttons/toggles it would
-    // hijack the control the user actually pressed.
-    const target = event.target as HTMLElement | null;
-    if (target?.tagName?.toLowerCase() !== 'nldd-text-field') return;
-    this.onSubmit();
   }
 
   onSubmit(): void {

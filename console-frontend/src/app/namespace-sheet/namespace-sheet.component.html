@@ -56,19 +56,19 @@
               [attr.href]="pageNav.path('/projects/' + projectId() + '/members')"
               (click)="pageNav.navigate($event, '/projects/' + projectId() + '/members')"
               text="Project members"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
             <nldd-button
               slot="actions"
               type="button"
               (click)="step.set('overview')"
               text="Back to namespace"
-              variant="secondary"
+              appearance="secondary"
             ></nldd-button>
           </nldd-inline-dialog>
         } @else {
           <nldd-form
-            (submit)="saveRoles()"
+            (submit)="saveRoles($event)"
             (keydown.enter)="saveRoles($event)"
           >
             @if (!editingMemberId()) {
@@ -103,7 +103,7 @@
             }
             <nldd-form-field label="Roles">
               <nldd-list
-                variant="box-tinted"
+                appearance="box-tinted"
                 accessible-label="Roles"
               >
                 @for (role of allRoles; track role) {
@@ -140,7 +140,7 @@
                 type="button"
                 (click)="saveRoles()"
                 [attr.text]="editingMemberId() ? 'Save roles' : 'Add access'"
-                variant="primary"
+                appearance="primary"
                 width="full"
               ></nldd-button>
             </nldd-form-actions>
@@ -162,7 +162,7 @@
             type="button"
             (click)="onClose()"
             text="Close"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {
@@ -174,7 +174,7 @@
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Namespace details"
         >
           <!-- Names the project: the sheet can be opened from a link, with no
@@ -207,14 +207,14 @@
           </h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
-        <nldd-toolbar label="Member access">
+        <nldd-toolbar accessible-label="Member access">
           <nldd-toolbar-item slot="start">
             <nldd-button
               type="button"
               (click)="addMember()"
               text="Add member access…"
               start-icon="plus-small"
-              variant="secondary"
+              appearance="secondary"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
@@ -241,7 +241,7 @@
           </nldd-box>
         } @else {
           <nldd-list
-            variant="box-tinted"
+            appearance="box-tinted"
             accessible-label="Member access"
           >
             @for (entry of members(); track entry.member.id) {
@@ -258,7 +258,7 @@
                   <nldd-icon-button
                     icon="more"
                     size="sm"
-                    variant="secondary"
+                    appearance="secondary"
                     popup-type="menu"
                     [attr.accessible-label]="'Actions for ' + entry.member.userName"
                   >
@@ -312,7 +312,7 @@
               (click)="showDeleteModal.set(true)"
               text="Delete namespace"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
             ></nldd-button>
           </nldd-container>
         </nldd-box>
@@ -336,14 +336,14 @@
     type="button"
     (click)="pendingRemove.set(null)"
     text="Keep access"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="confirmRemove()"
     text="Remove access"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Delete Namespace Modal -->
@@ -362,13 +362,13 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep namespace"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="deleteNamespace()"
     text="Delete namespace"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

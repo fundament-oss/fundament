@@ -37,7 +37,7 @@
                  itself. Secondary when the form is there too, so its button
                  stays the one primary action on the page. -->
             <nldd-button
-              [attr.variant]="methods()?.password ? 'secondary' : 'primary'"
+              [attr.appearance]="methods()?.password ? 'secondary' : 'primary'"
               width="full"
               [attr.text]="sso.text"
               [attr.href]="sso.url"
@@ -62,7 +62,6 @@
             <nldd-form
               [formGroup]="loginForm"
               (submit)="onSubmit($event)"
-              (keydown.enter)="onSubmit($event)"
             >
               <nldd-form-field label="Email address">
                 <nldd-text-field
@@ -109,7 +108,7 @@
                   type="submit"
                   text="Sign in"
                   [attr.loading]="isLoading() ? '' : null"
-                  variant="primary"
+                  appearance="primary"
                   width="full"
                 ></nldd-button>
               </nldd-form-actions>

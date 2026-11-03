@@ -18,16 +18,23 @@ await mountCreateForm({
   onReady: () => {
     wireHttpsToggle();
     wireTlsModeToggle();
-    renderClusterIssuerControl([]); // free-text field until ClusterIssuers load
-    void loadClusterIssuers();
+    void loadClusterIssuers(); // the markup holds the free-text field until then
   },
 });
 
+// Replaces the current control (the text field, or the dropdown around the
+// select) rather than its contents: nldd-form-field watches only its own
+// children, so a control swapped inside a wrapper would be left unlabeled.
 function renderClusterIssuerControl(issuers: string[]): void {
-  const container = document.getElementById('cluster-issuer-control');
-  if (!container) return;
-  container.innerHTML = clusterIssuerControlHtml(issuers);
-  resyncDropdown(container.querySelector('nldd-dropdown'));
+  const current = document.getElementById('cluster-issuer');
+  const control = current?.closest('nldd-dropdown') ?? current;
+  if (!control) return;
+  const template = document.createElement('template');
+  template.innerHTML = clusterIssuerControlHtml(issuers);
+  const next = template.content.firstElementChild as HTMLElement | null;
+  if (!next) return;
+  control.replaceWith(next);
+  resyncDropdown(next.matches('nldd-dropdown') ? next : null);
 }
 
 // Lists cert-manager ClusterIssuers and swaps the free-text field for a dropdown

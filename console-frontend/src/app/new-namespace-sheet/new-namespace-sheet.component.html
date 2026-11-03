@@ -142,7 +142,7 @@
               </span>
             </div>
             <nldd-list
-              variant="box-tinted"
+              appearance="box-tinted"
               accessible-label="Roles"
             >
               @for (role of allRoles; track role) {
@@ -179,7 +179,7 @@
             (click)="createNamespace()"
             text="Create namespace"
             [attr.loading]="isCreatingNamespace() ? '' : null"
-            variant="primary"
+            appearance="primary"
             width="full"
           ></nldd-button>
         </nldd-form-actions>

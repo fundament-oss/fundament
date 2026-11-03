@@ -177,7 +177,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         </p>
         <pre class="plugin-text"><code>${escapeHtml(mount)}</code></pre>
         <nldd-spacer size="16"></nldd-spacer>
-        <nldd-button type="button" variant="secondary" text="Close" data-role="close"></nldd-button>
+        <nldd-button type="button" appearance="secondary" text="Close" data-role="close"></nldd-button>
       `;
       sheetBody.querySelector('[data-role="close"]').addEventListener('click', () => closeSheet());
     } catch (err) {

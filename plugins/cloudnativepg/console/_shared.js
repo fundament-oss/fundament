@@ -66,7 +66,7 @@ export function renderKeyValueList(pairs, accessibleLabel) {
         </nldd-list-item>`,
     )
     .join('');
-  return `<nldd-list variant="simple" accessible-label="${escapeHtml(accessibleLabel)}">${rows}</nldd-list>`;
+  return `<nldd-list appearance="simple" accessible-label="${escapeHtml(accessibleLabel)}">${rows}</nldd-list>`;
 }
 
 // Loads the NLDD Design System bundle the Console serves next to the SDK, which

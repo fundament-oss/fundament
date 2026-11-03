@@ -35,7 +35,7 @@
         </h1>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-toolbar label="Cluster actions">
+      <nldd-toolbar accessible-label="Cluster actions">
         <!-- Parked until there is a terminal to open: the handler behind this
              only logged to the console, and a button that does nothing is worse
              than one that is not there. Uncomment both halves together, the
@@ -98,7 +98,7 @@
         <nldd-box>
           <nldd-container padding="16">
             <nldd-list
-              variant="simple"
+              appearance="simple"
               accessible-label="Cluster basics"
             >
               <!-- An empty value reads as a row that forgot to fill itself in.
@@ -157,7 +157,7 @@
               <h3>Provisioning status</h3>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
-            <nldd-list variant="simple">
+            <nldd-list appearance="simple">
               <nldd-list-item>
                 <nldd-text-cell text="Gardener status"></nldd-text-cell>
                 <nldd-cell width="fit-content">
@@ -266,7 +266,7 @@
                 [attr.href]="pageNav.path('/metrics')"
                 (click)="pageNav.navigate($event, '/metrics')"
                 text="View metrics"
-                variant="secondary"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -344,7 +344,7 @@
                 (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
                 text="Edit"
                 start-icon="pencil"
-                variant="secondary"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -359,7 +359,7 @@
             } @else {
               <nldd-collection
                 layout="grid"
-                item-width="320px"
+                item-min-width="320px"
                 gap="16"
               >
                 @for (pool of clusterData.nodePools; track pool.name) {
@@ -376,7 +376,7 @@
                       </nldd-title>
                       <nldd-spacer size="8"></nldd-spacer>
                       <nldd-list
-                        variant="simple"
+                        appearance="simple"
                         dividers="never"
                       >
                         <nldd-list-item size="sm">
@@ -462,7 +462,7 @@
                 "
                 text="Edit"
                 start-icon="pencil"
-                variant="secondary"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -480,7 +480,7 @@
                    runs through the Edit button above. So no href and no button. -->
               <nldd-collection
                 layout="grid"
-                item-width="320px"
+                item-min-width="320px"
                 gap="16"
               >
                 @for (plugin of installedPlugins(); track plugin.id) {
@@ -544,7 +544,7 @@
               (click)="onDeleteClusterClick()"
               text="Delete cluster"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
             ></nldd-button>
           </nldd-container>
         </nldd-box>
@@ -569,7 +569,7 @@
     slot="actions"
     type="button"
     text="Close"
-    variant="primary"
+    appearance="primary"
     width="full"
     (click)="closeKubeconfigError()"
   ></nldd-button>
@@ -621,7 +621,7 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep cluster"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -629,7 +629,7 @@
     (click)="deleteCluster()"
     text="Delete cluster"
     [loading]="isDeleting()"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Shown instead of the confirmation when the cluster cannot be deleted yet. -->
@@ -644,7 +644,7 @@
   @if (projects().length > 0) {
     <!-- Each row leads to the project's settings, where it is deleted. -->
     <nldd-list
-      variant="box-tinted"
+      appearance="box-tinted"
       accessible-label="Projects on this cluster"
     >
       @for (project of projects(); track project.id) {
@@ -674,7 +674,7 @@
     type="button"
     (click)="showDeleteBlockedModal.set(false)"
     text="Close"
-    variant="secondary"
+    appearance="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- One list, drawn twice: on the page it gets the first few, in the sheet all
@@ -707,12 +707,12 @@
             hide-below="md"
           ></nldd-spacer-cell>
         }
-        <nldd-timeline-track-cell
+        <nldd-step-cell
           status="past"
           [attr.position]="
             isFirst && isLast ? 'only' : isLast ? 'last' : isFirst ? 'first' : 'between'
           "
-        ></nldd-timeline-track-cell>
+        ></nldd-step-cell>
         <nldd-spacer-cell size="12"></nldd-spacer-cell>
         @if (inSheet) {
           <!-- What kind of event it was in the overline, what it says as the
@@ -762,7 +762,7 @@
             (click)="showAllEventsSheet.set(true)"
             text="Show all events"
             end-icon="chevron-right"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
         </nldd-cell>
       </nldd-list-item>

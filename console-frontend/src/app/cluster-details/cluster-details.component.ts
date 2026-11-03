@@ -91,7 +91,7 @@ import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/text-field';
-import '@nldd/design-system/timeline-track-cell';
+import '@nldd/design-system/step-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/tooltip';

@@ -233,7 +233,11 @@ export default class AddProjectMemberSheetComponent {
   }
 
   async saveMember(event?: Event) {
+    // Enter picking a member in the combo box is not a submit, and the DS says
+    // so by marking the event handled.
+    if (event?.defaultPrevented) return;
     event?.preventDefault();
+    if (this.isAddingMember()) return;
 
     this.addSubmitted.set(true);
     if (!this.selectedUserId()) this.userFieldTouched.set(true);

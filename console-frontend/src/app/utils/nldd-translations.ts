@@ -53,7 +53,7 @@ const datePickerTranslations = {
   'components.date-picker.friday-short-lowercase': 'Fr',
   'components.date-picker.saturday-short-lowercase': 'Sa',
   'components.date-picker.week-number-column-label': 'Week number',
-  'components.date-picker.week-number-column-short-label': 'Wk',
+  'components.date-picker.week-number-column-short-lowercase-label': 'wk',
   'components.date-picker.week-number-label': 'Week {week}',
   'components.date-picker.date-label': '{weekday} {month} {day}, {year}',
   'components.date-picker.today-lowercase': 'today',

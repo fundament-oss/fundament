@@ -1,11 +1,11 @@
-<nldd-app-view>
+<nldd-shell>
   <nldd-bar-split-view>
     <!-- Header: the product, the theme and who you are. Everything about a
          section moved into the sidebar, so this bar holds only what is true on
          every screen. -->
     <nldd-split-view-pane slot="header" sm-order="1" md-order="1" lg-order="1" background="base">
       <nldd-container padding-left="16" padding-right="8" padding-block="8">
-        <nldd-toolbar label="Application">
+        <nldd-toolbar accessible-label="Application">
           <nldd-toolbar-title slot="start" text="Fundament DCIM" href="/">
             <!-- The same mark as the favicon and the same file as the console
                  toolbar, so the tab, this bar and the other app all say the same
@@ -20,7 +20,7 @@
           <nldd-toolbar-item slot="end">
             <nldd-icon-button
               icon="plus-small"
-              variant="secondary"
+              appearance="secondary"
               accessible-label="New"
               expandable
               popup-type="menu"
@@ -45,7 +45,7 @@
                  person back where the initials belong. -->
             <nldd-icon-button
               [attr.accessible-label]="userName() || 'Account'"
-              variant="secondary"
+              appearance="secondary"
               expandable
               popup-type="menu"
             >
@@ -104,7 +104,7 @@
            `hide-back` on the deeper panes, and each page's title bar carries the
            way back. -->
       <nldd-navigation-split-view
-        sidebar-accessible-label="Navigation"
+        primary-sidebar-accessible-label="Navigation"
         (back)="onPaneBack($event)"
         (nldd-single-column-change)="onSingleColumnChange($event)"
       >
@@ -113,8 +113,10 @@
              second level; a row of tabs runs out of room at six. -->
         <nldd-split-view-pane slot="sidebar" background="base" has-content>
           <!-- The page owns the scroll region: a pane clips what does not fit, so a
-               menu longer than the pane would be cut off without one. -->
-          <nldd-page>
+               menu longer than the pane would be cut off without one. Named,
+               because a page beside others is a region and only a name makes
+               it a landmark. -->
+          <nldd-page accessible-label="Sections">
             <nldd-simple-section>
               <!-- No heading of its own: it would read "DCIM" under a toolbar
                    that already says "Fundament DCIM", and neither ever changes.
@@ -211,13 +213,17 @@
         <!-- The outlet anchor and the routed component around it are plumbing,
              and a pane grows everything it slots. Both are taken out of the
              layout in styles.css, so the page inside is the pane's own child. -->
-        <nldd-split-view-pane slot="main" [attr.has-content]="stackDepth() >= 2 ? '' : null">
+        <nldd-split-view-pane
+          slot="main"
+          appMainPane
+          [attr.has-content]="stackDepth() >= 2 ? '' : null"
+        >
           <router-outlet />
         </nldd-split-view-pane>
       </nldd-navigation-split-view>
     </nldd-split-view-pane>
   </nldd-bar-split-view>
-</nldd-app-view>
+</nldd-shell>
 
 <!-- The two questions a status menu can land on, once for the whole app. Both
      are a native <dialog> opened with showModal(), so from here they are over

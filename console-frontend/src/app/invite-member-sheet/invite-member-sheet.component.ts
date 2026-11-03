@@ -135,6 +135,9 @@ export default class InviteMemberSheetComponent {
   }
 
   async submitInvitation(event?: Event) {
+    // Enter in the only field submits the form itself and marks the keydown
+    // handled, so the keydown that follows is not a second submit.
+    if (event?.defaultPrevented) return;
     event?.preventDefault();
     this.inviteSubmitted.set(true);
 

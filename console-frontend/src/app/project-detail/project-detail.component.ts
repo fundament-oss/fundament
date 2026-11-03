@@ -191,7 +191,11 @@ export default class ProjectDetailComponent implements OnInit {
     this.showEditModal.set(true);
   }
 
-  async saveEdit() {
+  async saveEdit(event?: Event) {
+    // Enter in the only field submits the form itself and marks the keydown
+    // handled, so the keydown that follows is not a second submit.
+    if (event?.defaultPrevented) return;
+    event?.preventDefault();
     const currentProject = this.project();
     const aliasToSave = this.editingAlias();
 

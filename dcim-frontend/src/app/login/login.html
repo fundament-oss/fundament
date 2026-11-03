@@ -1,7 +1,7 @@
 <!-- The required root of an application, and this page skips the shell that
      normally provides it. Without it the page has no height to center in,
      so the panel sat at the top and the ribbon right under it. -->
-<nldd-app-view>
+<nldd-shell>
   <nldd-page>
     <!-- Only the ribbon: this page carries no navigation, and the bar is what
          makes it a Rijksoverheid page rather than a bare form. -->
@@ -35,7 +35,7 @@
               ></nldd-banner>
               <nldd-spacer size="16"></nldd-spacer>
             }
-            <nldd-form [formGroup]="loginForm" (ngSubmit)="onSubmit()" (keydown.enter)="onSubmit()">
+            <nldd-form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
               <!-- No placeholders: the label already says which field this is, and
                    a hint that disappears the moment you type is a label you can
                    lose. -->
@@ -65,10 +65,10 @@
                   [value]="password?.value ?? ''"
                   (input)="loginForm.get('password')!.setValue($any($event.target).value)"
                   (blur)="loginForm.get('password')!.markAsTouched()"
-                  show-text="Show"
-                  show-accessible-label="Show password"
-                  hide-text="Hide"
-                  hide-accessible-label="Hide password"
+                  show-button-text="Show"
+                  show-button-accessible-label="Show password"
+                  hide-button-text="Hide"
+                  hide-button-accessible-label="Hide password"
                   [invalid]="!!(password?.invalid && formSubmitted())"
                   unmet="login-password-error"
                 ></nldd-password-field>
@@ -85,7 +85,7 @@
                 <nldd-button
                   type="submit"
                   text="Sign in"
-                  variant="primary"
+                  appearance="primary"
                   width="full"
                   [attr.loading]="isLoading() ? '' : null"
                   (click)="onSubmit()"
@@ -101,4 +101,4 @@
          which is what closes off the page. -->
     <nldd-page-footer slot="footer"></nldd-page-footer>
   </nldd-page>
-</nldd-app-view>
+</nldd-shell>

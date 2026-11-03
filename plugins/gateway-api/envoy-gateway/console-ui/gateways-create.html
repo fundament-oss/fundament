@@ -89,9 +89,17 @@
               id="cluster-issuer-field"
               hidden
             >
-              <!-- Filled at runtime: a dropdown of cert-manager ClusterIssuers, or a
-                   free-text field when none are found / cert-manager isn't installed. -->
-              <div id="cluster-issuer-control"></div>
+              <!-- A free-text field until the ClusterIssuers load, and a dropdown of
+                   them once they do. It sits here directly, not in a wrapper the
+                   script fills: the form field re-wires its label only when its
+                   own children change, so the script swaps this element itself. -->
+              <nldd-text-field
+                id="cluster-issuer"
+                name="cluster-issuer"
+                required
+                unmet="cluster-issuer-error"
+                placeholder="letsencrypt"
+              ></nldd-text-field>
               <nldd-form-field-help-text
                 >cert-manager provisions a &lt;name&gt;-tls Secret via this
                 ClusterIssuer.</nldd-form-field-help-text
@@ -109,13 +117,13 @@
               <nldd-button
                 id="submit"
                 type="button"
-                variant="primary"
+                appearance="primary"
                 text="Create Gateway"
               ></nldd-button>
               <nldd-button
                 id="back"
                 type="button"
-                variant="secondary"
+                appearance="secondary"
                 text="Back"
               ></nldd-button>
             </nldd-button-group>

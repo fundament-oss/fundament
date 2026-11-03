@@ -68,7 +68,7 @@
              last row of the list, so a new row appears right above where you
              clicked instead of at the other end of the field. -->
         <nldd-form-field label="Specifications">
-          <nldd-list variant="box-tinted" accessible-label="Specifications">
+          <nldd-list appearance="box-tinted" accessible-label="Specifications">
             @for (spec of specRows(); track $index; let i = $index) {
               <nldd-list-item>
                 <nldd-cell width="full">
@@ -99,7 +99,7 @@
             <nldd-list-item>
               <nldd-cell width="full">
                 <nldd-button
-                  variant="secondary"
+                  appearance="secondary"
                   width="full"
                   text="Add specification"
                   start-icon="plus-small"
@@ -141,7 +141,7 @@
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->
         <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+          <nldd-button appearance="primary" width="full" text="Save" (click)="save()"></nldd-button>
         </nldd-form-actions>
       </nldd-form>
     </nldd-simple-section>
