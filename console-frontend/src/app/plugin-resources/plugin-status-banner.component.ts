@@ -59,6 +59,15 @@ export default class PluginStatusBannerComponent {
             issue.message ||
             'It is running, but not everything works. This screen may show errors until it recovers.',
         };
+      case 'Running':
+        // Running, but the controller does not report it ready.
+        return {
+          variant: 'warning',
+          text: 'This plugin is not ready',
+          supportingText:
+            issue.message ||
+            'It is running, but not ready. This screen may show errors until it is.',
+        };
       case 'Failed':
         return {
           variant: 'critical',

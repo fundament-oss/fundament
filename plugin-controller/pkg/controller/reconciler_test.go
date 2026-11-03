@@ -891,6 +891,10 @@ func TestStatusPoller_Unreachable(t *testing.T) {
 		"up on this spec":       {mutate: runningOnGeneration(1), want: pluginsv1.PluginPhaseDegraded},
 		"up on a previous spec": {mutate: func(cr *pluginsv1.PluginInstallation) { runningOnGeneration(1)(cr); cr.Generation = 2 }, want: pluginsv1.PluginPhaseDeploying},
 		"still coming up":       {mutate: func(cr *pluginsv1.PluginInstallation) { setProgressingCondition(cr, time.Now()) }, want: pluginsv1.PluginPhaseDeploying},
+		"up before Progressing existed": {mutate: func(cr *pluginsv1.PluginInstallation) {
+			cr.Status.Phase = pluginsv1.PluginPhaseRunning
+			cr.Status.ObservedGeneration = cr.Generation
+		}, want: pluginsv1.PluginPhaseDegraded},
 	}
 
 	for name, tt := range tests {

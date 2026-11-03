@@ -109,6 +109,9 @@ export default class ResourceListComponent implements OnInit {
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
+  /** '' on the organization-level route, which has no project. */
+  private projectId = computed(() => this.routeParams().get('id') ?? '');
+
   plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   isLoading = signal(false);
@@ -141,6 +144,10 @@ export default class ResourceListComponent implements OnInit {
   // Holds the iframe back until the namespace lookup has finished, failed or
   // not: the iframe sends them once, in fundament:init, and never again.
   namespacesSettled = signal(false);
+
+  // Counts namespace loads, so a response for a project the route has since
+  // moved away from is dropped.
+  private namespacesRequest = 0;
 
   installationId = computed(() => this.plugin()?.installationId ?? '');
 
@@ -211,9 +218,11 @@ export default class ResourceListComponent implements OnInit {
       this.titleService.setTitle(this.kindLabel());
     });
 
-    const projectId = this.route.snapshot.parent?.params['id'];
-    if (projectId) this.loadNamespaces(projectId).catch(() => {});
-    else this.namespacesSettled.set(true);
+    // Another project's list reuses this component, so follow the route.
+    effect(() => {
+      const projectId = this.projectId();
+      untracked(() => this.loadNamespaces(projectId));
+    });
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
@@ -325,17 +334,31 @@ export default class ResourceListComponent implements OnInit {
     return null;
   }
 
+  /** Unmounts the iframe until the project's namespaces are in, so a page
+   *  initialised with the previous project's namespaces does not keep them. */
   private async loadNamespaces(projectId: string): Promise<void> {
+    this.namespacesRequest += 1;
+    const current = this.namespacesRequest;
+    this.namespacesSettled.set(false);
+    this.namespaces.set([]);
+    this.namespaceDisplayNames.set({});
+    if (!projectId) {
+      // The organization-level route has no project to scope namespaces to.
+      this.namespacesSettled.set(true);
+      return;
+    }
     try {
       const { names, displayNames } = await this.projectNamespaces.list(projectId);
+      if (current !== this.namespacesRequest) return;
       this.namespaces.set(names);
       this.namespaceDisplayNames.set(displayNames);
     } catch (err) {
+      if (current !== this.namespacesRequest) return;
       // Transient failure: plugin UIs fall back to a free-text namespace field.
       // eslint-disable-next-line no-console
       console.error('[ResourceList] Failed to load namespaces:', err);
     } finally {
-      this.namespacesSettled.set(true);
+      if (current === this.namespacesRequest) this.namespacesSettled.set(true);
     }
   }
 

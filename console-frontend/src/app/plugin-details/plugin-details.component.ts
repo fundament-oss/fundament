@@ -421,8 +421,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
           `Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`,
         );
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
+        // From Running or Degraded it was installed, and stopped working since.
+        const wasUp = isInstallRunning(prevPhase) || prevPhase === 'Degraded';
         this.notificationService.error(
-          `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
+          wasUp
+            ? `Plugin ${displayNameOf(plugin)} failed on cluster ${n.name}`
+            : `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
         );
       } else if (n.phase === null) {
         this.notificationService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
@@ -518,11 +522,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Installed whatever its state: a Degraded or Failed installation is one to
+   *  manage, retry or uninstall, not one to install again. */
   hasInstalledClusters(): boolean {
-    return this.clusters().some((c) => isInstallRunning(c.phase ?? ''));
+    return this.getInstalledClusterCount() > 0;
   }
 
   getInstalledClusterCount(): number {
-    return this.clusters().filter((c) => isInstallRunning(c.phase ?? '')).length;
+    return this.clusters().filter((c) => c.phase !== null).length;
   }
 }

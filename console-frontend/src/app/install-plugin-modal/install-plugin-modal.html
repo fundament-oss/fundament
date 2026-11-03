@@ -226,10 +226,14 @@
                       placement="bottom-end"
                       accessible-label="Version"
                     >
-                      <nldd-menu-item
-                        [attr.text]="versions()[0].version"
-                        (click)="onInstallOne(cluster.id, versions()[0])"
-                      ></nldd-menu-item>
+                      <!-- The button renders, disabled, before the versions
+                           load, so there may be no newest one yet. -->
+                      @if (versions()[0]; as newest) {
+                        <nldd-menu-item
+                          [attr.text]="newest.version"
+                          (click)="onInstallOne(cluster.id, newest)"
+                        ></nldd-menu-item>
+                      }
                       @if (earlierVersions().length > 0) {
                         <nldd-menu-group text="Earlier versions">
                           @for (v of earlierVersions(); track v.version) {

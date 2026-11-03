@@ -1,10 +1,12 @@
 @if (customUIUrl()) {
   <!-- The page padding and column of the generated detail page below, around
        the plugin's own screen. -->
-  @if (namespacesSettled()) {
-    <nldd-page>
-      <nldd-simple-section>
-        <app-plugin-status-banner [installationName]="pluginName()" />
+  <nldd-page>
+    <nldd-simple-section>
+      <!-- Outside the namespace wait: why the plugin is not working is worth
+           saying before its own screen can load. -->
+      <app-plugin-status-banner [installationName]="pluginName()" />
+      @if (namespacesSettled()) {
         <app-plugin-iframe
           [src]="customUIUrl()!"
           [pluginName]="pluginName()"
@@ -18,9 +20,9 @@
           [namespaces]="namespaces()"
           [namespaceDisplayNames]="namespaceDisplayNames()"
         />
-      </nldd-simple-section>
-    </nldd-page>
-  }
+      }
+    </nldd-simple-section>
+  </nldd-page>
 } @else if (resource()) {
   <!-- Same outer layout as the other pages. The back button leads to the list
        this resource came from rather than to the menu, so it stays put when the

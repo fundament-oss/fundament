@@ -27,6 +27,12 @@ describe('parseSheetRequest', () => {
     });
   });
 
+  it('accepts a resource name of several labels', () => {
+    expect(
+      parseSheetRequest({ view: 'edit', resource: { name: 'api.example-1.io' } }, 'DiskPool'),
+    ).toMatchObject({ resource: { name: 'api.example-1.io' } });
+  });
+
   it.each([
     ['an unknown view', { view: 'list' }],
     ['a view that is not a string', { view: ['create'] }],
@@ -36,6 +42,11 @@ describe('parseSheetRequest', () => {
     ['a resource name with a slash', { view: 'edit', resource: { name: 'a/b' } }],
     ['a resource that is a string', { view: 'edit', resource: 'pool' }],
     ['a namespace with dots', { view: 'edit', resource: { name: 'a', namespace: 'a.b' } }],
+    ['a resource name with an empty label', { view: 'edit', resource: { name: 'a..b' } }],
+    [
+      'a resource name with a label starting with a dash',
+      { view: 'edit', resource: { name: 'a.-b' } },
+    ],
     ['params that are an array', { view: 'create', params: ['a'] }],
     ['a param that is not a string', { view: 'create', params: { a: 1 } }],
     ['a param key with a space', { view: 'create', params: { 'a b': 'c' } }],

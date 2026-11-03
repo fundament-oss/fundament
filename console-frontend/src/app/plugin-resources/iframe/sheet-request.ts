@@ -13,8 +13,10 @@ const SHEET_VIEWS: readonly SheetView[] = ['create', 'edit', 'detail'];
 // A Kubernetes kind: CamelCase, starting with a capital.
 const KIND = /^[A-Z][A-Za-z0-9]{0,62}$/;
 
-// Object names are DNS subdomains (253), namespaces DNS labels (63).
-const NAME = /^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$/;
+// Object names are DNS subdomains (253, dot-separated labels), namespaces DNS
+// labels (63).
+const NAME =
+  /^(?=.{1,253}$)(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$/;
 const NAMESPACE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
 
 const PARAM_KEY = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;

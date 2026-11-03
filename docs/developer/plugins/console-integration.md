@@ -152,7 +152,7 @@ The SDK sends and handles most messages itself.
 | `fundament:theme-changed` | User toggles the Console theme | `{ theme: 'light' \| 'dark' }` |
 | `fundament:token-refreshed` | The console minted a new PluginToken | `{ token, tokenExpiresAt }` |
 | `fundament:auth-failed` | Minting keeps failing | `{ reason: 'mint_failed' \| 'unauthorized' \| 'revoked' }` |
-| `fundament:resources-changed` | A sheet over the page saved something | none |
+| `fundament:resources-changed` | A sheet over the page saved something, or was replaced by another | none |
 
 ### Init payload fields
 

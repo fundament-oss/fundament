@@ -142,8 +142,10 @@ no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `style` attributes** — both are blocked. Events are wired with
 `addEventListener` and styling comes from the `.plugin-*` classes in
 `plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()`,
-which posts to `window.fundament.parentOrigin` rather than `*`; from a create
-sheet the console closes the sheet and opens the new resource. Create and edit
+which posts to `window.fundament.parentOrigin` rather than `*`; from a
+consumer or DiskPool create sheet the console closes the sheet and opens the
+new resource. A bucket create sheet instead opens the new claim's detail sheet
+in its place. Create and edit
 are opened with `fundament.openSheet()`, and the page under the sheet lists
 again on `fundament.onResourcesChanged()`.
 

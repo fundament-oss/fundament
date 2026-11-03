@@ -543,8 +543,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
+        // From Running or Degraded it was installed, and stopped working since.
+        const wasUp = isInstallRunning(prev.phase) || prev.phase === 'Degraded';
         this.notificationService.error(
-          `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
+          wasUp
+            ? `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} failed on cluster ${this.clusterName(next.clusterId)}`
+            : `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
     });

@@ -76,10 +76,20 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 // hasSettled reports whether the plugin has been up (Running or Degraded) since
 // the current spec was applied, as the Progressing condition records it.
 func hasSettled(cr *pluginsv1.PluginInstallation) bool {
-	progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing)
-	return progressing != nil &&
-		progressing.Status == metav1.ConditionFalse &&
-		progressing.ObservedGeneration == cr.Generation
+	if progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing); progressing != nil {
+		return progressing.Status == metav1.ConditionFalse &&
+			progressing.ObservedGeneration == cr.Generation
+	}
+	// A status written before the Progressing condition existed.
+	if cr.Status.ObservedGeneration != cr.Generation {
+		return false
+	}
+	switch cr.Status.Phase {
+	case pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDegraded:
+		return true
+	default:
+		return false
+	}
 }
 
 func mapPhase(phase string) (pluginsv1.PluginPhase, error) {

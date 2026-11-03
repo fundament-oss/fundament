@@ -13,10 +13,11 @@ import { PLUGIN } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
 import {
+  hasInvalidConfig,
   installPhase,
   isInstallInProgress,
   isInstallTerminating,
-  isInstallUnhealthy,
+  shouldPollInstall,
 } from '../utils/plugin-install-status';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
@@ -264,7 +265,8 @@ export default class PluginRegistryService {
    * deploying, so while any installation is on its way up or down, or a read
    * failed, this re-reads quickly: the sidebar's status marker then clears the
    * moment the plugin runs, without a reload. While one is Degraded or Failed
-   * it re-reads at a middle pace, to show a recovery or a new reason soon.
+   * (other than by its config) it re-reads at a middle pace, to show a
+   * recovery or a new reason soon.
    * Otherwise it keeps reading at a slower pace to notice installs started
    * later. A read that keeps
    * failing is retried with exponential backoff. So is a definition that keeps
@@ -309,7 +311,8 @@ export default class PluginRegistryService {
   }
 
   /** Reads the cluster's installations and rebuilds the menu from them.
-   *  'unhealthy' is a list with a Degraded or Failed installation in it,
+   *  'unhealthy' is a list with a Degraded or Failed installation in it whose
+   *  config was not the cause,
    *  'failed' a list that could not be read, 'incomplete' a list that was read
    *  with a plugin whose definition could not be, and whose retry is what to
    *  wait for next. */
@@ -388,7 +391,14 @@ export default class PluginRegistryService {
     if (items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))) {
       return 'inProgress';
     }
-    if (installed.some((item) => isInstallUnhealthy(installPhase(item.status?.phase)))) {
+    // In progress was ruled out above, so this is a Degraded or Failed one,
+    // apart from a failure its config caused, which nothing but a reinstall
+    // changes.
+    if (
+      installed.some((item) =>
+        shouldPollInstall(installPhase(item.status?.phase), hasInvalidConfig(item)),
+      )
+    ) {
       return 'unhealthy';
     }
     return this.definitionRetryAt === null ? 'idle' : 'incomplete';
