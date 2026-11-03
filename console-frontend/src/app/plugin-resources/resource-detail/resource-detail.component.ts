@@ -13,6 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import PluginRegistryService from '../plugin-registry.service';
 import { deleteErrorMessage } from '../kube-api-error';
@@ -62,6 +63,7 @@ function toRecord(val: unknown): Record<string, unknown> {
     RouterLink,
     FieldRendererComponent,
     PluginIframeComponent,
+    PluginStatusBannerComponent,
     ResourceDeleteModalComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

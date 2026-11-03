@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 import PluginNavService from './plugin-nav.service';
 import PluginRegistryService from './plugin-registry.service';
-import type { PluginDefinition } from './types';
+import type { PluginDefinition, PluginInstallationHealth } from './types';
 
 function definition(
   organizationName: string,
@@ -27,7 +27,11 @@ function definition(
   };
 }
 
-function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {}): PluginNavService {
+function navFor(
+  plugins: PluginDefinition[],
+  kinds: Record<string, string> = {},
+  health: Record<string, PluginInstallationHealth> = {},
+): PluginNavService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
@@ -36,6 +40,7 @@ function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {})
         useValue: {
           allPlugins: signal(plugins),
           crdKind: (crdRef: string) => kinds[crdRef],
+          installationHealth: (installationName: string) => health[installationName],
         },
       },
     ],
@@ -46,6 +51,25 @@ function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {})
 const CRD = 'dnsendpoints.externaldns.k8s.io';
 
 describe('PluginNavService', () => {
+  it('marks a group whose plugin is not running, with the reason', () => {
+    const nav = navFor(
+      [
+        definition('system', 'cert-manager', 'Cert Manager'),
+        definition('system', 'external-dns', 'External DNS'),
+      ],
+      {},
+      {
+        'system--cert-manager': { phase: 'Running', ready: true, message: 'running' },
+        'system--external-dns': { phase: 'Degraded', ready: false, message: 'CRDs missing' },
+      },
+    );
+
+    expect(nav.projectNav().map((g) => g.issue)).toEqual([
+      null,
+      { label: 'Degraded', badgeColor: 'warning', inProgress: false, message: 'CRDs missing' },
+    ]);
+  });
+
   it('routes on the installation name, not the plugin name', () => {
     const nav = navFor([definition('system', 'cert-manager', 'Cert Manager')]);
 

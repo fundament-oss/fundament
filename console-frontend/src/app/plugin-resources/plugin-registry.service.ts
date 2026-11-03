@@ -4,6 +4,7 @@ import type {
   PluginDefinition,
   ParsedCrd,
   RawCrdYaml,
+  PluginInstallationHealth,
   PluginInstallationItem,
   PluginInstallationListResponse,
 } from './types';
@@ -11,7 +12,12 @@ import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/
 import { PLUGIN } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
-import { installPhase, isInstallInProgress } from '../utils/plugin-install-status';
+import {
+  installPhase,
+  isInstallInProgress,
+  isInstallTerminating,
+  isInstallUnhealthy,
+} from '../utils/plugin-install-status';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
@@ -105,7 +111,7 @@ function mapDefinition(
   };
 }
 
-interface RunningInstallation {
+interface InstalledPlugin {
   def: ProtoPluginDefinition | undefined;
   installationId: string;
   installationName: string;
@@ -113,15 +119,45 @@ interface RunningInstallation {
   organizationName: string;
 }
 
-/** Identifies one running installation at one version: a reinstall or an
- *  upgrade changes it, a status poll that finds nothing new does not. */
+/** Identifies one installation at one version: a reinstall or an upgrade
+ *  changes it, a status poll that finds only a new phase does not. */
 function installationKey(item: PluginInstallationItem): string {
   return `${item.metadata.uid}/${item.spec.definitionRef.pluginVersion}`;
+}
+
+function healthOf(item: PluginInstallationItem): PluginInstallationHealth {
+  return {
+    phase: installPhase(item.status?.phase),
+    ready: item.status?.ready ?? false,
+    message: item.status?.message ?? '',
+  };
+}
+
+function sameHealth(
+  a: ReadonlyMap<string, PluginInstallationHealth>,
+  b: ReadonlyMap<string, PluginInstallationHealth>,
+): boolean {
+  if (a.size !== b.size) return false;
+  return [...a].every(([name, health]) => {
+    const other = b.get(name);
+    return (
+      other !== undefined &&
+      other.phase === health.phase &&
+      other.ready === health.ready &&
+      other.message === health.message
+    );
+  });
 }
 
 @Injectable({ providedIn: 'root' })
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
+
+  // Each installation's phase and message by installation name, from the
+  // latest list read. Kept apart from the definitions, which only change with
+  // the installation: a phase change must not refetch them, and must still
+  // redraw the sidebar's status marker.
+  private health = signal<ReadonlyMap<string, PluginInstallationHealth>>(new Map());
 
   // The cluster the poll loop runs for, and its latest sync; a second
   // loadPlugins for the same cluster waits on that instead of starting over.
@@ -129,7 +165,7 @@ export default class PluginRegistryService {
 
   private latestLoad: Promise<void> | null = null;
 
-  // Whether the latest sync left something unread: the list, or a running
+  // Whether the latest sync left something unread: the list, or an installed
   // plugin's definition. A loadPlugins then retries at once rather than hand
   // back that result: it comes from a user opening a screen that needs it.
   private lastSyncFailed = false;
@@ -140,7 +176,7 @@ export default class PluginRegistryService {
 
   // Definition fetches that failed in a row, and when to try them again. Kept
   // apart from the list reads, which go on at the fast pace while an install
-  // is on its way: a running plugin whose definition is gone from the catalog
+  // is on its way: a plugin whose definition is gone from the catalog
   // must not be refetched on every one of those.
   private definitionFailures = 0;
 
@@ -150,9 +186,9 @@ export default class PluginRegistryService {
   // can tell its result is stale and drop it.
   private generation = 0;
 
-  // The running installations the menu was last built from, by installationKey;
+  // The installations the menu was last built from, by installationKey;
   // null when it has not been built for the current cluster yet.
-  private runningKeys: string[] | null = null;
+  private installedKeys: string[] | null = null;
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -163,9 +199,12 @@ export default class PluginRegistryService {
   /** The longest wait between retries of a read that keeps failing. */
   private static readonly MAX_BACKOFF_MS = 120000;
 
+  /** How often to re-read while an installation is Degraded or Failed, so its
+   *  recovery, or a new reason, shows soon after the controller notices it. */
+  private static readonly UNHEALTHY_POLL_MS = 10000;
+
   /** How often to re-read while nothing is changing, so an install started
-   *  after the menu was built, or a Degraded plugin that recovers, still shows
-   *  up without a reload. */
+   *  after the menu was built still shows up without a reload. */
   private static readonly IDLE_POLL_MS = 30000;
 
   // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
@@ -222,9 +261,11 @@ export default class PluginRegistryService {
    * Syncs the menu and schedules the next sync. The menu is built when a
    * project is opened, which is often while a plugin just installed is still
    * deploying, so while any installation is on its way up or down, or a read
-   * failed, this re-reads quickly: the plugin's screens then appear in the
-   * sidebar the moment it runs, without a reload. Otherwise it keeps reading
-   * at a slower pace to notice installs started later. A read that keeps
+   * failed, this re-reads quickly: the sidebar's status marker then clears the
+   * moment the plugin runs, without a reload. While one is Degraded or Failed
+   * it re-reads at a middle pace, to show a recovery or a new reason soon.
+   * Otherwise it keeps reading at a slower pace to notice installs started
+   * later. A read that keeps
    * failing is retried with exponential backoff. So is a definition that keeps
    * failing to load, on a clock of its own and never slower than the idle
    * pace: the list itself still works, and an install started meanwhile
@@ -245,6 +286,9 @@ export default class PluginRegistryService {
       case 'inProgress':
         delay = PluginRegistryService.POLL_MS;
         break;
+      case 'unhealthy':
+        delay = PluginRegistryService.UNHEALTHY_POLL_MS;
+        break;
       case 'incomplete':
         delay = Math.max(0, (this.definitionRetryAt ?? 0) - Date.now());
         break;
@@ -263,14 +307,15 @@ export default class PluginRegistryService {
     }, delay);
   }
 
-  /** Reads the cluster's installations and rebuilds the menu from the running
-   *  ones. 'failed' is a list that could not be read, 'incomplete' a list that
-   *  was read with a running plugin whose definition could not be, and whose
-   *  retry is what to wait for next. */
+  /** Reads the cluster's installations and rebuilds the menu from them.
+   *  'unhealthy' is a list with a Degraded or Failed installation in it,
+   *  'failed' a list that could not be read, 'incomplete' a list that was read
+   *  with a plugin whose definition could not be, and whose retry is what to
+   *  wait for next. */
   private async sync(
     clusterId: string,
     generation: number,
-  ): Promise<'idle' | 'inProgress' | 'incomplete' | 'failed' | 'stale'> {
+  ): Promise<'idle' | 'inProgress' | 'unhealthy' | 'incomplete' | 'failed' | 'stale'> {
     const { kubeApiProxyUrl } = this.configService.getConfig();
 
     let listData: PluginInstallationListResponse;
@@ -289,15 +334,22 @@ export default class PluginRegistryService {
     if (generation !== this.generation) return 'stale';
 
     const items = listData.items ?? [];
-    const runningPlugins = items.filter(
-      (item) => item.status?.phase === 'Running' && item.status?.ready,
+    // Every installation keeps its screens whatever its health: a plugin that
+    // is Degraded, Failed or still coming up stays in the sidebar, which says
+    // what is wrong, rather than vanishing just when someone looks for it. Only
+    // one being removed is left out: its screens are about to go with it.
+    const installed = items.filter(
+      (item) => !isInstallTerminating(installPhase(item.status?.phase)),
     );
-    const keys = runningPlugins.map(installationKey);
+    const keys = installed.map(installationKey);
 
-    // Nothing started or stopped since the last read, and no failed
+    const health = new Map(installed.map((item) => [item.metadata.name, healthOf(item)]));
+    if (!sameHealth(health, this.health())) this.health.set(health);
+
+    // Nothing installed or removed since the last read, and no failed
     // definition is due another try: keep the menu as it is rather than
     // fetching every definition again and redrawing the sidebar.
-    const previous = this.runningKeys;
+    const previous = this.installedKeys;
     const unchanged =
       previous !== null &&
       keys.length === previous.length &&
@@ -305,10 +357,10 @@ export default class PluginRegistryService {
     const retryDue = this.definitionRetryAt !== null && Date.now() >= this.definitionRetryAt;
 
     if (!unchanged || retryDue) {
-      const fetched = await this.fetchDefinitions(runningPlugins);
+      const fetched = await this.fetchDefinitions(installed);
       if (generation !== this.generation) return 'stale';
       this.plugins.set(fetched.definitions);
-      this.runningKeys = keys;
+      this.installedKeys = keys;
       if (fetched.complete) {
         this.definitionFailures = 0;
         this.definitionRetryAt = null;
@@ -335,6 +387,9 @@ export default class PluginRegistryService {
     if (items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))) {
       return 'inProgress';
     }
+    if (installed.some((item) => isInstallUnhealthy(installPhase(item.status?.phase)))) {
+      return 'unhealthy';
+    }
     return this.definitionRetryAt === null ? 'idle' : 'incomplete';
   }
 
@@ -342,7 +397,7 @@ export default class PluginRegistryService {
     items: PluginInstallationItem[],
   ): Promise<{ definitions: PluginDefinition[]; complete: boolean }> {
     const results = await Promise.allSettled(
-      items.map(async (item): Promise<RunningInstallation> => {
+      items.map(async (item): Promise<InstalledPlugin> => {
         const ref = item.spec.definitionRef;
         const res = await firstValueFrom(
           // A definition is keyed on (organization, plugin, version): the
@@ -367,7 +422,7 @@ export default class PluginRegistryService {
     );
 
     // A definition that fails to load keeps the menu entry it had, so one
-    // flaky fetch does not drop a working plugin from the sidebar.
+    // flaky fetch does not drop a plugin from the sidebar.
     const previous = this.plugins();
     const definitions = results.flatMap((r, i): PluginDefinition[] => {
       if (r.status === 'rejected') {
@@ -502,8 +557,9 @@ export default class PluginRegistryService {
     this.failures = 0;
     this.definitionFailures = 0;
     this.definitionRetryAt = null;
-    this.runningKeys = null;
+    this.installedKeys = null;
     this.plugins.set([]);
+    this.health.set(new Map());
     this.parsedCrdByPlural.clear();
     this.crdKinds.set(new Map());
   }
@@ -513,6 +569,12 @@ export default class PluginRegistryService {
   // name tells their installations apart.
   getPlugin(installationName: string): PluginDefinition | undefined {
     return this.plugins().find((p) => p.installationName === installationName);
+  }
+
+  /** The installation's phase and message from the latest list read; undefined
+   *  for one the registry has not read. */
+  installationHealth(installationName: string): PluginInstallationHealth | undefined {
+    return this.health().get(installationName);
   }
 
   getCrd(pluginName: string, plural: string, clusterId: string): ParsedCrd | undefined {

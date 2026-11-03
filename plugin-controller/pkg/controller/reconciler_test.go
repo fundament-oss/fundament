@@ -730,8 +730,9 @@ func TestReconcile_StartedInstallKeepsRetrying(t *testing.T) {
 	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest}, "sha256:definitely-not-what-the-catalog-serves", runningOnGeneration(1))
 	require.NoError(t, err, "a started install is retried at the poll pace, not the workqueue backoff")
 	assert.Equal(t, 30*time.Second, result.RequeueAfter)
-	// The test poller cannot reach the plugin, so a fresh poll reads Deploying.
-	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase, "health must still be polled")
+	// The test poller cannot reach the plugin, which was up on this spec, so a
+	// fresh poll reads Degraded.
+	assert.Equal(t, pluginsv1.PluginPhaseDegraded, got.Status.Phase, "health must still be polled")
 	assert.False(t, got.Status.Ready)
 	assert.Contains(t, got.Status.Message, "hash mismatch")
 }
@@ -874,6 +875,35 @@ func TestPollInterval(t *testing.T) {
 	// Unset falls back to the steady-state interval rather than a hot loop.
 	r.cfg.ProgressPollInterval = 0
 	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying))
+}
+
+// TestStatusPoller_Unreachable verifies that a plugin that cannot be reached
+// reads as still on its way only until it first came up on the current spec:
+// after that it is broken, and must not show as one still being installed.
+func TestStatusPoller_Unreachable(t *testing.T) {
+	poller := newStatusPoller().WithClient(unreachableHTTPClient())
+
+	tests := map[string]struct {
+		mutate func(*pluginsv1.PluginInstallation)
+		want   pluginsv1.PluginPhase
+	}{
+		"never polled":          {mutate: func(*pluginsv1.PluginInstallation) {}, want: pluginsv1.PluginPhaseDeploying},
+		"up on this spec":       {mutate: runningOnGeneration(1), want: pluginsv1.PluginPhaseDegraded},
+		"up on a previous spec": {mutate: func(cr *pluginsv1.PluginInstallation) { runningOnGeneration(1)(cr); cr.Generation = 2 }, want: pluginsv1.PluginPhaseDeploying},
+		"still coming up":       {mutate: func(cr *pluginsv1.PluginInstallation) { setProgressingCondition(cr, time.Now()) }, want: pluginsv1.PluginPhaseDeploying},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cr := testCR()
+			tt.mutate(cr)
+
+			got := poller.poll(context.Background(), cr)
+			assert.Equal(t, tt.want, got.Phase)
+			assert.False(t, got.Ready)
+			assert.Contains(t, got.Message, "plugin not reachable")
+		})
+	}
 }
 
 func TestMapPhase(t *testing.T) {

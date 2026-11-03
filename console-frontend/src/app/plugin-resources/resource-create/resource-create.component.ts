@@ -12,6 +12,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import PluginRegistryService from '../plugin-registry.service';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
@@ -30,7 +31,7 @@ import '@nldd/design-system/simple-section';
 
 @Component({
   selector: 'app-resource-create',
-  imports: [RouterLink, PluginIframeComponent],
+  imports: [RouterLink, PluginIframeComponent, PluginStatusBannerComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-create.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

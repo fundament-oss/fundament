@@ -39,8 +39,8 @@ import {
 import {
   hasInvalidConfig,
   installPhase,
-  isInstallInProgress,
   isInstallRunning,
+  shouldPollInstall,
 } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
 import { NotificationService } from '../notification.service';
@@ -97,6 +97,9 @@ interface ClusterWithState extends ClusterSummary {
   // True when a Failed phase is config-caused (ConfigValid=False): the modal
   // hides Retry for it, since retry replays the same config.
   configInvalid: boolean;
+  // Why the installation is in its phase (status.message); '' when not
+  // installed.
+  message: string;
 }
 
 // The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install
@@ -264,6 +267,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
             phase: installPhaseOf(installation),
             version: installation?.spec?.definitionRef?.pluginVersion ?? '',
             configInvalid: installation ? hasInvalidConfig(installation) : false,
+            message: installation?.status?.message ?? '',
             running: isClusterReachable(cluster.status),
           };
         }),
@@ -350,7 +354,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private startInstallPollingIfNeeded(): void {
     if (this.installPollingTimer) return;
-    if (this.clusters().some((c) => c.phase !== null && isInstallInProgress(c.phase))) {
+    // Also while one is Degraded or Failed: it can recover, or get a new
+    // reason, without anyone acting on it.
+    if (this.clusters().some((c) => c.phase !== null && shouldPollInstall(c.phase))) {
       this.installPollingTimer = setInterval(() => this.refreshInstallStates(), 5000);
     }
   }
@@ -396,6 +402,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         ...c,
         phase: resolved,
         configInvalid: install ? hasInvalidConfig(install) : false,
+        message: install?.status?.message ?? '',
         running: isClusterReachable(c.status),
       };
     });
@@ -403,7 +410,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
-      if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
+      if (prevPhase === 'Degraded' && n.phase === 'Running') {
+        this.notificationService.success(
+          `Plugin ${displayNameOf(plugin)} is running again on cluster ${n.name}`,
+        );
+      } else if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
         this.notificationService.success(
           `Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`,
         );
@@ -418,7 +429,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     this.clusters.set(next);
 
-    if (!next.some((c) => c.phase !== null && isInstallInProgress(c.phase))) {
+    if (!next.some((c) => c.phase !== null && shouldPollInstall(c.phase))) {
       this.stopInstallPolling();
     }
   }

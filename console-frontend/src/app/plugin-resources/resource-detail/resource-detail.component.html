@@ -4,6 +4,7 @@
   @if (namespacesSettled()) {
     <nldd-page>
       <nldd-simple-section>
+        <app-plugin-status-banner [installationName]="pluginName()" />
         <app-plugin-iframe
           [src]="customUIUrl()!"
           [pluginName]="pluginName()"
@@ -37,6 +38,7 @@
       collapse-anchor="resource-detail-title"
     ></nldd-top-title-bar>
     <nldd-simple-section>
+      <app-plugin-status-banner [installationName]="pluginName()" />
       <!-- The badge sits inside the h1: it belongs to the name rather than to
            the end of the line. That way the heading also reads as
            "burgerzaken-afspraken, Not ready" to whoever hears it. -->
@@ -265,6 +267,8 @@
     (dismiss)="closeDeleteModal()"
   />
 } @else {
+  <!-- A plugin that is not running is the likely reason nothing was found. -->
+  <app-plugin-status-banner [installationName]="pluginName()" />
   <nldd-inline-dialog
     variant="alert"
     text="Resource not found"

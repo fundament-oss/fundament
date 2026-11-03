@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
@@ -39,8 +41,16 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 
 	resp, err := client.GetStatus(ctx, &pluginmetadatav1.GetStatusRequest{})
 	if err != nil {
+		// Before the current spec first came up, an unreachable plugin is one
+		// whose pod is still starting. After, it is one that stopped answering,
+		// typically a crash loop: reporting that as Deploying would show a broken
+		// plugin as one still being installed.
+		phase := pluginsv1.PluginPhaseDeploying
+		if hasSettled(cr) {
+			phase = pluginsv1.PluginPhaseDegraded
+		}
 		return pluginsv1.PluginInstallationStatus{
-			Phase:              pluginsv1.PluginPhaseDeploying,
+			Phase:              phase,
 			Message:            fmt.Sprintf("plugin not reachable: %v", err),
 			ObservedGeneration: cr.Generation,
 		}
@@ -61,6 +71,15 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 		Ready:              phase == pluginsv1.PluginPhaseRunning,
 		ObservedGeneration: cr.Generation,
 	}
+}
+
+// hasSettled reports whether the plugin has been up (Running or Degraded) since
+// the current spec was applied, as the Progressing condition records it.
+func hasSettled(cr *pluginsv1.PluginInstallation) bool {
+	progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing)
+	return progressing != nil &&
+		progressing.Status == metav1.ConditionFalse &&
+		progressing.ObservedGeneration == cr.Generation
 }
 
 func mapPhase(phase string) (pluginsv1.PluginPhase, error) {

@@ -116,6 +116,27 @@ export interface PluginNavGroup {
   installationName: string;
   label: string;
   items: PluginNavItem[];
+  // What is wrong with the installation, for a marker next to its heading;
+  // null while it runs and is ready.
+  issue: PluginInstallIssue | null;
+}
+
+/** The health of one installation, as its CR's status reports it. */
+export interface PluginInstallationHealth {
+  // installPhase() of status.phase: an installation without one is Pending.
+  phase: string;
+  ready: boolean;
+  // Why the controller or the plugin set this phase; '' when nothing is said.
+  message: string;
+}
+
+/** An installation that is not running as it should, as the console shows it. */
+export interface PluginInstallIssue {
+  label: string;
+  badgeColor: string;
+  // Still on its way up or down, rather than broken.
+  inProgress: boolean;
+  message: string;
 }
 
 export interface PluginNavItem {
@@ -147,7 +168,14 @@ export interface PluginInstallationItem {
     // uses only defaults.
     config?: Record<string, string>;
   };
-  status: { phase: string; ready: boolean; conditions?: PluginInstallationCondition[] };
+  status: {
+    phase: string;
+    ready: boolean;
+    // Why the installation is in this phase: the plugin's own status message,
+    // or what the controller could not do.
+    message?: string;
+    conditions?: PluginInstallationCondition[];
+  };
 }
 
 export interface PluginInstallationListResponse {

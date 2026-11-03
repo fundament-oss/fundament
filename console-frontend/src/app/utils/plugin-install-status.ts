@@ -2,7 +2,11 @@
 // Phases come from the backend CRD (plugin-controller/pkg/api/v1/types.go):
 // Pending, Deploying, Running, Degraded, Failed, Terminating.
 
-import type { PluginInstallationItem } from '../plugin-resources/types';
+import type {
+  PluginInstallationHealth,
+  PluginInstallationItem,
+  PluginInstallIssue,
+} from '../plugin-resources/types';
 
 export interface InstallStatusDisplay {
   label: string;
@@ -54,6 +58,34 @@ export function isInstallTerminating(phase: string): boolean {
 
 export function isInstallFailed(phase: string): boolean {
   return phase === 'Failed';
+}
+
+/** True when the installation is up but not working (Degraded) or did not come
+ *  up at all (Failed). Neither is in progress, yet both can change on their
+ *  own: the plugin recovers, or the controller's retry gets it going. */
+export function isInstallUnhealthy(phase: string): boolean {
+  return phase === 'Degraded' || isInstallFailed(phase);
+}
+
+/** True while the installation's phase may still change without anyone acting
+ *  on it, so a screen showing it should keep reading it. */
+export function shouldPollInstall(phase: string): boolean {
+  return isInstallInProgress(phase) || isInstallUnhealthy(phase);
+}
+
+/** What to show for an installation that is not running as it should; null for
+ *  one that is, or that has no status to go by. */
+export function installIssue(
+  health: PluginInstallationHealth | undefined,
+): PluginInstallIssue | null {
+  if (!health || (isInstallRunning(health.phase) && health.ready)) return null;
+  const display = getInstallStatusDisplay(health.phase);
+  return {
+    label: display.label,
+    badgeColor: display.badgeColor,
+    inProgress: display.inProgress,
+    message: health.message,
+  };
 }
 
 /** True when the controller rejected the installation's config against its

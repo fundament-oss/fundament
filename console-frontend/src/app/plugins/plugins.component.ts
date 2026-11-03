@@ -41,8 +41,8 @@ import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
-  isInstallInProgress,
   isInstallRunning,
+  shouldPollInstall,
 } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
@@ -117,6 +117,8 @@ interface ClusterModalRow {
   // True when a Failed phase is config-caused (ConfigValid=False): the modal
   // hides Retry for it, since retry replays the same config.
   configInvalid: boolean;
+  // Why the installation is in its phase; '' when not installed.
+  message: string;
 }
 
 // Extended install type with cluster ID and live status phase. organizationName +
@@ -134,6 +136,8 @@ interface InstallWithCluster {
   // True when a Failed phase is config-caused (ConfigValid=False): the modal
   // hides Retry for it, since retry replays the same config.
   configInvalid: boolean;
+  // Why the installation is in its phase (status.message).
+  message: string;
 }
 
 // Extended category type with count for filtering
@@ -467,6 +471,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               ready: item.status?.ready ?? false,
               version: item.spec?.definitionRef?.pluginVersion ?? '',
               configInvalid: hasInvalidConfig(item),
+              message: item.status?.message ?? '',
             })),
           )
           .catch((): InstallWithCluster[] | null => null),
@@ -486,7 +491,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private startInstallPollingIfNeeded() {
     if (this.installPollingTimer) return;
-    if (this.installs().some((install) => isInstallInProgress(install.phase))) {
+    // Also while one is Degraded or Failed: it can recover, or get a new
+    // reason, without anyone acting on it.
+    if (this.installs().some((install) => shouldPollInstall(install.phase))) {
       this.installPollingTimer = setInterval(() => this.refreshInstalls(), 5000);
     }
   }
@@ -525,7 +532,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           p.pluginName === next.pluginName,
       );
       if (!prev) return;
-      if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
+      if (prev.phase === 'Degraded' && isInstallRunning(next.phase)) {
+        this.notificationService.success(
+          `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} is running again on cluster ${this.clusterName(next.clusterId)}`,
+        );
+      } else if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
         this.notificationService.success(
           `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
@@ -567,7 +578,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     ];
     this.installs.set(merged);
 
-    if (!merged.some((install) => isInstallInProgress(install.phase))) {
+    if (!merged.some((install) => shouldPollInstall(install.phase))) {
       this.stopInstallPolling();
     }
   }
@@ -714,6 +725,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         version: install?.version ?? '',
         running: isClusterReachable(cluster.status),
         configInvalid: install?.configInvalid ?? false,
+        message: install?.message ?? '',
       };
     });
   }
@@ -877,6 +889,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ready: false,
         version: selection.version,
         configInvalid: false,
+        message: '',
       })),
     ]);
 
