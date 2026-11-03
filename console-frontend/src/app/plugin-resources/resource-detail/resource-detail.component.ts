@@ -6,6 +6,7 @@ import {
   signal,
   effect,
   untracked,
+  DestroyRef,
   OnInit,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -19,6 +20,7 @@ import PluginRegistryService from '../plugin-registry.service';
 import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
+import pollResources from '../resource-poll';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
@@ -168,6 +170,8 @@ export default class ResourceDetailComponent implements OnInit {
         untracked(() => this.loadCrdAndResource(clusterId));
       }
     });
+
+    pollResources(inject(DestroyRef), () => this.refreshResource());
   }
 
   async ngOnInit(): Promise<void> {
@@ -199,6 +203,39 @@ export default class ResourceDetailComponent implements OnInit {
       this.errorMessage.set('Failed to load resource. Please try again.');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * The poll's refresh, so the status and conditions follow the cluster.
+   * Re-reads the resource only, without the loading state, which would blank
+   * the page every few seconds. Only for the generated view; a custom detail UI
+   * reads its own. Read by the loaded resource's own name and namespace, as the
+   * delete is. Held back while a delete is out: the resource vanishing under
+   * the modal would swap the page for "not found" before the delete returns.
+   * A resource that is gone does show as gone. A failed poll keeps what is
+   * shown, and the next one tries again.
+   */
+  private async refreshResource(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    const current = this.resource();
+    if (!crd || clusterId === null || !current || this.isLoading() || this.deleting()) return;
+    if (this.customUIUrl()) return;
+    try {
+      const resource = await this.loader.loadResource(
+        this.pluginName(),
+        crd,
+        clusterId,
+        current.metadata.name,
+        current.metadata.namespace,
+      );
+      // Moved on to another resource or cluster, or deleting, while this was out.
+      if (this.resource()?.metadata.uid !== current.metadata.uid || this.deleting()) return;
+      if (this.clusterContext.selectedClusterId() !== clusterId) return;
+      this.resource.set(resource);
+    } catch {
+      // Kept as is; see above.
     }
   }
 

@@ -6,6 +6,7 @@ import {
   signal,
   effect,
   untracked,
+  DestroyRef,
   OnInit,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -16,6 +17,7 @@ import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
+import pollResources from '../resource-poll';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
@@ -204,6 +206,8 @@ export default class ResourceListComponent implements OnInit {
         });
       }
     });
+
+    pollResources(inject(DestroyRef), () => this.refreshResources());
   }
 
   async ngOnInit(): Promise<void> {
@@ -301,16 +305,25 @@ export default class ResourceListComponent implements OnInit {
     return null;
   }
 
-  // Refreshes the list after a delete. The CRD schema and plugin registry are
-  // unchanged, so re-list resources only rather than re-running the full
-  // loadCrdsAndResources (which re-fetches the CRD schema).
-  private async reloadResources(crd: ParsedCrd, clusterId: string): Promise<void> {
+  /**
+   * The poll's refresh, so a status column follows the cluster. Re-lists the
+   * resources only: the CRD schema is unchanged, so this skips the full
+   * loadCrdsAndResources and its loading state, which would blank the list
+   * every few seconds. Only for the generated list; a custom list UI reads its
+   * own resources. A failed poll keeps what is shown, and the next one tries
+   * again.
+   */
+  private async refreshResources(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (!crd || clusterId === null || this.isLoading() || this.customUIUrl()) return;
     try {
-      this.resources.set(await this.loader.loadResources(this.pluginName(), crd, clusterId));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[ResourceList] Failed to reload resources:', err);
-      this.errorMessage.set('Failed to load resources. Please try again.');
+      const resources = await this.loader.loadResources(this.pluginName(), crd, clusterId);
+      // Moved on to another kind or cluster while this was out.
+      if (this.crdDef() !== crd || this.clusterContext.selectedClusterId() !== clusterId) return;
+      this.resources.set(resources);
+    } catch {
+      // Kept as is; see above.
     }
   }
 }
