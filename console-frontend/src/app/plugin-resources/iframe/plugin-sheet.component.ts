@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -69,7 +70,16 @@ export default class PluginSheetComponent {
 
   protected open = signal(true);
 
+  /** True once SheetSyncDirective has moved the sheet to document.body. The
+   *  page in it waits for this (see plugin-iframe.component.ts): an iframe
+   *  that moves reloads, so a page put in before the move loads twice. */
+  readonly placed = signal(false);
+
   private changed = false;
+
+  constructor() {
+    afterNextRender(() => this.placed.set(true));
+  }
 
   /** Written here, not taken from the plugin: a plugin naming its own sheet
    *  could title it "Sign in again". */

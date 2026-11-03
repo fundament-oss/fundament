@@ -95,27 +95,31 @@ function isPluginMessage(data: unknown): data is PluginMessage {
         [pluginName]="pluginName()"
         (closed)="onSheetClosed($event)"
       >
-        <!-- One iteration, keyed on the request: a sheet replaced by another
-             gets a fresh frame, and the page it loads a fresh init. -->
-        @for (open of [request]; track open.seq) {
-          <app-plugin-iframe
-            presentation="sheet"
-            [src]="sheetSrc()!"
-            [pluginName]="pluginName()"
-            [pluginVersion]="pluginVersion()"
-            [installationId]="installationId()"
-            [crdKind]="open.kind"
-            [view]="open.view"
-            [clusterId]="clusterId()"
-            [resourceName]="open.resource?.name"
-            [resourceNamespace]="open.resource?.namespace"
-            [params]="open.params"
-            [namespaces]="namespaces()"
-            [namespaceDisplayNames]="namespaceDisplayNames()"
-            (closeRequested)="pluginSheet.close($event)"
-            (navigated)="onSheetNavigated($event)"
-            (sheetRequested)="onSheetReplaced($event)"
-          />
+        <!-- Only once the sheet is in place: a frame put in before it moves
+             would load twice. -->
+        @if (pluginSheet.placed()) {
+          <!-- One iteration, keyed on the request: a sheet replaced by another
+               gets a fresh frame, and the page it loads a fresh init. -->
+          @for (open of [request]; track open.seq) {
+            <app-plugin-iframe
+              presentation="sheet"
+              [src]="sheetSrc()!"
+              [pluginName]="pluginName()"
+              [pluginVersion]="pluginVersion()"
+              [installationId]="installationId()"
+              [crdKind]="open.kind"
+              [view]="open.view"
+              [clusterId]="clusterId()"
+              [resourceName]="open.resource?.name"
+              [resourceNamespace]="open.resource?.namespace"
+              [params]="open.params"
+              [namespaces]="namespaces()"
+              [namespaceDisplayNames]="namespaceDisplayNames()"
+              (closeRequested)="pluginSheet.close($event)"
+              (navigated)="onSheetNavigated($event)"
+              (sheetRequested)="onSheetReplaced($event)"
+            />
+          }
         }
       </app-plugin-sheet>
     }

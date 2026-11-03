@@ -68,8 +68,11 @@ export function isInstallUnhealthy(phase: string): boolean {
 }
 
 /** True while the installation's phase may still change without anyone acting
- *  on it, so a screen showing it should keep reading it. */
-export function shouldPollInstall(phase: string): boolean {
+ *  on it, so a screen showing it should keep reading it. A failure caused by
+ *  its config (see hasInvalidConfig) is not one: it stays Failed until someone
+ *  uninstalls and reinstalls. */
+export function shouldPollInstall(phase: string, configInvalid: boolean): boolean {
+  if (configInvalid && isInstallFailed(phase)) return false;
   return isInstallInProgress(phase) || isInstallUnhealthy(phase);
 }
 

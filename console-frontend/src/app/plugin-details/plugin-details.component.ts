@@ -356,7 +356,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     if (this.installPollingTimer) return;
     // Also while one is Degraded or Failed: it can recover, or get a new
     // reason, without anyone acting on it.
-    if (this.clusters().some((c) => c.phase !== null && shouldPollInstall(c.phase))) {
+    if (
+      this.clusters().some((c) => c.phase !== null && shouldPollInstall(c.phase, c.configInvalid))
+    ) {
       this.installPollingTimer = setInterval(() => this.refreshInstallStates(), 5000);
     }
   }
@@ -429,7 +431,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     this.clusters.set(next);
 
-    if (!next.some((c) => c.phase !== null && shouldPollInstall(c.phase))) {
+    if (!next.some((c) => c.phase !== null && shouldPollInstall(c.phase, c.configInvalid))) {
       this.stopInstallPolling();
     }
   }

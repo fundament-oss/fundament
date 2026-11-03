@@ -457,27 +457,17 @@
               <!-- Installing runs through a plugin's own page, the one place
                    that picks a version, asks for config and offers retry and
                    uninstall. So this starts where plugins are found, the same
-                   as the sidebar's "Install plugins…". -->
-              @if (browsePluginsUrl) {
-                <nldd-button
-                  slot="end"
-                  [attr.href]="browsePluginsUrl"
-                  text="Install plugins…"
-                  start-icon="add-plugin"
-                  variant="secondary"
-                  size="sm"
-                ></nldd-button>
-              } @else {
-                <nldd-button
-                  slot="end"
-                  [attr.href]="pageNav.path('/plugins')"
-                  (click)="pageNav.navigate($event, '/plugins')"
-                  text="Install plugins…"
-                  start-icon="add-plugin"
-                  variant="secondary"
-                  size="sm"
-                ></nldd-button>
-              }
+                   as the sidebar's "Install plugins…". The marketplace is
+                   another site, so only the console's own page opens in place. -->
+              <nldd-button
+                slot="end"
+                [attr.href]="browsePluginsUrl || pageNav.path('/plugins')"
+                (click)="browsePluginsUrl || pageNav.navigate($event, '/plugins')"
+                text="Install plugins…"
+                start-icon="add-plugin"
+                variant="secondary"
+                size="sm"
+              ></nldd-button>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
             @if (isLoadingPlugins()) {

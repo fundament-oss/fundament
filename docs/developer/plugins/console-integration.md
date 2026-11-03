@@ -166,8 +166,8 @@ The SDK sends and handles most messages itself.
 | `presentation` | `'page'` on a route, `'sheet'` in a sheet |
 | `resource` | Detail and edit views: `{ name, namespace? }` |
 | `params` | Pages in a sheet: the `params` the opening page passed to `openSheet()` |
-| `namespaces` | Create and detail views in a project, and sheets over them: the project's namespaces, by their name on the cluster (`tnt-<project>--<name>`). Pass these to the Kubernetes API as is |
-| `namespaceDisplayNames` | Create views in a project: maps each entry of `namespaces` to the name the console shows for it, to use as the label |
+| `namespaces` | List, create and detail views in a project, and sheets over them: the project's namespaces, by their name on the cluster (`tnt-<project>--<name>`). Pass these to the Kubernetes API as is |
+| `namespaceDisplayNames` | Wherever `namespaces` is set: maps each entry of `namespaces` to the name the console shows for it, to use as the label |
 | `kubeApiProxyUrl`, `clusterId` | Base for Kubernetes calls |
 | `token`, `tokenExpiresAt` | The PluginToken |
 

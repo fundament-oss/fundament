@@ -17,6 +17,7 @@ import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
+import ProjectNamespacesService from '../project-namespaces.service';
 import pollResources from '../resource-poll';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
@@ -98,6 +99,8 @@ export default class ResourceListComponent implements OnInit {
 
   private config = inject(ConfigService);
 
+  private projectNamespaces = inject(ProjectNamespacesService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -125,6 +128,19 @@ export default class ResourceListComponent implements OnInit {
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
+
+  // The project's namespaces, forwarded to the plugin iframe for the create
+  // sheet a custom list opens, which gets them from the list as the routed
+  // create page gets them from its own route. Cluster-side names
+  // ("tnt-<project>--<name>"): the plugin passes them to the Kubernetes API as is.
+  namespaces = signal<string[]>([]);
+
+  // The project-level name for each of namespaces, which the plugin shows.
+  namespaceDisplayNames = signal<Record<string, string>>({});
+
+  // Holds the iframe back until the namespace lookup has finished, failed or
+  // not: the iframe sends them once, in fundament:init, and never again.
+  namespacesSettled = signal(false);
 
   installationId = computed(() => this.plugin()?.installationId ?? '');
 
@@ -194,6 +210,10 @@ export default class ResourceListComponent implements OnInit {
     effect(() => {
       this.titleService.setTitle(this.kindLabel());
     });
+
+    const projectId = this.route.snapshot.parent?.params['id'];
+    if (projectId) this.loadNamespaces(projectId).catch(() => {});
+    else this.namespacesSettled.set(true);
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
@@ -303,6 +323,20 @@ export default class ResourceListComponent implements OnInit {
       return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
     }
     return null;
+  }
+
+  private async loadNamespaces(projectId: string): Promise<void> {
+    try {
+      const { names, displayNames } = await this.projectNamespaces.list(projectId);
+      this.namespaces.set(names);
+      this.namespaceDisplayNames.set(displayNames);
+    } catch (err) {
+      // Transient failure: plugin UIs fall back to a free-text namespace field.
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to load namespaces:', err);
+    } finally {
+      this.namespacesSettled.set(true);
+    }
   }
 
   /**

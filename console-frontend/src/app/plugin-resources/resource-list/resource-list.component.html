@@ -12,15 +12,19 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       <app-plugin-status-banner [installationName]="pluginName()" />
-      <app-plugin-iframe
-        [src]="customUIUrl()!"
-        [pluginName]="pluginName()"
-        [pluginVersion]="installationVersion()"
-        [installationId]="installationId()"
-        [crdKind]="crdDef()!.kind"
-        view="list"
-        [clusterId]="clusterContext.selectedClusterId()!"
-      />
+      @if (namespacesSettled()) {
+        <app-plugin-iframe
+          [src]="customUIUrl()!"
+          [pluginName]="pluginName()"
+          [pluginVersion]="installationVersion()"
+          [installationId]="installationId()"
+          [crdKind]="crdDef()!.kind"
+          view="list"
+          [clusterId]="clusterContext.selectedClusterId()!"
+          [namespaces]="namespaces()"
+          [namespaceDisplayNames]="namespaceDisplayNames()"
+        />
+      }
     </nldd-simple-section>
   </nldd-page>
 } @else {
