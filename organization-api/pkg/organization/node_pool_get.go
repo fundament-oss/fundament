@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -33,9 +34,9 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	runtime := runtimeForPool(s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1), nodePool.Name)
 	// The by-ID row has the list row's columns.
 	row := db.NodePoolListByClusterIDRow(nodePool)
+	runtime := runtimeForPool(s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1), &row, time.Now())
 
 	return organizationv1.GetNodePoolResponse_builder{
 		NodePool: nodePoolFromRow(&row, runtime),
