@@ -233,9 +233,10 @@ export default class AddProjectMemberSheetComponent {
   }
 
   async saveMember(event?: Event) {
-    // Enter picking a member in the combo box is not a submit, and the DS says
-    // so by marking the event handled.
-    if (event?.defaultPrevented) return;
+    // No defaultPrevented guard as in the other sheets: [formGroup] cancels the
+    // submit before this runs, and the keydown that requested it is marked
+    // handled too, so the guard would drop both. Both still arrive, though, so
+    // the second one finds the first already out.
     event?.preventDefault();
     if (this.isAddingMember()) return;
 
