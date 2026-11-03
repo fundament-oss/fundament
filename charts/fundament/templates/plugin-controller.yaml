@@ -49,6 +49,13 @@ rules:
       - update
       - patch
       - delete
+  # Read uncached to explain why an unreachable plugin's pod is not starting.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
   - apiGroups:
       - apps
     resources:

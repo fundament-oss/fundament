@@ -96,7 +96,7 @@ func run() error {
 	defHTTP := &http.Client{Timeout: 30 * time.Second}
 	tokenSource := identity.NewFileTokenSource(cfg.TokenFile, cfg.FundamentClusterID,
 		authnv1connect.NewTokenServiceClient(defHTTP, cfg.AuthnAPIURL), logger)
-	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg,
+	reconciler := controller.NewReconciler(mgr.GetClient(), mgr.GetAPIReader(), logger, &cfg,
 		controller.WithDefClient(defclient.New(cfg.CatalogAPIURL, defHTTP, tokenSource)),
 	)
 	if err := reconciler.SetupWithManager(mgr); err != nil {

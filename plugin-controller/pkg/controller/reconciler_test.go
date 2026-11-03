@@ -568,7 +568,7 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           counting,
 		defCache:            newDefinitionCache(),
@@ -621,7 +621,7 @@ func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -664,7 +664,7 @@ func reconcileWithDefClient(t *testing.T, defClient defclient.Client, pin string
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           defClient,
 		defCache:            newDefinitionCache(),
@@ -845,7 +845,7 @@ func TestPollInterval(t *testing.T) {
 				continue
 			}
 			cr.Status.Phase = phase
-			setProgressingCondition(cr, now)
+			setProgressingCondition(cr, phase != pluginsv1.PluginPhaseDeploying, now)
 			now = now.Add(time.Minute)
 		}
 		return r.pollInterval(cr, now)
@@ -1376,7 +1376,7 @@ func TestReconcile_WaitsForTerminatingNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1432,7 +1432,7 @@ func reconcileDevModeCR(t *testing.T, cr *pluginsv1.PluginInstallation, manifest
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: allowDevMode},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1470,7 +1470,7 @@ func TestReconcile_DevModeConditionClearsWhenAnnotationRemoved(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1603,7 +1603,7 @@ func TestReconcile_DevModeConditionSetOnEarlyFailure(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),

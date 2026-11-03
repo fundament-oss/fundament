@@ -729,12 +729,13 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 
 // classifyPluginPhase maps a plugin installation status phase to a polling
 // decision: done signals success (Running), terminal signals an unrecoverable
-// phase. Any other phase (Pending, Deploying, or empty) means keep polling.
+// phase. Any other phase means keep polling, including Degraded, which is
+// retryable: an image pull or scheduling problem can still clear by itself.
 func classifyPluginPhase(phase string) (done, terminal bool) {
 	switch phase {
 	case "Running":
 		return true, false
-	case "Failed", "Terminating", "Degraded":
+	case "Failed", "Terminating":
 		return false, true
 	default:
 		return false, false
@@ -747,7 +748,7 @@ func classifyPluginPhase(phase string) (done, terminal bool) {
 func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, name string) (string, error) {
 	const maxConsecutiveErrors = 5
 
-	lastPhase := ""
+	lastPhase, lastMessage := "", ""
 
 	err := pollWithBackoff(ctx, 10*time.Second, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
 		crdState, err := r.fetchCRD(ctx, clusterID, name)
@@ -759,7 +760,7 @@ func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, c
 			return false, false, fmt.Errorf("polling plugin installation status: %w", err)
 		}
 
-		lastPhase = crdState.Status.Phase
+		lastPhase, lastMessage = crdState.Status.Phase, crdState.Status.Message
 		done, terminal := classifyPluginPhase(lastPhase)
 		switch {
 		case done:
@@ -773,7 +774,7 @@ func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, c
 	})
 
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", name, lastPhase, err)
+		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q, last message: %q): %w", name, lastPhase, lastMessage, err)
 	}
 	if err != nil {
 		return "", err
