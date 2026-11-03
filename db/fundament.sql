@@ -3784,6 +3784,15 @@ CREATE POLICY node_pool_snapshots_select_platform_admin ON tenant.node_pool_snap
 	USING (true);
 -- ddl-end --
 
+-- object: node_pool_snapshots_select_organization | type: POLICY --
+-- DROP POLICY IF EXISTS node_pool_snapshots_select_organization ON tenant.node_pool_snapshots CASCADE;
+CREATE POLICY node_pool_snapshots_select_organization ON tenant.node_pool_snapshots
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (EXISTS (SELECT 1 FROM tenant.node_pools WHERE tenant.node_pools.id = tenant.node_pool_snapshots.node_pool_id AND authn.is_cluster_in_organization(tenant.node_pools.cluster_id)));
+-- ddl-end --
+
 -- object: namespace_snapshots_select_platform_admin | type: POLICY --
 -- DROP POLICY IF EXISTS namespace_snapshots_select_platform_admin ON tenant.namespace_snapshots CASCADE;
 CREATE POLICY namespace_snapshots_select_platform_admin ON tenant.namespace_snapshots
@@ -6144,6 +6153,14 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.node_pool_snapshots
    TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_2d459addd3 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pool_snapshots
+   TO fun_fundament_api;
 
 -- ddl-end --
 
