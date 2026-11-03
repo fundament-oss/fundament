@@ -10,12 +10,16 @@ import {
   viewChild,
   ElementRef,
   DestroyRef,
+  output,
   type OnInit,
   type AfterViewInit,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { HostMessage, PluginMessage } from './postmessage-types';
+import type { HostMessage, PluginMessage, ResourceContext } from './postmessage-types';
+import parseSheetRequest, { sheetUrl, type OpenSheet } from './sheet-request';
+import PluginSheetComponent from './plugin-sheet.component';
+import PluginRegistryService from '../plugin-registry.service';
 import { ConfigService } from '../../config.service';
 import { PluginAuthService } from '../../plugin-auth/plugin-auth.service';
 
@@ -33,6 +37,8 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     case 'plugin:create':
     case 'plugin:navigate-back':
     case 'plugin:request-token-refresh':
+    case 'plugin:open-sheet':
+    case 'plugin:close-sheet':
       return true;
     default:
       return false;
@@ -41,6 +47,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
 
 @Component({
   selector: 'app-plugin-iframe',
+  imports: [PluginSheetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (status() === 'error') {
@@ -78,6 +85,40 @@ function isPluginMessage(data: unknown): data is PluginMessage {
       "
       title="Plugin custom UI"
     ></iframe>
+    <!-- The sheet this frame asked for, holding a plugin page of its own:
+         this component again, in its sheet presentation. Only ever this same
+         installation's pages (see sheetUrl). -->
+    @if (sheet(); as request) {
+      <app-plugin-sheet
+        #pluginSheet
+        [request]="request"
+        [pluginName]="pluginName()"
+        (closed)="onSheetClosed($event)"
+      >
+        <!-- One iteration, keyed on the request: a sheet replaced by another
+             gets a fresh frame, and the page it loads a fresh init. -->
+        @for (open of [request]; track open.seq) {
+          <app-plugin-iframe
+            presentation="sheet"
+            [src]="sheetSrc()!"
+            [pluginName]="pluginName()"
+            [pluginVersion]="pluginVersion()"
+            [installationId]="installationId()"
+            [crdKind]="open.kind"
+            [view]="open.view"
+            [clusterId]="clusterId()"
+            [resourceName]="open.resource?.name"
+            [resourceNamespace]="open.resource?.namespace"
+            [params]="open.params"
+            [namespaces]="namespaces()"
+            [namespaceDisplayNames]="namespaceDisplayNames()"
+            (closeRequested)="pluginSheet.close($event)"
+            (navigated)="onSheetNavigated($event)"
+            (sheetRequested)="onSheetReplaced($event)"
+          />
+        }
+      </app-plugin-sheet>
+    }
   `,
 })
 export default class PluginIframeComponent implements OnInit, AfterViewInit {
@@ -91,7 +132,24 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
 
   crdKind = input.required<string>();
 
-  view = input.required<'list' | 'detail' | 'create'>();
+  view = input.required<'list' | 'detail' | 'create' | 'edit'>();
+
+  /** 'sheet' for the page inside a plugin sheet: it reports leaving, showing a
+   *  resource and asking for another sheet to that sheet, rather than acting
+   *  on them itself. */
+  presentation = input<'page' | 'sheet'>('page');
+
+  /** From the request that opened this page's sheet, passed on in init. */
+  params = input<Record<string, string> | undefined>(undefined);
+
+  /** From a sheet: leave it. True when the page saved something. */
+  closeRequested = output<boolean>();
+
+  /** From a sheet: show this resource of the page's kind. */
+  navigated = output<ResourceContext>();
+
+  /** From a sheet: open this sheet in its place. */
+  sheetRequested = output<OpenSheet>();
 
   clusterId = input.required<string>();
 
@@ -116,6 +174,18 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
   private configService = inject(ConfigService);
 
   private auth = inject(PluginAuthService);
+
+  private registry = inject(PluginRegistryService);
+
+  /** The sheet this page has open, if any. One at a time: a page asking for a
+   *  second while one is open is ignored, so a plugin cannot stack them. */
+  protected sheet = signal<OpenSheet | null>(null);
+
+  /** Its page, which openSheet checked the plugin declares before opening. */
+  protected sheetSrc = computed(() => {
+    const request = this.sheet();
+    return request && this.sheetUrlFor(request);
+  });
 
   private iframeRef = viewChild<ElementRef<HTMLIFrameElement>>('pluginFrame');
 
@@ -294,21 +364,16 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
           this.frameHeight.set(msg.height);
         }
         return;
-      case 'plugin:navigate': {
-        const queryParams = msg.namespace ? { ns: msg.namespace } : undefined;
-        if (this.view() === 'create') {
-          // The create route is `:resourceKind/create`; the created resource's
-          // detail is its sibling `:resourceKind/<name>`.
-          this.router.navigate(['..', msg.name], { relativeTo: this.route, queryParams });
+      case 'plugin:navigate':
+        if (this.presentation() === 'sheet') {
+          this.navigated.emit({ name: msg.name, namespace: msg.namespace });
           return;
         }
-        // The resource-kind list route is the navigation anchor: from `list`
-        // it's the current route, from `detail` it's the parent.
-        const baseRoute = this.view() === 'list' ? this.route : this.route.parent;
-        this.router.navigate([msg.name], { relativeTo: baseRoute, queryParams });
+        this.navigateToResource(msg.name, msg.namespace);
         return;
-      }
       case 'plugin:create':
+        // A sheet has no route of its own to put a create page next to.
+        if (this.presentation() === 'sheet') return;
         // Only meaningful from a list view: the create route is the sibling
         // `:resourceKind/create` of the current `:resourceKind` list route. From
         // a detail view it would resolve to a non-existent nested route, so ignore.
@@ -317,6 +382,11 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
         }
         return;
       case 'plugin:navigate-back':
+        // From a sheet, back is out of the sheet.
+        if (this.presentation() === 'sheet') {
+          this.closeRequested.emit(false);
+          return;
+        }
         // Only meaningful from a create/detail view: go up to the `:resourceKind`
         // list. From a list view there is no "back", and `..` would overshoot the
         // resource kind, so ignore it.
@@ -331,11 +401,89 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
         // reflected in failedSignal so we don't need to act on it here.
         this.auth.requestRefresh(this.clusterId(), this.installationId()).catch(() => undefined);
         return;
+      case 'plugin:open-sheet':
+        this.openSheet(msg);
+        return;
+      case 'plugin:close-sheet':
+        // A page on a route has no sheet to close.
+        if (this.presentation() === 'sheet') this.closeRequested.emit(msg.changed === true);
+        return;
       default: {
         const exhaustive: never = msg;
         throw new Error(`Unhandled plugin message type: ${(exhaustive as PluginMessage).type}`);
       }
     }
+  }
+
+  /**
+   * Opens the sheet a plugin:open-sheet message asks for, once it is the shape
+   * a request has to have and names a page this installation declares. From a
+   * sheet the request goes up to the page under it, which swaps sheets.
+   */
+  private openSheet(message: unknown): void {
+    const request = parseSheetRequest(message, this.crdKind());
+    if (!request || !this.sheetUrlFor(request)) {
+      // eslint-disable-next-line no-console
+      console.warn('[plugin-iframe] refused a sheet request the plugin does not declare', message);
+      return;
+    }
+    if (this.presentation() === 'sheet') {
+      this.sheetRequested.emit(request);
+      return;
+    }
+    if (this.sheet()) return;
+    this.sheet.set(request);
+  }
+
+  private sheetUrlFor(request: OpenSheet): string | null {
+    return sheetUrl(
+      this.registry.getPlugin(this.pluginName()),
+      request,
+      this.clusterId(),
+      this.configService.getConfig().pluginProxyUrl,
+    );
+  }
+
+  protected onSheetClosed(changed: boolean): void {
+    this.sheet.set(null);
+    if (changed) this.notifyResourcesChanged();
+  }
+
+  /** A sheet page showing a resource: one it just created, typically. Only a
+   *  resource of this page's own kind has a route to go to; for any other kind
+   *  the sheet just closes. */
+  protected onSheetNavigated(target: ResourceContext): void {
+    const request = this.sheet();
+    this.sheet.set(null);
+    this.notifyResourcesChanged();
+    if (request?.kind === this.crdKind()) this.navigateToResource(target.name, target.namespace);
+  }
+
+  /** A sheet page opening another sheet: it took the first one's place, after
+   *  saving, as a rule, so the page under it reads again. */
+  protected onSheetReplaced(request: OpenSheet): void {
+    this.sheet.set(request);
+    this.notifyResourcesChanged();
+  }
+
+  private notifyResourcesChanged(): void {
+    const iframe = this.iframeRef()?.nativeElement;
+    if (!iframe?.contentWindow || this.status() !== 'ready') return;
+    this.postToIframe(iframe, { type: 'fundament:resources-changed' });
+  }
+
+  private navigateToResource(name: string, namespace: string | undefined): void {
+    const queryParams = namespace ? { ns: namespace } : undefined;
+    if (this.view() === 'create') {
+      // The create route is `:resourceKind/create`; the created resource's
+      // detail is its sibling `:resourceKind/<name>`.
+      this.router.navigate(['..', name], { relativeTo: this.route, queryParams });
+      return;
+    }
+    // The resource-kind list route is the navigation anchor: from `list`
+    // it's the current route, from `detail` it's the parent.
+    const baseRoute = this.view() === 'list' ? this.route : this.route.parent;
+    this.router.navigate([name], { relativeTo: baseRoute, queryParams });
   }
 
   private async sendInit(iframe: HTMLIFrameElement): Promise<void> {
@@ -355,6 +503,7 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
     const namespace = this.resourceNamespace();
     const namespaces = this.namespaces();
     const namespaceDisplayNames = this.namespaceDisplayNames();
+    const params = this.params();
     this.postToIframe(iframe, {
       type: 'fundament:init',
       protocolVersion: 1,
@@ -362,7 +511,9 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
       pluginName: this.pluginName(),
       crdKind: this.crdKind(),
       view: this.view(),
+      presentation: this.presentation(),
       ...(name ? { resource: { name, namespace } } : {}),
+      ...(params ? { params } : {}),
       ...(namespaces ? { namespaces } : {}),
       ...(namespaceDisplayNames ? { namespaceDisplayNames } : {}),
       kubeApiProxyUrl: this.configService.getConfig().kubeApiProxyUrl,

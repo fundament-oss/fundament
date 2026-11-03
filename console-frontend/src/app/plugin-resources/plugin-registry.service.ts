@@ -94,6 +94,7 @@ function mapDefinition(
                 list: v.list || undefined,
                 detail: v.detail || undefined,
                 create: v.create || undefined,
+                edit: v.edit || undefined,
               },
             ]),
           )

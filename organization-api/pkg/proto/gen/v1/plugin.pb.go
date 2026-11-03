@@ -2645,6 +2645,7 @@ type PluginComponentMapping struct {
 	xxx_hidden_List   string                 `protobuf:"bytes,10,opt,name=list"`
 	xxx_hidden_Detail string                 `protobuf:"bytes,20,opt,name=detail"`
 	xxx_hidden_Create string                 `protobuf:"bytes,30,opt,name=create"`
+	xxx_hidden_Edit   string                 `protobuf:"bytes,40,opt,name=edit"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2695,6 +2696,13 @@ func (x *PluginComponentMapping) GetCreate() string {
 	return ""
 }
 
+func (x *PluginComponentMapping) GetEdit() string {
+	if x != nil {
+		return x.xxx_hidden_Edit
+	}
+	return ""
+}
+
 func (x *PluginComponentMapping) SetList(v string) {
 	x.xxx_hidden_List = v
 }
@@ -2707,12 +2715,18 @@ func (x *PluginComponentMapping) SetCreate(v string) {
 	x.xxx_hidden_Create = v
 }
 
+func (x *PluginComponentMapping) SetEdit(v string) {
+	x.xxx_hidden_Edit = v
+}
+
 type PluginComponentMapping_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	List   string
 	Detail string
 	Create string
+	// Opened only in a console sheet, never routed.
+	Edit string
 }
 
 func (b0 PluginComponentMapping_builder) Build() *PluginComponentMapping {
@@ -2722,6 +2736,7 @@ func (b0 PluginComponentMapping_builder) Build() *PluginComponentMapping {
 	x.xxx_hidden_List = b.List
 	x.xxx_hidden_Detail = b.Detail
 	x.xxx_hidden_Create = b.Create
+	x.xxx_hidden_Edit = b.Edit
 	return m0
 }
 
@@ -3290,12 +3305,13 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x06detail\x18\x1e \x01(\bR\x06detail\x12\x12\n" +
 	"\x04icon\x18( \x01(\tR\x04icon\x12\x14\n" +
 	"\x05label\x182 \x01(\tR\x05label\x12%\n" +
-	"\x0esingular_label\x18< \x01(\tR\rsingularLabel\"\\\n" +
+	"\x0esingular_label\x18< \x01(\tR\rsingularLabel\"p\n" +
 	"\x16PluginComponentMapping\x12\x12\n" +
 	"\x04list\x18\n" +
 	" \x01(\tR\x04list\x12\x16\n" +
 	"\x06detail\x18\x14 \x01(\tR\x06detail\x12\x16\n" +
-	"\x06create\x18\x1e \x01(\tR\x06create\"y\n" +
+	"\x06create\x18\x1e \x01(\tR\x06create\x12\x12\n" +
+	"\x04edit\x18( \x01(\tR\x04edit\"y\n" +
 	"\x15PluginAllowedResource\x12\x14\n" +
 	"\x05group\x18\n" +
 	" \x01(\tR\x05group\x12\x18\n" +

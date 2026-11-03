@@ -106,6 +106,8 @@ export interface CustomComponentMapping {
   list?: string;
   detail?: string;
   create?: string;
+  /** Opened only in a sheet (see iframe/plugin-sheet.component.ts). */
+  edit?: string;
 }
 
 // Navigation types

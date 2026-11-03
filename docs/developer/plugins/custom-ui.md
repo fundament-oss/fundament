@@ -19,7 +19,7 @@ console/
 ├── <plural>-list.js
 ├── <plural>-detail.html     customComponents.<Kind>.detail
 ├── <plural>-detail.js
-├── <plural>-create.html     customComponents.<Kind>.create
+├── <plural>-create.html     customComponents.<Kind>.create (route or sheet)
 └── <plural>-create.js
 ```
 

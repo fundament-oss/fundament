@@ -1,22 +1,14 @@
 import {
   loadSdk,
-  openSheet,
   errorBox,
-  ensureNldd,
   fetchCephCapacity,
   escapeHtml,
   humanizeQuantity,
   renderDefList,
-  wireSubmit,
-  formActionsHtml,
-  errorBannerHtml,
-  loadErrorBanner,
 } from './_shared.js';
-import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
 const ctx = await fundament.init;
-ensureNldd().catch(() => {});
 
 const content = document.getElementById('content');
 const heading = document.getElementById('heading');
@@ -105,7 +97,10 @@ async function showDetail() {
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
-    document.getElementById('edit-btn').onclick = () => showEdit(item);
+    // The edit form is diskpools-edit.html, in a console sheet.
+    document.getElementById('edit-btn').onclick = () => {
+      fundament.openSheet({ view: 'edit', resource: { name } });
+    };
     fetchCephCapacity().then((cap) => {
       const el = content.querySelector('[data-role="capacity"]');
       if (!cap || !el) return;
@@ -118,100 +113,10 @@ async function showDetail() {
   }
 }
 
-async function showEdit(item) {
-  const sheet = await openSheet({ label: 'Edit Disk Pool' });
-  if (!sheet) return;
-  const { body, close } = sheet;
-  body.insertAdjacentHTML(
-    'beforeend',
-    '<nldd-activity-indicator show-text text="Loading disks…"></nldd-activity-indicator>',
-  );
-  const current = item.spec?.disks ?? [];
-  const currentNames = current.map((d) => d.name);
-
-  let disks;
-  try {
-    const { items } = await fundament.k8s.list(RESOURCE_DISKS);
-    disks = selectableDisks(items, name);
-  } catch (err) {
-    body.lastElementChild.replaceWith(loadErrorBanner(`Failed to load disks: ${err?.message ?? err}`));
-    return;
-  }
-
-  // The picker can only offer disks it can see: one claimed by another pool, or
-  // named in spec with no Disk CR behind it, never gets a checkbox. Save rebuilds
-  // spec.disks wholesale, so anything the form did not render used to disappear
-  // on a save the operator did not intend as a change — one click after the
-  // detail page flagged that exact disk. Carry them through untouched, and name
-  // them below rather than holding them silently.
-  const rendered = new Set(disks.map((d) => d.metadata?.name).filter(Boolean));
-  const preserved = current.filter((d) => !rendered.has(d.name));
-  const preservedNote =
-    preserved.length === 0
-      ? ''
-      : `<nldd-text size="sm" color="secondary">
-           Kept as they are, because this form cannot show them: a disk is listed here only
-           when it exists and is either free or already claimed by this pool:
-           ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving leaves them in the pool; use kubectl
-           to remove one.
-         </nldd-text>`;
-
-  body.lastElementChild.outerHTML = `
-    <nldd-form>
-      <form novalidate>
-        ${errorBannerHtml('edit-error')}
-
-        <nldd-form-section text="Disks">
-          ${renderDiskPicker(disks, currentNames)}
-          ${preservedNote}
-          <nldd-text size="sm" color="secondary">
-            Unchecking a disk removes it from the shared Ceph cluster's device list, but its
-            storage daemon (OSD) keeps running until it is purged from Ceph manually, and
-            data may rebalance in the meantime.
-          </nldd-text>
-        </nldd-form-section>
-
-        ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
-      </form>
-    </nldd-form>
-  `;
-
-  const form = body.querySelector('form');
-
-  body.querySelector('#cancel-btn').addEventListener('click', () => close());
-
-  // Disjoint by construction: preserved is exactly what the picker did not
-  // render, so this cannot produce the duplicate name the CRD's listType=map
-  // rejects.
-  const selected = () => [...readSelectedDisks(form, current), ...preserved];
-
-  wireSubmit(form, {
-    button: body.querySelector('#save-btn'),
-    errorBanner: body.querySelector('#edit-error'),
-    failPrefix: 'Failed to save',
-    checks: [
-      [
-        body.querySelector('#disk-picker'),
-        () => (selected().length === 0 ? 'Select at least one disk.' : null),
-      ],
-    ],
-    action: async () => {
-      // Merge-patch of spec only: status is untouched and disks is replaced
-      // wholesale, not merged element-wise.
-      await fundament.k8s.patch(
-        { ...RESOURCE, name },
-        {
-          spec: { disks: selected() },
-        },
-      );
-      close();
-      await showDetail();
-    },
-  });
-}
-
 if (!name) {
   content.textContent = 'No disk pool selected.';
 } else {
+  // The edit sheet saved: show what it saved.
+  fundament.onResourcesChanged(() => showDetail());
   await showDetail();
 }

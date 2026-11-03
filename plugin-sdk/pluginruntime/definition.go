@@ -201,11 +201,16 @@ type MenuEntry struct {
 	SingularLabel string `yaml:"singularLabel"`
 }
 
-// ComponentMapping maps a CRD to custom UI component names.
+// ComponentMapping maps a CRD to custom UI component names. List and Detail
+// are routed pages. Create is both a routed page and a page the console can
+// open in a sheet over the plugin's other pages; Edit only ever opens in a
+// sheet. A sheet loads only a page named here, so a plugin can never point the
+// console's sheet at an arbitrary URL.
 type ComponentMapping struct {
 	List   string `yaml:"list"`
 	Detail string `yaml:"detail"`
 	Create string `yaml:"create"`
+	Edit   string `yaml:"edit"`
 }
 
 // UIHint provides form layout and status display hints for a CRD.
