@@ -15,12 +15,12 @@ func TestOlderShoot(t *testing.T) {
 	created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	older := gardener.ShootInfo{UID: "b", Created: created}
 	newer := gardener.ShootInfo{UID: "a", Created: created.Add(time.Minute)}
-	assert.True(t, olderShoot(older, newer))
-	assert.False(t, olderShoot(newer, older))
+	assert.True(t, olderShoot(&older, &newer))
+	assert.False(t, olderShoot(&newer, &older))
 
 	sameA := gardener.ShootInfo{UID: "a", Created: created}
 	sameB := gardener.ShootInfo{UID: "b", Created: created}
-	assert.True(t, olderShoot(sameA, sameB))
-	assert.False(t, olderShoot(sameB, sameA))
-	assert.False(t, olderShoot(sameA, sameA))
+	assert.True(t, olderShoot(&sameA, &sameB))
+	assert.False(t, olderShoot(&sameB, &sameA))
+	assert.False(t, olderShoot(&sameA, &sameA))
 }

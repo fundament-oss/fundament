@@ -52,11 +52,14 @@ const deployFix = "run `just plugins deploy` from a fundament checkout"
 func DockerInfo() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return exec.CommandContext(ctx, "docker", "info").Run()
+	if err := exec.CommandContext(ctx, "docker", "info").Run(); err != nil {
+		return fmt.Errorf("docker info: %w", err)
+	}
+	return nil
 }
 
 // CheckTools verifies the required local tools exist and docker is running.
-func CheckTools(l Layout, lookPath func(string) (string, error), dockerInfo func() error) error {
+func CheckTools(l *Layout, lookPath func(string) (string, error), dockerInfo func() error) error {
 	tools := []struct{ name, url string }{
 		{"docker", "https://docker.com"},
 		{"skaffold", "https://skaffold.dev"},
@@ -105,7 +108,7 @@ func CheckCluster(ctx context.Context, c Cluster, t Target, functlOrgID string) 
 
 	env, err := c.ControllerEnv(ctx)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 	if env["PLUGIN_CONTROLLER_ALLOW_DEV_MODE"] != "true" {
 		return fail("the plugin controller does not allow dev mode", deployFix)
@@ -163,7 +166,7 @@ const (
 
 // WaitGone polls until the installation is NotFound, printing one waiting line to out.
 func WaitGone(ctx context.Context, c Cluster, name string, out io.Writer, interval, timeout time.Duration) error {
-	fmt.Fprintf(out, "waiting for the controller to tear down %s…\n", name)
+	_, _ = fmt.Fprintf(out, "waiting for the controller to tear down %s…\n", name)
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
 	tick := time.NewTicker(interval)
@@ -178,7 +181,7 @@ func WaitGone(ctx context.Context, c Cluster, name string, out io.Writer, interv
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("wait for teardown of %s: %w", name, ctx.Err())
 		case <-deadline.C:
 			return fmt.Errorf("timed out after %s waiting for the controller to tear down %s; check the plugin controller logs", timeout, name)
 		case <-tick.C:
@@ -205,19 +208,19 @@ func DevDown(ctx context.Context, c Cluster, name string, out io.Writer, interva
 		return fmt.Errorf("read installation %q: %w", name, err)
 	}
 	if !found {
-		fmt.Fprintf(out, "PluginInstallation %s not found; nothing to remove\n", name)
+		_, _ = fmt.Fprintf(out, "PluginInstallation %s not found; nothing to remove\n", name)
 		return nil
 	}
 	if !state.Dev {
 		return notDevError(name)
 	}
 	if err := c.DeleteInstallation(ctx, name); err != nil {
-		return err
+		return fmt.Errorf("remove dev installation: %w", err)
 	}
 	if err := WaitGone(ctx, c, name, out, interval, timeout); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "PluginInstallation %s is gone\n", name)
+	_, _ = fmt.Fprintf(out, "PluginInstallation %s is gone\n", name)
 	return nil
 }
 

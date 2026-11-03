@@ -42,7 +42,7 @@ func TestStub_ReturnsFixedToken(t *testing.T) {
 
 func TestReal_ReturnsTokenAndHash(t *testing.T) {
 	fake := &fakeClient{
-		token: &gardener.PluginSAToken{
+		token: &gardener.PluginSAToken{ //nolint:gosec // fake token in a test
 			Token:                "eyJ.plugin-sa.jwt",
 			PinnedDefinitionHash: "sha256:abc123",
 		},

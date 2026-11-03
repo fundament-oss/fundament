@@ -7,15 +7,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/google/uuid"
+
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	pluginproxyv1 "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
-	"github.com/google/uuid"
 )
 
 // ClusterAccess resolves a cluster ID to the data plugin-proxy needs to read
@@ -96,7 +96,7 @@ func (s *Service) findInstallation(
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("list installations: %w", err))
 	}
 	for i := range list.Items {
-		if strings.Compare(string(list.Items[i].UID), installationID.String()) == 0 {
+		if string(list.Items[i].UID) == installationID.String() {
 			return &list.Items[i], nil
 		}
 	}

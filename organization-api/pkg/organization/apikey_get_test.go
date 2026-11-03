@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/fundament-oss/fundament/common/apitoken"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/common/apitoken"
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 func Test_APIKey_Get_Unauthenticated(t *testing.T) {

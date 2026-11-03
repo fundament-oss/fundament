@@ -11,12 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fundament-oss/fundament/common/auth"
-	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/idempotency"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
@@ -65,19 +66,6 @@ func WithOrganization(id uuid.UUID, name string) APIOption {
 
 		o.organizations[id] = name
 	}
-}
-
-type User struct {
-	id          uuid.UUID
-	name        string
-	email       string
-	externalRef *string
-	orgIDs      []uuid.UUID
-}
-
-func (u User) WithName(name string) User {
-	u.name = name
-	return u
 }
 
 type UserArgs struct {
@@ -321,7 +309,7 @@ func (e *testEnv) createAuthnToken(t *testing.T, userID uuid.UUID) string {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},

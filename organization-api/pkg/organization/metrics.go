@@ -308,7 +308,8 @@ func (s *Server) GetOrgWorkloadMetrics(
 	// that backend's connection pool.
 	g.SetLimit(10)
 
-	for i, cl := range clusters {
+	for i := range clusters {
+		cl := &clusters[i]
 		g.Go(func() error {
 			r := &results[i]
 			r.id = cl.ID.String()
@@ -365,7 +366,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 
 			if err := sub.Wait(); err != nil {
 				if isPromBadQuery(err) {
-					return err
+					return err //nolint:wrapcheck // already labelled per query
 				}
 				s.logger.WarnContext(gctx, "cluster metrics queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterResult{id: r.id, name: r.name, unavailable: true}
@@ -391,7 +392,8 @@ func (s *Server) GetOrgWorkloadMetrics(
 	allNsNetRx := make([][]prom.Sample, len(results))
 	allNsNetTx := make([][]prom.Sample, len(results))
 
-	for i, r := range results {
+	for i := range results {
+		r := &results[i]
 		cpuUsed += r.cpuUsed
 		cpuTotal += r.cpuTotal
 		memUsed += r.memUsed
@@ -425,15 +427,15 @@ func (s *Server) GetOrgWorkloadMetrics(
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
 
-	nsCPU := mergeSamples(allNsCPU, "namespace")
-	nsMem := mergeSamples(allNsMem, "namespace")
-	nsPods := mergeSamples(allNsPods, "namespace")
-	nsCPUReq := mergeSamples(allNsCPUReq, "namespace")
-	nsCPULim := mergeSamples(allNsCPULim, "namespace")
-	nsMemReq := mergeSamples(allNsMemReq, "namespace")
-	nsMemLim := mergeSamples(allNsMemLim, "namespace")
-	nsNetRx := mergeSamples(allNsNetRx, "namespace")
-	nsNetTx := mergeSamples(allNsNetTx, "namespace")
+	nsCPU := mergeSamples(allNsCPU)
+	nsMem := mergeSamples(allNsMem)
+	nsPods := mergeSamples(allNsPods)
+	nsCPUReq := mergeSamples(allNsCPUReq)
+	nsCPULim := mergeSamples(allNsCPULim)
+	nsMemReq := mergeSamples(allNsMemReq)
+	nsMemLim := mergeSamples(allNsMemLim)
+	nsNetRx := mergeSamples(allNsNetRx)
+	nsNetTx := mergeSamples(allNsNetTx)
 
 	return organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
@@ -461,7 +463,8 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(10)
 
-	for i, cl := range clusters {
+	for i := range clusters {
+		cl := &clusters[i]
 		g.Go(func() error {
 			r := &results[i]
 
@@ -494,7 +497,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 
 			if err := sub.Wait(); err != nil {
 				if isPromBadQuery(err) {
-					return err
+					return err //nolint:wrapcheck // already labelled per query
 				}
 				s.logger.WarnContext(gctx, "cluster time-series queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterTSResult{}
@@ -557,8 +560,8 @@ func (s *Server) GetProjectWorkloadMetrics(
 	// If cross-cluster projects are ever introduced, this must be updated to
 	// fan out per-cluster and aggregate results.
 	clusterID := namespaces[0].ClusterID
-	for _, ns := range namespaces[1:] {
-		if ns.ClusterID != clusterID {
+	for i := 1; i < len(namespaces); i++ {
+		if namespaces[i].ClusterID != clusterID {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
 		}
 	}
@@ -676,8 +679,8 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	// If cross-cluster projects are ever introduced, this must be updated to
 	// fan out per-cluster and aggregate results.
 	clusterID := namespaces[0].ClusterID
-	for _, ns := range namespaces[1:] {
-		if ns.ClusterID != clusterID {
+	for i := 1; i < len(namespaces); i++ {
+		if namespaces[i].ClusterID != clusterID {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project spans multiple clusters, which is not supported"))
 		}
 	}
@@ -745,7 +748,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 func querySingleValue(ctx context.Context, client prom.Client, query string, t time.Time) (float64, error) {
 	samples, err := client.Query(ctx, query, t)
 	if err != nil {
-		return 0, err
+		return 0, err //nolint:wrapcheck // callers label the query
 	}
 	if len(samples) == 0 {
 		return 0, nil
@@ -911,8 +914,9 @@ func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organiza
 }
 
 // mergeSamples merges per-cluster sample sets by summing values with the same
-// label value (e.g. namespace name) across clusters.
-func mergeSamples(allSamples [][]prom.Sample, labelKey string) []prom.Sample {
+// namespace across clusters.
+func mergeSamples(allSamples [][]prom.Sample) []prom.Sample {
+	const labelKey = "namespace"
 	sums := make(map[string]float64)
 	for _, samples := range allSamples {
 		for _, s := range samples {
@@ -981,7 +985,7 @@ func buildNamespaceFilter(names []string) string {
 	for i, n := range names {
 		escaped[i] = promEscapeLabelValue(n)
 	}
-	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(escaped, "|"))
+	return `namespace=~"` + strings.Join(escaped, "|") + `"`
 }
 
 // resolveTimeRange returns start, end, and step for a Prometheus range query,
@@ -1005,7 +1009,8 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 // namespaceNames extracts the name strings from a slice of namespace DB rows.
 func namespaceNames(rows []db.NamespaceListByProjectIDRow) []string {
 	names := make([]string, 0, len(rows))
-	for _, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		names = append(names, r.Name)
 	}
 	return names
@@ -1111,16 +1116,19 @@ func (s *Server) sendOrgSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:      workload.GetTotals(),
 		Clusters:    workload.GetClusters(),
 		Namespaces:  workload.GetNamespaces(),
 		TimeSeries:  ts,
 		RefreshedAt: timestamppb.Now(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) sendClusterSnapshot(
@@ -1153,17 +1161,20 @@ func (s *Server) sendClusterSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Nodes:              workload.GetNodes(),
 		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) sendProjectSnapshot(
@@ -1196,16 +1207,19 @@ func (s *Server) sendProjectSnapshot(
 		return err
 	})
 	if err := g.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck // the handlers' connect errors reach the client unchanged
 	}
 
-	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),
-	}.Build())
+	}.Build()); err != nil {
+		return fmt.Errorf("send metrics snapshot: %w", err)
+	}
+	return nil
 }
 
 // resolveStreamTimeRange computes start/end/step for a streaming snapshot.

@@ -94,16 +94,16 @@ func addProgressEvent(update *shootStatusUpdate, last progressRecord, now time.T
 
 // unchanged reports whether writing the update would change nothing: same
 // status, message and health as stored, and nothing to record.
-func (u *shootStatusUpdate) unchanged(stored storedShootState) bool {
+func (u *shootStatusUpdate) unchanged(stored *storedShootState) bool {
 	return u.Status == stored.Status && u.Message == stored.Message && u.Health == stored.Health &&
 		len(u.Events) == 0 && !u.InsertReady &&
-		!(u.APIAvailable && !stored.APIAvailable) && !u.APIGone
+		(!u.APIAvailable || stored.APIAvailable) && !u.APIGone
 }
 
 // nextShootStatus decides what a status check writes, given the stored row and
 // what Gardener reports. It is pure so every rule can be tested without a
 // database.
-func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	update := nextLifecycleStatus(stored, observed)
 	switch {
 	// A Shoot that turns ready has a working API server, whether or not the
@@ -139,7 +139,7 @@ func shootGone(observed *gardener.ShootStatus) bool {
 }
 
 // nextLifecycleStatus is nextShootStatus without the API server availability.
-func nextLifecycleStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	// Gardener reconciles running shoots periodically (gardenlet SyncPeriod, 1h
 	// by default). That is not a lifecycle change for a ready cluster, so it
 	// stays ready, but its health follows Gardener's verdict: a reconcile that
@@ -225,7 +225,7 @@ func nextLifecycleStatus(stored storedShootState, observed *gardener.ShootStatus
 // tracked, but a rolling update takes conditions down on purpose, so its
 // changes record no events. Anything else (a failure, a lost or deleted
 // Shoot) is not handled here and ends the update.
-func readyDuringUpdate(stored storedShootState, observed *gardener.ShootStatus) (shootStatusUpdate, bool) {
+func readyDuringUpdate(stored *storedShootState, observed *gardener.ShootStatus) (shootStatusUpdate, bool) {
 	switch observed.Status {
 	case gardener.StatusProgressing:
 		health := healthOf(stored.Health, observed)
@@ -256,7 +256,7 @@ func readyDuringUpdate(stored storedShootState, observed *gardener.ShootStatus) 
 // this exact text, so a reconcile or update mid-settle must not relabel a
 // merely settling cluster unhealthy. The first healthy verdict ends the
 // settle; the message then moves on for good.
-func settleMessage(stored storedShootState, health dbconst.ClusterShootHealth, message string) string {
+func settleMessage(stored *storedShootState, health dbconst.ClusterShootHealth, message string) string {
 	if stored.Message == gardener.MsgShootAwaitingHealth && health != dbconst.ClusterShootHealth_Healthy {
 		return gardener.MsgShootAwaitingHealth
 	}
@@ -266,7 +266,7 @@ func settleMessage(stored storedShootState, health dbconst.ClusterShootHealth, m
 // readyDuringReconcile keeps a ready cluster ready while Gardener reconciles
 // it. While it is healthy the stored message stays; while it is not, Gardener's
 // progress message says what the reconcile is waiting for.
-func readyDuringReconcile(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+func readyDuringReconcile(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	update := shootStatusUpdate{Status: gardener.StatusReady, Message: stored.Message, Health: healthOf(stored.Health, observed)}
 	switch {
 	case update.Health != dbconst.ClusterShootHealth_Healthy:
@@ -300,7 +300,7 @@ func healthOf(stored dbconst.ClusterShootHealth, observed *gardener.ShootStatus)
 // and Gardener labels it unhealthy meanwhile; that is not a fault yet. The
 // stored message tells whether it has been healthy: once healthy it reads
 // MsgShootReady, so a later failure is reported as unhealthy.
-func settlingAfterCreate(stored storedShootState, observed *gardener.ShootStatus, health dbconst.ClusterShootHealth) bool {
+func settlingAfterCreate(stored *storedShootState, observed *gardener.ShootStatus, health dbconst.ClusterShootHealth) bool {
 	if observed.Operation != gardener.OperationCreate || health == dbconst.ClusterShootHealth_Healthy {
 		return false
 	}

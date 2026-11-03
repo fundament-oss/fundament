@@ -46,7 +46,7 @@ func pollWithBackoff(
 		select {
 		case <-ctx.Done():
 			t.Stop()
-			return ctx.Err()
+			return ctx.Err() //nolint:wrapcheck // documented contract: callers match it with errors.Is and add their own message
 		case <-t.C:
 		}
 	}

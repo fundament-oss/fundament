@@ -90,7 +90,7 @@ func TestProcessesRetryingRowOnPollTimeoutWithoutNotify(t *testing.T) {
 	}, 3*time.Second, 20*time.Millisecond, "due retrying row must be processed on the poll timeout without a NOTIFY")
 
 	cancel()
-	<-done
+	require.ErrorIs(t, <-done, context.Canceled)
 }
 
 // clusterID is seeded by db/testdata/001_0101-content.sql. The outbox row needs

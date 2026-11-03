@@ -108,7 +108,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		}
 		stored.LastWarning = lastWarning.String
 	}
-	update := nextShootStatus(stored, shootStatus)
+	update := nextShootStatus(&stored, shootStatus)
 	var retryAfter time.Duration
 	if update.Status == gardener.StatusProgressing || update.Updating {
 		last, err := h.lastProgress(ctx, cluster.ID)
@@ -117,7 +117,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		}
 		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
 	}
-	if update.unchanged(stored) {
+	if update.unchanged(&stored) {
 		// Gardener writes a Shoot after every reconcile task; most of those
 		// leave what fundament records as it is.
 		return retryAfter, nil
@@ -192,7 +192,7 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 			Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String,
 			APIAvailable: cluster.ShootApiAvailable.Valid,
 		}
-		if deleting.unchanged(stored) {
+		if deleting.unchanged(&stored) {
 			return nil
 		}
 		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {

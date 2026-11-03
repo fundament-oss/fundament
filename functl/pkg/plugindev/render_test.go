@@ -13,24 +13,24 @@ import (
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 )
 
-func renderTo(t *testing.T, l Layout) string {
+func renderTo(t *testing.T, l *Layout) string {
 	t.Helper()
 	out := t.TempDir()
-	p := RenderParams{Layout: l, Target: Sandbox, OrgName: "acme-corp"}
-	require.NoError(t, Render(out, p))
-	require.NoError(t, RenderInstallation(out, p, "1.2.0-dev"))
+	p := RenderParams{Layout: *l, Target: Sandbox, OrgName: "acme-corp"}
+	require.NoError(t, Render(out, &p))
+	require.NoError(t, RenderInstallation(out, &p, "1.2.0-dev"))
 	return out
 }
 
 func readFile(t *testing.T, dir, name string) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(dir, name))
+	b, err := os.ReadFile(filepath.Join(dir, name)) //nolint:gosec // test helper, paths are not user-controlled
 	require.NoError(t, err)
 	return string(b)
 }
 
 func TestRenderStandalone(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
+	out := renderTo(t, &Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
 
 	skaffold := readFile(t, out, "skaffold.yaml")
 	assert.Contains(t, skaffold, `PLUGIN_PACKAGE: "."`)
@@ -52,7 +52,7 @@ func TestRenderStandalone(t *testing.T) {
 
 func TestRenderDockerfilePath(t *testing.T) {
 	root := t.TempDir()
-	out := renderTo(t, Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo"})
+	out := renderTo(t, &Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo"})
 
 	skaffold := readFile(t, out, "skaffold.yaml")
 	assert.Contains(t, skaffold, `context: "`+root+`"`)
@@ -64,7 +64,7 @@ func TestRenderDockerfilePath(t *testing.T) {
 func TestRenderStandaloneKeepsProjectIgnore(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, ".dockerignore"), ".env\nconsole/\n")
-	out := renderTo(t, Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
+	out := renderTo(t, &Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
 
 	ignore := readFile(t, out, "Dockerfile.dockerignore")
 	assert.Contains(t, ignore, ".env\nconsole/\n")
@@ -73,7 +73,7 @@ func TestRenderStandaloneKeepsProjectIgnore(t *testing.T) {
 }
 
 func TestRenderInRepo(t *testing.T) {
-	out := renderTo(t, Layout{
+	out := renderTo(t, &Layout{
 		ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/openfsc", Name: "openfsc",
 		SourceDirs: []string{"openfsc-operator", "plugin-sdk", "plugins/openfsc"},
 	})
@@ -90,12 +90,12 @@ func TestRenderInRepo(t *testing.T) {
 }
 
 func TestRenderInRepoNeedsSourceDirs(t *testing.T) {
-	err := Render(t.TempDir(), RenderParams{Layout: Layout{ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/x", Name: "x"}})
+	err := Render(t.TempDir(), &RenderParams{Layout: Layout{ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/x", Name: "x"}})
 	require.Error(t, err)
 }
 
 func TestRenderSDKReplace(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", SDKReplace: "/src/fundament"})
+	out := renderTo(t, &Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", SDKReplace: "/src/fundament"})
 
 	assert.Contains(t, readFile(t, out, "skaffold.yaml"), "fundament-sdk=/src/fundament")
 	dockerfile := readFile(t, out, "Dockerfile")
@@ -104,7 +104,7 @@ func TestRenderSDKReplace(t *testing.T) {
 }
 
 func TestRenderInstallation(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo"})
+	out := renderTo(t, &Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo"})
 
 	var inst pluginsv1.PluginInstallation
 	require.NoError(t, yaml.Unmarshal([]byte(readFile(t, out, "installation.yaml")), &inst))
@@ -121,7 +121,7 @@ func TestRenderInstallationConfig(t *testing.T) {
 	out := t.TempDir()
 	config := map[string]string{"MON_COUNT": "1", "NOTE": "a: \"quoted\" value\nline two"}
 	p := RenderParams{Layout: Layout{Name: "demo"}, Target: Sandbox, OrgName: "acme-corp", Config: config}
-	require.NoError(t, RenderInstallation(out, p, "1.2.0-dev"))
+	require.NoError(t, RenderInstallation(out, &p, "1.2.0-dev"))
 
 	var inst pluginsv1.PluginInstallation
 	require.NoError(t, yaml.Unmarshal([]byte(readFile(t, out, "installation.yaml")), &inst))
@@ -136,7 +136,7 @@ func TestNames(t *testing.T) {
 func TestRenderInstallationQuotesNames(t *testing.T) {
 	out := t.TempDir()
 	p := RenderParams{Layout: Layout{Name: "yes"}, Target: Sandbox, OrgName: "123", Config: nil}
-	require.NoError(t, RenderInstallation(out, p, "1.0.0-dev"))
+	require.NoError(t, RenderInstallation(out, &p, "1.0.0-dev"))
 
 	var inst pluginsv1.PluginInstallation
 	require.NoError(t, yaml.Unmarshal([]byte(readFile(t, out, "installation.yaml")), &inst))

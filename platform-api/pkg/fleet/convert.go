@@ -30,7 +30,7 @@ func clusterstatusOf(row *db.ClusterStatusInputListRow) clusterstatus.Status {
 // drift apart: a new input is a new parameter, which both callers must pass.
 // Both queries read live clusters only, so Deleted is never set.
 func deriveStatus(shootStatus, shootMessage, shootHealth pgtype.Text, updating bool, outboxStatus pgtype.Text, reachedGardener bool) clusterstatus.Status {
-	return clusterstatus.FromDB(clusterstatus.Input{
+	return clusterstatus.FromDB(&clusterstatus.Input{
 		ShootStatus:     shootStatus,
 		ShootMessage:    shootMessage,
 		ShootHealth:     shootHealth,

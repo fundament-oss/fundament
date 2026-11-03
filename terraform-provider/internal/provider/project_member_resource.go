@@ -113,7 +113,7 @@ func (r *ProjectMemberResource) Configure(ctx context.Context, req resource.Conf
 }
 
 // Create creates a new project member.
-func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan ProjectMemberModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -221,7 +221,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state ProjectMemberModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -264,7 +264,7 @@ func (r *ProjectMemberResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 // Update updates the project member role.
-func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan ProjectMemberModel
 	var state ProjectMemberModel
 
@@ -357,7 +357,7 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 }
 
 // Delete removes the project member.
-func (r *ProjectMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *ProjectMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state ProjectMemberModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)

@@ -102,7 +102,7 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 	// api_available fan-out re-enqueues these rows once it is.
 	ready := row.ShootStatus.Valid && row.ShootStatus.String == string(gardener.StatusReady)
 	if !ready && !row.ShootApiAvailable.Valid {
-		return handler.NewPreconditionError("shoot API server not available yet")
+		return handler.NewPreconditionError("shoot API server not available yet") //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 
 	if row.Deleted.Valid {
@@ -113,7 +113,7 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 	// A cluster still being created can be announced before its API server
 	// answers from here; wait for it instead of spending retries.
 	if !ready && shoot.IsUnreachable(err) {
-		return handler.NewShootUnreachableError(err)
+		return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 	return err
 }
@@ -184,7 +184,7 @@ func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSy
 			return fmt.Errorf("get namespace %s after create conflict: %w", name, gerr)
 		}
 		if raced == nil {
-			return handler.NewPreconditionError(fmt.Sprintf("namespace %s create raced, retrying", name))
+			return handler.NewPreconditionError(fmt.Sprintf("namespace %s create raced, retrying", name)) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 		}
 		if raced.Labels[LabelNamespaceID] == row.ID.String() {
 			return h.reconcileLabels(ctx, row, name, desired)
@@ -206,7 +206,7 @@ func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSy
 // a real collision we must never adopt.
 func (h *Handler) nameTakenError(name string, existing *shoot.ResourceInfo) error {
 	if existing.Labels[LabelManagedBy] == ManagedByValue {
-		return handler.NewPreconditionError(
+		return handler.NewPreconditionError( //nolint:wrapcheck // typed PreconditionError for the outbox worker
 			fmt.Sprintf("namespace %s held by another managed namespace, awaiting cleanup", name))
 	}
 	return fmt.Errorf("namespace name collision: %s already exists on shoot without matching label", name)

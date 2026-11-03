@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 )
 
@@ -47,7 +49,7 @@ func TestStatusWorker_RunsOnStartup(t *testing.T) {
 	}
 
 	cancel()
-	<-done
+	assert.ErrorIs(t, <-done, context.Canceled)
 
 	if count := mock.callCount.Load(); count < 1 {
 		t.Errorf("expected at least 1 call, got %d", count)

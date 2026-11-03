@@ -128,7 +128,7 @@ func mintUserToken(t *testing.T, userID uuid.UUID) string {
 }
 
 func postRefresh(s *AuthnServer, token string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	s.HandleRefresh(rec, req)

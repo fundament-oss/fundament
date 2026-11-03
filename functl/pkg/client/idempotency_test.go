@@ -15,7 +15,7 @@ type fakeClock struct {
 
 func (c *fakeClock) Sleep(ctx context.Context, d time.Duration) error {
 	if err := ctx.Err(); err != nil {
-		return err
+		return err //nolint:wrapcheck // test double
 	}
 	c.sleeps = append(c.sleeps, d)
 	return nil

@@ -307,7 +307,8 @@ func outputUserList(format OutputFormat, users []db.UserListRow) error {
 	switch format {
 	case OutputJSON:
 		output := make([]userOutput, len(users))
-		for i, u := range users {
+		for i := range users {
+			u := &users[i]
 			output[i] = userOutput{
 				ID:            u.ID.String(),
 				Name:          u.Name,

@@ -165,7 +165,7 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 	}
 
 	if v.expectedAudience != "" {
-		if !slices.Contains(claims.Audience, string(v.expectedAudience)) {
+		if !slices.Contains(claims.Audience, v.expectedAudience) {
 			v.logger.Debug("token audience mismatch", "got", claims.Audience, "want", v.expectedAudience)
 			return nil, fmt.Errorf("token audience %v does not contain expected %q", claims.Audience, v.expectedAudience)
 		}

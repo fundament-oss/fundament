@@ -112,7 +112,10 @@ func EnsureConfigDir() error {
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(dir, 0o700)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	return nil
 }
 
 // LoadConfig loads the configuration from the config file.
@@ -125,7 +128,7 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is functl's own config file
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			cfg := DefaultConfig()
@@ -179,7 +182,7 @@ func LoadCredentials() (*Credentials, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is functl's own credentials file
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, ErrNotAuthenticated
@@ -210,7 +213,7 @@ func SaveCredentials(creds *Credentials) error {
 		return err
 	}
 
-	data, err := yaml.Marshal(creds)
+	data, err := yaml.Marshal(creds) //nolint:gosec // the credentials file stores the API key by design; written 0600
 	if err != nil {
 		return fmt.Errorf("failed to marshal credentials: %w", err)
 	}

@@ -219,8 +219,9 @@ func TestListClustersPages(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("paged-org", "Paged Org")
-	var want []string
-	for _, name := range []string{"a", "b", "c", "d", "e"} {
+	names := []string{"a", "b", "c", "d", "e"}
+	want := make([]string, 0, len(names))
+	for _, name := range names {
 		want = append(want, seed.Cluster(org, name).String())
 	}
 	// Two of five in error, so a filtered page has to read past the first
@@ -310,7 +311,7 @@ func TestFleetSkipsSystemOrganization(t *testing.T) {
 
 	summary, err := client.GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, int32(len(all.GetClusters())), summary.GetSummary().GetClusters())
+	assert.Len(t, all.GetClusters(), int(summary.GetSummary().GetClusters()))
 }
 
 func TestGetClusterDetail(t *testing.T) {

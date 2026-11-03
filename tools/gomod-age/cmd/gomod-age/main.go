@@ -14,6 +14,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	var root cli.CLI
 	kong.Parse(&root,
 		kong.Name("gomod-age"),
@@ -47,5 +51,5 @@ func main() {
 		fmt.Fprintln(os.Stderr, "To allow a fresh dependency, add it to .gomod-age.json:")
 		fmt.Fprintln(os.Stderr, `  { "allow": [{ "module": "<module>", "version": "<version>", "reason": "<reason>" }] }`)
 	}
-	os.Exit(code)
+	return code
 }

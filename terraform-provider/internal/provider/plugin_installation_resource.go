@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -28,6 +26,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 var _ resource.Resource = &PluginInstallationResource{}
@@ -210,7 +211,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 					// not destroy and recreate a healthy installation.
 					mapplanmodifier.RequiresReplaceIf(
 						func(ctx context.Context, req planmodifier.MapRequest, resp *mapplanmodifier.RequiresReplaceIfFuncResponse) {
-							resp.RequiresReplace = !(configIsEmpty(req.StateValue) && configIsEmpty(req.PlanValue))
+							resp.RequiresReplace = !configIsEmpty(req.StateValue) || !configIsEmpty(req.PlanValue)
 						},
 						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (null and {}).",
 						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (`null` and `{}`).",
@@ -242,7 +243,7 @@ func (r *PluginInstallationResource) Configure(ctx context.Context, req resource
 	r.client = client
 }
 
-func (r *PluginInstallationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *PluginInstallationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -340,7 +341,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		resp.Diagnostics.AddError("Unable to Create Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode == http.StatusConflict {
 		conflictBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
@@ -404,7 +405,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 // transport). It errors when the (organization, plugin) pair is not in the
 // catalog or has no published definition to pin.
 func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, organizationName, pluginName string) (string, string, error) {
-	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build())
+	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build()) //nolint:staticcheck // catalog.v1 ListPlugins lives in marketplace-api and omits RESTRICTED listings; migrating is not a drop-in swap
 	if err != nil {
 		return "", "", fmt.Errorf("list plugins: %w", err)
 	}
@@ -421,7 +422,7 @@ func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context
 	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog", pluginName, organizationName)
 }
 
-func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -477,7 +478,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	}
 
 	getURL := r.resourceURL(clusterID, name)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, http.NoBody)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
 		return
@@ -488,7 +489,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		resp.Diagnostics.AddError("Unable to Read Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode == http.StatusNotFound {
 		tflog.Info(ctx, "Plugin installation not found, removing from state", map[string]any{"name": name})
@@ -533,18 +534,19 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	} else {
 		state.DefinitionHash = types.StringValue(unpinnedDefinitionHash)
 	}
-	if len(crd.Spec.Config) > 0 {
+	switch {
+	case len(crd.Spec.Config) > 0:
 		configValue, diags := types.MapValueFrom(ctx, types.StringType, crd.Spec.Config)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		state.Config = configValue
-	} else if !state.Config.IsNull() && len(state.Config.Elements()) == 0 {
+	case !state.Config.IsNull() && len(state.Config.Elements()) == 0:
 		// `config = {}` in HCL round-trips: the CR omits an empty config, so
 		// keep the empty map rather than flapping to null and forcing a
 		// replacement on every refresh.
-	} else {
+	default:
 		state.Config = types.MapNull(types.StringType)
 	}
 	if crd.Status.Phase != "" {
@@ -560,7 +562,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 // spellings of "no config", which RequiresReplaceIf deliberately does not
 // replace on (every other attribute change forces a replacement). The CR is
 // identical either way, so just sync the state to the planned spelling.
-func (r *PluginInstallationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *PluginInstallationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan, state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -578,7 +580,7 @@ func (r *PluginInstallationResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state PluginInstallationResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -633,7 +635,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	}
 
 	deleteURL := r.resourceURL(clusterID, name)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, http.NoBody)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
 		return
@@ -644,7 +646,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		resp.Diagnostics.AddError("Unable to Delete Plugin Installation", err.Error())
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	switch httpResp.StatusCode {
 	case http.StatusOK, http.StatusAccepted, http.StatusNoContent, http.StatusNotFound:
@@ -703,14 +705,14 @@ func (r *PluginInstallationResource) resourceURL(clusterID, name string) string 
 func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, name string) (*pluginInstallationCRD, error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, name), http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	httpResp, err := r.client.KubeProxyHTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get plugin installation: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
@@ -719,7 +721,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 
 	var crd pluginInstallationCRD
 	if err := json.NewDecoder(httpResp.Body).Decode(&crd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode plugin installation: %w", err)
 	}
 
 	return &crd, nil
@@ -728,7 +730,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 // classifyPluginPhase maps a plugin installation status phase to a polling
 // decision: done signals success (Running), terminal signals an unrecoverable
 // phase. Any other phase (Pending, Deploying, or empty) means keep polling.
-func classifyPluginPhase(phase string) (done bool, terminal bool) {
+func classifyPluginPhase(phase string) (done, terminal bool) {
 	switch phase {
 	case "Running":
 		return true, false

@@ -19,7 +19,9 @@ func TestMuxServesProbes(t *testing.T) {
 
 	for _, path := range []string{"/livez", "/readyz"} {
 		t.Run(path, func(t *testing.T) {
-			resp, err := server.Client().Get(server.URL + path)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+path, http.NoBody)
+			require.NoError(t, err)
+			resp, err := server.Client().Do(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = resp.Body.Close() })
 
@@ -34,7 +36,9 @@ func TestMuxVersionEchoesDeploymentVersion(t *testing.T) {
 	server := httptest.NewServer(NewMux(slog.New(slog.DiscardHandler), "v1.2.3", nil))
 	t.Cleanup(server.Close)
 
-	resp, err := server.Client().Get(server.URL + "/version")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/version", http.NoBody)
+	require.NoError(t, err)
+	resp, err := server.Client().Do(req)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = resp.Body.Close() })
 

@@ -224,7 +224,7 @@ func setNodePools(ctx context.Context, client *FundamentClient, clusterID string
 			ClusterId: clusterID,
 			NodePools: specs,
 		}.Build())
-		return err
+		return err //nolint:wrapcheck // the diagnostic title already names the call
 	})
 	if err != nil {
 		diags.AddError("Unable to Set Node Pools", err.Error())

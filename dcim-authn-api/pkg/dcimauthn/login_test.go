@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -38,9 +39,13 @@ type hs256KeySet struct{}
 func (hs256KeySet) VerifySignature(_ context.Context, rawJWT string) ([]byte, error) {
 	if _, err := jwt.Parse(rawJWT, func(*jwt.Token) (any, error) { return idpSecret, nil },
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()})); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse jwt: %w", err)
 	}
-	return base64.RawURLEncoding.DecodeString(strings.Split(rawJWT, ".")[1])
+	payload, err := base64.RawURLEncoding.DecodeString(strings.Split(rawJWT, ".")[1])
+	if err != nil {
+		return nil, fmt.Errorf("decode jwt payload: %w", err)
+	}
+	return payload, nil
 }
 
 // loginStore records the upsert and answers with a fixed directory row whose

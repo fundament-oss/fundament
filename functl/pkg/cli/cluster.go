@@ -43,16 +43,19 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tSTATUS\tREGION")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tSTATUS\tREGION")
 	for _, cluster := range clusters {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			cluster.GetId(),
 			cluster.GetName(),
 			formatClusterStatus(cluster.GetStatus()),
 			cluster.GetRegion(),
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // ClusterGetCmd handles the cluster get command.
@@ -118,10 +121,10 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		PrintKeyValue(w, "Created", cluster.GetCreated().AsTime().Format(TimeFormat))
 	}
 	if len(nodePools) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "NAME\tTYPE\tNODES\tSTATUS\tREASON\tSYNC ERROR")
+		_, _ = fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w, "NAME\tTYPE\tNODES\tSTATUS\tREASON\tSYNC ERROR")
 		for _, pool := range nodePools {
-			fmt.Fprintf(w, "%s\t%s\t%d (min %d, max %d)\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%d (min %d, max %d)\t%s\t%s\t%s\n",
 				pool.GetName(),
 				pool.GetMachineType(),
 				pool.GetCurrentNodes(), pool.GetMinNodes(), pool.GetMaxNodes(),
@@ -131,7 +134,10 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 			)
 		}
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // formatClusterStatus formats a cluster status for display.

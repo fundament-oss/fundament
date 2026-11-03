@@ -3,6 +3,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/fundament-oss/fundament/functl/pkg/client"
@@ -71,12 +72,12 @@ func NewClientFromConfig(opts ...ClientOpt) (*client.Client, error) {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	creds, err := config.LoadCredentials()
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // ErrNotAuthenticated is shown to the user as-is
 	}
 
 	orgID := o.organizationID

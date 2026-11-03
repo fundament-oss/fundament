@@ -106,7 +106,7 @@ func (d *ProjectMembersDataSource) Configure(ctx context.Context, req datasource
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var state ProjectMembersDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)

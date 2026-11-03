@@ -48,13 +48,13 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "USER ID\tNAME\tEMAIL\tPERMISSION\tSTATUS\tCREATED")
+	_, _ = fmt.Fprintln(w, "USER ID\tNAME\tEMAIL\tPERMISSION\tSTATUS\tCREATED")
 	for _, member := range members {
 		created := ""
 		if member.GetCreated().IsValid() {
 			created = member.GetCreated().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			member.GetUserId(),
 			member.GetName(),
 			member.GetEmail(),
@@ -63,7 +63,10 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // OrgMemberInviteCmd handles inviting a member to the organization.

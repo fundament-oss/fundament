@@ -150,7 +150,7 @@ func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
 	}
 
 	if item := c.failures.Get(key); item != nil {
-		return "", item.Value()
+		return "", item.Value() //nolint:wrapcheck // cached error was wrapped when the fetch failed
 	}
 
 	// Cache miss or expired — synchronous fetch.

@@ -11,7 +11,8 @@ import (
 // A cluster without node pools gets no worker group: no Shoot runs a worker
 // that fundament does not list.
 func TestBuildWorkers_NoPoolsIsAnError(t *testing.T) {
-	r := testClient(NewProviderConfig())
+	provider := NewProviderConfig()
+	r := testClient(&provider)
 
 	cluster := testCluster()
 	cluster.NodePools = nil
@@ -28,7 +29,7 @@ func TestBuildWorkers_NoPoolsIsAnError(t *testing.T) {
 func TestBuildWorkers_PoolsPassThroughUnchanged(t *testing.T) {
 	provider := NewProviderConfig()
 	provider.Type = "metal"
-	r := testClient(provider)
+	r := testClient(&provider)
 	cluster := testCluster()
 	cluster.NodePools = []NodePool{
 		{Name: "small", MachineType: "local-small", AutoscaleMin: 0, AutoscaleMax: 2},

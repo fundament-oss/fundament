@@ -422,26 +422,31 @@ func (w *Worker) handleProcessingError(ctx context.Context, qtx *db.Queries, ite
 }
 
 func (w *Worker) dispatchItem(ctx context.Context, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error {
+	var err error
 	switch {
 	case item.OrganizationUserID.Valid:
-		return w.handler.OrganizationUser(ctx, qtx, item.OrganizationUserID.Bytes)
+		err = w.handler.OrganizationUser(ctx, qtx, item.OrganizationUserID.Bytes)
 	case item.ProjectID.Valid:
-		return w.handler.Project(ctx, qtx, item.ProjectID.Bytes)
+		err = w.handler.Project(ctx, qtx, item.ProjectID.Bytes)
 	case item.ProjectMemberID.Valid:
-		return w.handler.ProjectMember(ctx, qtx, item.ProjectMemberID.Bytes)
+		err = w.handler.ProjectMember(ctx, qtx, item.ProjectMemberID.Bytes)
 	case item.ClusterID.Valid:
-		return w.handler.Cluster(ctx, qtx, item.ClusterID.Bytes)
+		err = w.handler.Cluster(ctx, qtx, item.ClusterID.Bytes)
 	case item.NodePoolID.Valid:
-		return w.handler.NodePool(ctx, qtx, item.NodePoolID.Bytes)
+		err = w.handler.NodePool(ctx, qtx, item.NodePoolID.Bytes)
 	case item.NamespaceID.Valid:
-		return w.handler.Namespace(ctx, qtx, item.NamespaceID.Bytes)
+		err = w.handler.Namespace(ctx, qtx, item.NamespaceID.Bytes)
 	case item.ApiKeyID.Valid:
-		return w.handler.ApiKey(ctx, qtx, item.ApiKeyID.Bytes)
+		err = w.handler.ApiKey(ctx, qtx, item.ApiKeyID.Bytes)
 	case item.PluginID.Valid:
-		return w.handler.Plugin(ctx, qtx, item.PluginID.Bytes)
+		err = w.handler.Plugin(ctx, qtx, item.PluginID.Bytes)
 	default:
 		return fmt.Errorf("unknown outbox subject FK")
 	}
+	if err != nil {
+		return fmt.Errorf("dispatch outbox item: %w", err)
+	}
+	return nil
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

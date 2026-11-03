@@ -24,8 +24,8 @@ func TestDigestRef(t *testing.T) {
 }
 
 func TestSuperviseStopsSiblings(t *testing.T) {
-	sleeper := exec.Command("sleep", "30")
-	failer := exec.Command("sh", "-c", "exit 3")
+	sleeper := exec.CommandContext(context.Background(), "sleep", "30")
+	failer := exec.CommandContext(context.Background(), "sh", "-c", "exit 3")
 
 	start := time.Now()
 	err := supervise(context.Background(), context.Background(), sleeper, failer)
@@ -40,7 +40,7 @@ func TestSuperviseStopsSiblings(t *testing.T) {
 
 func TestSuperviseContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	sleeper := exec.Command("sleep", "30")
+	sleeper := exec.CommandContext(context.Background(), "sleep", "30")
 
 	done := make(chan error, 1)
 	go func() { done <- supervise(ctx, context.Background(), sleeper) }()
@@ -70,7 +70,7 @@ func TestLineWriterPrefixesWholeLines(t *testing.T) {
 }
 
 func TestSuperviseCleanExitIsAnError(t *testing.T) {
-	err := supervise(context.Background(), context.Background(), exec.Command("true"))
+	err := supervise(context.Background(), context.Background(), exec.CommandContext(context.Background(), "true"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "exited unexpectedly")
 }
@@ -89,7 +89,7 @@ func TestSuperviseForceKillsWithoutGrace(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	force, forceCancel := context.WithCancel(context.Background())
 	// Ignores SIGINT, so only a kill stops it before stopGrace.
-	stubborn := exec.Command("sh", "-c", "trap '' INT; sleep 30")
+	stubborn := exec.CommandContext(context.Background(), "sh", "-c", "trap '' INT; sleep 30")
 
 	done := make(chan error, 1)
 	go func() { done <- supervise(ctx, force, stubborn) }()
@@ -100,7 +100,8 @@ func TestSuperviseForceKillsWithoutGrace(t *testing.T) {
 	forceCancel()
 
 	select {
-	case <-done:
+	case err := <-done:
+		assert.NoError(t, err)
 		assert.Less(t, time.Since(start), stopGrace/2)
 	case <-time.After(stopGrace + 5*time.Second):
 		t.Fatal("supervise did not return after force")

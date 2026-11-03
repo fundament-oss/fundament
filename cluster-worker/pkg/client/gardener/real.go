@@ -77,7 +77,7 @@ type ProviderConfig struct {
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
-	return ProviderConfig{
+	return ProviderConfig{ //nolint:gosec // G101: credential binding names, not credentials
 		Type:                     "local",
 		CloudProfile:             "local",
 		Region:                   "local",
@@ -113,7 +113,7 @@ type RealClient struct {
 
 // NewReal creates a new RealClient that connects to Gardener.
 // If kubeconfigPath is empty, it uses in-cluster config.
-func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
+func NewReal(kubeconfigPath string, provider *ProviderConfig, logger *slog.Logger) (*RealClient, error) {
 	// Build REST config
 	var clientConfig clientcmd.ClientConfig
 
@@ -155,7 +155,7 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 
 	r := &RealClient{
 		client:   c,
-		provider: provider,
+		provider: *provider,
 		logger:   logger,
 	}
 

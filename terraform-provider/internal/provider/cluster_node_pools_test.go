@@ -189,8 +189,9 @@ func TestNewOrRetyped(t *testing.T) {
 		pool("keep", "local-medium", 1, 3),
 		pool("new", "local-small", 1, 1),
 	}
-	var names []string
-	for _, p := range newOrRetyped(current, planned) {
+	retyped := newOrRetyped(current, planned)
+	names := make([]string, 0, len(retyped))
+	for _, p := range retyped {
 		names = append(names, p.Name.ValueString())
 	}
 	assert.Equal(t, []string{"keep", "new"}, names)

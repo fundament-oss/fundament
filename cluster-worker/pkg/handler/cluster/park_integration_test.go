@@ -68,8 +68,8 @@ func TestNodePoolInsertWakesOnlyParkedRows(t *testing.T) {
 	db := createTestDB(t)
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-parked-only")
 	markOutboxCompleted(t, db, clusterID)
-	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
-	backingOff := insertClusterOutboxRow(t, db, clusterID, "retrying", "infinity")
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending")
+	backingOff := insertClusterOutboxRow(t, db, clusterID, "retrying")
 	_, err := db.adminPool.Exec(t.Context(),
 		`UPDATE tenant.cluster_outbox SET retry_after = now() + interval '1 hour' WHERE id = $1`, backingOff)
 	require.NoError(t, err)

@@ -19,7 +19,7 @@ import (
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
-func mintPluginToken(t *testing.T, secret []byte, installID, clusterID string) string {
+func mintPluginToken(t *testing.T, secret []byte) string {
 	t.Helper()
 	c := &auth.PluginClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -28,8 +28,8 @@ func mintPluginToken(t *testing.T, secret []byte, installID, clusterID string) s
 			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
-		ClusterID:      clusterID,
-		InstallationID: installID,
+		ClusterID:      "CLUSTER-X",
+		InstallationID: "INSTALL-X",
 		// Deliberately different from PluginName: the namespace derives from the
 		// installation name, and conflating the two is a real bug this catches.
 		InstallationName: "system--cert-manager",
@@ -67,7 +67,7 @@ func TestRuntimeProxy_RejectsMissingToken(t *testing.T) {
 
 func TestRuntimeProxy_RejectsInstallationIDMismatch(t *testing.T) {
 	secret := []byte("s")
-	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
+	tok := mintPluginToken(t, secret)
 	h := New(secret, allowAuthz{}, stubBackend(), discardLogger())
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-Y/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -78,7 +78,7 @@ func TestRuntimeProxy_RejectsInstallationIDMismatch(t *testing.T) {
 
 func TestRuntimeProxy_RejectsWhenCanViewFalse(t *testing.T) {
 	secret := []byte("s")
-	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
+	tok := mintPluginToken(t, secret)
 	h := New(secret, denyAuthz{}, stubBackend(), discardLogger())
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -89,7 +89,7 @@ func TestRuntimeProxy_RejectsWhenCanViewFalse(t *testing.T) {
 
 func TestRuntimeProxy_ForwardsAuthorizedRequest(t *testing.T) {
 	secret := []byte("s")
-	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
+	tok := mintPluginToken(t, secret)
 	h := New(secret, allowAuthz{}, stubBackend(), discardLogger())
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -104,7 +104,7 @@ func TestRuntimeProxy_ForwardsAuthorizedRequest(t *testing.T) {
 // namespace that does not exist, since metadata.name is "<org>-<plugin>".
 func TestRuntimeProxy_RouteCarriesInstallationName(t *testing.T) {
 	secret := []byte("s")
-	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
+	tok := mintPluginToken(t, secret)
 
 	var got Route
 	backend := BackendFunc(func(w http.ResponseWriter, _ *http.Request, route Route) {

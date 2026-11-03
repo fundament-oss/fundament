@@ -28,7 +28,7 @@ func TestSandboxShootAccess_NamespacesOnSandbox(t *testing.T) {
 	got, err := cs.CoreV1().Namespaces().Get(ctx, "tnt-p--web", metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, "n1", got.Labels["fundament.io/namespace-id"])
-	assert.Empty(t, s.MockShootAccess.Namespaces[clusterID], "the namespace is not kept in memory")
+	assert.Empty(t, s.Namespaces[clusterID], "the namespace is not kept in memory")
 
 	found, err := s.FindNamespaceByLabel(ctx, clusterID, "fundament.io/namespace-id", "n1")
 	require.NoError(t, err)
@@ -39,5 +39,5 @@ func TestSandboxShootAccess_NamespacesOnSandbox(t *testing.T) {
 	lrs, err := cs.CoreV1().LimitRanges("tnt-p--web").List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	assert.Empty(t, lrs.Items, "LimitRanges do not reach the sandbox")
-	assert.Contains(t, s.MockShootAccess.LimitRanges[clusterID], "tnt-p--web", "LimitRanges stay in memory")
+	assert.Contains(t, s.LimitRanges[clusterID], "tnt-p--web", "LimitRanges stay in memory")
 }

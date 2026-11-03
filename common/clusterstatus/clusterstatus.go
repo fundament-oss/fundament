@@ -56,7 +56,7 @@ type Input struct {
 // conditions fail is unhealthy; that wins over updating, because a stuck
 // update is a failure, not progress. A ready cluster that an update fundament
 // pushed is rolling out on is upgrading; it stays usable meanwhile.
-func FromDB(in Input) Status {
+func FromDB(in *Input) Status {
 	if in.Deleted.Valid {
 		return Deleting
 	}

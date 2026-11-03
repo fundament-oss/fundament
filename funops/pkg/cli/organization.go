@@ -101,7 +101,7 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 	})
 	if err != nil {
 		// Check for unique constraint violation
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("organization '%s' already exists", c.Name)
 		}
 		// No row: a deleted organization that had clusters still holds the
@@ -247,16 +247,23 @@ func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) 
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED")
+		if _, err := fmt.Fprintln(w, "ID\tNAME\tALIAS\tCREATED"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
 		for _, org := range orgs {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				org.ID.String(),
 				org.Name,
 				org.Alias,
 				org.Created.Time.Format(TimeFormat),
-			)
+			); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
 	default:
 		panic(fmt.Sprintf("unknown output format: %s", format))
 	}

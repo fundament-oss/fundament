@@ -90,7 +90,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	authURL := s.oauth2Config.AuthCodeURL(state, oauth2.S256ChallengeOption(verifier))
 	s.logger.Debug("redirecting to OIDC provider", "url", authURL, "return_to", returnTo)
-	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect) //nolint:gosec // G710: OIDC provider auth URL from our own oauth2 config
 }
 
 // HandleCallback handles the OIDC provider redirect after login.
@@ -148,7 +148,7 @@ func (s *Server) HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
-	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect) //nolint:gosec // G710: return_to is validated by isSafeReturnTo
 }
 
 // HandleRefresh re-issues the auth cookie from a valid existing token.

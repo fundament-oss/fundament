@@ -11,8 +11,8 @@ import (
 
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o750))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 }
 
 const demoDefinition = "metadata:\n  name: demo\n  version: v1.2.0\n"
@@ -137,7 +137,7 @@ func TestResolveSourceDirsRepo(t *testing.T) {
 	}
 	l, err := Detect(filepath.Join("..", "..", "..", "plugins", "openfsc"))
 	require.NoError(t, err)
-	require.NoError(t, l.ResolveSourceDirs())
+	require.NoError(t, l.ResolveSourceDirs(t.Context()))
 	assert.Contains(t, l.SourceDirs, "openfsc-operator")
 	assert.Contains(t, l.SourceDirs, "plugin-sdk")
 	assert.Contains(t, l.SourceDirs, "plugins/openfsc")
@@ -145,6 +145,6 @@ func TestResolveSourceDirsRepo(t *testing.T) {
 
 func TestResolveSourceDirsStandaloneNoop(t *testing.T) {
 	l := Layout{ModulePath: "example.com/demo"}
-	require.NoError(t, l.ResolveSourceDirs())
+	require.NoError(t, l.ResolveSourceDirs(t.Context()))
 	assert.Empty(t, l.SourceDirs)
 }

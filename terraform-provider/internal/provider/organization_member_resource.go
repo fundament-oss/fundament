@@ -102,7 +102,7 @@ func (r *OrganizationMemberResource) Configure(ctx context.Context, req resource
 	r.client = client
 }
 
-func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan OrganizationMemberModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -188,7 +188,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state OrganizationMemberModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -247,7 +247,7 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan OrganizationMemberModel
 	var state OrganizationMemberModel
 
@@ -348,7 +348,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *OrganizationMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *OrganizationMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state OrganizationMemberModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)

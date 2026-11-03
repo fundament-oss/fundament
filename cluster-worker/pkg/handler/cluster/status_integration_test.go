@@ -175,7 +175,7 @@ func TestCheckStatusRefreshesUnhealthyReady(t *testing.T) {
 	clusterID := readyCluster(t, db, "status-settles")
 	setShootState(t, db, clusterID, "ready", gardener.MsgShootUnhealthy, "unhealthy", time.Minute)
 	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
 	})
 
@@ -231,7 +231,7 @@ func TestCheckClusterUnchangedWritesNothing(t *testing.T) {
 	clusterID := readyCluster(t, db, "status-unchanged")
 	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", time.Hour)
 	before := getShootStatusUpdated(t, db, clusterID)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
@@ -252,7 +252,7 @@ func TestCheckStatusRetriedErrorIsWarning(t *testing.T) {
 
 	clusterID := readyCluster(t, db, "status-retrying")
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true,
 	})
 
@@ -278,7 +278,7 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 	clusterID := readyCluster(t, db, "status-reconcile")
 	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 6*time.Minute)
 	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
@@ -337,7 +337,7 @@ func TestCheckClusterConcurrentTransitionRecordedOnce(t *testing.T) {
 	clusterID := readyCluster(t, db, "status-race")
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
 	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
 	})
 
@@ -366,7 +366,7 @@ func TestCheckClusterRetriedErrorRecordedOnce(t *testing.T) {
 
 	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
 	report := func(status gardener.ShootStatusType, message string, retrying bool) {
-		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying,
 		})
 		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
@@ -393,7 +393,7 @@ func TestCheckClusterRetriedErrorAfterReadyIsNewWarning(t *testing.T) {
 
 	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
 	report := func(status gardener.ShootStatusType, message string, retrying, healthy bool) {
-		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying, Healthy: healthy,
 		})
 		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
@@ -420,7 +420,7 @@ func TestCheckClusterRecordsThrottledProgress(t *testing.T) {
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting for etcd", "", time.Minute)
 
 	report := func(message string) {
-		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 			Status: gardener.StatusProgressing, Message: message, Operation: gardener.OperationCreate,
 		})
 		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
@@ -451,7 +451,7 @@ func TestCheckClusterAPIServerAvailableBeforeReady(t *testing.T) {
 	markOutboxCompleted(t, db, clusterID)
 	setShootStatus(t, db, clusterID, "progressing")
 
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Message: "Create: Waiting until shoot worker nodes have been reconciled",
 		Operation: gardener.OperationCreate, APIServerAvailable: true,
 	})

@@ -51,7 +51,7 @@ type authTransport struct {
 func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	req.Header.Set("Authorization", "Bearer "+t.token)
-	return t.base.RoundTrip(req)
+	return t.base.RoundTrip(req) //nolint:wrapcheck // RoundTripper passthrough
 }
 
 func (e *testEnv) client() *http.Client {
@@ -73,19 +73,8 @@ func signTestToken(t *testing.T, subject string) string {
 	return s
 }
 
-type apiOptions struct {
-	t testing.TB
-}
-
-type APIOption func(*apiOptions)
-
-func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
+func newTestAPI(t *testing.T) *testEnv {
 	t.Helper()
-
-	opts := apiOptions{t: t}
-	for _, option := range options {
-		option(&opts)
-	}
 
 	testLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelError,

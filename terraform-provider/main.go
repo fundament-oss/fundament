@@ -5,8 +5,9 @@ import (
 	"flag"
 	"log"
 
-	"github.com/fundament-oss/fundament/terraform-provider/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"github.com/fundament-oss/fundament/terraform-provider/internal/provider"
 )
 
 var version = "dev"
