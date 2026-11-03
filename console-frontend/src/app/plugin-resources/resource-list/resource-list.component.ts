@@ -18,6 +18,7 @@ import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
 import ProjectNamespacesService from '../project-namespaces.service';
+import ProjectNamespacesLoader from '../project-namespaces-loader';
 import pollResources from '../resource-poll';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
@@ -99,8 +100,6 @@ export default class ResourceListComponent implements OnInit {
 
   private config = inject(ConfigService);
 
-  private projectNamespaces = inject(ProjectNamespacesService);
-
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -134,20 +133,18 @@ export default class ResourceListComponent implements OnInit {
 
   // The project's namespaces, forwarded to the plugin iframe for the create
   // sheet a custom list opens, which gets them from the list as the routed
-  // create page gets them from its own route. Cluster-side names
-  // ("tnt-<project>--<name>"): the plugin passes them to the Kubernetes API as is.
-  namespaces = signal<string[]>([]);
+  // create page gets them from its own route. The iframe is held back until
+  // they have settled.
+  private projectNamespaces = new ProjectNamespacesLoader(
+    inject(ProjectNamespacesService),
+    'ResourceList',
+  );
 
-  // The project-level name for each of namespaces, which the plugin shows.
-  namespaceDisplayNames = signal<Record<string, string>>({});
+  namespaces = this.projectNamespaces.names;
 
-  // Holds the iframe back until the namespace lookup has finished, failed or
-  // not: the iframe sends them once, in fundament:init, and never again.
-  namespacesSettled = signal(false);
+  namespaceDisplayNames = this.projectNamespaces.displayNames;
 
-  // Counts namespace loads, so a response for a project the route has since
-  // moved away from is dropped.
-  private namespacesRequest = 0;
+  namespacesSettled = this.projectNamespaces.settled;
 
   installationId = computed(() => this.plugin()?.installationId ?? '');
 
@@ -221,7 +218,7 @@ export default class ResourceListComponent implements OnInit {
     // Another project's list reuses this component, so follow the route.
     effect(() => {
       const projectId = this.projectId();
-      untracked(() => this.loadNamespaces(projectId));
+      untracked(() => this.projectNamespaces.load(projectId));
     });
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
@@ -332,34 +329,6 @@ export default class ResourceListComponent implements OnInit {
       return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
     }
     return null;
-  }
-
-  /** Unmounts the iframe until the project's namespaces are in, so a page
-   *  initialised with the previous project's namespaces does not keep them. */
-  private async loadNamespaces(projectId: string): Promise<void> {
-    this.namespacesRequest += 1;
-    const current = this.namespacesRequest;
-    this.namespacesSettled.set(false);
-    this.namespaces.set([]);
-    this.namespaceDisplayNames.set({});
-    if (!projectId) {
-      // The organization-level route has no project to scope namespaces to.
-      this.namespacesSettled.set(true);
-      return;
-    }
-    try {
-      const { names, displayNames } = await this.projectNamespaces.list(projectId);
-      if (current !== this.namespacesRequest) return;
-      this.namespaces.set(names);
-      this.namespaceDisplayNames.set(displayNames);
-    } catch (err) {
-      if (current !== this.namespacesRequest) return;
-      // Transient failure: plugin UIs fall back to a free-text namespace field.
-      // eslint-disable-next-line no-console
-      console.error('[ResourceList] Failed to load namespaces:', err);
-    } finally {
-      if (current === this.namespacesRequest) this.namespacesSettled.set(true);
-    }
   }
 
   /**

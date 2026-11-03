@@ -41,8 +41,9 @@ import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
+  installPollDelay,
+  installTransitionNotice,
   isInstallRunning,
-  shouldPollInstall,
 } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
@@ -180,6 +181,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   private installPollingTimer: ReturnType<typeof setInterval> | null = null;
+
+  // The pace installPollingTimer runs at, so a change of pace restarts it.
+  private installPollingDelay: number | null = null;
+
+  private destroyed = false;
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -413,6 +419,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     this.stopPolling();
     this.stopInstallPolling();
     document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
@@ -489,15 +496,17 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.installs.set(byCluster.flatMap((cluster) => cluster.installs ?? []));
   }
 
+  /** Starts, re-paces or stops the install poll to suit the installs shown. */
   private startInstallPollingIfNeeded() {
-    if (this.installPollingTimer) return;
-    // Also while one is Degraded or Failed: it can recover, or get a new
-    // reason, without anyone acting on it.
-    if (
-      this.installs().some((install) => shouldPollInstall(install.phase, install.configInvalid))
-    ) {
-      this.installPollingTimer = setInterval(() => this.refreshInstalls(), 5000);
-    }
+    if (this.destroyed) return;
+    // Also while one is Degraded or Failed, at a slower pace: it can recover,
+    // or get a new reason, without anyone acting on it.
+    const delay = installPollDelay(this.installs());
+    if (delay === this.installPollingDelay) return;
+    this.stopInstallPolling();
+    if (delay === null) return;
+    this.installPollingDelay = delay;
+    this.installPollingTimer = setInterval(() => this.refreshInstalls(), delay);
   }
 
   private stopInstallPolling() {
@@ -505,6 +514,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       clearInterval(this.installPollingTimer);
       this.installPollingTimer = null;
     }
+    this.installPollingDelay = null;
   }
 
   // Poll installation status and surface transitions (installed / failed / removed).
@@ -534,23 +544,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           p.pluginName === next.pluginName,
       );
       if (!prev) return;
-      if (prev.phase === 'Degraded' && isInstallRunning(next.phase)) {
-        this.notificationService.success(
-          `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} is running again on cluster ${this.clusterName(next.clusterId)}`,
-        );
-      } else if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
-        this.notificationService.success(
-          `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
-        );
-      } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
-        // From Running or Degraded it was installed, and stopped working since.
-        const wasUp = isInstallRunning(prev.phase) || prev.phase === 'Degraded';
-        this.notificationService.error(
-          wasUp
-            ? `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} failed on cluster ${this.clusterName(next.clusterId)}`
-            : `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
-        );
-      }
+      const notice = installTransitionNotice(
+        prev.phase,
+        next.phase,
+        this.pluginDisplayName(next.organizationName, next.pluginName),
+        this.clusterName(next.clusterId),
+      );
+      if (notice?.kind === 'success') this.notificationService.success(notice.text);
+      else if (notice?.kind === 'error') this.notificationService.error(notice.text);
     });
 
     // Detect installs that vanished from a cluster we successfully read. A
@@ -583,10 +584,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       ...preserved,
     ];
     this.installs.set(merged);
-
-    if (!merged.some((install) => shouldPollInstall(install.phase, install.configInvalid))) {
-      this.stopInstallPolling();
-    }
+    this.startInstallPollingIfNeeded();
   }
 
   get categories(): CategoryWithCount[] {

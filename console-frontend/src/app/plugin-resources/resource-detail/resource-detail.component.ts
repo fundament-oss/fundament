@@ -25,6 +25,7 @@ import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
 import ProjectNamespacesService from '../project-namespaces.service';
+import ProjectNamespacesLoader from '../project-namespaces-loader';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel, kindToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
@@ -159,9 +160,7 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
-    const projectId = this.route.snapshot.parent?.params['id'];
-    if (projectId) this.loadNamespaces(projectId).catch(() => {});
-    else this.namespacesSettled.set(true);
+    this.projectNamespaces.load(this.route.snapshot.parent?.params['id'] ?? '');
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
@@ -213,25 +212,27 @@ export default class ResourceDetailComponent implements OnInit {
    * reads its own. Read by the loaded resource's own name and namespace, as the
    * delete is. Held back while a delete is out: the resource vanishing under
    * the modal would swap the page for "not found" before the delete returns.
-   * A resource that is gone does show as gone. A failed poll keeps what is
-   * shown, and the next one tries again.
+   * A resource that is gone does show as gone, and keeps being read by the
+   * route's name: a 404 can be passing (a CRD not served for a moment during a
+   * plugin upgrade), and the resource then shows again by itself. A failed poll
+   * keeps what is shown, and the next one tries again.
    */
   private async refreshResource(): Promise<void> {
     const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
     const current = this.resource();
-    if (!crd || clusterId === null || !current || this.isLoading() || this.deleting()) return;
+    if (!crd || clusterId === null || this.isLoading() || this.deleting()) return;
     if (this.customUIUrl()) return;
     try {
       const resource = await this.loader.loadResource(
         this.pluginName(),
         crd,
         clusterId,
-        current.metadata.name,
-        current.metadata.namespace,
+        current?.metadata.name ?? this.resourceId(),
+        current ? current.metadata.namespace : this.resourceNamespace(),
       );
       // Moved on to another resource or cluster, or deleting, while this was out.
-      if (this.resource()?.metadata.uid !== current.metadata.uid || this.deleting()) return;
+      if (this.resource()?.metadata.uid !== current?.metadata.uid || this.deleting()) return;
       if (this.clusterContext.selectedClusterId() !== clusterId) return;
       this.resource.set(resource);
     } catch {
@@ -269,34 +270,20 @@ export default class ResourceDetailComponent implements OnInit {
     return projectId ? `/projects/${projectId}` : '/';
   });
 
-  private projectNamespaces = inject(ProjectNamespacesService);
-
   // The project's namespaces, forwarded to the plugin iframe: custom detail
   // UIs embed create flows (the ceph-rook Buckets section), which need the
-  // same namespace choices the create view gets. Cluster-side names
-  // ("tnt-<project>--<name>"): the plugin passes them to the Kubernetes API as is.
-  namespaces = signal<string[]>([]);
+  // same namespace choices the create view gets. The iframe is held back until
+  // they have settled.
+  private projectNamespaces = new ProjectNamespacesLoader(
+    inject(ProjectNamespacesService),
+    'ResourceDetail',
+  );
 
-  // The project-level name for each of namespaces, which the plugin shows.
-  namespaceDisplayNames = signal<Record<string, string>>({});
+  namespaces = this.projectNamespaces.names;
 
-  // Holds the iframe back until the namespace lookup has finished, failed or
-  // not: the iframe sends them once, in fundament:init, and never again.
-  namespacesSettled = signal(false);
+  namespaceDisplayNames = this.projectNamespaces.displayNames;
 
-  private async loadNamespaces(projectId: string): Promise<void> {
-    try {
-      const { names, displayNames } = await this.projectNamespaces.list(projectId);
-      this.namespaces.set(names);
-      this.namespaceDisplayNames.set(displayNames);
-    } catch (err) {
-      // Transient failure: plugin UIs fall back to a free-text namespace field.
-      // eslint-disable-next-line no-console
-      console.error('[ResourceDetail] Failed to load namespaces:', err);
-    } finally {
-      this.namespacesSettled.set(true);
-    }
-  }
+  namespacesSettled = this.projectNamespaces.settled;
 
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears

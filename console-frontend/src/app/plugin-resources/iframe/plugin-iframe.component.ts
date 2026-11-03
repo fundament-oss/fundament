@@ -17,7 +17,8 @@ import {
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { HostMessage, PluginMessage, ResourceContext } from './postmessage-types';
-import parseSheetRequest, { sheetUrl, type OpenSheet } from './sheet-request';
+import parseSheetRequest, { type OpenSheet } from './sheet-request';
+import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import PluginSheetComponent from './plugin-sheet.component';
 import PluginRegistryService from '../plugin-registry.service';
 import { ConfigService } from '../../config.service';
@@ -87,7 +88,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     ></iframe>
     <!-- The sheet this frame asked for, holding a plugin page of its own:
          this component again, in its sheet presentation. Only ever this same
-         installation's pages (see sheetUrl). -->
+         installation's pages (see sheetUrlFor). -->
     @if (sheet(); as request) {
       <app-plugin-sheet
         #pluginSheet
@@ -439,13 +440,22 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
     this.sheet.set(request);
   }
 
+  /**
+   * The URL of the page a sheet request names: the plugin's own
+   * customComponents[kind][view], on the plugin-proxy origin like every plugin
+   * page. Null when the plugin declares no such page, and the request is then
+   * refused. Always the opening page's own installation: two plugins' frames
+   * side by side would share the plugin-proxy origin, and could read each
+   * other's DOM and token.
+   */
   private sheetUrlFor(request: OpenSheet): string | null {
-    return sheetUrl(
-      this.registry.getPlugin(this.pluginName()),
-      request,
-      this.clusterId(),
-      this.configService.getConfig().pluginProxyUrl,
-    );
+    return buildCustomUIUrl({
+      plugin: this.registry.getPlugin(this.pluginName()),
+      kind: request.kind,
+      view: request.view,
+      clusterId: this.clusterId(),
+      pluginProxyUrl: this.configService.getConfig().pluginProxyUrl,
+    });
   }
 
   protected onSheetClosed(changed: boolean): void {

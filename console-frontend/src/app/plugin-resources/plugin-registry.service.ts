@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
 import type {
   PluginDefinition,
   ParsedCrd,
@@ -14,6 +15,7 @@ import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
 import {
   hasInvalidConfig,
+  healthOf,
   installPhase,
   isInstallInProgress,
   isInstallTerminating,
@@ -127,12 +129,15 @@ function installationKey(item: PluginInstallationItem): string {
   return `${item.metadata.uid}/${item.spec.definitionRef.pluginVersion}`;
 }
 
-function healthOf(item: PluginInstallationItem): PluginInstallationHealth {
-  return {
-    phase: installPhase(item.status?.phase),
-    ready: item.status?.ready ?? false,
-    message: item.status?.message ?? '',
-  };
+/** True for a definition fetch that will fail the same way however often it is
+ *  tried: the installation names a version the catalog does not have (yanked,
+ *  or never pinned, as a failed install's can be). Retrying it would keep the
+ *  menu sync 'incomplete' for good. */
+function isPermanentDefinitionFailure(reason: unknown): boolean {
+  return (
+    reason instanceof ConnectError &&
+    (reason.code === Code.NotFound || reason.code === Code.InvalidArgument)
+  );
 }
 
 function sameHealth(
@@ -455,7 +460,14 @@ export default class PluginRegistryService {
         }),
       ];
     });
-    return { definitions, complete: results.every((r) => r.status === 'fulfilled') };
+    // A definition that can never load is not worth another try: it keeps
+    // what it had, as above, and does not hold the sync at 'incomplete'.
+    return {
+      definitions,
+      complete: results.every(
+        (r) => r.status === 'fulfilled' || isPermanentDefinitionFailure(r.reason),
+      ),
+    };
   }
 
   /**

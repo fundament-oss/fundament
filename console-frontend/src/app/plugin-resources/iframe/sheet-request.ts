@@ -1,5 +1,4 @@
 import type { ResourceContext, SheetRequest, SheetView } from './postmessage-types';
-import { buildCustomUIUrl, type PluginLike } from '../plugin-console-url.utils';
 
 /** A sheet request that passed parseSheetRequest: the kind resolved, and a
  *  sequence number, so a sheet replaced by another remounts its iframe. */
@@ -80,27 +79,4 @@ export default function parseSheetRequest(message: unknown, openerKind: string):
     ...(resource ? { resource } : {}),
     ...(params ? { params } : {}),
   };
-}
-
-/**
- * The URL of the page a sheet request names: the plugin's own
- * customComponents[kind][view], on the plugin-proxy origin like every plugin
- * page. Null when the plugin declares no such page, and the request is then
- * refused. Always the opening page's own installation: two plugins' frames
- * side by side would share the plugin-proxy origin, and could read each
- * other's DOM and token.
- */
-export function sheetUrl(
-  plugin: PluginLike | null | undefined,
-  request: OpenSheet,
-  clusterId: string,
-  pluginProxyUrl: string,
-): string | null {
-  return buildCustomUIUrl({
-    plugin,
-    kind: request.kind,
-    view: request.view,
-    clusterId,
-    pluginProxyUrl,
-  });
 }

@@ -39,8 +39,10 @@ import {
 import {
   hasInvalidConfig,
   installPhase,
-  isInstallRunning,
-  shouldPollInstall,
+  installPollDelay,
+  installTransitionNotice,
+  isInstallInProgress,
+  isInstallTerminating,
 } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
 import { NotificationService } from '../notification.service';
@@ -142,6 +144,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   protected readonly backText = injectBrowsePluginsUrl() ? 'Installed plugins' : 'Plugins';
 
   private installPollingTimer: ReturnType<typeof setInterval> | null = null;
+
+  // The pace installPollingTimer runs at, so a change of pace restarts it.
+  private installPollingDelay: number | null = null;
+
+  private destroyed = false;
 
   private sanitizer = inject(DomSanitizer);
 
@@ -339,6 +346,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     this.stopInstallPolling();
   }
 
@@ -352,15 +360,21 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** Starts, re-paces or stops the install poll to suit the clusters shown. */
   private startInstallPollingIfNeeded(): void {
-    if (this.installPollingTimer) return;
-    // Also while one is Degraded or Failed: it can recover, or get a new
-    // reason, without anyone acting on it.
-    if (
-      this.clusters().some((c) => c.phase !== null && shouldPollInstall(c.phase, c.configInvalid))
-    ) {
-      this.installPollingTimer = setInterval(() => this.refreshInstallStates(), 5000);
-    }
+    if (this.destroyed) return;
+    // Also while one is Degraded or Failed, at a slower pace: it can recover,
+    // or get a new reason, without anyone acting on it.
+    const delay = installPollDelay(
+      this.clusters().flatMap((c) =>
+        c.phase === null ? [] : [{ phase: c.phase, configInvalid: c.configInvalid }],
+      ),
+    );
+    if (delay === this.installPollingDelay) return;
+    this.stopInstallPolling();
+    if (delay === null) return;
+    this.installPollingDelay = delay;
+    this.installPollingTimer = setInterval(() => this.refreshInstallStates(), delay);
   }
 
   private stopInstallPolling(): void {
@@ -368,6 +382,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       clearInterval(this.installPollingTimer);
       this.installPollingTimer = null;
     }
+    this.installPollingDelay = null;
   }
 
   // Poll installation status and surface transitions (installed / failed / removed).
@@ -412,32 +427,17 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
-      if (prevPhase === 'Degraded' && n.phase === 'Running') {
-        this.notificationService.success(
-          `Plugin ${displayNameOf(plugin)} is running again on cluster ${n.name}`,
-        );
-      } else if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.notificationService.success(
-          `Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`,
-        );
-      } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        // From Running or Degraded it was installed, and stopped working since.
-        const wasUp = isInstallRunning(prevPhase) || prevPhase === 'Degraded';
-        this.notificationService.error(
-          wasUp
-            ? `Plugin ${displayNameOf(plugin)} failed on cluster ${n.name}`
-            : `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
-        );
-      } else if (n.phase === null) {
+      if (n.phase === null) {
         this.notificationService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
+        return;
       }
+      const notice = installTransitionNotice(prevPhase, n.phase, displayNameOf(plugin), n.name);
+      if (notice?.kind === 'success') this.notificationService.success(notice.text);
+      else if (notice?.kind === 'error') this.notificationService.error(notice.text);
     });
 
     this.clusters.set(next);
-
-    if (!next.some((c) => c.phase !== null && shouldPollInstall(c.phase, c.configInvalid))) {
-      this.stopInstallPolling();
-    }
+    this.startInstallPollingIfNeeded();
   }
 
   async onInstallOnClusters(selection: InstallSelection): Promise<void> {
@@ -522,13 +522,19 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Installed whatever its state: a Degraded or Failed installation is one to
-   *  manage, retry or uninstall, not one to install again. */
+  /** Whether the header offers Manage rather than Install: true for an
+   *  installation in any state but being removed. One still coming up, or
+   *  Degraded or Failed, is one to manage, retry or uninstall, not one to
+   *  install again. One being removed is on its way out. */
   hasInstalledClusters(): boolean {
-    return this.getInstalledClusterCount() > 0;
+    return this.clusters().some((c) => c.phase !== null && !isInstallTerminating(c.phase));
   }
 
+  /** The clusters the plugin is installed on, for "Installed on N clusters":
+   *  only installations that have settled, Running or not. One still on its
+   *  way up or down shows as Installing… or Removing… in the install modal,
+   *  and must not read as installed here meanwhile. */
   getInstalledClusterCount(): number {
-    return this.clusters().filter((c) => c.phase !== null).length;
+    return this.clusters().filter((c) => c.phase !== null && !isInstallInProgress(c.phase)).length;
   }
 }

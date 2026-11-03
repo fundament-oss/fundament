@@ -76,19 +76,81 @@ export function shouldPollInstall(phase: string, configInvalid: boolean): boolea
   return isInstallInProgress(phase) || isInstallUnhealthy(phase);
 }
 
+/** An installation's health as its CR's status reports it. */
+export function healthOf(item: PluginInstallationItem): PluginInstallationHealth {
+  return {
+    phase: installPhase(item.status?.phase),
+    ready: item.status?.ready ?? false,
+    message: item.status?.message ?? '',
+  };
+}
+
+// Running but not ready: up, yet not serving as it should. The controller sets
+// ready from the phase, so this is rare, but it must not read as Installed.
+const NOT_READY_DISPLAY: InstallStatusDisplay = {
+  label: 'Not ready',
+  badgeColor: 'warning',
+  inProgress: false,
+};
+
 /** What to show for an installation that is not running as it should; null for
  *  one that is, or that has no status to go by. */
 export function installIssue(
   health: PluginInstallationHealth | undefined,
 ): PluginInstallIssue | null {
-  if (!health || (isInstallRunning(health.phase) && health.ready)) return null;
-  const display = getInstallStatusDisplay(health.phase);
-  return {
-    label: display.label,
-    badgeColor: display.badgeColor,
-    inProgress: display.inProgress,
-    message: health.message,
-  };
+  if (!health) return null;
+  if (isInstallRunning(health.phase)) {
+    return health.ready ? null : { ...NOT_READY_DISPLAY, message: health.message };
+  }
+  return { ...getInstallStatusDisplay(health.phase), message: health.message };
+}
+
+/** How long to wait before a screen reads these installations again: quickly
+ *  while one is on its way up or down, slower while one is only Degraded or
+ *  Failed (the controller retries a failed one every couple of minutes, and a
+ *  degraded one changes as seldom), and null when none can change on its own. */
+export function installPollDelay(
+  installs: readonly { phase: string; configInvalid: boolean }[],
+): number | null {
+  if (installs.some((install) => isInstallInProgress(install.phase))) return 5000;
+  if (installs.some((install) => shouldPollInstall(install.phase, install.configInvalid))) {
+    return 20000;
+  }
+  return null;
+}
+
+export interface InstallTransitionNotice {
+  kind: 'success' | 'error';
+  text: string;
+}
+
+/** The notification for an installation going from one phase to another, or
+ *  null for a change that needs none. An installation that went away is not a
+ *  phase change; callers say that one themselves. */
+export function installTransitionNotice(
+  previous: string,
+  next: string,
+  plugin: string,
+  cluster: string,
+): InstallTransitionNotice | null {
+  if (previous === next) return null;
+  if (previous === 'Degraded' && isInstallRunning(next)) {
+    return { kind: 'success', text: `Plugin ${plugin} is running again on cluster ${cluster}` };
+  }
+  if (!isInstallRunning(previous) && isInstallRunning(next)) {
+    return { kind: 'success', text: `Plugin ${plugin} installed on cluster ${cluster}` };
+  }
+  if (!isInstallFailed(previous) && isInstallFailed(next)) {
+    // From Running or Degraded it was installed, and stopped working since.
+    const wasUp = isInstallRunning(previous) || previous === 'Degraded';
+    return {
+      kind: 'error',
+      text: wasUp
+        ? `Plugin ${plugin} failed on cluster ${cluster}`
+        : `Failed to install plugin ${plugin} on cluster ${cluster}`,
+    };
+  }
+  return null;
 }
 
 /** True when the controller rejected the installation's config against its

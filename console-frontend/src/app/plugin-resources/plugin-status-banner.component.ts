@@ -7,7 +7,7 @@ import {
   input,
 } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
-import { installIssue } from '../utils/plugin-install-status';
+import { isInstallRunning } from '../utils/plugin-install-status';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/spacer';
@@ -47,8 +47,7 @@ export default class PluginStatusBannerComponent {
 
   protected content = computed<BannerContent | null>(() => {
     const health = this.registry.installationHealth(this.installationName());
-    const issue = installIssue(health);
-    if (!health || !issue) return null;
+    if (!health || (isInstallRunning(health.phase) && health.ready)) return null;
 
     switch (health.phase) {
       case 'Degraded':
@@ -56,7 +55,7 @@ export default class PluginStatusBannerComponent {
           variant: 'warning',
           text: 'This plugin is degraded',
           supportingText:
-            issue.message ||
+            health.message ||
             'It is running, but not everything works. This screen may show errors until it recovers.',
         };
       case 'Running':
@@ -65,7 +64,7 @@ export default class PluginStatusBannerComponent {
           variant: 'warning',
           text: 'This plugin is not ready',
           supportingText:
-            issue.message ||
+            health.message ||
             'It is running, but not ready. This screen may show errors until it is.',
         };
       case 'Failed':
@@ -73,14 +72,14 @@ export default class PluginStatusBannerComponent {
           variant: 'critical',
           text: 'This plugin failed',
           supportingText:
-            issue.message ||
+            health.message ||
             'This screen will not work until the installation is retried or the plugin is reinstalled.',
         };
       default:
         return {
           variant: 'accent',
           text: 'This plugin is still being installed',
-          supportingText: issue.message || 'This screen works once the plugin is running.',
+          supportingText: health.message || 'This screen works once the plugin is running.',
         };
     }
   });

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PluginRegistryService from './plugin-registry.service';
 import { ConfigService } from '../config.service';
@@ -262,6 +263,22 @@ describe('PluginRegistryService', () => {
     expect(listReads()).toBe(5);
     await vi.advanceTimersByTimeAsync(30000);
     expect(listReads()).toBe(6);
+  });
+
+  it('does not retry a definition the catalog does not have', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Failed')];
+    getPluginDefinition.mockImplementation(() =>
+      throwError(() => new ConnectError('not found', Code.NotFound)),
+    );
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+
+    // Opening a project again does not refetch it either.
+    await registry.loadPlugins('cl-1');
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
   });
 
   it('backs off a failing definition while another installation is still on its way', async () => {

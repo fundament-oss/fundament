@@ -11,7 +11,7 @@ import type {
   PluginDefinition,
   PluginInstallationHealth,
 } from '../plugin-resources/types';
-import { installPhase, isInstallTerminating } from '../utils/plugin-install-status';
+import { healthOf, installPhase, isInstallTerminating } from '../utils/plugin-install-status';
 import { PLUGIN_INSTALLS_CHANGED_EVENT } from './fake-plugin-installation.service';
 import * as fx from './fixtures';
 
@@ -72,18 +72,7 @@ export default class FakePluginRegistryService implements Pick<
     const installed = items.filter(
       (item) => !isInstallTerminating(installPhase(item.status?.phase)),
     );
-    this.health.set(
-      new Map(
-        installed.map((item) => [
-          item.metadata.name,
-          {
-            phase: installPhase(item.status?.phase),
-            ready: item.status?.ready ?? false,
-            message: item.status?.message ?? '',
-          },
-        ]),
-      ),
-    );
+    this.health.set(new Map(installed.map((item) => [item.metadata.name, healthOf(item)])));
     this.plugins.set(
       installed
         .map((item) => definitionFor(item.spec.definitionRef.pluginName))
