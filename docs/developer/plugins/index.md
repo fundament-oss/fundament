@@ -172,6 +172,8 @@ Transitions:
 - **failed → uninstalling**: The plugin CR is deleted; cleanup still runs.
 - **uninstalling → failed**: A permanent error during cleanup (e.g. cannot delete resources).
 
+The plugin reports its own phase over `GetStatus`. While it cannot be reached, the controller reads the plugin's Pod and Deployment instead: an image pull failure, a crash loop, an unschedulable pod or a stalled rollout makes the `PluginInstallation` `Degraded` with the cause in `.status.message`, and it stays `Deploying` otherwise. A later poll picks up the recovery once the cause is fixed.
+
 ### Error types
 
 The SDK provides error classification to drive retry behavior:

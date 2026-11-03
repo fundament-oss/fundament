@@ -107,6 +107,12 @@ func ClusterRoleRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 		},
 		{
+			// Read uncached to explain why an unreachable plugin's pod is not starting.
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"list"},
+		},
+		{
 			APIGroups: []string{"apps"},
 			Resources: []string{"deployments"},
 			Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
