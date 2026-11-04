@@ -58,8 +58,8 @@ describe('demo plugin sidebar', () => {
     );
     await registry.loadPlugins('cl-production');
 
-    // Still Pending right after the install: not in the menu yet.
-    expect(nav.projectNav()).toEqual([]);
+    // Still Pending right after the install: in the menu, marked as installing.
+    expect(nav.projectNav().map((group) => group.issue?.label)).toEqual(['Installing…']);
 
     // The registry keeps reading until the install reports Running.
     await vi.advanceTimersByTimeAsync(5000);
@@ -72,6 +72,7 @@ describe('demo plugin sidebar', () => {
         items: [
           { label: 'Certificates', crdPlural: 'certificates.cert-manager.io', icon: 'certificate' },
         ],
+        issue: null,
       },
     ]);
   });

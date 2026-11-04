@@ -122,7 +122,7 @@
               >
                 <!-- First row: the only one about your own clusters rather than
                      about the plugin. -->
-                @if (hasInstalledClusters()) {
+                @if (getInstalledClusterCount() > 0) {
                   <nldd-list-item>
                     <nldd-text-cell
                       min-width="120px"

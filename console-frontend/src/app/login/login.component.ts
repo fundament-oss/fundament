@@ -43,6 +43,15 @@ import '@nldd/design-system/validation-list';
  */
 const DEFAULT_ROUTE = HOME;
 
+/**
+ * Said under the button of the provider the PoC signs people in with during the
+ * fieldlab. Keyed on the provider's display name, so it goes away with Pleio:
+ * remove it once the fieldlab is over.
+ */
+const FIELDLAB_PROVIDER = 'Pleio';
+
+const FIELDLAB_NOTE = 'Logging in with Pleio is temporary, for the duration of the fieldlab.';
+
 /** What the page says when the visitor came here of their own accord. */
 const DEFAULT_DESCRIPTION =
   'The platform your team manages its Kubernetes clusters and projects with.';
@@ -55,7 +64,20 @@ const DEFAULT_DESCRIPTION =
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   // The host is a flex item of nldd-shell, so it needs a display and a share
   // of the height, or the page inside it collapses to its content.
-  styles: ':host { display: block; flex: 1; min-height: 0; }',
+  styles: `
+    :host {
+      display: block;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sso-note {
+      margin: 0;
+      color: var(--semantics-content-secondary-color);
+      font: var(--primitives-font-body-xs-regular-snug);
+      text-align: center;
+    }
+  `,
 })
 export default class LoginComponent implements OnInit {
   private titleService = inject(TitleService);
@@ -104,6 +126,7 @@ export default class LoginComponent implements OnInit {
     return {
       text: `Log in with ${name}`,
       url: this.apiService.ssoLoginUrl(window.location.href),
+      note: name === FIELDLAB_PROVIDER ? FIELDLAB_NOTE : null,
     };
   });
 

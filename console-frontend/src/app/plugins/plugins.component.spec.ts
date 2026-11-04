@@ -141,7 +141,7 @@ describe('PluginsComponent install-status matching', () => {
     await component.ngOnInit();
 
     expect(component.isPluginInstalledAnywhere('acme', 'cert-manager')).toBe(true);
-    expect(component.runningInstallCount('acme', 'cert-manager')).toBe(1);
+    expect(component.installedClusterCount('acme', 'cert-manager')).toBe(1);
   });
 
   // The regression this guards: metadata.name is now the RFC-1123 slug of
@@ -153,7 +153,25 @@ describe('PluginsComponent install-status matching', () => {
     await component.ngOnInit();
 
     expect(component.isPluginInstalledAnywhere('globex', 'cert-manager')).toBe(false);
-    expect(component.runningInstallCount('globex', 'cert-manager')).toBe(0);
+    expect(component.installedClusterCount('globex', 'cert-manager')).toBe(0);
+  });
+
+  it('counts a Degraded installation as installed, as the plugin page does', async () => {
+    const degraded = { ...acmeInstall, status: { phase: 'Degraded', ready: false } };
+    const component = build([acmeCertManager], [degraded]);
+    await component.ngOnInit();
+
+    expect(component.installedClusterCount('acme', 'cert-manager')).toBe(1);
+    expect(component.pluginStatusLabel('acme', 'cert-manager')).toBe('Installed on 1 cluster');
+  });
+
+  it('says an installation still coming up is installing, not that nothing is installed', async () => {
+    const pending = { ...acmeInstall, status: { phase: 'Pending', ready: false } };
+    const component = build([acmeCertManager], [pending]);
+    await component.ngOnInit();
+
+    expect(component.installedClusterCount('acme', 'cert-manager')).toBe(0);
+    expect(component.pluginStatusLabel('acme', 'cert-manager')).toBe('Installing…');
   });
 
   it('falls back to the plugin name, without throwing, for an install whose catalog entry is gone', () => {
@@ -281,6 +299,40 @@ describe('PluginsComponent retry install', () => {
       'ceph-rook',
       'v0.2.0',
       'sha256:abc',
+    );
+  });
+
+  // A poll read that was out when the user acted must not put the row back to
+  // the phase it had before.
+  it('drops a poll read that started before an uninstall', async () => {
+    const failed: PluginInstallationItem = {
+      ...acmeInstall,
+      metadata: { name: 'acme--ceph-rook', uid: 'uid-2' },
+      spec: { definitionRef: { ...acmeInstall.spec.definitionRef, pluginName: 'ceph-rook' } },
+      status: { phase: 'Failed', ready: false },
+    };
+    let resolveRead: (items: PluginInstallationItem[]) => void = () => {};
+    const installationService = {
+      listInstallations: vi.fn().mockResolvedValue([failed]),
+      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const component = build([], [], '', installationService);
+    await component.ngOnInit();
+    component.selectedPlugin = { ...selectedPlugin };
+
+    installationService.listInstallations.mockReturnValueOnce(
+      new Promise<PluginInstallationItem[]>((resolve) => {
+        resolveRead = resolve;
+      }),
+    );
+    const read = component['refreshInstalls']();
+    await component.onUninstallFromCluster(cluster.id);
+    resolveRead([failed]);
+    await read;
+
+    expect(component.installs().find((i) => i.pluginName === 'ceph-rook')?.phase).toBe(
+      'Terminating',
     );
   });
 

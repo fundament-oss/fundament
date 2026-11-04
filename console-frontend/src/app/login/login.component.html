@@ -43,6 +43,10 @@
               [attr.href]="sso.url"
               (click)="onSsoLogin()"
             ></nldd-button>
+            @if (sso.note) {
+              <nldd-spacer size="8"></nldd-spacer>
+              <p class="sso-note">{{ sso.note }}</p>
+            }
             @if (methods()?.password) {
               <nldd-spacer size="24"></nldd-spacer>
               <nldd-divider></nldd-divider>

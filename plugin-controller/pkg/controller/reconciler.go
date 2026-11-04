@@ -181,12 +181,14 @@ func WithDefClient(c defclient.Client) ReconcilerOption {
 	}
 }
 
-func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
+// NewReconciler builds the Reconciler. apiReader reads the plugin's pods when it
+// is unreachable; pass an uncached reader so no cluster-wide Pod informer starts.
+func NewReconciler(c client.Client, apiReader client.Reader, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
 	r := &Reconciler{
 		client:              c,
 		logger:              logger,
 		cfg:                 *cfg,
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(apiReader),
 		uninstallHTTPClient: &http.Client{Timeout: 5 * time.Minute},
 		defCache:            newDefinitionCache(),
 	}
@@ -287,10 +289,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cr.Status.ObservedGeneration = cr.Generation
 		}
 		if started {
-			polled := r.statusPoller.poll(ctx, &cr)
+			polled, reachable := r.statusPoller.poll(ctx, &cr)
 			cr.Status.Phase = polled.Phase
 			cr.Status.Ready = polled.Ready
-			setProgressingCondition(&cr, time.Now())
+			if polled.Phase == pluginsv1.PluginPhaseDegraded {
+				cr.Status.Message = polled.Message + "; " + err.Error()
+			}
+			setProgressingCondition(&cr, reachable, time.Now())
 		}
 		if updateErr := r.client.Status().Update(ctx, &cr); updateErr != nil {
 			// Retry until the phase is saved, even for a permanent error:
@@ -320,11 +325,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Poll plugin status and update CR. statusPoller.poll returns a fresh
 	// PluginInstallationStatus with no Conditions — carry the Conditions
 	// materialised inside reconcileChildren across the assignment.
-	status := r.statusPoller.poll(ctx, &cr)
+	status, reachable := r.statusPoller.poll(ctx, &cr)
 	status.Conditions = cr.Status.Conditions
 	cr.Status = status
 	cr.Status.Namespace = pluginNamespace(cr.Name)
-	setProgressingCondition(&cr, time.Now())
+	setProgressingCondition(&cr, reachable, time.Now())
 	if err := r.client.Status().Update(ctx, &cr); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 	}
@@ -335,13 +340,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // setProgressingCondition records whether the current spec is still on its
 // way up. A new generation, an install or an upgrade, starts it afresh; the
-// first Running or Degraded poll of that generation settles it, and a later
-// Deploying (the poller's answer for a plugin it cannot reach) leaves it
-// settled.
-func setProgressingCondition(cr *pluginsv1.PluginInstallation, now time.Time) {
+// first Running or Degraded report from the plugin itself settles it. A plugin
+// that cannot be reached leaves it as it is, whatever its workload shows. Once
+// settled, the poller reports a plugin it cannot reach as Degraded, not
+// Deploying (see hasSettled).
+func setProgressingCondition(cr *pluginsv1.PluginInstallation, reachable bool, now time.Time) {
 	existing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing)
 	switch {
-	case cr.Status.Phase == pluginsv1.PluginPhaseRunning || cr.Status.Phase == pluginsv1.PluginPhaseDegraded:
+	case reachable && (cr.Status.Phase == pluginsv1.PluginPhaseRunning || cr.Status.Phase == pluginsv1.PluginPhaseDegraded):
 		meta.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
 			Type:               ConditionProgressing,
 			Status:             metav1.ConditionFalse,
@@ -368,10 +374,10 @@ func setProgressingCondition(cr *pluginsv1.PluginInstallation, now time.Time) {
 // again. Only the poll notices the plugin pod turning ready, so while the
 // current spec is on its way up the controller asks at the faster progress
 // interval, and once it has settled it drops back to the steady-state one. The
-// poller also reports Deploying for a plugin it cannot reach, so a plugin that
-// has been up on this spec, or one that has been coming up for longer than
-// progressWindow, is treated as settled: a crash-looping plugin is not polled
-// at the fast pace.
+// poller reports Deploying for a plugin it cannot reach before it first came
+// up, so one that has been coming up for longer than progressWindow is treated
+// as settled too: a plugin that crash-loops from the start is not polled at the
+// fast pace.
 func (r *Reconciler) pollInterval(cr *pluginsv1.PluginInstallation, now time.Time) time.Duration {
 	if cr.Status.Phase != pluginsv1.PluginPhaseDeploying || r.cfg.ProgressPollInterval <= 0 {
 		return r.cfg.StatusPollInterval

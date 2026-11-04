@@ -262,6 +262,8 @@ message PluginComponentMapping {
   string list = 10;
   string detail = 20;
   string create = 30;
+  // Opened only in a console sheet, never routed.
+  string edit = 40;
 }
 message PluginAllowedResource {
   string group = 10;

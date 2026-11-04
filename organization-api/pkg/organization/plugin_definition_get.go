@@ -62,7 +62,9 @@ func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv
 	}
 	components := make(map[string]*organizationv1.PluginComponentMapping, len(def.Spec.CustomComponents))
 	for k, c := range def.Spec.CustomComponents {
-		components[k] = organizationv1.PluginComponentMapping_builder{List: c.List, Detail: c.Detail, Create: c.Create}.Build()
+		components[k] = organizationv1.PluginComponentMapping_builder{
+			List: c.List, Detail: c.Detail, Create: c.Create, Edit: c.Edit,
+		}.Build()
 	}
 	allowed := make([]*organizationv1.PluginAllowedResource, 0, len(def.Spec.AllowedResources))
 	for _, a := range def.Spec.AllowedResources {

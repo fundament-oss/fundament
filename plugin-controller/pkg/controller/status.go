@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
@@ -21,10 +24,11 @@ func pluginServiceURL(installationName string) string {
 
 type statusPoller struct {
 	httpClient connect.HTTPClient
+	reader     client.Reader
 }
 
-func newStatusPoller() *statusPoller {
-	return &statusPoller{httpClient: &http.Client{Timeout: 5 * time.Second}}
+func newStatusPoller(reader client.Reader) *statusPoller {
+	return &statusPoller{httpClient: &http.Client{Timeout: 5 * time.Second}, reader: reader}
 }
 
 func (s *statusPoller) WithClient(client connect.HTTPClient) *statusPoller {
@@ -33,17 +37,16 @@ func (s *statusPoller) WithClient(client connect.HTTPClient) *statusPoller {
 	return s
 }
 
-func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallation) pluginsv1.PluginInstallationStatus {
+// poll returns the installation's status and whether the plugin answered. A plugin
+// that answers is the authority on its own health; otherwise the workload says
+// whether it is still coming up or will not come up without intervention.
+func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallation) (pluginsv1.PluginInstallationStatus, bool) {
 	url := pluginServiceURL(cr.Name)
-	client := pluginmetadatav1connect.NewPluginMetadataServiceClient(s.httpClient, url)
+	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(s.httpClient, url)
 
-	resp, err := client.GetStatus(ctx, &pluginmetadatav1.GetStatusRequest{})
+	resp, err := rpcClient.GetStatus(ctx, &pluginmetadatav1.GetStatusRequest{})
 	if err != nil {
-		return pluginsv1.PluginInstallationStatus{
-			Phase:              pluginsv1.PluginPhaseDeploying,
-			Message:            fmt.Sprintf("plugin not reachable: %v", err),
-			ObservedGeneration: cr.Generation,
-		}
+		return s.unreachableStatus(ctx, cr, err), false
 	}
 
 	phase, err := mapPhase(resp.GetPhase())
@@ -52,7 +55,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 			Phase:              pluginsv1.PluginPhaseDegraded,
 			Message:            err.Error(),
 			ObservedGeneration: cr.Generation,
-		}
+		}, true
 	}
 
 	return pluginsv1.PluginInstallationStatus{
@@ -60,6 +63,51 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 		Message:            resp.GetMessage(),
 		Ready:              phase == pluginsv1.PluginPhaseRunning,
 		ObservedGeneration: cr.Generation,
+	}, true
+}
+
+func (s *statusPoller) unreachableStatus(ctx context.Context, cr *pluginsv1.PluginInstallation, rpcErr error) pluginsv1.PluginInstallationStatus {
+	// Before the current spec first came up, an unreachable plugin is one whose
+	// pod is still starting. After, it is one that stopped answering, typically
+	// a crash loop: reporting that as Deploying would show a broken plugin as
+	// one still being installed.
+	phase := pluginsv1.PluginPhaseDeploying
+	if hasSettled(cr) {
+		phase = pluginsv1.PluginPhaseDegraded
+	}
+	status := pluginsv1.PluginInstallationStatus{
+		Phase:              phase,
+		Message:            fmt.Sprintf("plugin not reachable: %v", rpcErr),
+		ObservedGeneration: cr.Generation,
+	}
+
+	failure, err := s.inspectWorkload(ctx, cr)
+	switch {
+	case err != nil:
+		status.Message = fmt.Sprintf("%s; inspect workload: %v", status.Message, err)
+	case failure != "":
+		status.Phase = pluginsv1.PluginPhaseDegraded
+		status.Message = failure
+	}
+	return status
+}
+
+// hasSettled reports whether the plugin has been up (Running or Degraded) since
+// the current spec was applied, as the Progressing condition records it.
+func hasSettled(cr *pluginsv1.PluginInstallation) bool {
+	if progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing); progressing != nil {
+		return progressing.Status == metav1.ConditionFalse &&
+			progressing.ObservedGeneration == cr.Generation
+	}
+	// A status written before the Progressing condition existed.
+	if cr.Status.ObservedGeneration != cr.Generation {
+		return false
+	}
+	switch cr.Status.Phase {
+	case pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDegraded:
+		return true
+	default:
+		return false
 	}
 }
 

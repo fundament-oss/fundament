@@ -221,11 +221,6 @@ const routes: Routes = [
             loadComponent: () =>
               import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
           },
-          {
-            path: 'plugins',
-            loadComponent: () =>
-              import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
-          },
         ],
       },
       {

@@ -6,20 +6,34 @@
 import { inject, Injectable, signal } from '@angular/core';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type PluginRegistryService from '../plugin-resources/plugin-registry.service';
-import type { ParsedCrd, PluginDefinition } from '../plugin-resources/types';
+import type {
+  ParsedCrd,
+  PluginDefinition,
+  PluginInstallationHealth,
+} from '../plugin-resources/types';
+import { healthOf, installPhase, isInstallTerminating } from '../utils/plugin-install-status';
 import { PLUGIN_INSTALLS_CHANGED_EVENT } from './fake-plugin-installation.service';
 import * as fx from './fixtures';
 
 @Injectable({ providedIn: 'root' })
 export default class FakePluginRegistryService implements Pick<
   PluginRegistryService,
-  'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'crdKind' | 'allPlugins'
+  | 'loadPlugins'
+  | 'loadCrdsForPlugin'
+  | 'reset'
+  | 'getPlugin'
+  | 'getCrd'
+  | 'crdKind'
+  | 'installationHealth'
+  | 'allPlugins'
 > {
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
   // reflects the install the walkthrough performs on its plugin slide.
   private readonly installations = inject(PluginInstallationService);
 
   private plugins = signal<PluginDefinition[]>([]);
+
+  private health = signal<ReadonlyMap<string, PluginInstallationHealth>>(new Map());
 
   private loadedForClusterId: string | null = null;
 
@@ -53,9 +67,14 @@ export default class FakePluginRegistryService implements Pick<
 
     const definitionFor = (pluginName: string) => fx.pluginDefinitions[pluginName];
 
+    // As in the real service: every installation keeps its menu whatever its
+    // health, apart from one being removed.
+    const installed = items.filter(
+      (item) => !isInstallTerminating(installPhase(item.status?.phase)),
+    );
+    this.health.set(new Map(installed.map((item) => [item.metadata.name, healthOf(item)])));
     this.plugins.set(
-      items
-        .filter((item) => item.status.phase === 'Running' && item.status.ready)
+      installed
         .map((item) => definitionFor(item.spec.definitionRef.pluginName))
         // An installed plugin the fixtures give no definition for has no console
         // UI — the same outcome as a definition the catalog cannot resolve.
@@ -93,12 +112,17 @@ export default class FakePluginRegistryService implements Pick<
     this.clearPoll();
     this.loadedForClusterId = null;
     this.plugins.set([]);
+    this.health.set(new Map());
   }
 
   // Keyed on the installation name, as in the real service: routes and nav
   // address an installation, not a plugin name.
   getPlugin(installationName: string): PluginDefinition | undefined {
     return this.plugins().find((p) => p.installationName === installationName);
+  }
+
+  installationHealth(installationName: string): PluginInstallationHealth | undefined {
+    return this.health().get(installationName);
   }
 
   /** `key` is a plural, a kind or a full `plural.group`, as in the real service. */

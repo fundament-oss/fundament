@@ -2,6 +2,7 @@
      gets the page padding and column the native forms have. -->
 <nldd-page>
   <nldd-simple-section>
+    <app-plugin-status-banner [installationName]="pluginName()" />
     @if (errorMessage()) {
       <nldd-banner
         variant="critical"

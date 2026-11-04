@@ -568,7 +568,7 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           counting,
 		defCache:            newDefinitionCache(),
@@ -621,7 +621,7 @@ func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -664,7 +664,7 @@ func reconcileWithDefClient(t *testing.T, defClient defclient.Client, pin string
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           defClient,
 		defCache:            newDefinitionCache(),
@@ -730,8 +730,9 @@ func TestReconcile_StartedInstallKeepsRetrying(t *testing.T) {
 	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest}, "sha256:definitely-not-what-the-catalog-serves", runningOnGeneration(1))
 	require.NoError(t, err, "a started install is retried at the poll pace, not the workqueue backoff")
 	assert.Equal(t, 30*time.Second, result.RequeueAfter)
-	// The test poller cannot reach the plugin, so a fresh poll reads Deploying.
-	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase, "health must still be polled")
+	// The test poller cannot reach the plugin, which was up on this spec, so a
+	// fresh poll reads Degraded.
+	assert.Equal(t, pluginsv1.PluginPhaseDegraded, got.Status.Phase, "health must still be polled")
 	assert.False(t, got.Status.Ready)
 	assert.Contains(t, got.Status.Message, "hash mismatch")
 }
@@ -845,7 +846,7 @@ func TestPollInterval(t *testing.T) {
 				continue
 			}
 			cr.Status.Phase = phase
-			setProgressingCondition(cr, now)
+			setProgressingCondition(cr, phase != pluginsv1.PluginPhaseDeploying, now)
 			now = now.Add(time.Minute)
 		}
 		return r.pollInterval(cr, now)
@@ -874,6 +875,42 @@ func TestPollInterval(t *testing.T) {
 	// Unset falls back to the steady-state interval rather than a hot loop.
 	r.cfg.ProgressPollInterval = 0
 	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying))
+}
+
+// TestStatusPoller_Unreachable verifies that a plugin that cannot be reached
+// reads as still on its way only until it first came up on the current spec:
+// after that it is broken, and must not show as one still being installed.
+func TestStatusPoller_Unreachable(t *testing.T) {
+	// No pods or deployment: nothing in the workload says it cannot start.
+	reader := fake.NewClientBuilder().WithScheme(newTestScheme()).Build()
+	poller := newStatusPoller(reader).WithClient(unreachableHTTPClient())
+
+	tests := map[string]struct {
+		mutate func(*pluginsv1.PluginInstallation)
+		want   pluginsv1.PluginPhase
+	}{
+		"never polled":          {mutate: func(*pluginsv1.PluginInstallation) {}, want: pluginsv1.PluginPhaseDeploying},
+		"up on this spec":       {mutate: runningOnGeneration(1), want: pluginsv1.PluginPhaseDegraded},
+		"up on a previous spec": {mutate: func(cr *pluginsv1.PluginInstallation) { runningOnGeneration(1)(cr); cr.Generation = 2 }, want: pluginsv1.PluginPhaseDeploying},
+		"still coming up":       {mutate: func(cr *pluginsv1.PluginInstallation) { setProgressingCondition(cr, false, time.Now()) }, want: pluginsv1.PluginPhaseDeploying},
+		"up before Progressing existed": {mutate: func(cr *pluginsv1.PluginInstallation) {
+			cr.Status.Phase = pluginsv1.PluginPhaseRunning
+			cr.Status.ObservedGeneration = cr.Generation
+		}, want: pluginsv1.PluginPhaseDegraded},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cr := testCR()
+			tt.mutate(cr)
+
+			got, reachable := poller.poll(context.Background(), cr)
+			assert.False(t, reachable)
+			assert.Equal(t, tt.want, got.Phase)
+			assert.False(t, got.Ready)
+			assert.Contains(t, got.Message, "plugin not reachable")
+		})
+	}
 }
 
 func TestMapPhase(t *testing.T) {
@@ -1376,7 +1413,7 @@ func TestReconcile_WaitsForTerminatingNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1432,7 +1469,7 @@ func reconcileDevModeCR(t *testing.T, cr *pluginsv1.PluginInstallation, manifest
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: allowDevMode},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1470,7 +1507,7 @@ func TestReconcile_DevModeConditionClearsWhenAnnotationRemoved(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1603,7 +1640,7 @@ func TestReconcile_DevModeConditionSetOnEarlyFailure(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),

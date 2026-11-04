@@ -86,6 +86,7 @@ func TestDefinition(t *testing.T) {
 				"list":   mapping.List,
 				"detail": mapping.Detail,
 				"create": mapping.Create,
+				"edit":   mapping.Edit,
 			} {
 				if file == "" {
 					continue
@@ -109,7 +110,7 @@ func TestDefinition(t *testing.T) {
 		t.Parallel()
 		referenced := make(map[string]struct{})
 		for _, mapping := range def.Spec.CustomComponents {
-			for _, file := range []string{mapping.List, mapping.Detail, mapping.Create} {
+			for _, file := range []string{mapping.List, mapping.Detail, mapping.Create, mapping.Edit} {
 				if file != "" {
 					referenced[file] = struct{}{}
 				}
@@ -139,6 +140,7 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/diskpools-detail.html",
 		"console/diskpools-detail.js",
 		"console/diskpools-list.js",
+		"console/diskpool-forms.js",
 		// The blockstorages-*/filestorages-* files are thin wrappers; the page
 		// code they share lives in consumer-pages.js.
 		"console/consumer-pages.js",
@@ -149,6 +151,7 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/objectstorages-detail.js",
 		"console/objectstorages-list.js",
 		"console/bucket-pages.js",
+		"console/sheet.js",
 	} {
 		src, err := os.ReadFile(path) //nolint:gosec // test helper, paths are not user-controlled
 		require.NoError(t, err)

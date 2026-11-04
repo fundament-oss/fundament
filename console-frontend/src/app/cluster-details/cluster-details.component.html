@@ -454,14 +454,17 @@
                   ></nldd-badge>
                 }
               </h3>
+              <!-- Installing runs through a plugin's own page, the one place
+                   that picks a version, asks for config and offers retry and
+                   uninstall. So this starts where plugins are found, the same
+                   as the sidebar's "Install plugins…". The marketplace is
+                   another site, so only the console's own page opens in place. -->
               <nldd-button
                 slot="end"
-                [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/plugins')"
-                (click)="
-                  pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')
-                "
-                text="Edit"
-                start-icon="pencil"
+                [attr.href]="browsePluginsUrl || pageNav.path('/plugins')"
+                (click)="browsePluginsUrl || pageNav.navigate($event, '/plugins')"
+                text="Install plugins…"
+                start-icon="add-plugin"
                 appearance="secondary"
                 size="sm"
               ></nldd-button>
@@ -476,15 +479,19 @@
               ></nldd-inline-dialog>
               <nldd-spacer size="16"></nldd-spacer>
             } @else if (installedPlugins().length > 0) {
-              <!-- Informational only: these cards report what is installed, editing
-                   runs through the Edit button above. So no href and no button. -->
+              <!-- Each card opens the plugin's page, whose Manage sheet updates,
+                   retries or uninstalls it on this cluster. -->
               <nldd-collection
                 layout="grid"
                 item-min-width="320px"
                 gap="16"
               >
                 @for (plugin of installedPlugins(); track plugin.id) {
-                  <nldd-card>
+                  <nldd-card
+                    [attr.href]="pageNav.path('/plugins/' + plugin.id)"
+                    [attr.accessible-label]="pluginDisplayName(plugin)"
+                    (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
+                  >
                     <nldd-container padding="16">
                       <app-plugin-icon
                         [name]="pluginIconName(plugin.name)"
@@ -552,7 +559,7 @@
     }
   </nldd-simple-section>
 </nldd-page>
-<!-- The node pool and plugin editors, each opening as a sheet over this page. -->
+<!-- The node pool and namespace editors, each opening as a sheet over this page. -->
 <router-outlet />
 <!-- Nothing was downloaded, so there is nothing to lay out: the alert says what
      went wrong and offers the way out. -->

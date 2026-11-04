@@ -644,9 +644,24 @@
                        heading as "Projects" one pane to the left. -->
                     @for (group of pluginNavService.projectNav(); track group.installationName) {
                       <nldd-spacer size="24"></nldd-spacer>
-                      <nldd-title size="5">
-                        <h2>{{ group.label }}</h2>
-                      </nldd-title>
+                      <!-- A plugin that is not running as it should keeps its
+                           screens, with its state next to its name: the reason
+                           is in the tooltip and on the plugin's own pages. -->
+                      <div class="flex items-center gap-2">
+                        <nldd-title size="5">
+                          <h2>{{ group.label }}</h2>
+                        </nldd-title>
+                        @if (group.issue; as issue) {
+                          <nldd-tooltip [attr.text]="issue.message || issue.label">
+                            <nldd-badge
+                              size="sm"
+                              [attr.color]="issue.badgeColor"
+                              [attr.text]="issue.label"
+                              [attr.pulse]="issue.inProgress ? '' : null"
+                            ></nldd-badge>
+                          </nldd-tooltip>
+                        }
+                      </div>
                       <nldd-spacer size="8"></nldd-spacer>
                       <nldd-list
                         type="navigation"
