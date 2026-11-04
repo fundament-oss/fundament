@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -32,7 +32,7 @@ func (s *Server) GetProjectByName(
 	}
 
 	// Auth is done after the DB call because we don't know the project ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(project.ID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ProjectCanView, project.ID); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +47,7 @@ func (s *Server) GetProject(
 ) (*organizationv1.GetProjectResponse, error) {
 	projectID := uuid.MustParse(req.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ProjectCanView, projectID); err != nil {
 		return nil, err
 	}
 

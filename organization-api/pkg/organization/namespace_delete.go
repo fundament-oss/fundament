@@ -7,7 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,7 +18,7 @@ func (s *Server) DeleteNamespace(
 ) (*organizationv1.DeleteNamespaceResponse, error) {
 	namespaceID := uuid.MustParse(req.GetNamespaceId())
 
-	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Namespace(namespaceID)); err != nil {
+	if err := s.checkPermission(ctx, actions.NamespaceCanDelete, namespaceID); err != nil {
 		return nil, err
 	}
 

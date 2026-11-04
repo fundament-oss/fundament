@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -23,7 +23,7 @@ func (s *Server) CreateProject(
 	req *organizationv1.CreateProjectRequest,
 ) (*organizationv1.CreateProjectResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
-	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermissionWithRetry(ctx, actions.ClusterCanCreateProject, clusterID); err != nil {
 		return nil, err
 	}
 

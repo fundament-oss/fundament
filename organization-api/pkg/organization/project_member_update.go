@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -27,7 +27,7 @@ func (s *Server) UpdateProjectMemberRole(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ProjectMember(memberID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ProjectMemberCanEdit, memberID); err != nil {
 		return nil, err
 	}
 

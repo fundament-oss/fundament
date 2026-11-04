@@ -7,7 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -18,7 +18,7 @@ func (s *Server) RevokeAPIKey(
 ) (*organizationv1.RevokeAPIKeyResponse, error) {
 	apiKeyID := uuid.MustParse(req.GetApiKeyId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.ApiKey(apiKeyID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ApiKeyCanEdit, apiKeyID); err != nil {
 		return nil, err
 	}
 

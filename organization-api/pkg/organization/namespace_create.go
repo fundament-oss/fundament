@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -26,7 +26,7 @@ func (s *Server) CreateNamespace(
 
 	// Retry: a namespace is often created right after its project, before the
 	// project's authz tuple has synced to OpenFGA (see checkPermissionWithRetry).
-	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateNamespace(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermissionWithRetry(ctx, actions.ProjectCanCreateNamespace, projectID); err != nil {
 		return nil, err
 	}
 

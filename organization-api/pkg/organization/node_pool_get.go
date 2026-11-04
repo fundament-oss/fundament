@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -21,7 +21,7 @@ func (s *Server) GetNodePool(
 ) (*organizationv1.GetNodePoolResponse, error) {
 	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.NodePool(nodePoolID)); err != nil {
+	if err := s.checkPermission(ctx, actions.NodePoolCanView, nodePoolID); err != nil {
 		return nil, err
 	}
 

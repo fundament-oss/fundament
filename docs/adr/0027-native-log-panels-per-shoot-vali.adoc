@@ -59,7 +59,7 @@ Option 1, with Option 4's mechanism retained for the plugin-logs slice: organiza
 
 Datasource discovery probes `/api/datasources/proxy/N/vali/api/v1/labels` for ascending N with the monitoring credentials; the first id that answers is cached (TTL, singleflight) and invalidated on 401 (credential rotation) or 404/meta-data errors (id drift). Per-cluster failures degrade to empty responses with a `LOG_BACKEND_NONE` marker — never a failed RPC or dead stream.
 
-Access requires edit permission on the cluster (`can_edit`), not view: issue #978 restricts logs to cluster admins. A dedicated `can_view_logs` relation in the authorization model is the noted follow-up if log access ever needs its own role.
+Access requires `can_view_logs` on the cluster, not `can_view`: issue #978 restricts logs to cluster admins, so the relation is granted to organization admins.
 
 == Consequences
 

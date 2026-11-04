@@ -28,6 +28,7 @@ import (
 
 type testEnv struct {
 	server    *httptest.Server
+	org       *organization.Server
 	adminPool *pgxpool.Pool
 	jwtSecret []byte
 	orgs      map[uuid.UUID]string
@@ -53,6 +54,7 @@ type apiOptions struct {
 	gardenerClient  gardener.Client
 	mockLogsClient  *logs.MockClient
 	apiKeyMaxExpiry time.Duration
+	serverOptions   []organization.Option
 }
 
 type APIOption func(*apiOptions)
@@ -95,6 +97,12 @@ func WithUser(args *UserArgs) APIOption {
 func WithClock(c clock.Clock) APIOption {
 	return func(o *apiOptions) {
 		o.clock = c
+	}
+}
+
+func WithServerOptions(serverOptions ...organization.Option) APIOption {
+	return func(o *apiOptions) {
+		o.serverOptions = append(o.serverOptions, serverOptions...)
 	}
 }
 
@@ -191,7 +199,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		idempotencyStore = idempotency.NewStore(testDb.Pool, idempotency.Config{}, testLogger)
 	}
 
-	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil, idempotencyStore)
+	organizationServer, err := organization.New(testLogger, organizationCfg, testDb, nil, idempotencyStore, opts.serverOptions...)
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(organizationServer.Handler())
@@ -234,6 +242,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	return &testEnv{
 		server:    ts,
+		org:       organizationServer,
 		adminPool: adminPool,
 		jwtSecret: jwtSecret,
 		orgs:      opts.organizations,

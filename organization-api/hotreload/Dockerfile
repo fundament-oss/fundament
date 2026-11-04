@@ -4,6 +4,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY organization-api/ ./organization-api/
+COPY authz-api/ ./authz-api/
 COPY plugin-sdk/ ./plugin-sdk/
 COPY common/ ./common/
 # Bake $GOCACHE at build time so air's first in-container build is a cache hit

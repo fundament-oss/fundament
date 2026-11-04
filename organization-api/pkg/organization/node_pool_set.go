@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -36,7 +36,7 @@ func (s *Server) SetNodePools(
 	// Retry: the add-cluster wizard sets the pools right after creating the
 	// cluster, before its authz tuple has synced (see checkPermissionWithRetry).
 	// A cluster admin may create, edit and delete its pools alike.
-	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateNodePool(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermissionWithRetry(ctx, actions.ClusterCanCreateNodePool, clusterID); err != nil {
 		return nil, err
 	}
 

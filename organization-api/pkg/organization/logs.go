@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
@@ -135,7 +135,7 @@ func (s *Server) QueryLogs(
 ) (*organizationv1.QueryLogsResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ClusterCanViewLogs, clusterID); err != nil {
 		return nil, err
 	}
 	if err := s.assertClusterExists(ctx, clusterID); err != nil {
@@ -194,7 +194,7 @@ func (s *Server) TailLogs(
 ) error {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ClusterCanViewLogs, clusterID); err != nil {
 		return err
 	}
 	if err := s.assertClusterExists(ctx, clusterID); err != nil {
@@ -265,7 +265,7 @@ func (s *Server) GetLogLabels(
 ) (*organizationv1.GetLogLabelsResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ClusterCanViewLogs, clusterID); err != nil {
 		return nil, err
 	}
 	if err := s.assertClusterExists(ctx, clusterID); err != nil {
@@ -322,7 +322,7 @@ func (s *Server) GetLogHistogram(
 ) (*organizationv1.GetLogHistogramResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ClusterCanViewLogs, clusterID); err != nil {
 		return nil, err
 	}
 	if err := s.assertClusterExists(ctx, clusterID); err != nil {
