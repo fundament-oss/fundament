@@ -227,7 +227,11 @@ export default class ResourceDetailComponent implements OnInit {
     const load = this.loads;
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    // What was shown is another resource's, or another cluster's.
+    // What was shown is another resource's, or another cluster's. The CRD
+    // too: the route may name another kind, whose schema and custom page
+    // the previous one's must not stand in for, nor be polled with should
+    // this load fail.
+    this.crdDef.set(undefined);
     this.resource.set(undefined);
 
     try {
