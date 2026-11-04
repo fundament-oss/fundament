@@ -85,6 +85,7 @@ async function render(fixture: ComponentFixture<LoginComponent>) {
     ssoButtons: Array.from(page.querySelectorAll('nldd-button[href]')) as HTMLElement[],
     form: page.querySelector('nldd-form'),
     divider: page.querySelector('nldd-divider'),
+    note: page.querySelector('.sso-note'),
   };
 }
 
@@ -134,6 +135,22 @@ describe('LoginComponent', () => {
     expect(url.searchParams.get('return_to')).toBe(window.location.href);
     expect(form).toBeNull();
     expect(divider).toBeNull();
+  });
+
+  it('says under the Pleio button that it is a fieldlab login', async () => {
+    const { fixture } = await openLogin(false, { password: false, provider_name: 'Pleio' });
+
+    const { note } = await render(fixture);
+
+    expect(note?.textContent).toContain('fieldlab');
+  });
+
+  it('says nothing under the button of any other provider', async () => {
+    const { fixture } = await openLogin(false, { password: true, provider_name: 'Dex' });
+
+    const { note } = await render(fixture);
+
+    expect(note).toBeNull();
   });
 
   it('shows only the form where Dex is the identity provider', async () => {

@@ -67,8 +67,10 @@ plugins/storage/ceph-rook/
 ├── storageclass_apply.go    # Create/reconcile a StorageClass its owner already owns
 ├── console/                 # Hand-written console pages (no build step)
 │   ├── _shared.js           # SDK loader, escaping, navigation helpers
-│   ├── consumer-pages.js    # List/detail page factory for the consumer kinds; create/edit open in sheets
-│   ├── bucket-pages.js      # Buckets section (ObjectBucketClaims) on the ObjectStorage detail page
+│   ├── consumer-pages.js    # List/detail page factory and create/edit forms for the consumer kinds
+│   ├── bucket-pages.js      # Buckets section (ObjectBucketClaims) on the ObjectStorage detail page, and its create/detail forms
+│   ├── diskpool-forms.js    # DiskPool create/edit forms
+│   ├── sheet.{html,js}      # Every sheet: picks the form by kind and view
 │   ├── disk-picker.js       # Shared disk-selection widget (pool/consumer create+edit)
 │   ├── disks-list.{html,js}
 │   ├── disks-detail.{html,js}
@@ -97,10 +99,14 @@ a test file of their own.
 | `ObjectStorage` | list, detail, create, **edit**, embedded Buckets section |
 | `Disk` | list, **detail** |
 
-**Create and edit** both run in an `<nldd-sheet>` side panel over the list or
-detail page (the shared NLDD Design System bundle the console serves per
-FUN-18), so there are no routed create pages and `ComponentMapping`'s `create`
-slots go unused. `DiskPool` edits its disk
+**Create and edit** open in a console sheet over the list and detail pages,
+with `fundament.openSheet()` (see [Sheets](console-integration#sheets)). Every
+`create` and `edit` in `customComponents` names the same `sheet.html`, whose
+`sheet.js` picks the form from the kind and view the console opens it with. The forms
+are built from the shared NLDD Design System bundle the console serves per
+FUN-18. The create pages work on their routed create page too. The Buckets
+section opens the `ObjectBucketClaim` create and detail pages the same way,
+handing the create page the store's StorageClass in `params`. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
 replicas and whether its StorageClass is the cluster default; `FileStorage`
 edits replicas and metadata server count; `ObjectStorage` edits replicas and
@@ -136,8 +142,12 @@ no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `style` attributes** — both are blocked. Events are wired with
 `addEventListener` and styling comes from the `.plugin-*` classes in
 `plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()`,
-which posts to `window.fundament.parentOrigin` rather than `*`; create and
-edit never navigate, they open an `<nldd-sheet>` in place.
+which posts to `window.fundament.parentOrigin` rather than `*`; from a
+consumer or DiskPool create sheet the console closes the sheet and opens the
+new resource. A bucket create sheet instead opens the new claim's detail sheet
+in its place. Create and edit
+are opened with `fundament.openSheet()`, and the page under the sheet lists
+again on `fundament.onResourcesChanged()`.
 
 ## Disk → DiskPool → consumer-kind flow
 

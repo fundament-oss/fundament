@@ -113,15 +113,18 @@
                 [attr.color]="cluster.running ? null : 'secondary'"
               ></nldd-icon-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <!-- A Degraded or Failed row says why under the name; the name
+                   then takes the slack, so the reason has room to wrap. -->
               <nldd-text-cell
-                width="fit-content"
+                [attr.width]="issueMessage(cluster) ? 'full' : 'fit-content'"
                 [attr.color]="cluster.running ? null : 'secondary'"
                 [attr.text]="cluster.name"
+                [attr.supporting-text]="issueMessage(cluster) || null"
               ></nldd-text-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <!-- The tag cell takes the slack, so the tag sits right behind the
                    name and the action stays pinned to the right. -->
-              <nldd-cell width="full">
+              <nldd-cell [attr.width]="issueMessage(cluster) ? 'fit-content' : 'full'">
                 <!-- Only for states no button can express: progress lives in the
                      button's own loading state, and "installed" is already said
                      by the version and the Uninstall button. -->
@@ -144,6 +147,10 @@
                   ></nldd-badge>
                 }
               </nldd-cell>
+              <!-- Without it a row that says why, whose tag cell is only as wide
+                   as the tag, puts the tag flush against the version or the
+                   Retry button, and its ring over them. -->
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
               @if (showsVersion(cluster)) {
                 <!-- Next to the action rather than the cluster name, where a bare
                      version number would read as the cluster's own Kubernetes
@@ -223,10 +230,14 @@
                       placement="bottom-end"
                       accessible-label="Version"
                     >
-                      <nldd-menu-item
-                        [attr.text]="versions()[0].version"
-                        (click)="onInstallOne(cluster.id, versions()[0])"
-                      ></nldd-menu-item>
+                      <!-- The button renders, disabled, before the versions
+                           load, so there may be no newest one yet. -->
+                      @if (versions()[0]; as newest) {
+                        <nldd-menu-item
+                          [attr.text]="newest.version"
+                          (click)="onInstallOne(cluster.id, newest)"
+                        ></nldd-menu-item>
+                      }
                       @if (earlierVersions().length > 0) {
                         <nldd-menu-group text="Earlier versions">
                           @for (v of earlierVersions(); track v.version) {

@@ -2,6 +2,7 @@ import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginNavGroup } from './types';
 import { crdRefToLabel, kindToLabel } from './crd-schema.utils';
+import { installIssue } from '../utils/plugin-install-status';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginNavService {
@@ -30,6 +31,7 @@ export default class PluginNavService {
         crdPlural: menuItem.crd,
         icon: menuItem.icon,
       })),
+      issue: installIssue(this.registry.installationHealth(plugin.installationName)),
     }));
   }
 

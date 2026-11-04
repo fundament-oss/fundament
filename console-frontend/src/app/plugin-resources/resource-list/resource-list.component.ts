@@ -6,15 +6,20 @@ import {
   signal,
   effect,
   untracked,
+  DestroyRef,
   OnInit,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
+import ProjectNamespacesService from '../project-namespaces.service';
+import ProjectNamespacesLoader from '../project-namespaces-loader';
+import pollResources from '../resource-poll';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
@@ -73,7 +78,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent],
+  imports: [RouterLink, PluginIframeComponent, PluginStatusBannerComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -103,6 +108,9 @@ export default class ResourceListComponent implements OnInit {
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
+  /** '' on the organization-level route, which has no project. */
+  private projectId = computed(() => this.routeParams().get('id') ?? '');
+
   plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   isLoading = signal(false);
@@ -122,6 +130,21 @@ export default class ResourceListComponent implements OnInit {
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
+
+  // The project's namespaces, forwarded to the plugin iframe for the create
+  // sheet a custom list opens, which gets them from the list as the routed
+  // create page gets them from its own route. The iframe is held back until
+  // they have settled.
+  private projectNamespaces = new ProjectNamespacesLoader(
+    inject(ProjectNamespacesService),
+    'ResourceList',
+  );
+
+  namespaces = this.projectNamespaces.names;
+
+  namespaceDisplayNames = this.projectNamespaces.displayNames;
+
+  namespacesSettled = this.projectNamespaces.settled;
 
   installationId = computed(() => this.plugin()?.installationId ?? '');
 
@@ -192,6 +215,12 @@ export default class ResourceListComponent implements OnInit {
       this.titleService.setTitle(this.kindLabel());
     });
 
+    // Another project's list reuses this component, so follow the route.
+    effect(() => {
+      const projectId = this.projectId();
+      untracked(() => this.projectNamespaces.load(projectId));
+    });
+
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
       const pluginName = this.pluginName();
@@ -203,6 +232,8 @@ export default class ResourceListComponent implements OnInit {
         });
       }
     });
+
+    pollResources(inject(DestroyRef), () => this.refreshResources());
   }
 
   async ngOnInit(): Promise<void> {
@@ -300,16 +331,63 @@ export default class ResourceListComponent implements OnInit {
     return null;
   }
 
-  // Refreshes the list after a delete. The CRD schema and plugin registry are
-  // unchanged, so re-list resources only rather than re-running the full
-  // loadCrdsAndResources (which re-fetches the CRD schema).
-  private async reloadResources(crd: ParsedCrd, clusterId: string): Promise<void> {
+  /**
+   * The poll's refresh, so a status column follows the cluster. Re-lists the
+   * resources only: the CRD schema is unchanged, so this skips the full
+   * loadCrdsAndResources and its loading state, which would blank the list
+   * every few seconds. Only for the generated list; a custom list UI reads its
+   * own resources. A failed poll keeps what is shown, and the next one tries
+   * again. Until the CRD has been read it retries the whole load instead: one
+   * that failed, or found the CRD not served yet (a plugin still deploying, or
+   * Failed), would otherwise stay empty after the plugin recovers.
+   */
+  private async refreshResources(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (clusterId === null || this.isLoading()) return;
+    if (!crd) {
+      await this.retryLoad(clusterId);
+      return;
+    }
+    if (this.customUIUrl()) return;
     try {
-      this.resources.set(await this.loader.loadResources(this.pluginName(), crd, clusterId));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[ResourceList] Failed to reload resources:', err);
-      this.errorMessage.set('Failed to load resources. Please try again.');
+      const resources = await this.loader.loadResources(this.pluginName(), crd, clusterId);
+      // Moved on to another kind or cluster while this was out.
+      if (this.crdDef() !== crd || this.clusterContext.selectedClusterId() !== clusterId) return;
+      this.resources.set(resources);
+    } catch {
+      // Kept as is; see above.
+    }
+  }
+
+  /** loadCrdsAndResources without its loading state, which would put a spinner
+   *  over the error every few seconds. Clears the error once the load works. */
+  private async retryLoad(clusterId: string): Promise<void> {
+    const pluginName = this.pluginName();
+    const resourceKind = this.resourceKind();
+    if (!pluginName || !resourceKind) return;
+    try {
+      const { crd, resources } = await this.loader.loadCrdAndResources(
+        pluginName,
+        resourceKind,
+        clusterId,
+      );
+      // Moved on, or a full load started, while this was out.
+      if (
+        !crd ||
+        this.crdDef() !== undefined ||
+        this.isLoading() ||
+        this.pluginName() !== pluginName ||
+        this.resourceKind() !== resourceKind ||
+        this.clusterContext.selectedClusterId() !== clusterId
+      ) {
+        return;
+      }
+      this.crdDef.set(crd);
+      this.resources.set(resources);
+      this.errorMessage.set(null);
+    } catch {
+      // Kept as is; see above.
     }
   }
 }

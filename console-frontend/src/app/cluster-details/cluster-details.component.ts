@@ -48,6 +48,7 @@ import {
   shouldPollStatus,
 } from '../utils/cluster-status';
 import getPluginIconName from '../utils/plugin-icon-name';
+import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -287,6 +288,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   protected pageNav = inject(PageNavService);
 
   protected readonly mockMetrics = inject(ConfigService).getConfig().mockMetrics ?? false;
+
+  /** The marketplace, when there is one; '' sends "Install plugins…" to the
+   *  console's own plugins page (see injectBrowsePluginsUrl). */
+  protected readonly browsePluginsUrl = injectBrowsePluginsUrl();
 
   /**
    * nldd-top-title-bar resolves `collapse-anchor` once, when the attribute

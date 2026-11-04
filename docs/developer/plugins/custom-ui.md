@@ -19,9 +19,13 @@ console/
 ├── <plural>-list.js
 ├── <plural>-detail.html     customComponents.<Kind>.detail
 ├── <plural>-detail.js
-├── <plural>-create.html     customComponents.<Kind>.create
-└── <plural>-create.js
+├── <plural>-create.html     customComponents.<Kind>.create (route or sheet)
+├── <plural>-create.js
+├── <plural>-edit.html       customComponents.<Kind>.edit (sheet only)
+└── <plural>-edit.js
 ```
+
+- An edit page only ever opens in a [sheet](console-integration#sheets), with `fundament.openSheet({ view: 'edit', resource })`, and only when `customComponents.<Kind>.edit` names it.
 
 - Each HTML page loads its logic from a `.js` module: the page CSP blocks inline scripts and styles.
 - Working example: [`plugins/cert-manager/console/`](https://github.com/fundament-oss/fundament/tree/master/plugins/cert-manager/console).

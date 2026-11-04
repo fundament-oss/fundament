@@ -3,7 +3,8 @@
 //
 // The plugin CSP has no 'unsafe-inline', which rules out onclick= and inline
 // style alike: events go through addEventListener, styling through the
-// <nldd-*> components in sheets and the .plugin-* classes in plugin-sdk.css.
+// <nldd-*> components on the sheet pages and the .plugin-* classes in
+// plugin-sdk.css.
 
 // Loads the plugin SDK v1. The iframe runs on the plugin-proxy origin, which
 // also serves the SDK, so these bare paths satisfy script-src 'self'. The /v1/
@@ -25,9 +26,9 @@ export function loadSdk() {
 
 // Loads the shared NLDD Design System bundle served next to the SDK
 // (FUN-18) and mirrors the body's light/dark class into data-scheme.
-// Memoized and loaded lazily from the sheet-opening handlers, so a host
-// without the bundle still serves the read-only views; the stylesheet is
-// awaited too, or sheets render unstyled with the error swallowed.
+// Memoized and loaded only by sheet.js, so a host without the bundle
+// still serves the read-only views; the stylesheet is awaited too, or a form
+// renders unstyled with the error swallowed.
 let nlddLoad;
 let nlddThemeSync = false;
 export function ensureNldd() {
@@ -70,78 +71,6 @@ export function ensureNldd() {
   return nlddLoad;
 }
 
-// Surfaces a sheet-open failure without killing the page: one reused
-// .plugin-error at the top of the page card.
-export function showSheetError(err) {
-  const card = document.querySelector('.plugin-card');
-  let box = card?.querySelector('[data-role="sheet-error"]');
-  if (!box && card) {
-    box = document.createElement('div');
-    box.className = 'plugin-error';
-    box.dataset.role = 'sheet-error';
-    card.prepend(box);
-  }
-  if (box) box.textContent = `Cannot open the editor: ${err?.message ?? err}`;
-}
-
-// Opens a right-hand <nldd-sheet> appended to the document root (it is a
-// <dialog>; inside the content flow it would steal layout height). Loads the
-// design-system bundle on first use; on failure it surfaces the error and
-// returns null, so callers bail with `if (!sheet) return`. Otherwise returns
-// the content container and a close(); the element removes itself after the
-// closing animation.
-//
-// The host sizes the iframe to this document's height, so on a short page
-// the sheet, confined to the iframe's viewport, would render a few rows
-// tall; growing the body makes the host grow the iframe. CSSOM property
-// assignment, not style attributes: the CSP blocks only the latter.
-let openSheetCount = 0;
-let preSheetMinHeight = '';
-
-export async function openSheet({ label, width = '480px', minHeight = '640px' }) {
-  try {
-    await ensureNldd();
-  } catch (err) {
-    showSheetError(err);
-    return null;
-  }
-  // Only the outermost open/last close touch the body: chained sheets
-  // would otherwise capture the inflated value as "previous" and latch it.
-  if (openSheetCount === 0) {
-    preSheetMinHeight = document.body.style.minHeight;
-    document.body.style.minHeight = minHeight;
-  }
-  openSheetCount += 1;
-
-  const sheet = document.createElement('nldd-sheet');
-  sheet.setAttribute('placement', 'right');
-  sheet.setAttribute('width', width);
-  sheet.setAttribute('accessible-label', label);
-  const body = document.createElement('div');
-  body.className = 'plugin-card';
-  body.style.maxHeight = '100dvh';
-  body.style.overflowY = 'auto';
-  if (label) {
-    const title = document.createElement('nldd-title');
-    title.setAttribute('size', '3');
-    const heading = document.createElement('h2');
-    heading.textContent = label;
-    title.appendChild(heading);
-    const spacer = document.createElement('nldd-spacer');
-    spacer.setAttribute('size', '16');
-    body.append(title, spacer);
-  }
-  sheet.appendChild(body);
-  document.body.appendChild(sheet);
-  sheet.addEventListener('close', () => {
-    openSheetCount -= 1;
-    if (openSheetCount === 0) document.body.style.minHeight = preSheetMinHeight;
-    sheet.remove();
-  });
-  sheet.show();
-  return { body, close: () => sheet.hide() };
-}
-
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -161,7 +90,7 @@ export function errorRow(colspan, err) {
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
 }
 
-// The block-level sibling of errorRow, for detail views and sheets.
+// The block-level sibling of errorRow, for detail views and sheet pages.
 export function errorBox(err, prefix = 'Failed to load') {
   return `<div class="plugin-error">${escapeHtml(`${prefix}: ${err?.message ?? err}`)}</div>`;
 }
@@ -240,7 +169,7 @@ export function errorBannerHtml(id) {
   return `<nldd-banner id="${id}" variant="critical" hidden></nldd-banner>`;
 }
 
-// A standalone critical banner, for a sheet whose data failed to load.
+// A standalone critical banner, for a sheet page whose data failed to load.
 export function loadErrorBanner(message) {
   const banner = document.createElement('nldd-banner');
   banner.setAttribute('variant', 'critical');
@@ -340,7 +269,7 @@ function clearFieldError(el) {
 // gets the control's trimmed value and returns an error message or null; each
 // failure shows under its own field and the first failing field takes focus.
 // A failing action shows in the critical errorBanner. On success the button
-// keeps loading: the action closes the sheet, navigates or re-renders.
+// keeps loading: the action closes the sheet or navigates.
 export function wireSubmit(form, { button, errorBanner, failPrefix, checks = [], action }) {
   // A field is judged on submit, and stops being wrong the moment it is edited.
   for (const [control] of checks) {

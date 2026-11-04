@@ -62,6 +62,7 @@ func TestDefinition(t *testing.T) {
 				"list":   mapping.List,
 				"detail": mapping.Detail,
 				"create": mapping.Create,
+				"edit":   mapping.Edit,
 			} {
 				if file == "" {
 					continue
@@ -88,7 +89,7 @@ func TestDefinition(t *testing.T) {
 		t.Parallel()
 		referenced := make(map[string]struct{})
 		for _, mapping := range def.Spec.CustomComponents {
-			for _, file := range []string{mapping.List, mapping.Detail, mapping.Create} {
+			for _, file := range []string{mapping.List, mapping.Detail, mapping.Create, mapping.Edit} {
 				if file != "" {
 					referenced[file] = struct{}{}
 				}

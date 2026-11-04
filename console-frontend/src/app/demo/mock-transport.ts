@@ -472,9 +472,8 @@ export default function createDemoTransport(): Transport {
       },
     });
 
-    // What organization.v1 still answers: the cluster-side views
-    // (cluster-plugins, cluster-details, shared-plugins-form) have not moved to
-    // the catalog, and shared-plugins-form still reads presets from here too.
+    // What organization.v1 still answers: cluster-details has not moved to the
+    // catalog.
     router.service(PluginService, {
       listPlugins: async () => {
         await delay();

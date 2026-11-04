@@ -95,3 +95,67 @@ describe('plugin-sdk k8s write verbs', () => {
     );
   });
 });
+
+describe('plugin-sdk sheets', () => {
+  let postMessage: { mock: { calls: unknown[][] }; mockRestore(): void };
+
+  beforeEach(async () => {
+    await import('./plugin-sdk');
+    sendInit();
+    await window.fundament.init;
+    postMessage = vi.spyOn(window.parent, 'postMessage') as unknown as typeof postMessage;
+  });
+
+  afterEach(() => {
+    postMessage.mockRestore();
+  });
+
+  /** The messages the SDK posted to the console, once init's promise ran. */
+  async function posted(): Promise<unknown[]> {
+    await window.fundament.init;
+    await Promise.resolve();
+    return postMessage.mock.calls.map((call: unknown[]) => call[0]);
+  }
+
+  it('asks the console for a sheet, to its pinned origin only', async () => {
+    window.fundament.openSheet({ view: 'edit', resource: { name: 'test-pool' } });
+
+    expect(await posted()).toContainEqual({
+      type: 'plugin:open-sheet',
+      view: 'edit',
+      resource: { name: 'test-pool' },
+    });
+    expect(postMessage.mock.calls.at(-1)?.[1]).toBe(window.location.origin);
+  });
+
+  it('cannot be talked into posting another message type', async () => {
+    window.fundament.openSheet({ view: 'create', type: 'plugin:navigate' } as never);
+
+    expect(await posted()).toContainEqual({ type: 'plugin:open-sheet', view: 'create' });
+  });
+
+  // sendInit opens the page on a route, which a page in a console from before
+  // sheets is too: it has no presentation to say otherwise.
+  it('leaves a page on a route by going back, not by closing a sheet', async () => {
+    window.fundament.closeSheet({ changed: true });
+
+    await Promise.resolve();
+    expect(await posted()).toContainEqual({ type: 'plugin:navigate-back' });
+  });
+
+  it('tells its listeners when a sheet over the page saved something', () => {
+    const listener = vi.fn();
+    const unsubscribe = window.fundament.onResourcesChanged(listener);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        source: window,
+        origin: window.location.origin,
+        data: { type: 'fundament:resources-changed' },
+      }),
+    );
+    unsubscribe();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
