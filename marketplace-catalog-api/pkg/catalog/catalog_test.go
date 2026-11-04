@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -119,6 +120,54 @@ func TestListPluginsSortsByNameAscending(t *testing.T) {
 		names = append(names, plugin.GetDisplayName())
 	}
 	assert.IsIncreasing(t, names)
+}
+
+func seedLogo(t *testing.T, env *testEnv, definitionID uuid.UUID, logo, logoDark string) {
+	t.Helper()
+	_, err := env.adminPool.Exec(context.Background(),
+		`UPDATE appstore.plugin_definitions SET logo = $2, logo_dark = $3 WHERE id = $1`, definitionID, logo, logoDark)
+	require.NoError(t, err)
+}
+
+// seedLogoVersions publishes v1 (logo A) and v2 (logo B), then adds a draft v3 (logo C).
+func seedLogoVersions(t *testing.T, env *testEnv, name string) uuid.UUID {
+	t.Helper()
+	pluginID := seedPlugin(t, env, seedOptions{Name: name, Visibility: "public", Published: true})
+	_, err := env.adminPool.Exec(context.Background(),
+		`UPDATE appstore.plugin_definitions SET logo = 'logo-a', logo_dark = 'dark-a' WHERE plugin_id = $1`, pluginID)
+	require.NoError(t, err)
+	seedLogo(t, env, seedVersion(t, env, pluginID, "2.0.0", true), "logo-b", "dark-b")
+	seedLogo(t, env, seedVersion(t, env, pluginID, "3.0.0", false), "logo-c", "dark-c")
+	return pluginID
+}
+
+func TestListPlugins_LogoFromLatestPublished(t *testing.T) {
+	env := newTestEnv(t)
+	pluginID := seedLogoVersions(t, env, "logo-latest")
+	srv := newServer(t, env)
+
+	list, err := srv.ListPlugins(context.Background(), catalogv1.ListPluginsRequest_builder{Query: "logo-latest"}.Build())
+	require.NoError(t, err)
+	require.Len(t, list.GetPlugins(), 1)
+	assert.Equal(t, "logo-b", list.GetPlugins()[0].GetLogo())
+	assert.Equal(t, "dark-b", list.GetPlugins()[0].GetLogoDark())
+
+	got, err := srv.GetPlugin(context.Background(), catalogv1.GetPluginRequest_builder{PluginId: pluginID.String()}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, "logo-b", got.GetPlugin().GetLogo())
+	assert.Equal(t, "dark-b", got.GetPlugin().GetLogoDark())
+}
+
+func TestListPlugins_NoCustomLogo(t *testing.T) {
+	env := newTestEnv(t)
+	seedPlugin(t, env, seedOptions{Name: "logo-none", Visibility: "public", Published: true})
+
+	resp, err := newServer(t, env).ListPlugins(context.Background(),
+		catalogv1.ListPluginsRequest_builder{Query: "logo-none"}.Build())
+	require.NoError(t, err)
+	require.Len(t, resp.GetPlugins(), 1)
+	assert.Empty(t, resp.GetPlugins()[0].GetLogo())
+	assert.Empty(t, resp.GetPlugins()[0].GetLogoDark())
 }
 
 func TestListPluginsPopulatesLatestVersionID(t *testing.T) {

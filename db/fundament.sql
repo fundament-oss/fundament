@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 1.2.2
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1491,6 +1491,9 @@ CREATE TABLE appstore.plugin_definitions (
 	manifest bytea NOT NULL,
 	hash text NOT NULL,
 	image text NOT NULL DEFAULT '',
+	logo text NOT NULL DEFAULT '',
+	logo_dark text NOT NULL DEFAULT '',
+	menu_icons jsonb NOT NULL DEFAULT '{}',
 	status text NOT NULL DEFAULT 'draft',
 	published timestamptz,
 	release_notes text NOT NULL DEFAULT '',
@@ -1502,6 +1505,12 @@ CREATE TABLE appstore.plugin_definitions (
 );
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugin_definitions.image IS E'Denormalized from the manifest at write time so lists never parse YAML; the pinned manifest stays the source of truth.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.logo IS E'Logo as a data: URI, written at publish.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.logo_dark IS E'Dark-mode logo as a data: URI, written at publish.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.menu_icons IS E'Map of sha256: digest to data: URI for menu icons, written at publish.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugin_definitions.published IS E'Null until the version is live. The public catalog''s entire visibility predicate.';
 -- ddl-end --

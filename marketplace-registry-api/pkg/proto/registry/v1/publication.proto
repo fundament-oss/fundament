@@ -203,6 +203,8 @@ message CreatePluginVersionRequest {
   // Replace re-publishes an existing *draft* version in place (dev loop);
   // refused for any other status.
   bool replace = 50;
+  // Icon files the manifest references by digest, keyed by that digest.
+  map<string, bytes> icon_files = 60 [(buf.validate.field).map = {max_pairs: 64}];
 }
 
 message CreatePluginVersionResponse {

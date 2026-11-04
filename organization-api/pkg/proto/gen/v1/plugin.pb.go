@@ -179,6 +179,8 @@ type PluginSummary struct {
 	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,70,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_DefinitionHash   string                 `protobuf:"bytes,80,opt,name=definition_hash,json=definitionHash"`
 	xxx_hidden_OrganizationName string                 `protobuf:"bytes,90,opt,name=organization_name,json=organizationName"`
+	xxx_hidden_Logo             string                 `protobuf:"bytes,100,opt,name=logo"`
+	xxx_hidden_LogoDark         string                 `protobuf:"bytes,110,opt,name=logo_dark,json=logoDark"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -289,6 +291,20 @@ func (x *PluginSummary) GetOrganizationName() string {
 	return ""
 }
 
+func (x *PluginSummary) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -333,6 +349,14 @@ func (x *PluginSummary) SetOrganizationName(v string) {
 	x.xxx_hidden_OrganizationName = v
 }
 
+func (x *PluginSummary) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *PluginSummary) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
+}
+
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -357,6 +381,9 @@ type PluginSummary_builder struct {
 	// Publishing organization's name. With `name` it forms the installation's
 	// metadata.name: "<organization_name>--<name>".
 	OrganizationName string
+	// Latest published logo as a data: URI; empty when none.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -374,6 +401,8 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	x.xxx_hidden_OrganizationName = b.OrganizationName
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -2208,7 +2237,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\x9d\x03\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xce\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2223,7 +2252,9 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x05image\x18< \x01(\tR\x05image\x12%\n" +
 	"\x0eplugin_version\x18F \x01(\tR\rpluginVersion\x12'\n" +
 	"\x0fdefinition_hash\x18P \x01(\tR\x0edefinitionHash\x12+\n" +
-	"\x11organization_name\x18Z \x01(\tR\x10organizationName\"\x14\n" +
+	"\x11organization_name\x18Z \x01(\tR\x10organizationName\x12\x12\n" +
+	"\x04logo\x18d \x01(\tR\x04logo\x12\x1b\n" +
+	"\tlogo_dark\x18n \x01(\tR\blogoDark\"\x14\n" +
 	"\x12ListPluginsRequest\"O\n" +
 	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +

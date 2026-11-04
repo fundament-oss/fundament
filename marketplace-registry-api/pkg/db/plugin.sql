@@ -26,7 +26,19 @@ SELECT
 	    AND plugin_definitions.published IS NOT NULL
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
-	  LIMIT 1) AS latest_published_version_id
+	  LIMIT 1) AS latest_published_version_id,
+	COALESCE((SELECT plugin_definitions.logo
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo,
+	COALESCE((SELECT plugin_definitions.logo_dark
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo_dark
 FROM appstore.plugins
 WHERE deleted IS NULL
 ORDER BY name ASC;
@@ -53,7 +65,19 @@ SELECT
 	    AND plugin_definitions.published IS NOT NULL
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
-	  LIMIT 1) AS latest_published_version_id
+	  LIMIT 1) AS latest_published_version_id,
+	COALESCE((SELECT plugin_definitions.logo
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo,
+	COALESCE((SELECT plugin_definitions.logo_dark
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo_dark
 FROM appstore.plugins
 WHERE id = sqlc.arg('id')::uuid
   AND deleted IS NULL;
