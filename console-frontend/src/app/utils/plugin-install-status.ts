@@ -85,6 +85,25 @@ export function healthOf(item: PluginInstallationItem): PluginInstallationHealth
   };
 }
 
+/** The longest status message the console shows, in characters. */
+const MAX_STATUS_MESSAGE = 200;
+
+/**
+ * An installation's status message as the console shows it, or '' for none.
+ * The message can be the plugin's own words (its GetStatus answer, passed on
+ * by the controller), shown in console UI outside the plugin's sandboxed
+ * frame. So it is quoted and attributed, never presented as the console's own
+ * text (a plugin could otherwise write "Your session expired, sign in
+ * again"), and kept to one capped line.
+ */
+export function reportedStatusMessage(message: string): string {
+  const line = message.replace(/\s+/g, ' ').trim();
+  if (!line) return '';
+  const capped =
+    line.length > MAX_STATUS_MESSAGE ? `${line.slice(0, MAX_STATUS_MESSAGE - 1)}…` : line;
+  return `The installation reports: “${capped}”`;
+}
+
 // Running but not ready: up, yet not serving as it should. The controller sets
 // ready from the phase, so this is rare, but it must not read as Installed.
 const NOT_READY_DISPLAY: InstallStatusDisplay = {
@@ -100,9 +119,14 @@ export function installIssue(
 ): PluginInstallIssue | null {
   if (!health) return null;
   if (isInstallRunning(health.phase)) {
-    return health.ready ? null : { ...NOT_READY_DISPLAY, message: health.message };
+    return health.ready
+      ? null
+      : { ...NOT_READY_DISPLAY, message: reportedStatusMessage(health.message) };
   }
-  return { ...getInstallStatusDisplay(health.phase), message: health.message };
+  return {
+    ...getInstallStatusDisplay(health.phase),
+    message: reportedStatusMessage(health.message),
+  };
 }
 
 /** How long to wait before a screen reads these installations again: quickly

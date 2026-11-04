@@ -180,10 +180,10 @@
                   </h2>
                   <!-- Not a second green tag beside "Official": that one says what
                        the plugin is, this says what it does in your clusters. -->
-                  @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
+                  @if (installedClusterCount(plugin.organizationName, plugin.name) > 0) {
                     <span slot="subtitle">
                       Installed on
-                      {{ runningInstallCount(plugin.organizationName, plugin.name) }}/{{
+                      {{ installedClusterCount(plugin.organizationName, plugin.name) }}/{{
                         clusterCount
                       }}
                     </span>

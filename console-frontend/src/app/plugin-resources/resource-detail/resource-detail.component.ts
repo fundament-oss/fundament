@@ -48,6 +48,14 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 
+/** The resource a detail route names. */
+interface ResourceTarget {
+  pluginName: string;
+  resourceKind: string;
+  name: string;
+  namespace: string | undefined;
+}
+
 function checkIsConditionsField(key: string, value: unknown): boolean {
   return key === 'conditions' && Array.isArray(value);
 }
@@ -106,6 +114,35 @@ export default class ResourceDetailComponent implements OnInit {
 
   protected resourceNamespace = computed(() => this.routeQuery().get('ns') || undefined);
 
+  /** The resource the route names, as one value: the load follows it, and the
+   *  plugin's frame is keyed on it. */
+  private resourceTarget = computed<ResourceTarget>(
+    () => ({
+      pluginName: this.pluginName(),
+      resourceKind: this.resourceKind(),
+      name: this.resourceId(),
+      namespace: this.resourceNamespace(),
+    }),
+    {
+      equal: (a, b) =>
+        a.pluginName === b.pluginName &&
+        a.resourceKind === b.resourceKind &&
+        a.name === b.name &&
+        a.namespace === b.namespace,
+    },
+  );
+
+  /** One key per resource the route names. The plugin's frame gets the
+   *  resource once, in fundament:init, so another resource needs a new frame. */
+  protected resourceKey = computed(() => {
+    const target = this.resourceTarget();
+    return `${target.pluginName}/${target.resourceKind}/${target.namespace ?? ''}/${target.name}`;
+  });
+
+  // Bumped by every full load, so a read that one overtook can tell its result
+  // is for a resource no longer shown and drop it.
+  private loads = 0;
+
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   customUIUrl = computed(() =>
@@ -163,10 +200,13 @@ export default class ResourceDetailComponent implements OnInit {
     this.projectNamespaces.load(this.route.snapshot.parent?.params['id'] ?? '');
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
+    // It follows the route too: another resource's detail reuses this
+    // component (a sheet that navigates to the resource it just created).
     effect(() => {
       const clusterId = this.clusterContext.selectedClusterId();
+      const target = this.resourceTarget();
       if (clusterId !== null) {
-        untracked(() => this.loadCrdAndResource(clusterId));
+        untracked(() => this.loadCrdAndResource(clusterId, target));
       }
     });
 
@@ -182,26 +222,32 @@ export default class ResourceDetailComponent implements OnInit {
     }
   }
 
-  private async loadCrdAndResource(clusterId: string): Promise<void> {
+  private async loadCrdAndResource(clusterId: string, target: ResourceTarget): Promise<void> {
+    this.loads += 1;
+    const load = this.loads;
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    // What was shown is another resource's, or another cluster's.
+    this.resource.set(undefined);
 
     try {
       const { crd, resource } = await this.loader.loadCrdAndResource(
-        this.pluginName(),
-        this.resourceKind(),
+        target.pluginName,
+        target.resourceKind,
         clusterId,
-        this.resourceId(),
-        this.resourceNamespace(),
+        target.name,
+        target.namespace,
       );
+      if (load !== this.loads) return;
       this.crdDef.set(crd);
       this.resource.set(resource);
     } catch (err) {
+      if (load !== this.loads) return;
       // eslint-disable-next-line no-console
       console.error('[ResourceDetail] Failed to load resource:', err);
       this.errorMessage.set('Failed to load resource. Please try again.');
     } finally {
-      this.isLoading.set(false);
+      if (load === this.loads) this.isLoading.set(false);
     }
   }
 
@@ -215,13 +261,20 @@ export default class ResourceDetailComponent implements OnInit {
    * A resource that is gone does show as gone, and keeps being read by the
    * route's name: a 404 can be passing (a CRD not served for a moment during a
    * plugin upgrade), and the resource then shows again by itself. A failed poll
-   * keeps what is shown, and the next one tries again.
+   * keeps what is shown, and the next one tries again. Until the CRD has been
+   * read it retries the whole load instead: one that failed, or found the CRD
+   * not served yet, would otherwise stay empty after the plugin recovers.
    */
   private async refreshResource(): Promise<void> {
     const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
     const current = this.resource();
-    if (!crd || clusterId === null || this.isLoading() || this.deleting()) return;
+    const load = this.loads;
+    if (clusterId === null || this.isLoading() || this.deleting()) return;
+    if (!crd) {
+      await this.retryLoad(clusterId);
+      return;
+    }
     if (this.customUIUrl()) return;
     try {
       const resource = await this.loader.loadResource(
@@ -232,11 +285,36 @@ export default class ResourceDetailComponent implements OnInit {
         current ? current.metadata.namespace : this.resourceNamespace(),
       );
       // Moved on to another resource or cluster, or deleting, while this was out.
-      if (this.resource()?.metadata.uid !== current?.metadata.uid || this.deleting()) return;
+      if (load !== this.loads || this.deleting()) return;
+      if (this.resource()?.metadata.uid !== current?.metadata.uid) return;
       if (this.clusterContext.selectedClusterId() !== clusterId) return;
       this.resource.set(resource);
     } catch {
       // Kept as is; see above.
+    }
+  }
+
+  /** loadCrdAndResource without its loading state, which would put a spinner
+   *  over the error every few seconds. Clears the error once the load works. */
+  private async retryLoad(clusterId: string): Promise<void> {
+    const load = this.loads;
+    const target = this.resourceTarget();
+    try {
+      const { crd, resource } = await this.loader.loadCrdAndResource(
+        target.pluginName,
+        target.resourceKind,
+        clusterId,
+        target.name,
+        target.namespace,
+      );
+      // A full load started, for this resource or another, while this was out.
+      if (!crd || load !== this.loads || this.crdDef() !== undefined) return;
+      if (this.clusterContext.selectedClusterId() !== clusterId) return;
+      this.crdDef.set(crd);
+      this.resource.set(resource);
+      this.errorMessage.set(null);
+    } catch {
+      // Kept as is; see refreshResource.
     }
   }
 

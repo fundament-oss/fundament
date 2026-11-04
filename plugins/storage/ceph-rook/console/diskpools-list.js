@@ -12,8 +12,8 @@ await fundament.init;
 
 const tbody = document.getElementById('rows');
 
-// The create form is a page of its own, diskpools-create.html, which the
-// console opens in a sheet over this list.
+// The create form lives on sheet.html (sheet.js, then diskpool-forms.js),
+// which the console opens in a sheet over this list.
 document.getElementById('create-btn').addEventListener('click', () => {
   fundament.openSheet({ view: 'create' });
 });

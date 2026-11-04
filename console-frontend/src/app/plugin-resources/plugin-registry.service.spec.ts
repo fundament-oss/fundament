@@ -228,6 +228,23 @@ describe('PluginRegistryService', () => {
     expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
   });
 
+  it("does not read a Failed installation's CRDs until it is up", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Failed')];
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(10000 * 3);
+
+    // Still in the menu, but its CRDs are mostly not served: no 404 per sync.
+    expect(registry.allPlugins()).toHaveLength(1);
+    expect(crdReads()).toBe(0);
+
+    items = [installation('Running')];
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
+  });
+
   it('does not read a kind it already knows again', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Running')];

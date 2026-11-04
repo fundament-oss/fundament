@@ -24,6 +24,11 @@
           [namespaces]="namespaces()"
           [namespaceDisplayNames]="namespaceDisplayNames()"
         />
+      } @else {
+        <nldd-inline-dialog
+          variant="loading"
+          text="Loading..."
+        ></nldd-inline-dialog>
       }
     </nldd-simple-section>
   </nldd-page>

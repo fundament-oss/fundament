@@ -7,19 +7,29 @@
            saying before its own screen can load. -->
       <app-plugin-status-banner [installationName]="pluginName()" />
       @if (namespacesSettled()) {
-        <app-plugin-iframe
-          [src]="customUIUrl()!"
-          [pluginName]="pluginName()"
-          [pluginVersion]="installationVersion()"
-          [installationId]="installationId()"
-          [crdKind]="crdDef()!.kind"
-          view="detail"
-          [clusterId]="clusterContext.selectedClusterId()!"
-          [resourceName]="resourceId()"
-          [resourceNamespace]="resourceNamespace()"
-          [namespaces]="namespaces()"
-          [namespaceDisplayNames]="namespaceDisplayNames()"
-        />
+        <!-- One iteration, keyed on the resource: the frame gets it once, in
+             fundament:init, so a route to another resource that reuses this
+             page gets a fresh frame rather than the old one's screen. -->
+        @for (key of [resourceKey()]; track key) {
+          <app-plugin-iframe
+            [src]="customUIUrl()!"
+            [pluginName]="pluginName()"
+            [pluginVersion]="installationVersion()"
+            [installationId]="installationId()"
+            [crdKind]="crdDef()!.kind"
+            view="detail"
+            [clusterId]="clusterContext.selectedClusterId()!"
+            [resourceName]="resourceId()"
+            [resourceNamespace]="resourceNamespace()"
+            [namespaces]="namespaces()"
+            [namespaceDisplayNames]="namespaceDisplayNames()"
+          />
+        }
+      } @else {
+        <nldd-inline-dialog
+          variant="loading"
+          text="Loading..."
+        ></nldd-inline-dialog>
       }
     </nldd-simple-section>
   </nldd-page>

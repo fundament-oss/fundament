@@ -18,6 +18,7 @@ import {
   healthOf,
   installPhase,
   isInstallInProgress,
+  isInstallRunning,
   isInstallTerminating,
   shouldPollInstall,
 } from '../utils/plugin-install-status';
@@ -138,6 +139,12 @@ function isPermanentDefinitionFailure(reason: unknown): boolean {
     reason instanceof ConnectError &&
     (reason.code === Code.NotFound || reason.code === Code.InvalidArgument)
   );
+}
+
+/** True for an installation that is up, working or not, and so serves its
+ *  CRDs: Running or Degraded. */
+function isInstallUp(phase: string | undefined): boolean {
+  return phase !== undefined && (isInstallRunning(phase) || phase === 'Degraded');
 }
 
 function sameHealth(
@@ -346,7 +353,10 @@ export default class PluginRegistryService {
     // Every installation keeps its screens whatever its health: a plugin that
     // is Degraded, Failed or still coming up stays in the sidebar, which says
     // what is wrong, rather than vanishing just when someone looks for it. Only
-    // one being removed is left out: its screens are about to go with it.
+    // one being removed is left out: its screens are about to go with it. The
+    // screens come from the definition, so one whose version the catalog does
+    // not have (see isPermanentDefinitionFailure) has none to show, and no
+    // sidebar entry; its phase and reason are on the plugins pages.
     const installed = items.filter(
       (item) => !isInstallTerminating(installPhase(item.status?.phase)),
     );
@@ -386,9 +396,10 @@ export default class PluginRegistryService {
 
     // On every sync, not only the ones that rebuilt the menu: a CRD whose kind
     // could not be read keeps a reference-derived label, and the read is worth
-    // another try — right after an install the CRD is often not served yet.
-    // Resolved kinds are never refetched, so a settled menu reads nothing here.
-    // Not awaited either: the sidebar must not wait on it.
+    // another try once the plugin is up. Resolved kinds are never refetched,
+    // and a plugin that is not up is not read for (see loadCrdKinds), so a
+    // settled menu reads nothing here. Not awaited either: the sidebar must
+    // not wait on it.
     this.loadCrdKinds(clusterId, generation).catch(() => {});
 
     // An installation that has no phase yet is one the controller has not
@@ -474,13 +485,18 @@ export default class PluginRegistryService {
    * Reads the kind of every CRD the menus point at, so the sidebar can spell a
    * resource the way the CRD does. A read that fails is skipped silently: the
    * reference-derived label stands in, and a CRD the user may not read must not
-   * take the menu with it.
+   * take the menu with it. Only for installations that are up (Running or
+   * Degraded): one still coming up, or Failed, mostly serves no CRDs yet, and
+   * reading for it would answer 404 on every sync for as long as it stays so.
+   * The sync after it comes up reads them.
    */
   private async loadCrdKinds(clusterId: string, generation: number): Promise<void> {
     const known = this.crdKinds();
+    const health = this.health();
     const refs = [
       ...new Set(
         this.plugins()
+          .filter((plugin) => isInstallUp(health.get(plugin.installationName)?.phase))
           .flatMap((plugin) => plugin.menu.project ?? [])
           .map((entry) => entry.crd)
           .filter((ref) => ref && !known.has(ref)),

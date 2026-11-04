@@ -66,7 +66,13 @@ describe('PluginNavService', () => {
 
     expect(nav.projectNav().map((g) => g.issue)).toEqual([
       null,
-      { label: 'Degraded', badgeColor: 'warning', inProgress: false, message: 'CRDs missing' },
+      {
+        label: 'Degraded',
+        badgeColor: 'warning',
+        inProgress: false,
+        // Quoted and attributed: the plugin's own words, in console UI.
+        message: 'The installation reports: “CRDs missing”',
+      },
     ]);
   });
 

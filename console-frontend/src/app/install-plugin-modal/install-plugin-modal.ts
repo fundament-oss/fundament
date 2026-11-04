@@ -21,6 +21,7 @@ import {
   isInstallUnhealthy,
   isInstallRunning,
   isInstallTerminating,
+  reportedStatusMessage,
 } from '../utils/plugin-install-status';
 
 import '@nldd/design-system/badge';
@@ -206,7 +207,7 @@ export default class InstallPluginModalComponent {
   // eslint-disable-next-line class-methods-use-this
   issueMessage(cluster: Cluster): string {
     if (cluster.phase === null || !isInstallUnhealthy(cluster.phase)) return '';
-    return cluster.message;
+    return reportedStatusMessage(cluster.message);
   }
 
   showsVersion = showsInstalledVersion;

@@ -97,7 +97,8 @@ async function showDetail() {
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
-    // The edit form is diskpools-edit.html, in a console sheet.
+    // The edit form lives on sheet.html (sheet.js, then diskpool-forms.js), in
+    // a console sheet.
     document.getElementById('edit-btn').onclick = () => {
       fundament.openSheet({ view: 'edit', resource: { name } });
     };

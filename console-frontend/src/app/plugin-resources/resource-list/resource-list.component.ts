@@ -337,17 +337,55 @@ export default class ResourceListComponent implements OnInit {
    * loadCrdsAndResources and its loading state, which would blank the list
    * every few seconds. Only for the generated list; a custom list UI reads its
    * own resources. A failed poll keeps what is shown, and the next one tries
-   * again.
+   * again. Until the CRD has been read it retries the whole load instead: one
+   * that failed, or found the CRD not served yet (a plugin still deploying, or
+   * Failed), would otherwise stay empty after the plugin recovers.
    */
   private async refreshResources(): Promise<void> {
     const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
-    if (!crd || clusterId === null || this.isLoading() || this.customUIUrl()) return;
+    if (clusterId === null || this.isLoading()) return;
+    if (!crd) {
+      await this.retryLoad(clusterId);
+      return;
+    }
+    if (this.customUIUrl()) return;
     try {
       const resources = await this.loader.loadResources(this.pluginName(), crd, clusterId);
       // Moved on to another kind or cluster while this was out.
       if (this.crdDef() !== crd || this.clusterContext.selectedClusterId() !== clusterId) return;
       this.resources.set(resources);
+    } catch {
+      // Kept as is; see above.
+    }
+  }
+
+  /** loadCrdsAndResources without its loading state, which would put a spinner
+   *  over the error every few seconds. Clears the error once the load works. */
+  private async retryLoad(clusterId: string): Promise<void> {
+    const pluginName = this.pluginName();
+    const resourceKind = this.resourceKind();
+    if (!pluginName || !resourceKind) return;
+    try {
+      const { crd, resources } = await this.loader.loadCrdAndResources(
+        pluginName,
+        resourceKind,
+        clusterId,
+      );
+      // Moved on, or a full load started, while this was out.
+      if (
+        !crd ||
+        this.crdDef() !== undefined ||
+        this.isLoading() ||
+        this.pluginName() !== pluginName ||
+        this.resourceKind() !== resourceKind ||
+        this.clusterContext.selectedClusterId() !== clusterId
+      ) {
+        return;
+      }
+      this.crdDef.set(crd);
+      this.resources.set(resources);
+      this.errorMessage.set(null);
     } catch {
       // Kept as is; see above.
     }

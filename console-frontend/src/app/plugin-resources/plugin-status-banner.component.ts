@@ -7,7 +7,7 @@ import {
   input,
 } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
-import { isInstallRunning } from '../utils/plugin-install-status';
+import { isInstallRunning, reportedStatusMessage } from '../utils/plugin-install-status';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/spacer';
@@ -49,37 +49,43 @@ export default class PluginStatusBannerComponent {
     const health = this.registry.installationHealth(this.installationName());
     if (!health || (isInstallRunning(health.phase) && health.ready)) return null;
 
+    // The console's own explanation always leads; the installation's message,
+    // which can be the plugin's own words, follows in quotes (see
+    // reportedStatusMessage).
+    const reported = reportedStatusMessage(health.message);
+    const explain = (text: string) => (reported ? `${text} ${reported}` : text);
+
     switch (health.phase) {
       case 'Degraded':
         return {
           variant: 'warning',
           text: 'This plugin is degraded',
-          supportingText:
-            health.message ||
+          supportingText: explain(
             'It is running, but not everything works. This screen may show errors until it recovers.',
+          ),
         };
       case 'Running':
         // Running, but the controller does not report it ready.
         return {
           variant: 'warning',
           text: 'This plugin is not ready',
-          supportingText:
-            health.message ||
+          supportingText: explain(
             'It is running, but not ready. This screen may show errors until it is.',
+          ),
         };
       case 'Failed':
         return {
           variant: 'critical',
           text: 'This plugin failed',
-          supportingText:
-            health.message ||
+          supportingText: explain(
             'This screen will not work until the installation is retried or the plugin is reinstalled.',
+          ),
         };
       default:
         return {
           variant: 'accent',
           text: 'This plugin is still being installed',
-          supportingText: health.message || 'This screen works once the plugin is running.',
+          supportingText: explain('This screen works once the plugin is running.'),
         };
     }
   });

@@ -1,8 +1,8 @@
 import {
   Component,
   inject,
+  DestroyRef,
   OnInit,
-  OnDestroy,
   signal,
   computed,
   ChangeDetectionStrategy,
@@ -39,7 +39,6 @@ import {
 import {
   hasInvalidConfig,
   installPhase,
-  installPollDelay,
   installTransitionNotice,
   isInstallInProgress,
   isInstallTerminating,
@@ -52,6 +51,7 @@ import PluginInstallationService, {
   RetryConfigVersionError,
 } from '../plugin-installation/plugin-installation.service';
 import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
+import createInstallPoller from '../utils/install-poller';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -132,7 +132,7 @@ function isOfficialPlugin(plugin: { tags: string[] }): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
-export default class PluginDetailsComponent implements OnInit, OnDestroy {
+export default class PluginDetailsComponent implements OnInit {
   protected pageNav = inject(PageNavService);
 
   private titleService = inject(TitleService);
@@ -143,12 +143,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
    *  catalog or only what is installed (see injectBrowsePluginsUrl). */
   protected readonly backText = injectBrowsePluginsUrl() ? 'Installed plugins' : 'Plugins';
 
-  private installPollingTimer: ReturnType<typeof setInterval> | null = null;
+  private installPoller = createInstallPoller(inject(DestroyRef), () =>
+    this.refreshInstallStates(),
+  );
 
-  // The pace installPollingTimer runs at, so a change of pace restarts it.
-  private installPollingDelay: number | null = null;
-
-  private destroyed = false;
+  // Bumped by every change this page makes to a cluster's phase itself, so a
+  // poll read that started before it can tell it is stale and drop it.
+  private localChanges = 0;
 
   private sanitizer = inject(DomSanitizer);
 
@@ -345,44 +346,26 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy() {
-    this.destroyed = true;
-    this.stopInstallPolling();
-  }
-
   private clusterName(clusterId: string): string {
     return this.clusters().find((c) => c.id === clusterId)?.name ?? clusterId;
   }
 
   private setPhase(clusterId: string, phase: string | null): void {
+    this.localChanges += 1;
     this.clusters.update((clusters) =>
       clusters.map((c) => (c.id === clusterId ? { ...c, phase } : c)),
     );
   }
 
-  /** Starts, re-paces or stops the install poll to suit the clusters shown. */
+  /** Starts, re-paces or stops the install poll to suit the clusters shown.
+   *  Also while one is Degraded or Failed, at a slower pace: it can recover, or
+   *  get a new reason, without anyone acting on it. */
   private startInstallPollingIfNeeded(): void {
-    if (this.destroyed) return;
-    // Also while one is Degraded or Failed, at a slower pace: it can recover,
-    // or get a new reason, without anyone acting on it.
-    const delay = installPollDelay(
+    this.installPoller.pace(
       this.clusters().flatMap((c) =>
         c.phase === null ? [] : [{ phase: c.phase, configInvalid: c.configInvalid }],
       ),
     );
-    if (delay === this.installPollingDelay) return;
-    this.stopInstallPolling();
-    if (delay === null) return;
-    this.installPollingDelay = delay;
-    this.installPollingTimer = setInterval(() => this.refreshInstallStates(), delay);
-  }
-
-  private stopInstallPolling(): void {
-    if (this.installPollingTimer) {
-      clearInterval(this.installPollingTimer);
-      this.installPollingTimer = null;
-    }
-    this.installPollingDelay = null;
   }
 
   // Poll installation status and surface transitions (installed / failed / removed).
@@ -392,6 +375,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
     const clusters = this.clusters();
+    const changes = this.localChanges;
     let results: (PluginInstallationItem[] | null)[];
     try {
       results = await Promise.all(
@@ -404,6 +388,10 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     } catch {
       return;
     }
+    // An install, uninstall or retry since the read started: what it read is
+    // from before, and would put the row back to the phase it had. The handler
+    // re-paced the poll, so the next read is not far off.
+    if (changes !== this.localChanges) return;
 
     const next = clusters.map((c, i) => {
       const items = results[i];

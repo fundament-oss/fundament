@@ -3,6 +3,7 @@ import {
   installIssue,
   installPollDelay,
   installTransitionNotice,
+  reportedStatusMessage,
 } from './plugin-install-status';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 
@@ -49,8 +50,27 @@ describe('installIssue', () => {
       label: 'Not ready',
       badgeColor: 'warning',
       inProgress: false,
-      message: 'probe failing',
+      message: 'The installation reports: “probe failing”',
     });
+  });
+});
+
+describe('reportedStatusMessage', () => {
+  it('quotes the message and says where it comes from', () => {
+    expect(reportedStatusMessage('Your session expired, sign in again')).toBe(
+      'The installation reports: “Your session expired, sign in again”',
+    );
+  });
+
+  it('is empty for no message', () => {
+    expect(reportedStatusMessage('  ')).toBe('');
+  });
+
+  it('keeps a long or multi-line message to one capped line', () => {
+    const reported = reportedStatusMessage(`first\n\nsecond ${'x'.repeat(300)}`);
+    expect(reported).not.toContain('\n');
+    expect(reported).toMatch(/^The installation reports: “first second x+…”$/);
+    expect(reported.length).toBeLessThan(240);
   });
 });
 

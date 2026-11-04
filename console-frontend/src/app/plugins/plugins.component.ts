@@ -1,6 +1,7 @@
 import {
   Component,
   inject,
+  DestroyRef,
   signal,
   effect,
   viewChild,
@@ -41,11 +42,12 @@ import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
-  installPollDelay,
   installTransitionNotice,
-  isInstallRunning,
+  isInstallInProgress,
+  isInstallTerminating,
 } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
+import createInstallPoller from '../utils/install-poller';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
@@ -180,12 +182,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
-  private installPollingTimer: ReturnType<typeof setInterval> | null = null;
+  private installPoller = createInstallPoller(inject(DestroyRef), () => this.refreshInstalls());
 
-  // The pace installPollingTimer runs at, so a change of pace restarts it.
-  private installPollingDelay: number | null = null;
-
-  private destroyed = false;
+  // Bumped by every write to the installs but the poll's own (an install,
+  // uninstall or retry, or a full reload), so a poll read that started before
+  // it can tell it is stale and drop it.
+  private localChanges = 0;
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -419,15 +421,13 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.destroyed = true;
     this.stopPolling();
-    this.stopInstallPolling();
     document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
   }
 
   // Re-read installs from the (reset) backend and drop any stale in-flight polling.
   private reloadInstalls(): void {
-    this.stopInstallPolling();
+    this.installPoller.stop();
     this.loadInstalls().catch(() => {}); // Background refresh; a failed read just leaves the current view.
   }
 
@@ -492,39 +492,37 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // recorded so the empty state does not claim nothing is installed.
   private async loadInstalls(): Promise<void> {
     const byCluster = await this.fetchInstallsByCluster();
+    this.localChanges += 1;
     this.installsReadFailed.set(byCluster.some((cluster) => cluster.installs === null));
     this.installs.set(byCluster.flatMap((cluster) => cluster.installs ?? []));
   }
 
-  /** Starts, re-paces or stops the install poll to suit the installs shown. */
+  /** Starts, re-paces or stops the install poll to suit the installs shown.
+   *  Also while one is Degraded or Failed, at a slower pace: it can recover, or
+   *  get a new reason, without anyone acting on it. */
   private startInstallPollingIfNeeded() {
-    if (this.destroyed) return;
-    // Also while one is Degraded or Failed, at a slower pace: it can recover,
-    // or get a new reason, without anyone acting on it.
-    const delay = installPollDelay(this.installs());
-    if (delay === this.installPollingDelay) return;
-    this.stopInstallPolling();
-    if (delay === null) return;
-    this.installPollingDelay = delay;
-    this.installPollingTimer = setInterval(() => this.refreshInstalls(), delay);
+    this.installPoller.pace(this.installs());
   }
 
-  private stopInstallPolling() {
-    if (this.installPollingTimer) {
-      clearInterval(this.installPollingTimer);
-      this.installPollingTimer = null;
-    }
-    this.installPollingDelay = null;
+  /** Changes the installs from this page, not from a read of the cluster. */
+  private updateInstalls(fn: (current: InstallWithCluster[]) => InstallWithCluster[]): void {
+    this.localChanges += 1;
+    this.installs.update(fn);
   }
 
   // Poll installation status and surface transitions (installed / failed / removed).
   private async refreshInstalls() {
+    const changes = this.localChanges;
     let byCluster: { clusterId: string; installs: InstallWithCluster[] | null }[];
     try {
       byCluster = await this.fetchInstallsByCluster();
     } catch {
       return; // Ignore errors from background polling.
     }
+    // An install, uninstall or retry since the read started: what it read is
+    // from before, and would put the row back to the phase it had. The handler
+    // re-paced the poll, so the next read is not far off.
+    if (changes !== this.localChanges) return;
 
     const previous = this.installs();
 
@@ -742,13 +740,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Number of clusters where the plugin is up and running.
-  runningInstallCount(organizationName: string, pluginName: string): number {
+  /** The clusters the plugin is installed on, for "Installed on N": only
+   *  installations that have settled, Running or not, as on the plugin's own
+   *  page. A Degraded or Failed one is installed, and offers Manage; one still
+   *  on its way up or down is not counted until it gets there. */
+  installedClusterCount(organizationName: string, pluginName: string): number {
     return this.installs().filter(
       (install) =>
         install.organizationName === organizationName &&
         install.pluginName === pluginName &&
-        isInstallRunning(install.phase),
+        !isInstallInProgress(install.phase),
     ).length;
   }
 
@@ -806,8 +807,17 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   pluginCategoryLabel = pluginCategoryLabel;
 
   pluginStatusLabel(organizationName: string, pluginName: string): string {
-    const count = this.runningInstallCount(organizationName, pluginName);
-    return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
+    const count = this.installedClusterCount(organizationName, pluginName);
+    if (count > 0) return `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
+    // Nothing settled yet, but an install on its way: the sheet offers Manage
+    // for it, so it must not read as not installed.
+    const installing = this.installs().some(
+      (install) =>
+        install.organizationName === organizationName &&
+        install.pluginName === pluginName &&
+        !isInstallTerminating(install.phase),
+    );
+    return installing ? 'Installing…' : 'Not installed';
   }
 
   // Fetches the plugin's published versions (latest first) for the install
@@ -856,7 +866,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     pluginName: string,
     phase: string,
   ): void {
-    this.installs.update((current) =>
+    this.updateInstalls((current) =>
       current.map((install) =>
         install.clusterId === clusterId &&
         install.organizationName === organizationName &&
@@ -883,7 +893,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (targets.length === 0) return;
 
     // Optimistically mark each target as installing so the rows update at once.
-    this.installs.update((current) => [
+    this.updateInstalls((current) => [
       ...current,
       ...targets.map((clusterId) => ({
         clusterId,
@@ -913,7 +923,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     // Roll back optimistic entries whose install request failed outright.
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {
-      this.installs.update((current) =>
+      this.updateInstalls((current) =>
         current.filter(
           (install) =>
             !(
