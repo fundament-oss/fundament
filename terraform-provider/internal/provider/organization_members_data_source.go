@@ -124,7 +124,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list members in this organization.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

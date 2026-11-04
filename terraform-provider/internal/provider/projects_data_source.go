@@ -140,7 +140,7 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list projects in this organization.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

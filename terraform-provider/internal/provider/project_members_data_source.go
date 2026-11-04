@@ -141,7 +141,7 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list members of this project.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

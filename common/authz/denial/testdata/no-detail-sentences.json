@@ -1,0 +1,14 @@
+[
+  {
+    "message": "permission denied",
+    "sentence": "You do not have permission to do this."
+  },
+  {
+    "message": "",
+    "sentence": "You do not have permission to do this."
+  },
+  {
+    "message": "user is not an accepted member of the organization",
+    "sentence": "user is not an accepted member of the organization"
+  }
+]

@@ -136,7 +136,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to access this namespace.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authzv1 "github.com/fundament-oss/fundament/authz-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/common/authz/denial"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
@@ -82,7 +84,16 @@ type fakeDeletingService struct {
 }
 
 func (fakeDeletingService) GetCluster(_ context.Context, _ *organizationv1.GetClusterRequest) (*organizationv1.GetClusterResponse, error) {
-	return nil, connect.NewError(connect.CodePermissionDenied, errors.New("permission denied"))
+	err := connect.NewError(connect.CodePermissionDenied, errors.New("permission denied"))
+	detail, derr := connect.NewErrorDetail(authzv1.PermissionDeniedDetail_builder{
+		Action:       authzv1.Action_ACTION_CLUSTER_CAN_VIEW,
+		RequiredRole: authzv1.RequiredRole_REQUIRED_ROLE_ORGANIZATION_MEMBER,
+	}.Build())
+	if derr != nil {
+		return nil, derr //nolint:wrapcheck // test double
+	}
+	err.AddDetail(detail)
+	return nil, err
 }
 
 func (f fakeDeletingService) ListClusters(_ context.Context, _ *organizationv1.ListClustersRequest) (*organizationv1.ListClustersResponse, error) {
@@ -105,7 +116,7 @@ func TestClusterReadRefused(t *testing.T) {
 		_, handler := organizationv1connect.NewClusterServiceHandler(fakeDeletingService{listedStatus: listed})
 		srv := httptest.NewServer(handler)
 		t.Cleanup(srv.Close)
-		r.client = &FundamentClient{ClusterService: organizationv1connect.NewClusterServiceClient(srv.Client(), srv.URL)}
+		r.client = &FundamentClient{ClusterService: organizationv1connect.NewClusterServiceClient(srv.Client(), srv.URL, connect.WithInterceptors(denial.Interceptor()))}
 
 		state := tfsdk.State{Schema: schemaResp.Schema, Raw: tftypes.NewValue(schemaResp.Schema.Type().TerraformType(ctx), nil)}
 		require.False(t, state.Set(ctx, &ClusterResourceModel{
@@ -139,6 +150,6 @@ func TestClusterReadRefused(t *testing.T) {
 	t.Run("refused while listed as running is an error", func(t *testing.T) {
 		resp := read(t, organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING)
 		require.True(t, resp.Diagnostics.HasError())
-		assert.Contains(t, resp.Diagnostics.Errors()[0].Detail(), `Unable to read cluster "web": permission_denied: permission denied`)
+		assert.Contains(t, resp.Diagnostics.Errors()[0].Detail(), `Unable to read cluster "web": Only organization members can view this cluster`)
 	})
 }

@@ -268,7 +268,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to create namespaces in this cluster.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

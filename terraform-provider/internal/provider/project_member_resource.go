@@ -167,7 +167,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to add members to this project.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(
@@ -320,7 +320,7 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to update member roles in this project.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(
@@ -399,7 +399,7 @@ func (r *ProjectMemberResource) Delete(ctx context.Context, req resource.DeleteR
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to remove members from this project.",
+				err.Error(),
 			)
 			return
 		default:

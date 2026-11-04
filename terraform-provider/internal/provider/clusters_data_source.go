@@ -134,7 +134,7 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list clusters in this organization.",
+				err.Error(),
 			)
 		case connect.CodeNotFound:
 			resp.Diagnostics.AddError(

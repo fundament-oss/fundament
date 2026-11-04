@@ -139,7 +139,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to invite members to this organization.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(
@@ -292,7 +292,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to update member permissions in this organization.",
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

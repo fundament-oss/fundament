@@ -144,7 +144,7 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				fmt.Sprintf("You do not have permission to access cluster %q.", config.Name.ValueString()),
+				err.Error(),
 			)
 		default:
 			resp.Diagnostics.AddError(

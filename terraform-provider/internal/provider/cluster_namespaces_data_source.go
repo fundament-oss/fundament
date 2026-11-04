@@ -140,7 +140,7 @@ func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.R
 		case connect.CodePermissionDenied:
 			resp.Diagnostics.AddError(
 				"Permission Denied",
-				"You do not have permission to list namespaces in this cluster.",
+				err.Error(),
 			)
 		case connect.CodeNotFound:
 			resp.Diagnostics.AddError(
