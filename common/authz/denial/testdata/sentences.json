@@ -1,0 +1,192 @@
+[
+  {
+    "action": "ACTION_VIEW_ORGANIZATION",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can view the organization"
+  },
+  {
+    "action": "ACTION_EDIT_ORGANIZATION",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can edit the organization"
+  },
+  {
+    "action": "ACTION_CREATE_API_KEY",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can create API keys"
+  },
+  {
+    "action": "ACTION_LIST_API_KEYS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list API keys"
+  },
+  {
+    "action": "ACTION_CREATE_CLUSTER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can create clusters"
+  },
+  {
+    "action": "ACTION_LIST_CLUSTERS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list clusters"
+  },
+  {
+    "action": "ACTION_INVITE_MEMBER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can invite members"
+  },
+  {
+    "action": "ACTION_EDIT_MEMBER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can edit members"
+  },
+  {
+    "action": "ACTION_DELETE_MEMBER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can remove members"
+  },
+  {
+    "action": "ACTION_LIST_MEMBERS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list members"
+  },
+  {
+    "action": "ACTION_VIEW_API_KEY",
+    "role": "REQUIRED_ROLE_API_KEY_OWNER",
+    "sentence": "Only the key's creator and organization admins can view this API key"
+  },
+  {
+    "action": "ACTION_REVOKE_API_KEY",
+    "role": "REQUIRED_ROLE_API_KEY_OWNER",
+    "sentence": "Only the key's creator and organization admins can revoke this API key"
+  },
+  {
+    "action": "ACTION_DELETE_API_KEY",
+    "role": "REQUIRED_ROLE_API_KEY_OWNER",
+    "sentence": "Only the key's creator and organization admins can delete this API key"
+  },
+  {
+    "action": "ACTION_VIEW_CLUSTER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can view this cluster"
+  },
+  {
+    "action": "ACTION_EDIT_CLUSTER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can edit this cluster"
+  },
+  {
+    "action": "ACTION_DELETE_CLUSTER",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can delete clusters"
+  },
+  {
+    "action": "ACTION_VIEW_LOGS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Logs are available to organization admins"
+  },
+  {
+    "action": "ACTION_CREATE_NODE_POOL",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can create node pools"
+  },
+  {
+    "action": "ACTION_LIST_NODE_POOLS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list node pools"
+  },
+  {
+    "action": "ACTION_LIST_CLUSTER_NAMESPACES",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list the namespaces of this cluster"
+  },
+  {
+    "action": "ACTION_CREATE_PROJECT",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can create projects"
+  },
+  {
+    "action": "ACTION_LIST_PROJECTS",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can list projects"
+  },
+  {
+    "action": "ACTION_VIEW_NODE_POOL",
+    "role": "REQUIRED_ROLE_ORGANIZATION_MEMBER",
+    "sentence": "Only organization members can view this node pool"
+  },
+  {
+    "action": "ACTION_EDIT_NODE_POOL",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can edit this node pool"
+  },
+  {
+    "action": "ACTION_DELETE_NODE_POOL",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can delete this node pool"
+  },
+  {
+    "action": "ACTION_VIEW_PROJECT",
+    "role": "REQUIRED_ROLE_PROJECT_MEMBER",
+    "sentence": "Only project members can view this project"
+  },
+  {
+    "action": "ACTION_EDIT_PROJECT",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can edit this project"
+  },
+  {
+    "action": "ACTION_DELETE_PROJECT",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can delete this project"
+  },
+  {
+    "action": "ACTION_MANAGE_PROJECT_MEMBERS",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can manage project members"
+  },
+  {
+    "action": "ACTION_LIST_PROJECT_MEMBERS",
+    "role": "REQUIRED_ROLE_PROJECT_MEMBER",
+    "sentence": "Only project members can list project members"
+  },
+  {
+    "action": "ACTION_CREATE_NAMESPACE",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can create namespaces"
+  },
+  {
+    "action": "ACTION_LIST_NAMESPACES",
+    "role": "REQUIRED_ROLE_PROJECT_MEMBER",
+    "sentence": "Only project members can list namespaces"
+  },
+  {
+    "action": "ACTION_VIEW_PROJECT_MEMBER",
+    "role": "REQUIRED_ROLE_PROJECT_MEMBER",
+    "sentence": "Only project members can view this project member"
+  },
+  {
+    "action": "ACTION_EDIT_PROJECT_MEMBER",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can edit this project member"
+  },
+  {
+    "action": "ACTION_DELETE_PROJECT_MEMBER",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can remove this project member"
+  },
+  {
+    "action": "ACTION_VIEW_NAMESPACE",
+    "role": "REQUIRED_ROLE_PROJECT_MEMBER",
+    "sentence": "Only project members can view this namespace"
+  },
+  {
+    "action": "ACTION_DELETE_NAMESPACE",
+    "role": "REQUIRED_ROLE_PROJECT_ADMIN",
+    "sentence": "Only project admins can delete this namespace"
+  },
+  {
+    "action": "ACTION_EDIT_PLUGIN",
+    "role": "REQUIRED_ROLE_ORGANIZATION_ADMIN",
+    "sentence": "Only organization admins can edit plugins"
+  }
+]

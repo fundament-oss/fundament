@@ -43,6 +43,9 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 @Component({
   selector: 'app-namespaces',
@@ -75,6 +78,13 @@ export default class NamespacesComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.CREATE_NAMESPACE, id)] : [];
+  });
+
+  canCreateNamespace = computed(() => this.mayDo(Action.CREATE_NAMESPACE, this.projectId()));
 
   /** Named in the sheet title, so it says which project the namespace lands in;
    *  the page header is behind the sheet while it is open. */
@@ -153,9 +163,10 @@ export default class NamespacesComponent implements OnInit {
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load namespaces: ${error.message}`
+            : 'Failed to load namespaces'),
       );
     } finally {
       this.isLoading.set(false);

@@ -167,13 +167,15 @@
           icon-color="secondary"
           text="No clusters found"
         >
-          <nldd-button
-            [routerLink]="pageNav.path('/clusters/new')"
-            slot="actions"
-            text="New cluster…"
-            start-icon="plus-small"
-            variant="primary"
-          ></nldd-button>
+          @if (canCreateCluster()) {
+            <nldd-button
+              [routerLink]="pageNav.path('/clusters/new')"
+              slot="actions"
+              text="New cluster…"
+              start-icon="plus-small"
+              variant="primary"
+            ></nldd-button>
+          }
         </nldd-inline-dialog>
       } @else {
         <nldd-inline-dialog

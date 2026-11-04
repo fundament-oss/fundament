@@ -61,6 +61,9 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 @Component({
   selector: 'app-project-detail',
@@ -94,6 +97,21 @@ export default class ProjectDetailComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
+
+  private mayDo = watchPermissions(() => {
+    const id = this.project()?.id;
+    return id ? [check(Action.EDIT_PROJECT, id), check(Action.DELETE_PROJECT, id)] : [];
+  });
+
+  canEditProject = computed(() => {
+    const id = this.project()?.id;
+    return !!id && this.mayDo(Action.EDIT_PROJECT, id);
+  });
+
+  canDeleteProject = computed(() => {
+    const id = this.project()?.id;
+    return !!id && this.mayDo(Action.DELETE_PROJECT, id);
+  });
 
   /** Falls back to the bare noun while the project is still loading, so no
    *  button or dialog ever says "Delete undefined". */
@@ -142,9 +160,10 @@ export default class ProjectDetailComponent implements OnInit {
       await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load project: ${error.message}`
-          : 'Failed to load project',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load project: ${error.message}`
+            : 'Failed to load project'),
       );
     } finally {
       this.isLoading.set(false);
@@ -158,9 +177,10 @@ export default class ProjectDetailComponent implements OnInit {
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load namespaces: ${error.message}`
+            : 'Failed to load namespaces'),
       );
     }
   }
@@ -172,9 +192,10 @@ export default class ProjectDetailComponent implements OnInit {
       this.clusters.set(response.clusters);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load clusters: ${error.message}`
+            : 'Failed to load clusters'),
       );
     }
   }
@@ -219,9 +240,10 @@ export default class ProjectDetailComponent implements OnInit {
     } catch (err) {
       this.showEditModal.set(false);
       this.errorMessage.set(
-        err instanceof Error
-          ? `Failed to update project alias: ${err.message}`
-          : 'Failed to update project alias',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to update project alias: ${err.message}`
+            : 'Failed to update project alias'),
       );
     } finally {
       this.saving.set(false);
@@ -288,9 +310,10 @@ export default class ProjectDetailComponent implements OnInit {
         this.errorMessage.set('Delete all namespaces in this project before deleting the project.');
       } else {
         this.errorMessage.set(
-          err instanceof Error
-            ? `Failed to delete project: ${err.message}`
-            : 'Failed to delete project',
+          permissionDeniedMessage(err) ??
+            (err instanceof Error
+              ? `Failed to delete project: ${err.message}`
+              : 'Failed to delete project'),
         );
       }
     }

@@ -73,6 +73,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import { isClusterReachable } from '../utils/cluster-status';
+import permissionDeniedMessage from '../utils/permission-denied';
 // The detail page's own shape. catalog.v1 returns ids where organization.v1
 // returned names, and splits the author into two scalars; resolving that here
 // keeps the template as it was.
@@ -292,9 +293,10 @@ export default class PluginDetailsComponent implements OnInit {
       }
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load plugin details: ${error.message}`
-          : 'Failed to load plugin details',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load plugin details: ${error.message}`
+            : 'Failed to load plugin details'),
       );
       this.isLoading.set(false);
     }

@@ -61,6 +61,9 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -105,6 +108,26 @@ export default class ProjectMemberSheetComponent implements OnInit {
   projectId = signal('');
 
   memberId = signal('');
+
+  private mayDo = watchPermissions(() => {
+    const memberId = this.memberId();
+    const projectId = this.projectId();
+    return [
+      ...(memberId
+        ? [
+            check(Action.EDIT_PROJECT_MEMBER, memberId),
+            check(Action.DELETE_PROJECT_MEMBER, memberId),
+          ]
+        : []),
+      ...(projectId ? [check(Action.CREATE_NAMESPACE, projectId)] : []),
+    ];
+  });
+
+  canEditMember = computed(() => this.mayDo(Action.EDIT_PROJECT_MEMBER, this.memberId()));
+
+  canRemoveMember = computed(() => this.mayDo(Action.DELETE_PROJECT_MEMBER, this.memberId()));
+
+  canCreateNamespace = computed(() => this.mayDo(Action.CREATE_NAMESPACE, this.projectId()));
 
   member = signal<ProjectMemberView | null>(null);
 
@@ -339,7 +362,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
           : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
       } catch (err) {
         this.notificationService.error(
-          err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
+          permissionDeniedMessage(err) ??
+            (err instanceof Error
+              ? `Namespace not created: ${err.message}`
+              : 'Namespace not created'),
         );
         return;
       } finally {
@@ -394,7 +420,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await this.load();
     } catch (err) {
       this.notificationService.error(
-        err instanceof Error ? `Permission not changed: ${err.message}` : 'Permission not changed',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Permission not changed: ${err.message}`
+            : 'Permission not changed'),
       );
     } finally {
       this.saving.set(false);
@@ -413,7 +442,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
     } catch (err) {
       this.showRemoveModal.set(false);
       this.notificationService.error(
-        err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed'),
       );
     }
   }

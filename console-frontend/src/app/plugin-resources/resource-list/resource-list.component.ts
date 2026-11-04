@@ -57,6 +57,8 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import { organizationPermission } from '../../utils/permission-checks';
+import { Action } from '../../../generated/v1/authz_pb';
 
 function buildDetailLink(resource: KubeResource): string[] {
   return ['.', resource.metadata.name];
@@ -99,6 +101,8 @@ export default class ResourceListComponent implements OnInit {
   private loader = inject(KubePluginLoaderService);
 
   private config = inject(ConfigService);
+
+  protected canCreateCluster = organizationPermission(Action.CREATE_CLUSTER);
 
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,

@@ -41,6 +41,7 @@ import {
   GetProjectDefaultsResponseSchema,
   UpdateProjectDefaultsResponseSchema,
 } from '../../generated/v1/project_pb';
+import { AuthzService, CheckPermissionsResponseSchema } from '../../generated/v1/authz_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
 import {
@@ -771,6 +772,12 @@ export default function createDemoTransport(): Transport {
         await delay(80);
         return create(ListAPIKeysResponseSchema, { apiKeys: [] });
       },
+    });
+
+    // The demo user may do everything.
+    router.service(AuthzService, {
+      checkPermissions: (req) =>
+        create(CheckPermissionsResponseSchema, { allowed: req.checks.map(() => true) }),
     });
 
     router.service(OverviewService, {

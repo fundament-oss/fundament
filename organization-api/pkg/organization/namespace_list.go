@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -20,7 +20,7 @@ func (s *Server) ListClusterNamespaces(
 ) (*organizationv1.ListClusterNamespacesResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ListClusterNamespaces, clusterID); err != nil {
 		return nil, err
 	}
 
@@ -45,7 +45,7 @@ func (s *Server) ListProjectNamespaces(
 ) (*organizationv1.ListProjectNamespacesResponse, error) {
 	projectID := uuid.MustParse(req.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ListNamespaces, projectID); err != nil {
 		return nil, err
 	}
 

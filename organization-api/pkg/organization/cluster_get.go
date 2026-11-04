@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -34,7 +34,7 @@ func (s *Server) GetClusterByName(
 	// Auth is done after the DB call because we dont know the cluster ID yet.
 	// This does leave us open for enumeration attacks because attackers can distinguish between not found and permission denied.
 	// We could always return cluster not found instead of permission errors.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, cluster.ID); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +54,7 @@ func (s *Server) GetCluster(
 ) (*organizationv1.GetClusterResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, clusterID); err != nil {
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (s *Server) GetClusterActivity(
 ) (*organizationv1.GetClusterActivityResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, clusterID); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (s *Server) GetKubeconfig(
 ) (*organizationv1.GetKubeconfigResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, clusterID); err != nil {
 		return nil, err
 	}
 

@@ -47,6 +47,9 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 /**
  * The cluster's per-container defaults, as a block on the cluster detail page:
@@ -79,9 +82,19 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
 
   protected loadError = signal<string | null>(null);
 
+  private mayDo = watchPermissions(() => {
+    const id = this.clusterId();
+    return id ? [check(Action.EDIT_CLUSTER, id)] : [];
+  });
+
+  /** Whether the caller may change the defaults at all; otherwise no edit control is shown. */
+  protected mayEdit = computed(() => this.mayDo(Action.EDIT_CLUSTER, this.clusterId()));
+
   /** The editor starts from what is stored, so it waits until that is known:
    *  a draft seeded while loading or after a failed read would save as unset. */
-  protected canEdit = computed(() => !this.loading() && this.loadError() === null);
+  protected canEdit = computed(
+    () => this.mayEdit() && !this.loading() && this.loadError() === null,
+  );
 
   private values = signal<ContainerDefaultValues>(NO_DEFAULTS);
 
@@ -127,8 +140,8 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
       );
       this.values.set(valuesFrom(response.defaults));
       this.suggested.set(valuesFrom(response.suggested));
-    } catch {
-      this.loadError.set('Failed to load the cluster defaults.');
+    } catch (err) {
+      this.loadError.set(permissionDeniedMessage(err) ?? 'Failed to load the cluster defaults.');
     } finally {
       this.loading.set(false);
     }
@@ -181,7 +194,7 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
     } catch (err) {
       // A FailedPrecondition names the project to lower first, so the API's own
       // message is more use here than anything this page could write.
-      this.saveError.set(ConnectError.from(err).rawMessage);
+      this.saveError.set(permissionDeniedMessage(err) ?? ConnectError.from(err).rawMessage);
     } finally {
       this.saving.set(false);
     }

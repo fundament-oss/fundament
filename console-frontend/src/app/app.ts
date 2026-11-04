@@ -48,6 +48,8 @@ import DialogSyncDirective from './dialog-sync.directive';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
+import watchPermissions, { check } from './utils/permission-checks';
+import { Action } from '../generated/v1/authz_pb';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import { inOrganization, organizationOf, withinOrganization } from './address';
@@ -833,14 +835,65 @@ export default class App implements OnInit {
     );
   });
 
-  /** The sidebar's projects section, also with no projects yet so its "New
-   *  project" button is there for the first one. Not before the projects have
-   *  loaded, or it flashes empty, and not without a cluster to put one on. */
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContextService.currentOrganizationId();
+    return [
+      ...(organizationId
+        ? [
+            check(Action.CREATE_CLUSTER, organizationId),
+            check(Action.INVITE_MEMBER, organizationId),
+          ]
+        : []),
+      ...this.organizationDataService
+        .clusterSummaries()
+        .map((cluster) => check(Action.CREATE_PROJECT, cluster.id)),
+      ...this.organizationProjects().flatMap((project) => [
+        check(Action.CREATE_NAMESPACE, project.id),
+        check(Action.MANAGE_PROJECT_MEMBERS, project.id),
+      ]),
+    ];
+  });
+
+  canCreateCluster = computed(() => {
+    const organizationId = this.organizationContextService.currentOrganizationId();
+    return !!organizationId && this.mayDo(Action.CREATE_CLUSTER, organizationId);
+  });
+
+  canInviteMember = computed(() => {
+    const organizationId = this.organizationContextService.currentOrganizationId();
+    return !!organizationId && this.mayDo(Action.INVITE_MEMBER, organizationId);
+  });
+
+  /** A project can go on any cluster that allows it; none, no button. */
+  canCreateProject = computed(() =>
+    this.organizationDataService
+      .clusterSummaries()
+      .some((cluster) => this.mayDo(Action.CREATE_PROJECT, cluster.id)),
+  );
+
+  canCreateNamespace = (projectId: string): boolean =>
+    this.mayDo(Action.CREATE_NAMESPACE, projectId);
+
+  canManageProjectMembers = (projectId: string): boolean =>
+    this.mayDo(Action.MANAGE_PROJECT_MEMBERS, projectId);
+
+  /** The sidebar's projects section: its projects, or, with none yet, the "New
+   *  project" button for the first one. Not before the projects have loaded, or
+   *  it flashes empty, and not when the caller may create none. */
   showProjectsSection = computed(
     () =>
       this.organizationProjects().length > 0 ||
-      (this.organizationDataService.projectsLoaded() &&
-        this.organizationDataService.clusterSummaries().length > 0),
+      (this.organizationDataService.projectsLoaded() && this.canCreateProject()),
+  );
+
+  /** Whether the Create menu's Projects group has any item to show. */
+  showCreateProjectsGroup = computed(
+    () =>
+      this.canCreateProject() ||
+      this.organizationProjects().some(
+        (project) =>
+          this.canCreateNamespace(project.id) || this.canManageProjectMembers(project.id),
+      ),
   );
 
   /** The project whose menu fills the secondary sidebar. */

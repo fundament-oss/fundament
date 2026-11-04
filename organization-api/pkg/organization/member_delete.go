@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -32,7 +32,7 @@ func (s *Server) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	if err := s.checkPermission(ctx, authz.CanDeleteMember(), authz.Organization(organizationID)); err != nil {
+	if err := s.checkPermission(ctx, actions.DeleteMember, organizationID); err != nil {
 		return nil, err
 	}
 

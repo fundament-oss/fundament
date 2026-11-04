@@ -171,6 +171,9 @@ jobs:
           - image-name: organization-api
             dockerfile: organization-api/Dockerfile
             context: "."
+          - image-name: authz-api
+            dockerfile: authz-api/Dockerfile
+            context: "."
           - image-name: db-migrations
             dockerfile: db/Dockerfile
             context: db
@@ -489,6 +492,7 @@ jobs:
             | Console demo (walkthrough) | https://console-demo.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Authz API | https://authz-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Kube API Proxy | https://k8s-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM | https://dcim.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
@@ -589,6 +593,7 @@ jobs:
           BASE_URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           ORGANIZATION_API_URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           AUTHN_API_URL="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          AUTHZ_API_URL="https://authz-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           PLUGIN_PROXY_URL="https://plugin-proxy.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           E2E_MOCK_SHOOT_VERIFIER=true \
           bun run test

@@ -98,6 +98,10 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/tooltip';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import routeParam from '../utils/route-param';
+import { Action } from '../../generated/v1/authz_pb';
 
 interface ClusterResourceUsage {
   cpu: { used: number; total: number; unit: string };
@@ -333,6 +337,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private cdr = inject(ChangeDetectorRef);
 
+  private routeClusterId = routeParam('id');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.routeClusterId();
+    return id ? [check(Action.DELETE_CLUSTER, id), check(Action.CREATE_NODE_POOL, id)] : [];
+  });
+
+  canDeleteCluster = computed(() => this.mayDo(Action.DELETE_CLUSTER, this.routeClusterId()));
+
+  canEditNodePools = computed(() => this.mayDo(Action.CREATE_NODE_POOL, this.routeClusterId()));
+
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   private usageRetryTimer: ReturnType<typeof setInterval> | null = null;
@@ -514,9 +529,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.startPolling();
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load cluster: ${error.message}`
-          : 'Failed to load cluster data',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load cluster: ${error.message}`
+            : 'Failed to load cluster data'),
       );
     } finally {
       this.isLoading.set(false);
@@ -710,7 +726,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      this.kubeconfigError.set(error instanceof Error ? error.message : 'The request failed.');
+      this.kubeconfigError.set(
+        permissionDeniedMessage(error) ??
+          (error instanceof Error ? error.message : 'The request failed.'),
+      );
     } finally {
       this.isDownloadingKubeconfig.set(false);
     }
@@ -803,9 +822,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         return;
       }
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to delete cluster: ${error.message}`
-          : 'Failed to delete cluster',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to delete cluster: ${error.message}`
+            : 'Failed to delete cluster'),
       );
     } finally {
       this.isDeleting.set(false);
@@ -821,9 +841,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.projectsLoadError.set(true);
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load projects: ${error.message}`
-          : 'Failed to load projects',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load projects: ${error.message}`
+            : 'Failed to load projects'),
       );
     }
   }
@@ -844,9 +865,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load installed plugins: ${error.message}`
-          : 'Failed to load installed plugins',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load installed plugins: ${error.message}`
+            : 'Failed to load installed plugins'),
       );
     } finally {
       this.isLoadingPlugins.set(false);

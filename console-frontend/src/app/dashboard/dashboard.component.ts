@@ -38,6 +38,9 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import { organizationPermission } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-dashboard',
@@ -56,6 +59,8 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   private organizationDataService = inject(OrganizationDataService);
 
   private client = inject(CLUSTER);
+
+  protected canCreateCluster = organizationPermission(Action.CREATE_CLUSTER);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -110,9 +115,10 @@ export default class DashboardComponent implements OnInit, OnDestroy {
       fetched = response.clusters;
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters. Please try again later.',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load clusters: ${error.message}`
+            : 'Failed to load clusters. Please try again later.'),
       );
       return;
     }

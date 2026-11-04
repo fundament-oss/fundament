@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
+
+	"github.com/fundament-oss/fundament/common/authz/denial"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
@@ -107,12 +110,12 @@ func newFundamentClientWithTransport(endpoint, kubeProxyURL string, transport, k
 	}
 
 	return &FundamentClient{
-		ClusterService:      organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
-		ProjectService:      organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
-		MemberService:       organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
-		InviteService:       organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
-		NamespaceService:    organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
-		PluginService:       organizationv1connect.NewPluginServiceClient(httpClient, endpoint),
+		ClusterService:      organizationv1connect.NewClusterServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
+		ProjectService:      organizationv1connect.NewProjectServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
+		MemberService:       organizationv1connect.NewMemberServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
+		InviteService:       organizationv1connect.NewInviteServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
+		NamespaceService:    organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
+		PluginService:       organizationv1connect.NewPluginServiceClient(httpClient, endpoint, connect.WithInterceptors(denial.Interceptor())),
 		KubeProxyURL:        kubeProxyURL,
 		KubeProxyHTTPClient: kubeProxyClient,
 	}

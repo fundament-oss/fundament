@@ -19,21 +19,23 @@
          actions slot: a toolbar takes a second and a third action without the
          title growing a row of controls. -->
     <nldd-toolbar label="Member actions">
-      <nldd-toolbar-item slot="start">
-        <nldd-button
-          type="button"
-          (click)="overlays.inviteMember.set(true)"
-          text="Invite member…"
-          start-icon="plus-small"
-          variant="primary"
-        ></nldd-button>
-        <nldd-menu-item
-          slot="overflow"
-          icon="plus-small"
-          text="Invite member…"
-          (select)="overlays.inviteMember.set(true)"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
+      @if (canInviteMember()) {
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            type="button"
+            (click)="overlays.inviteMember.set(true)"
+            text="Invite member…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="Invite member…"
+            (select)="overlays.inviteMember.set(true)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      }
       <nldd-toolbar-item slot="start">
         <!-- Carries a real href: the sheet has its own URL, so this can be
              opened in a new tab and closed with the back button. In a toolbar it
@@ -330,50 +332,58 @@
                   text="Invited"
                 ></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <nldd-icon-button
-                    icon="more"
-                    size="sm"
-                    variant="secondary"
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- The role is part of the invitation, so it can still be
-                           corrected: without this a wrong one costs a cancel, a
-                           second invite and a second mail to the same person. -->
-                      <nldd-menu-item
-                        icon="user-admin"
-                        [attr.text]="
-                          member.permission === 'admin'
-                            ? 'Switch to organization viewer'
-                            : 'Switch to organization admin'
-                        "
-                        (select)="setPermission(member)"
-                      ></nldd-menu-item>
-                      <!-- Nothing was ever sent, so this is not a resend: it is
-                           the message the admin still has to deliver by hand,
-                           for an invitation made last week or made by functl.
-                           Guarded on the address: the proto says email is set
-                           for invited members, and without one the message
-                           would name nobody to send it to. -->
-                      @if (member.email) {
-                        <nldd-menu-item
-                          text="Send invitation email…"
-                          icon="envelope"
-                          (select)="openInvitationEmail(member)"
-                        ></nldd-menu-item>
-                      }
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Cancel invitation"
-                        icon="delete"
-                        destructive
-                        (select)="cancelInvitation(member.id)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
+                @if (canEditMember() || canDeleteMember() || (canInviteMember() && member.email)) {
+                  <nldd-cell width="fit-content">
+                    <nldd-icon-button
+                      icon="more"
+                      size="sm"
+                      variant="secondary"
+                      popup-type="menu"
+                      [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
+                    >
+                      <nldd-menu slot="popup">
+                        <!-- The role is part of the invitation, so it can still be
+                             corrected: without this a wrong one costs a cancel, a
+                             second invite and a second mail to the same person. -->
+                        @if (canEditMember()) {
+                          <nldd-menu-item
+                            icon="user-admin"
+                            [attr.text]="
+                              member.permission === 'admin'
+                                ? 'Switch to organization viewer'
+                                : 'Switch to organization admin'
+                            "
+                            (select)="setPermission(member)"
+                          ></nldd-menu-item>
+                        }
+                        <!-- Nothing was ever sent, so this is not a resend: it is
+                             the message the admin still has to deliver by hand,
+                             for an invitation made last week or made by functl.
+                             Guarded on the address: the proto says email is set
+                             for invited members, and without one the message
+                             would name nobody to send it to. -->
+                        @if (canInviteMember() && member.email) {
+                          <nldd-menu-item
+                            text="Send invitation email…"
+                            icon="envelope"
+                            (select)="openInvitationEmail(member)"
+                          ></nldd-menu-item>
+                        }
+                        @if (canDeleteMember()) {
+                          @if (canEditMember() || (canInviteMember() && member.email)) {
+                            <nldd-menu-divider></nldd-menu-divider>
+                          }
+                          <nldd-menu-item
+                            text="Cancel invitation"
+                            icon="delete"
+                            destructive
+                            (select)="cancelInvitation(member.id)"
+                          ></nldd-menu-item>
+                        }
+                      </nldd-menu>
+                    </nldd-icon-button>
+                  </nldd-cell>
+                }
               } @else if (member.isCurrentUser) {
                 <!-- Where the actions would be, saying why there are none. -->
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -386,37 +396,45 @@
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
               } @else {
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <!-- No chevron: the ellipsis already says a menu opens. -->
-                  <nldd-icon-button
-                    icon="more"
-                    size="sm"
-                    variant="secondary"
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + member.name"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- Names the result, not the form: one click instead of
-                           a sheet holding a single radio group. -->
-                      <nldd-menu-item
-                        icon="user-admin"
-                        [attr.text]="
-                          member.permission === 'admin'
-                            ? 'Make organization viewer'
-                            : 'Make organization admin'
-                        "
-                        (select)="setPermission(member)"
-                      ></nldd-menu-item>
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Remove"
-                        icon="delete"
-                        destructive
-                        (select)="openDeleteModal(member)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
+                @if (canEditMember() || canDeleteMember()) {
+                  <nldd-cell width="fit-content">
+                    <!-- No chevron: the ellipsis already says a menu opens. -->
+                    <nldd-icon-button
+                      icon="more"
+                      size="sm"
+                      variant="secondary"
+                      popup-type="menu"
+                      [attr.accessible-label]="'Actions for ' + member.name"
+                    >
+                      <nldd-menu slot="popup">
+                        <!-- Names the result, not the form: one click instead of
+                             a sheet holding a single radio group. -->
+                        @if (canEditMember()) {
+                          <nldd-menu-item
+                            icon="user-admin"
+                            [attr.text]="
+                              member.permission === 'admin'
+                                ? 'Make organization viewer'
+                                : 'Make organization admin'
+                            "
+                            (select)="setPermission(member)"
+                          ></nldd-menu-item>
+                        }
+                        @if (canEditMember() && canDeleteMember()) {
+                          <nldd-menu-divider></nldd-menu-divider>
+                        }
+                        @if (canDeleteMember()) {
+                          <nldd-menu-item
+                            text="Remove"
+                            icon="delete"
+                            destructive
+                            (select)="openDeleteModal(member)"
+                          ></nldd-menu-item>
+                        }
+                      </nldd-menu>
+                    </nldd-icon-button>
+                  </nldd-cell>
+                }
               }
             </nldd-list-item>
           }

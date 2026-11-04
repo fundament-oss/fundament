@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -21,7 +21,7 @@ func (s *Server) GetProjectMember(
 ) (*organizationv1.GetProjectMemberResponse, error) {
 	memberID := uuid.MustParse(req.GetMemberId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.ProjectMember(memberID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewProjectMember, memberID); err != nil {
 		return nil, err
 	}
 

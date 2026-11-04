@@ -9,6 +9,7 @@ jwtSecret: "local-dev-jwt-secret"
 externalUrls:
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
+  authzApi: https://authz-api.fundament.localhost:8443
   kubeApiProxy: https://k8s-api.fundament.localhost:8443
   pluginProxy: https://plugin-proxy.fundament.localhost:8443
   console: https://console.fundament.localhost:8443
@@ -65,6 +66,16 @@ organizationApi:
     parentRefs: *localGateway
     hostnames:
       - organization.fundament.localhost
+
+authzApi:
+  enabled: true
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - authz-api.fundament.localhost
 
 kubeApiProxy:
   enabled: true

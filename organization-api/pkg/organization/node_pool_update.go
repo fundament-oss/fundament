@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -22,7 +22,7 @@ func (s *Server) UpdateNodePool(
 ) (*organizationv1.UpdateNodePoolResponse, error) {
 	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
+	if err := s.checkPermission(ctx, actions.EditNodePool, nodePoolID); err != nil {
 		return nil, err
 	}
 

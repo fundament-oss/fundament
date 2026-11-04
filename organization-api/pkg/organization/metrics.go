@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
@@ -93,7 +93,7 @@ func (s *Server) GetClusterWorkloadMetrics(
 ) (*organizationv1.GetClusterWorkloadMetricsResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, clusterID); err != nil {
 		return nil, err
 	}
 
@@ -212,7 +212,7 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 ) (*organizationv1.GetWorkloadTimeSeriesResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewCluster, clusterID); err != nil {
 		return nil, err
 	}
 
@@ -540,7 +540,7 @@ func (s *Server) GetProjectWorkloadMetrics(
 ) (*organizationv1.GetProjectWorkloadMetricsResponse, error) {
 	projectID := uuid.MustParse(req.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewProject, projectID); err != nil {
 		return nil, err
 	}
 
@@ -662,7 +662,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 ) (*organizationv1.GetWorkloadTimeSeriesResponse, error) {
 	projectID := uuid.MustParse(req.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewProject, projectID); err != nil {
 		return nil, err
 	}
 

@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   ViewChild,
   ChangeDetectionStrategy,
@@ -43,6 +44,10 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import routeParam from '../utils/route-param';
+import { Action } from '../../generated/v1/authz_pb';
 
 /**
  * What the submit did, in one line. One pool by name, because the name is what
@@ -92,6 +97,16 @@ export default class ClusterNodesComponent implements OnInit {
   private regionCatalog = inject(RegionCatalogService);
 
   private clusterId = '';
+
+  private routeClusterId = routeParam('id');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.routeClusterId();
+    return id ? [check(Action.CREATE_NODE_POOL, id)] : [];
+  });
+
+  /** SetNodePools is checked as CreateNodePool, which covers editing and deleting pools too. */
+  canEditNodePools = computed(() => this.mayDo(Action.CREATE_NODE_POOL, this.routeClusterId()));
 
   private existingNodePools: NodePool[] = [];
 
@@ -162,9 +177,10 @@ export default class ClusterNodesComponent implements OnInit {
       );
     } catch (error) {
       const message =
-        error instanceof Error
+        permissionDeniedMessage(error) ??
+        (error instanceof Error
           ? `Failed to load node pools: ${error.message}`
-          : 'Failed to load node pools';
+          : 'Failed to load node pools');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -246,7 +262,8 @@ export default class ClusterNodesComponent implements OnInit {
       // backend detail.
       const reason = readableRefusal(error);
       this.errorMessage.set(
-        reason ? `Failed to update cluster nodes: ${reason}` : 'Failed to update cluster nodes',
+        permissionDeniedMessage(error) ??
+          (reason ? `Failed to update cluster nodes: ${reason}` : 'Failed to update cluster nodes'),
       );
     } finally {
       this.isSubmitting.set(false);

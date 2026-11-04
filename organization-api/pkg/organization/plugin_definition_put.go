@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -52,7 +52,7 @@ func (s *Server) PutPluginDefinition(
 	// idempotent, so a caller that races a fresh ownership sync can simply retry.
 	// RLS on appstore.plugin_definitions independently enforces the same rule
 	// (see the insert-error mapping below).
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+	if err := s.checkPermission(ctx, actions.EditPlugin, pluginID); err != nil {
 		return nil, err
 	}
 	// Strict parse rejects an image-free template (and any malformed manifest):
@@ -156,8 +156,7 @@ func (s *Server) PutPluginDefinition(
 			// plugin. The OpenFGA check above normally catches this first; reaching
 			// here means the ownership tuple has not synced yet. We only translate
 			// the rejection into a clean API error.
-			return nil, connect.NewError(connect.CodePermissionDenied,
-				fmt.Errorf("organization is not the owner of plugin %s", catalogRow.Name))
+			return nil, s.permissionDenied(ctx, actions.EditPlugin)
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("insert plugin definition: %w", err))
 	}

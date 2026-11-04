@@ -12,6 +12,7 @@ import (
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/authz/denial"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
@@ -126,7 +127,7 @@ func (c *Client) Organizations() organizationv1connect.OrganizationServiceClient
 	return organizationv1connect.NewOrganizationServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -135,7 +136,7 @@ func (c *Client) Clusters() organizationv1connect.ClusterServiceClient {
 	return organizationv1connect.NewClusterServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -144,7 +145,7 @@ func (c *Client) Projects() organizationv1connect.ProjectServiceClient {
 	return organizationv1connect.NewProjectServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -153,7 +154,7 @@ func (c *Client) Namespaces() organizationv1connect.NamespaceServiceClient {
 	return organizationv1connect.NewNamespaceServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -162,7 +163,7 @@ func (c *Client) APIKeys() organizationv1connect.APIKeyServiceClient {
 	return organizationv1connect.NewAPIKeyServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -171,7 +172,7 @@ func (c *Client) Members() organizationv1connect.MemberServiceClient {
 	return organizationv1connect.NewMemberServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 
@@ -180,7 +181,7 @@ func (c *Client) Invites() organizationv1connect.InviteServiceClient {
 	return organizationv1connect.NewInviteServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+		connect.WithInterceptors(denial.Interceptor(), c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 

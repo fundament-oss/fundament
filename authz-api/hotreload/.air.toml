@@ -1,0 +1,16 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/fun-authz-api ./authz-api/cmd/fun-authz-api"
+entrypoint = "tmp/fun-authz-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["authz-api", "common"]
+exclude_dir = ["tmp"]
+delay = 500
+# Exits while OpenFGA is not yet provisioned; this brings it back.
+rerun = true
+rerun_delay = 2000
+
+[log]
+time = false

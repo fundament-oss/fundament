@@ -168,23 +168,25 @@
               }
               <!-- The ellipsis warns that picking this asks for more before
                    anything happens. -->
-              <nldd-list-item
-                checkbox
-                [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
-                (click)="toggleDraftNamespace(NEW_NAMESPACE)"
-              >
-                <nldd-cell width="fit-content">
-                  <nldd-checkbox
-                    decorative
-                    [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
-                  ></nldd-checkbox>
-                </nldd-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <nldd-text-cell
-                  width="full"
-                  text="New namespace…"
-                ></nldd-text-cell>
-              </nldd-list-item>
+              @if (canCreateNamespace()) {
+                <nldd-list-item
+                  checkbox
+                  [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                  (click)="toggleDraftNamespace(NEW_NAMESPACE)"
+                >
+                  <nldd-cell width="fit-content">
+                    <nldd-checkbox
+                      decorative
+                      [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                    ></nldd-checkbox>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="full"
+                    text="New namespace…"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
             </nldd-list>
             <!-- Access is a mock role binding; only a new namespace is created
                  for real. -->

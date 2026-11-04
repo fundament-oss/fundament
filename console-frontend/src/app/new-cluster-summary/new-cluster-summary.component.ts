@@ -40,6 +40,7 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-new-cluster-summary',
@@ -134,7 +135,8 @@ export default class NewClusterSummaryComponent {
       clusterId = response.clusterId;
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'The cluster could not be created.',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error ? error.message : 'The cluster could not be created.'),
       );
       this.isCreating.set(false);
       return;

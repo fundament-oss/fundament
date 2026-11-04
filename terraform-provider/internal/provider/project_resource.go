@@ -214,7 +214,6 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	state.ID = types.StringValue(createResp.GetProjectId())
 
 	// Read the project to get the full state including created.
-	// Retry on permission_denied, OpenFGA needs time to sync
 	getReq := organizationv1.GetProjectRequest_builder{
 		ProjectId: createResp.GetProjectId(),
 	}.Build()

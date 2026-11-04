@@ -60,6 +60,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../../utils/permission-denied';
 
 Chart.register(...registerables);
 
@@ -304,7 +305,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   // ── request state
   readonly isLoading = signal(false);
 
-  readonly loadError = signal(false);
+  /** Set when a load failed; `denied` is the permission sentence for a denial, else null. */
+  readonly loadError = signal<{ denied: string | null } | null>(null);
+
+  readonly loadDenied = computed(() => this.loadError()?.denied ?? null);
 
   readonly backend = signal<LogBackend>(LogBackend.UNSPECIFIED);
 
@@ -627,8 +631,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         this.selectedCluster.set(clusters[0].id);
         await this.onClusterSelected();
       }
-    } catch {
-      this.loadError.set(true);
+    } catch (err) {
+      this.loadError.set({ denied: permissionDeniedMessage(err) });
     }
   }
 
@@ -760,7 +764,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     }
 
     this.isLoading.set(true);
-    this.loadError.set(false);
+    this.loadError.set(null);
     try {
       // Re-anchor so a page left open queries "the last hour" from now, not
       // from when it was opened.
@@ -786,9 +790,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       // up: the page is done here, and the counts land on their own ticket.
       this.isLoading.set(false);
       this.refreshHistogram(from, to, seq);
-    } catch {
+    } catch (err) {
       if (seq !== this.loadSeq) return;
-      this.loadError.set(true);
+      this.loadError.set({ denied: permissionDeniedMessage(err) });
       // Voids the histogram still in flight for this load: a chart above an
       // empty, errored list would be describing logs the page cannot show.
       this.clearLogs();

@@ -31,6 +31,7 @@ import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-profile',
@@ -79,9 +80,10 @@ export default class ProfileComponent implements OnInit {
       this.isLoading.set(false);
     } catch (error) {
       this.error.set(
-        error instanceof Error
-          ? `Failed to load user information: ${error.message}`
-          : 'Failed to load user information',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load user information: ${error.message}`
+            : 'Failed to load user information'),
       );
       this.isLoading.set(false);
     }

@@ -43,6 +43,9 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 @Component({
   selector: 'app-organization-settings',
@@ -61,6 +64,16 @@ export default class OrganizationComponent implements OnInit {
   private organizationContextService = inject(OrganizationContextService);
 
   private organizationDataService = inject(OrganizationDataService);
+
+  private mayDo = watchPermissions(() => {
+    const id = this.organization()?.id;
+    return id ? [check(Action.EDIT_ORGANIZATION, id)] : [];
+  });
+
+  canEditOrganization = computed(() => {
+    const id = this.organization()?.id;
+    return !!id && this.mayDo(Action.EDIT_ORGANIZATION, id);
+  });
 
   organization = signal<OrganizationData | null>(null);
 
@@ -133,7 +146,10 @@ export default class OrganizationComponent implements OnInit {
     } catch (err) {
       // The sheet stays open: this is where the change is.
 
-      this.error.set(err instanceof Error ? err.message : 'The request failed.');
+      this.error.set(
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
+      );
     } finally {
       this.loading.set(false);
     }
