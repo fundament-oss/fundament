@@ -1,0 +1,65 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 24
+:state: prediscussion
+
+= FUN-24 Permission Denials and the authz-api
+
+== Problem
+
+A user who lacks a role cannot tell why an action failed or which role it needs, and some denials take 9 seconds. Permissions are enforced correctly; the way denials are answered and shown is the problem. OpenFGA stays the only authority (link:/funs/fun-7[FUN-7]): no client decides who may do what.
+
+== Decision
+
+* A denial is answered at once and carries a structured detail naming the action and the role it needs. Clients turn the detail into a sentence.
+* A denied check is retried only while the authorization data it depends on is still syncing.
+* A new service, `authz-api`, tells the console which actions the caller may take on which objects. The console hides the actions that are not allowed.
+* One action catalogue defines the actions for `authz-api`, for denials and for organization-api's checks.
+
+== The action catalogue
+
+`authz-api/pkg/proto/v1/authz.proto` defines `Action` (for example `ACTION_DELETE_CLUSTER`), `RequiredRole` and `PermissionDeniedDetail { action, required_role }`. The Go package `common/authz/actions` maps every action to an OpenFGA relation, an object type and a required role. A test checks each mapping against `common/authz/model.fga`.
+
+organization-api passes an action and an object ID to its checks, for example `checkPermission(ctx, actions.DeleteCluster, clusterID)`. Relation and object type come from the catalogue, so what `authz-api` reports is what organization-api enforces. `QueryLogs` is the action `VIEW_LOGS`, mapped to `can_edit` on the cluster.
+
+== The structured detail
+
+A denial is a `permission_denied` error with a neutral message and a `PermissionDeniedDetail`. The API does not send a sentence. The console, `functl` and the OpenTofu provider map the detail to one, for example "Only organization admins can delete clusters". The console has its own mapping; `functl` and the provider share the Go package `common/authz/denial`. `common/authz/denial/testdata/sentences.json` lists every action with its role and sentence, and both the Go tests and the console spec read it, so a new action without wording fails in both languages.
+
+== The outbox gate
+
+Authorization tuples reach OpenFGA through `authz.outbox` and the authz-worker, so a check right after a create may be denied briefly. After a denial, organization-api looks in `authz.outbox` and retries only if a row in status `pending` or `retrying` exists for what the decision depends on:
+
+[cols="1,3"]
+|===
+|Object checked |Rows that count
+
+|Cluster
+|The cluster; the caller's organization membership.
+
+|Project
+|The project; its cluster; the caller's project membership; the caller's organization membership.
+|===
+
+A row in status `failed` does not count. The retry budgets are unchanged (8 seconds for writes, 1 second for reads). With nothing pending a denial returns at once, and an allowed request never touches the outbox.
+
+== authz-api
+
+`authz-api` is a standalone service at `authz-api.<domain>` with one RPC, `CheckPermissions`. It takes a list of (action, object ID) checks and returns one answer per check, in request order, at most 500 per call.
+
+* The caller is the user in the validated JWT, never a field of the request. API-key-exchanged tokens work as in organization-api.
+* There is no organization header. An object that does not exist answers `false`, and so does one in another organization unless the caller is a member of that organization.
+* The service needs only OpenFGA and has no database. `Client.Evaluations` in `common/authz` uses OpenFGA's `BatchCheck`.
+* An OpenFGA failure returns `Internal`, and the console keeps those actions hidden.
+
+The console sends one batched call per component watcher, keeps actions hidden until the answer arrives, and hides rather than disables what is not allowed. A page has loaded its object through organization-api first, so most of its tuples have synced. After a `false` answer the watcher asks again at 1 second and at 4 seconds and shows an action that turns true. Submit buttons inside sheets are not gated.
+
+== Why organization-api still calls OpenFGA
+
+organization-api could ask `authz-api` instead, but it must decide with the outbox gate, which needs its database, and a network hop on every request adds a failure mode to enforcement. Keeping the checks in-process means a bug or an outage in `authz-api` can hide a button but cannot change what the API allows. The catalogue is what keeps the two answering the same.
+
+== Testing
+
+`e2e/features/permission-denials.feature` runs on every PR preview without a real Gardener. It covers three things for the seeded users bart and cindy: the action is hidden in the console, a direct API call is denied in under 2 seconds with the detail, and `CheckPermissions` agrees with what the API enforces.

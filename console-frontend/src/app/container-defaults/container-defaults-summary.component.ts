@@ -48,8 +48,8 @@ import '@nldd/design-system/title';
       >
         @for (row of section.rows; track row.label) {
           <nldd-list-item
-            button
-            (click)="edit.emit()"
+            [attr.button]="editable() ? '' : null"
+            (click)="editable() && edit.emit()"
           >
             <nldd-text-cell
               width="full"
@@ -63,10 +63,12 @@ import '@nldd/design-system/title';
               [attr.supporting-text]="row.inherited ? 'Inherited from cluster' : null"
             ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-icon-cell
-              icon="edit"
-              size="20"
-            ></nldd-icon-cell>
+            @if (editable()) {
+              <nldd-icon-cell
+                icon="edit"
+                size="20"
+              ></nldd-icon-cell>
+            }
           </nldd-list-item>
         }
       </nldd-list>
@@ -78,6 +80,9 @@ import '@nldd/design-system/title';
 })
 export default class ContainerDefaultsSummaryComponent {
   sections = input.required<DefaultsSummarySection[]>();
+
+  /** Without it the rows are plain text: no edit icon, no click. */
+  editable = input(true);
 
   edit = output();
 }

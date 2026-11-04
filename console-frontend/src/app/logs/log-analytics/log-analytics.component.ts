@@ -22,6 +22,7 @@ import { LogBackend } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 
 import '@nldd/design-system/button';
+import permissionDeniedMessage from '../../utils/permission-denied';
 
 Chart.register(...registerables);
 
@@ -78,7 +79,10 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
   // ── request state
   readonly isLoading = signal(false);
 
-  readonly loadError = signal(false);
+  /** Set when a load failed; `denied` is the permission sentence for a denial, else null. */
+  readonly loadError = signal<{ denied: string | null } | null>(null);
+
+  readonly loadDenied = computed(() => this.loadError()?.denied ?? null);
 
   readonly backend = signal<LogBackend>(LogBackend.UNSPECIFIED);
 
@@ -246,8 +250,8 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
         this.selectedCluster.set(clusters[0].id);
         await this.onClusterSelected();
       }
-    } catch {
-      this.loadError.set(true);
+    } catch (err) {
+      this.loadError.set({ denied: permissionDeniedMessage(err) });
     }
   }
 
@@ -296,7 +300,7 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
       return;
     }
     this.isLoading.set(true);
-    this.loadError.set(false);
+    this.loadError.set(null);
     try {
       const { from, to } = this.timeRange();
       const result = await this.logsApi.query({
@@ -308,8 +312,8 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
       });
       this.backend.set(result.backend);
       this.allLogs.set(result.entries);
-    } catch {
-      this.loadError.set(true);
+    } catch (err) {
+      this.loadError.set({ denied: permissionDeniedMessage(err) });
       this.allLogs.set([]);
     } finally {
       this.isLoading.set(false);

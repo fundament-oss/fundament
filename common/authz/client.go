@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -48,45 +49,7 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
 // Returns a Decision indicating whether the subject can perform the action on the resource.
 func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) { //nolint:gocritic // exported signature mirrored by kube-api-proxy interfaces
-	// Build OpenFGA check context from the AuthZEN request context and any
-	// object/action properties, so that conditions can be evaluated correctly.
-	checkContext := map[string]any{}
-	if req.Context != nil {
-		checkContext = maps.Clone(req.Context)
-	}
-
-	// Map resource (object) properties into the context under the "object" key.
-	if req.Resource.Properties != nil {
-		objProps, ok := checkContext["object"].(map[string]any)
-		if !ok || objProps == nil {
-			objProps = make(map[string]any)
-		}
-
-		maps.Copy(objProps, req.Resource.Properties)
-		checkContext["object"] = objProps
-	}
-
-	// Map action properties into the context under the "action" key.
-	if req.Action.Properties != nil {
-		actProps, ok := checkContext["action"].(map[string]any)
-		if !ok || actProps == nil {
-			actProps = make(map[string]any)
-		}
-
-		maps.Copy(actProps, req.Action.Properties)
-		checkContext["action"] = actProps
-	}
-
-	// Construct the OpenFGA check request, including context if any was provided.
-	checkReq := client.ClientCheckRequest{
-		User:     req.Subject.String(),
-		Relation: string(req.Action.Name),
-		Object:   req.Resource.String(),
-	}
-
-	if len(checkContext) > 0 {
-		checkReq.Context = &checkContext
-	}
+	checkReq := checkRequest(&req)
 
 	storeID, err := c.store.ID(ctx)
 	if err != nil {
@@ -107,6 +70,48 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 	}
 
 	return Decision{Decision: decision}, nil
+}
+
+// checkRequest builds the OpenFGA check for req. Resource and action properties
+// are mapped into the check context under "object" and "action", so conditions
+// can read them.
+func checkRequest(req *EvaluationRequest) client.ClientCheckRequest {
+	checkContext := map[string]any{}
+	if req.Context != nil {
+		checkContext = maps.Clone(req.Context)
+	}
+
+	if req.Resource.Properties != nil {
+		objProps, ok := checkContext["object"].(map[string]any)
+		if !ok || objProps == nil {
+			objProps = make(map[string]any)
+		}
+
+		maps.Copy(objProps, req.Resource.Properties)
+		checkContext["object"] = objProps
+	}
+
+	if req.Action.Properties != nil {
+		actProps, ok := checkContext["action"].(map[string]any)
+		if !ok || actProps == nil {
+			actProps = make(map[string]any)
+		}
+
+		maps.Copy(actProps, req.Action.Properties)
+		checkContext["action"] = actProps
+	}
+
+	checkReq := client.ClientCheckRequest{
+		User:     req.Subject.String(),
+		Relation: string(req.Action.Name),
+		Object:   req.Resource.String(),
+	}
+
+	if len(checkContext) > 0 {
+		checkReq.Context = &checkContext
+	}
+
+	return checkReq
 }
 
 // ListObjects returns the ids of every objectType object on which subject holds
@@ -140,7 +145,10 @@ func (c *Client) ListObjects(ctx context.Context, subject Object, action Action,
 }
 
 // Evaluations performs batch access evaluations following the AuthZEN Access Evaluations API.
-// Supports default values and evaluation semantics (execute_all, deny_on_first_deny, permit_on_first_permit).
+// Every evaluation is sent to OpenFGA BatchCheck, which the SDK splits into as many
+// requests as the server limit needs; decisions come back in request order.
+// With deny_on_first_deny or permit_on_first_permit the result is cut after the
+// first matching decision. A check OpenFGA rejects fails the whole call.
 func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (EvaluationsResponse, error) {
 	semantic := ExecuteAll
 	if req.Options != nil && req.Options.Semantic != "" {
@@ -152,35 +160,68 @@ func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (Evalu
 		}
 	}
 
-	results := make([]Decision, 0, len(req.Evaluations))
+	if len(req.Evaluations) == 0 {
+		return EvaluationsResponse{Evaluations: []Decision{}}, nil
+	}
 
+	checks := make([]client.ClientBatchCheckItem, 0, len(req.Evaluations))
 	for i := range req.Evaluations {
-		// Apply defaults from top-level request
 		merged := mergeEvaluation(&req.Evaluations[i], req)
+		checkReq := checkRequest(&merged)
+		checks = append(checks, client.ClientBatchCheckItem{
+			User:          checkReq.User,
+			Relation:      checkReq.Relation,
+			Object:        checkReq.Object,
+			Context:       checkReq.Context,
+			CorrelationId: strconv.Itoa(i),
+		})
+	}
 
-		decision, err := c.Evaluate(ctx, merged)
-		if err != nil {
-			return EvaluationsResponse{}, err
+	storeID, err := c.store.ID(ctx)
+	if err != nil {
+		return EvaluationsResponse{}, err
+	}
+
+	resp, err := c.fga.BatchCheck(ctx).
+		Body(client.ClientBatchCheckRequest{Checks: checks}).
+		Options(client.BatchCheckOptions{StoreId: &storeID}).
+		Execute()
+	if err != nil {
+		return EvaluationsResponse{}, fmt.Errorf("batch check: %w", err)
+	}
+
+	results := resp.GetResult()
+	decisions := make([]Decision, 0, len(checks))
+
+	for i := range checks {
+		result, ok := results[strconv.Itoa(i)]
+		if !ok {
+			return EvaluationsResponse{}, fmt.Errorf("batch check: no result for evaluation %d", i)
 		}
 
-		results = append(results, decision)
+		if result.Error != nil {
+			return EvaluationsResponse{}, fmt.Errorf("batch check: evaluation %d: %s", i, result.Error.GetMessage())
+		}
 
-		// Apply semantic short-circuiting
+		decision := Decision{Decision: result.GetAllowed()}
+		decisions = append(decisions, decision)
+
 		switch semantic {
 		case ExecuteAll:
-			// Continue processing all evaluations
 		case DenyOnFirstDeny:
 			if !decision.Decision {
-				return EvaluationsResponse{Evaluations: results}, nil
+				return EvaluationsResponse{Evaluations: decisions}, nil
 			}
 		case PermitOnFirstPermit:
 			if decision.Decision {
-				return EvaluationsResponse{Evaluations: results}, nil
+				return EvaluationsResponse{Evaluations: decisions}, nil
 			}
+		default:
+			panic(fmt.Sprintf("unhandled evaluation semantic %q", semantic))
 		}
 	}
 
-	return EvaluationsResponse{Evaluations: results}, nil
+	return EvaluationsResponse{Evaluations: decisions}, nil
 }
 
 // mergeEvaluation applies defaults from the batch request to an individual evaluation.

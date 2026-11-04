@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -26,7 +26,7 @@ func (s *Server) CreateCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
 	}
 
-	if err := s.checkPermission(ctx, authz.CanCreateCluster(), authz.Organization(organizationID)); err != nil {
+	if err := s.checkPermission(ctx, actions.CreateCluster, organizationID); err != nil {
 		return nil, err
 	}
 

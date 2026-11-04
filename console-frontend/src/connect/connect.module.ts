@@ -20,6 +20,8 @@ export const INSTALL_TRANSPORT = createTransportToken('install');
 // The public platform overview (FUN-23): anonymous, like the catalog, and
 // called over GET so the response can be cached.
 export const PLATFORM_TRANSPORT = createTransportToken('platform');
+// authz-api: credentialed, answers batched permission checks.
+export const AUTHZ_TRANSPORT = createTransportToken('authz');
 
 export function createClientToken<T extends DescService>(
   service: T,

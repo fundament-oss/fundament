@@ -1,0 +1,91 @@
+edition = "2023";
+
+package authz.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/authz-api/pkg/proto/gen/v1;authzv1";
+
+// A product action a caller may be allowed to take.
+enum Action {
+  ACTION_UNSPECIFIED = 0;
+  ACTION_VIEW_ORGANIZATION = 1;
+  ACTION_EDIT_ORGANIZATION = 2;
+  ACTION_CREATE_API_KEY = 3;
+  ACTION_LIST_API_KEYS = 4;
+  ACTION_CREATE_CLUSTER = 5;
+  ACTION_LIST_CLUSTERS = 6;
+  ACTION_INVITE_MEMBER = 7;
+  ACTION_EDIT_MEMBER = 8;
+  ACTION_DELETE_MEMBER = 9;
+  ACTION_LIST_MEMBERS = 10;
+  ACTION_VIEW_API_KEY = 11;
+  ACTION_REVOKE_API_KEY = 12;
+  ACTION_DELETE_API_KEY = 13;
+  ACTION_VIEW_CLUSTER = 14;
+  ACTION_EDIT_CLUSTER = 15;
+  ACTION_DELETE_CLUSTER = 16;
+  ACTION_VIEW_LOGS = 17;
+  ACTION_CREATE_NODE_POOL = 18;
+  ACTION_LIST_NODE_POOLS = 19;
+  ACTION_LIST_CLUSTER_NAMESPACES = 20;
+  ACTION_CREATE_PROJECT = 21;
+  ACTION_LIST_PROJECTS = 22;
+  ACTION_VIEW_NODE_POOL = 23;
+  ACTION_EDIT_NODE_POOL = 24;
+  ACTION_DELETE_NODE_POOL = 25;
+  ACTION_VIEW_PROJECT = 26;
+  ACTION_EDIT_PROJECT = 27;
+  ACTION_DELETE_PROJECT = 28;
+  ACTION_MANAGE_PROJECT_MEMBERS = 29;
+  ACTION_LIST_PROJECT_MEMBERS = 30;
+  ACTION_CREATE_NAMESPACE = 31;
+  ACTION_LIST_NAMESPACES = 32;
+  ACTION_VIEW_PROJECT_MEMBER = 33;
+  ACTION_EDIT_PROJECT_MEMBER = 34;
+  ACTION_DELETE_PROJECT_MEMBER = 35;
+  ACTION_VIEW_NAMESPACE = 36;
+  ACTION_DELETE_NAMESPACE = 37;
+  ACTION_EDIT_PLUGIN = 38;
+}
+
+// The role that grants an action.
+enum RequiredRole {
+  REQUIRED_ROLE_UNSPECIFIED = 0;
+  REQUIRED_ROLE_ORGANIZATION_ADMIN = 1;
+  REQUIRED_ROLE_ORGANIZATION_MEMBER = 2;
+  REQUIRED_ROLE_PROJECT_ADMIN = 3;
+  REQUIRED_ROLE_PROJECT_MEMBER = 4;
+  REQUIRED_ROLE_API_KEY_OWNER = 5; // The key's creator or an organization admin
+}
+
+// Attached to a permission-denied error to say what was denied and who may do it.
+message PermissionDeniedDetail {
+  Action action = 10;
+  RequiredRole required_role = 20;
+}
+
+message PermissionCheck {
+  Action action = 10 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string object_id = 20 [(buf.validate.field).string.uuid = true];
+}
+
+message CheckPermissionsRequest {
+  repeated PermissionCheck checks = 10 [(buf.validate.field).repeated.max_items = 500];
+}
+
+message CheckPermissionsResponse {
+  // One entry per check, in request order.
+  repeated bool allowed = 10;
+}
+
+service AuthzService {
+  // Reports, per check, whether the caller may take the action on the object.
+  rpc CheckPermissions(CheckPermissionsRequest) returns (CheckPermissionsResponse);
+}

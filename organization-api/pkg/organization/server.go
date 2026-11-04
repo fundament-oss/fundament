@@ -49,7 +49,7 @@ type Server struct {
 	queries        *db.Queries
 	logger         *slog.Logger
 	authValidator  *auth.Validator
-	authz          *authz.Client
+	authz          authzEvaluator
 	circuitBreaker *circuitbreaker.Breaker
 	clock          clock.Clock
 	handler        http.Handler
@@ -107,7 +107,6 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		db:             database,
 		queries:        db.New(database.Pool),
 		authValidator:  auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		authz:          authzClient,
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
 		mockLogsClient: cfg.MockLogsClient,
@@ -118,6 +117,11 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		gardener:       gardenerClient,
 		perShoot:       newPerShootClients(gardenerClient, logger, trust),
 		perShootLogs:   newPerShootLogs(gardenerClient, logger, trust),
+	}
+
+	// Left unset for a nil client: a typed nil would pass checkPermission's nil check.
+	if authzClient != nil {
+		s.authz = authzClient
 	}
 
 	for _, opt := range opts {

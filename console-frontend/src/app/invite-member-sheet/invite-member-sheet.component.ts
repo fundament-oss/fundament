@@ -40,6 +40,7 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 /**
  * Inviting someone into the organization, from wherever you were. The shell owns
  * this sheet rather than the member list, so the toolbar can open it over any
@@ -164,7 +165,10 @@ export default class InviteMemberSheetComponent {
       // behind this sheet, so it hears about the invitation from here.
       this.organizationDataService.membersChanged.update((count) => count + 1);
     } catch (err: unknown) {
-      if (err instanceof ConnectError) {
+      const denied = permissionDeniedMessage(err);
+      if (denied) {
+        this.inviteError.set(denied);
+      } else if (err instanceof ConnectError) {
         if (err.code === Code.AlreadyExists) {
           this.inviteError.set('This email address is already in use.');
         } else if (err.code === Code.InvalidArgument) {

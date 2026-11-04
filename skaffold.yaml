@@ -149,6 +149,12 @@ build:
         buildArgs:
           BINARY: platform-admin-api
 
+    # Appended last, as the hotreload profile patches by index.
+    - image: authz-api
+      context: .
+      docker:
+        dockerfile: authz-api/Dockerfile
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -164,6 +170,7 @@ deploy:
           images.dbMigrations: "{{.IMAGE_FULLY_QUALIFIED_db_migrations}}"
           images.authnApi: "{{.IMAGE_FULLY_QUALIFIED_authn_api}}"
           images.organizationApi: "{{.IMAGE_FULLY_QUALIFIED_organization_api}}"
+          images.authzApi: "{{.IMAGE_FULLY_QUALIFIED_authz_api}}"
           images.consoleFrontend: "{{.IMAGE_FULLY_QUALIFIED_console_frontend}}"
           images.clusterWorker: "{{.IMAGE_FULLY_QUALIFIED_cluster_worker}}"
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
@@ -355,6 +362,12 @@ profiles:
         value: platform-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/21/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/22/docker/dockerfile
+        value: authz-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/22/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

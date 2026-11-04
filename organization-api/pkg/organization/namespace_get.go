@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -29,7 +29,7 @@ func (s *Server) GetNamespace(
 	}
 
 	// Auth is done after the DB call because we don't know the namespace ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewNamespace, namespace.ID); err != nil {
 		return nil, err
 	}
 
@@ -55,7 +55,7 @@ func (s *Server) GetNamespaceByProjectAndName(
 	}
 
 	// Auth is done after the DB call because we don't know the namespace ID yet.
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Namespace(namespace.ID)); err != nil {
+	if err := s.checkPermission(ctx, actions.ViewNamespace, namespace.ID); err != nil {
 		return nil, err
 	}
 

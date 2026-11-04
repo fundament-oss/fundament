@@ -15,6 +15,7 @@ export interface ICustomWorld extends World {
   // API testing state - base URLs
   organizationApiUrl?: string;
   authnApiUrl?: string;
+  authzApiUrl?: string;
   pluginProxyUrl?: string;
   consoleUrl?: string;
   // Service clients
@@ -44,6 +45,7 @@ export class CustomWorld extends World implements ICustomWorld {
   // API testing state
   organizationApiUrl?: string;
   authnApiUrl?: string;
+  authzApiUrl?: string;
   pluginProxyUrl?: string;
   consoleUrl?: string;
   apiKeyService?: APIKeyService;

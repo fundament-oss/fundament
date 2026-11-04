@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/authz/actions"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -23,7 +23,7 @@ func (s *Server) UpdateProject(
 ) (*organizationv1.UpdateProjectResponse, error) {
 	projectID := uuid.MustParse(req.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
+	if err := s.checkPermission(ctx, actions.EditProject, projectID); err != nil {
 		return nil, err
 	}
 

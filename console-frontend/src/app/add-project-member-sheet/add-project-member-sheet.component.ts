@@ -53,6 +53,9 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 const stringToRole = (value: string): ProjectMemberRole =>
   value === 'admin' ? ProjectMemberRole.ADMIN : ProjectMemberRole.VIEWER;
@@ -71,6 +74,13 @@ const stringToRole = (value: string): ProjectMemberRole =>
 })
 export default class AddProjectMemberSheetComponent {
   readonly projectId = input.required<string>();
+
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.CREATE_NAMESPACE, id)] : [];
+  });
+
+  canCreateNamespace = computed(() => this.mayDo(Action.CREATE_NAMESPACE, this.projectId()));
 
   readonly show = input(false);
 
@@ -264,7 +274,8 @@ export default class AddProjectMemberSheetComponent {
       // standing over another one, so the failure reports where it can be seen.
       this.closed.emit();
       this.notificationService.error(
-        err instanceof Error ? `Member not added: ${err.message}` : 'Member not added',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? `Member not added: ${err.message}` : 'Member not added'),
       );
     } finally {
       this.isAddingMember.set(false);
@@ -294,7 +305,10 @@ export default class AddProjectMemberSheetComponent {
           : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
       } catch (err) {
         this.notificationService.error(
-          err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
+          permissionDeniedMessage(err) ??
+            (err instanceof Error
+              ? `Namespace not created: ${err.message}`
+              : 'Namespace not created'),
         );
         namespaces = namespaces.filter((entry) => entry !== NEW_NAMESPACE);
       }

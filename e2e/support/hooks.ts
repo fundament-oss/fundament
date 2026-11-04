@@ -84,6 +84,8 @@ Before({ tags: '@api' }, async function (this: ICustomWorld) {
     'https://organization.fundament.localhost:8443';
   this.authnApiUrl =
     process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
+  this.authzApiUrl =
+    process.env.AUTHZ_API_URL || 'https://authz-api.fundament.localhost:8443';
   this.pluginProxyUrl =
     process.env.PLUGIN_PROXY_URL ||
     'https://plugin-proxy.fundament.localhost:8443';

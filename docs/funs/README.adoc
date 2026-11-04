@@ -75,4 +75,7 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-23[FUN-23 Platform overview and fleet inventory]
 | discussion
+
+| link:/funs/fun-24[FUN-24 Permission Denials and the authz-api]
+| prediscussion
 |===

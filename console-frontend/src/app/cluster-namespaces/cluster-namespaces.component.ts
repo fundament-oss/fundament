@@ -7,6 +7,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  computed,
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
@@ -49,6 +50,9 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/title-cell';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 @Component({
   selector: 'app-cluster-namespaces',
@@ -98,6 +102,19 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   projects = signal<Project[]>([]);
 
+  private mayDo = watchPermissions(() =>
+    this.namespaces().map((n) => check(Action.DELETE_NAMESPACE, n.id)),
+  );
+
+  canDeleteNamespace = (namespaceId: string): boolean =>
+    this.mayDo(Action.DELETE_NAMESPACE, namespaceId);
+
+  /** Bulk delete removes every row, so it needs every row to be allowed. */
+  canDeleteAll = computed(() => {
+    const rows = this.namespaces();
+    return rows.length > 0 && rows.every((n) => this.canDeleteNamespace(n.id));
+  });
+
   isLoadingProjects = signal<boolean>(false);
 
   showDeleteNamespaceModal = signal<boolean>(false);
@@ -132,9 +149,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.selection.retainVisible();
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load namespaces: ${error.message}`
+            : 'Failed to load namespaces'),
       );
     }
   }
@@ -147,9 +165,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.projects.set(response.projects);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load projects: ${error.message}`
-          : 'Failed to load projects',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load projects: ${error.message}`
+            : 'Failed to load projects'),
       );
     } finally {
       this.isLoadingProjects.set(false);
@@ -191,9 +210,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       ]);
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to delete namespace: ${error.message}`
-          : 'Failed to delete namespace',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to delete namespace: ${error.message}`
+            : 'Failed to delete namespace'),
       );
     }
   }
@@ -231,7 +251,12 @@ export default class ClusterNamespacesComponent implements OnInit {
         );
       }
       if (failed > 0) {
-        this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
+        const denied = results
+          .map((r) => (r.status === 'rejected' ? permissionDeniedMessage(r.reason) : null))
+          .find((message) => message !== null);
+        this.errorMessage.set(
+          denied ?? `Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`,
+        );
       }
 
       this.selection.clear();

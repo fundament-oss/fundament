@@ -52,6 +52,10 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import OrganizationContextService from '../organization-context.service';
+import { Action } from '../../generated/v1/authz_pb';
 
 interface OrganizationMember {
   id: string;
@@ -150,6 +154,30 @@ export default class OrganizationMembersComponent implements OnInit {
   private notificationService = inject(NotificationService);
 
   private memberClient = inject(MEMBER);
+
+  private organizationContext = inject(OrganizationContextService);
+
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return organizationId
+      ? [
+          check(Action.INVITE_MEMBER, organizationId),
+          check(Action.EDIT_MEMBER, organizationId),
+          check(Action.DELETE_MEMBER, organizationId),
+        ]
+      : [];
+  });
+
+  private mayOnOrganization = (action: Action) => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return !!organizationId && this.mayDo(action, organizationId);
+  };
+
+  canInviteMember = computed(() => this.mayOnOrganization(Action.INVITE_MEMBER));
+
+  canEditMember = computed(() => this.mayOnOrganization(Action.EDIT_MEMBER));
+
+  canDeleteMember = computed(() => this.mayOnOrganization(Action.DELETE_MEMBER));
 
   private inviteClient = inject(INVITE);
 
@@ -310,7 +338,10 @@ export default class OrganizationMembersComponent implements OnInit {
       await this.organizationDataService.reloadMembers();
     } catch (err) {
       this.error.set(
-        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to load members: ${err.message}`
+            : 'Failed to load members'),
       );
     } finally {
       this.isLoading.set(false);
@@ -330,7 +361,9 @@ export default class OrganizationMembersComponent implements OnInit {
     } catch (err) {
       this.actionError.set({
         title: 'Invitation not cancelled',
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.cancelInvitation(id),
       });
@@ -356,7 +389,9 @@ export default class OrganizationMembersComponent implements OnInit {
       this.showDeleteModal.set(false);
       this.actionError.set({
         title: 'Member not removed',
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.confirmDeleteMember(),
       });
@@ -382,7 +417,9 @@ export default class OrganizationMembersComponent implements OnInit {
     } catch (err) {
       this.actionError.set({
         title: `${who} ${stays} ${member.permission}`,
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.setPermission(member),
       });

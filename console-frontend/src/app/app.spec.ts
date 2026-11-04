@@ -26,6 +26,7 @@ import OrganizationContextService from './organization-context.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import {
   AUTHN_TRANSPORT,
+  AUTHZ_TRANSPORT,
   ORGANIZATION_TRANSPORT,
   MARKETPLACE_TRANSPORT,
 } from '../connect/connect.module';
@@ -45,6 +46,7 @@ const unusedTransport = {
 const config: AppConfiguration = {
   authnApiUrl: '',
   organizationApiUrl: '',
+  authzApiUrl: '',
   marketplaceApiUrl: '',
   kubeApiProxyUrl: '',
   pluginProxyUrl: '',
@@ -55,6 +57,7 @@ async function configure(extraProviders: unknown[] = []) {
     imports: [App],
     providers: [
       { provide: AUTHN_TRANSPORT, useValue: unusedTransport },
+      { provide: AUTHZ_TRANSPORT, useValue: unusedTransport },
       { provide: ORGANIZATION_TRANSPORT, useValue: unusedTransport },
       { provide: MARKETPLACE_TRANSPORT, useValue: unusedTransport },
       { provide: ConfigService, useValue: { getConfig: () => config } as ConfigService },

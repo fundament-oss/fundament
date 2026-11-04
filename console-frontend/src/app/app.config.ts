@@ -11,6 +11,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
 import {
   AUTHN_TRANSPORT,
+  AUTHZ_TRANSPORT,
   INSTALL_TRANSPORT,
   MARKETPLACE_TRANSPORT,
   ORGANIZATION_TRANSPORT,
@@ -115,6 +116,18 @@ export const appConfig: ApplicationConfig = {
         });
       },
       deps: [Injector],
+    },
+    // Provide the Authz transport: credentialed, but no organization header or
+    // version check; authz-api answers for the caller alone.
+    {
+      provide: AUTHZ_TRANSPORT,
+      useFactory: () => {
+        const configService = inject(ConfigService);
+        return createConnectTransport({
+          baseUrl: configService.getConfig().authzApiUrl,
+          fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+        });
+      },
     },
     // Provide the Organization transport, which also checks the API version
     // the server reports against the protos this console was built with.

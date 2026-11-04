@@ -5,6 +5,7 @@ import {
   Output,
   EventEmitter,
   signal,
+  computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
@@ -66,6 +67,9 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/authz_pb';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -179,6 +183,30 @@ export default class ApiKeysComponent {
 
   private organizationContext = inject(OrganizationContextService);
 
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return [
+      ...(organizationId ? [check(Action.CREATE_API_KEY, organizationId)] : []),
+      ...this.apiKeys().flatMap((apiKey) => [
+        check(Action.REVOKE_API_KEY, apiKey.id),
+        check(Action.DELETE_API_KEY, apiKey.id),
+      ]),
+    ];
+  });
+
+  canCreateApiKey = computed(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return !!organizationId && this.mayDo(Action.CREATE_API_KEY, organizationId);
+  });
+
+  canRevokeApiKey = (apiKeyId: string): boolean => this.mayDo(Action.REVOKE_API_KEY, apiKeyId);
+
+  canDeleteApiKey = (apiKeyId: string): boolean => this.mayDo(Action.DELETE_API_KEY, apiKeyId);
+
+  /** Revoke applies to a key that is still live, and only if the caller may. */
+  showRevoke = (apiKey: APIKey): boolean =>
+    this.canRevokeApiKey(apiKey.id) && !isRevoked(apiKey.revoked) && !isExpired(apiKey.expires);
+
   /** Whose keys this sheet holds: the user and the organization they were for. */
   private owner: string | undefined;
 
@@ -238,9 +266,10 @@ export default class ApiKeysComponent {
       this.maxExpiresIn.set(response.maxExpiresIn);
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to load API keys: ${err.message}`
-          : 'Failed to load API keys',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to load API keys: ${err.message}`
+            : 'Failed to load API keys'),
       );
     } finally {
       this.loading.set(false);
@@ -277,9 +306,10 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to revoke API key: ${err.message}`
-          : 'Failed to revoke API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to revoke API key: ${err.message}`
+            : 'Failed to revoke API key'),
       );
       this.loading.set(false);
     }
@@ -303,9 +333,10 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to delete API key: ${err.message}`
-          : 'Failed to delete API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to delete API key: ${err.message}`
+            : 'Failed to delete API key'),
       );
       this.loading.set(false);
     }
@@ -373,9 +404,10 @@ export default class ApiKeysComponent {
         return;
       }
       this.error.set(
-        err instanceof Error
-          ? `Failed to create API key: ${err.message}`
-          : 'Failed to create API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to create API key: ${err.message}`
+            : 'Failed to create API key'),
       );
     } finally {
       this.loading.set(false);
