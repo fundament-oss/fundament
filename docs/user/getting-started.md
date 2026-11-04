@@ -89,7 +89,7 @@ page. Either way `functl` has to stay installed and logged in: the kubeconfig
 holds no credential of its own and calls `functl` for a fresh token on every
 request.
 
-Two things that surprise people the first time:
+Three things that surprise people the first time:
 
 - The namespace is called something else on the cluster. A `staging` namespace
   in project `payments` shows up in `kubectl` as `tnt-payments--staging`; see
@@ -97,6 +97,9 @@ Two things that surprise people the first time:
 - What you may do depends on your role. Organization admins get full access;
   project members get only what the cluster's RBAC grants them. See
   [Cluster access](./clusters.md#cluster-access).
+- Nothing is reachable from the internet until you ask for it. A Service of
+  type `LoadBalancer`, or a Gateway, gets a public address; see
+  [Service IP addresses](./service-addresses.md).
 
 ## Next steps
 

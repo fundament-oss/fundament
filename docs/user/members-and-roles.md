@@ -1,7 +1,7 @@
 ---
 title: Members and roles
 sidebar:
-  order: 8
+  order: 9
 ---
 
 Access in Fundament is granted at three levels (organization, cluster and

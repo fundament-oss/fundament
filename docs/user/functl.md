@@ -1,7 +1,7 @@
 ---
 title: functl CLI
 sidebar:
-  order: 10
+  order: 11
 ---
 
 `functl` is the command-line client for the Fundament platform API. It does what
