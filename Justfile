@@ -242,6 +242,18 @@ plugin-sandbox-kubeconfig:
         --dry-run=client -o yaml | \
         kubectl --context k3d-fundament-plugin apply -f -
 
+    # kube-api-proxy lists a user's namespaces as their SA plus this group (project
+    # lists, namespace pickers); cluster-worker grants it on real clusters.
+    kubectl --context k3d-fundament-plugin create clusterrole fundament:namespace-lister \
+        --verb=get,list,watch --resource=namespaces \
+        --dry-run=client -o yaml | \
+        kubectl --context k3d-fundament-plugin apply -f -
+    kubectl --context k3d-fundament-plugin create clusterrolebinding fundament:namespace-lister \
+        --clusterrole=fundament:namespace-lister \
+        --group=fundament:namespace-listers \
+        --dry-run=client -o yaml | \
+        kubectl --context k3d-fundament-plugin apply -f -
+
     # All four consumers read the Secret only at startup, and Reloader does not reliably pick
     # this one up, so restart them here rather than leave a Secret that has no effect.
     echo "- restarting plugin-proxy, kube-api-proxy, authn-api and cluster-worker to pick the Secret up"

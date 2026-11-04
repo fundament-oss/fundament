@@ -13,6 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import PluginRegistryService from '../plugin-registry.service';
+import pluginRouteScope from '../plugin-route-scope';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
@@ -56,12 +57,22 @@ export default class ResourceCreateComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
+  private scope = computed(() =>
+    pluginRouteScope(this.routeParams().get('id') ?? '', this.route.snapshot.data),
+  );
+
+  /** The route's cluster on a cluster page; on a project page, the project's
+   *  cluster as the registry follows it. */
+  protected clusterId = computed(
+    () => this.scope().clusterId ?? this.clusterContext.selectedClusterId(),
+  );
+
   protected pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
-  // Present only on the project-level route (projects/:id/...); empty at org level.
-  protected projectId = computed(() => this.routeParams().get('id') ?? '');
+  // Present only on the project-level route (projects/:id/...); empty on a cluster's.
+  protected projectId = computed(() => this.scope().projectId ?? '');
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
@@ -70,7 +81,7 @@ export default class ResourceCreateComponent implements OnInit {
       plugin: this.plugin(),
       kind: this.crdDef()?.kind,
       view: 'create',
-      clusterId: this.clusterContext.selectedClusterId(),
+      clusterId: this.clusterId(),
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
@@ -127,7 +138,7 @@ export default class ResourceCreateComponent implements OnInit {
   protected loading = computed(() => {
     if (this.clusterContext.isLoadingClusters()) return true;
     // No cluster selected (none available or load failed): nothing left to wait for.
-    if (this.clusterContext.selectedClusterId() === null) return false;
+    if (this.clusterId() === null) return false;
     return !this.crdLoaded() || !this.namespacesReady();
   });
 
@@ -136,9 +147,10 @@ export default class ResourceCreateComponent implements OnInit {
   constructor() {
     this.titleService.setTitle('Create');
 
-    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
+    // On a project page the effect fires when selectedClusterId is set by
+    // loadClusters() in ngOnInit.
     effect(() => {
-      const clusterId = this.clusterContext.selectedClusterId();
+      const clusterId = this.clusterId();
       if (clusterId !== null) {
         untracked(() => this.loadCrd(clusterId));
       }
@@ -150,7 +162,7 @@ export default class ResourceCreateComponent implements OnInit {
         if (projectId) {
           this.loadNamespaces(projectId);
         } else {
-          // Org-level route has no project to scope namespaces to; the form uses
+          // A cluster's route has no project to scope namespaces to; the form uses
           // its free-text namespace field. Nothing to load, so mark it settled.
           this.namespacesRequest += 1;
           this.namespacesFailed.set(false);

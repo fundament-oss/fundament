@@ -15,6 +15,7 @@ import FieldRendererComponent from '../field-renderers/field-renderer.component'
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import PluginRegistryService from '../plugin-registry.service';
+import pluginRouteScope from '../plugin-route-scope';
 import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
@@ -89,6 +90,19 @@ export default class ResourceDetailComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
+  /** Undefined on a cluster page; the plugin UI then lists cluster-wide. */
+  protected projectId = computed(() => this.scope().projectId ?? undefined);
+
+  private scope = computed(() =>
+    pluginRouteScope(this.routeParams().get('id') ?? '', this.route.snapshot.data),
+  );
+
+  /** The route's cluster on a cluster page; on a project page, the project's
+   *  cluster as the registry follows it. */
+  protected clusterId = computed(
+    () => this.scope().clusterId ?? this.clusterContext.selectedClusterId(),
+  );
+
   private routeQuery = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -108,7 +122,7 @@ export default class ResourceDetailComponent implements OnInit {
       plugin: this.plugin(),
       kind: this.crdDef()?.kind,
       view: 'detail',
-      clusterId: this.clusterContext.selectedClusterId(),
+      clusterId: this.clusterId(),
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
@@ -155,13 +169,14 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
-    const projectId = this.route.snapshot.parent?.params['id'];
+    const { projectId } = this.scope();
     if (projectId) this.loadNamespaces(projectId).catch(() => {});
     else this.namespacesSettled.set(true);
 
-    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
+    // On a project page the effect fires when selectedClusterId is set by
+    // loadClusters() in ngOnInit.
     effect(() => {
-      const clusterId = this.clusterContext.selectedClusterId();
+      const clusterId = this.clusterId();
       if (clusterId !== null) {
         untracked(() => this.loadCrdAndResource(clusterId));
       }
@@ -181,6 +196,8 @@ export default class ResourceDetailComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
+    const { projectId } = this.scope();
+
     try {
       const { crd, resource } = await this.loader.loadCrdAndResource(
         this.pluginName(),
@@ -188,6 +205,7 @@ export default class ResourceDetailComponent implements OnInit {
         clusterId,
         this.resourceId(),
         this.resourceNamespace(),
+        projectId ? { projectId } : undefined,
       );
       this.crdDef.set(crd);
       this.resource.set(resource);
@@ -215,20 +233,16 @@ export default class ResourceDetailComponent implements OnInit {
    *  gave "Dnsendpoints". */
   kindLabel = computed(() => {
     const resourceKind = this.resourceKind();
-    const item = this.plugin()?.menu.project?.find((i) => i.crd === resourceKind);
+    const item = this.plugin()?.menu[this.scope().menuSection]?.find((i) => i.crd === resourceKind);
     if (item?.label) return item.label;
 
     const kind = this.crdDef()?.kind;
     return kind ? kindToLabel(kind) : this.kind() || 'list';
   });
 
-  /** Where the title bar's back button leads: the project this resource belongs
-   *  to, or the organization when the plugin is installed there. The way back to
-   *  the list is a link in the page itself. */
-  backPath = computed(() => {
-    const projectId = this.route.snapshot.parent?.params['id'];
-    return projectId ? `/projects/${projectId}` : '/';
-  });
+  /** Where the title bar's back button leads: the cluster or project page the
+   *  resource is listed on. The way back to the list is a link in the page itself. */
+  backPath = computed(() => this.scope().backPath);
 
   private projectNamespaces = inject(ProjectNamespacesService);
 
@@ -293,7 +307,7 @@ export default class ResourceDetailComponent implements OnInit {
 
   async confirmDelete(): Promise<void> {
     const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
+    const clusterId = this.clusterId();
     const resource = this.resource();
     if (!crd || !clusterId || !resource) return;
 

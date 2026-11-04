@@ -21,6 +21,8 @@ export type HostMessage =
       // build fetch URLs without knowing about the host.
       kubeApiProxyUrl: string;
       clusterId: string;
+      // Set on a project page only.
+      projectId?: string;
       token: string;
       tokenExpiresAt: number;
     }

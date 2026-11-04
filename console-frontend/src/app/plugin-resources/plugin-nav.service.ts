@@ -7,30 +7,55 @@ import { crdRefToLabel, kindToLabel } from './crd-schema.utils';
 export default class PluginNavService {
   private registry = inject(PluginRegistryService);
 
+  clusterNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('organization'));
+
   projectNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('project'));
 
-  private buildNavGroups(section: 'project'): PluginNavGroup[] {
+  private buildNavGroups(section: 'organization' | 'project'): PluginNavGroup[] {
     const shown = this.registry
       .allPlugins()
-      .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0);
+      .map((plugin) => ({
+        plugin,
+        entries: (plugin.menu[section] ?? []).filter((entry) =>
+          this.fitsSection(entry.crd, section),
+        ),
+      }))
+      .filter(({ entries }) => entries.length > 0);
     // Two organizations may publish the same plugin, so a shared label would
     // give two indistinguishable nav groups. Qualify only the ambiguous ones —
     // adding the publisher everywhere is noise when there is nothing to resolve.
     const duplicated = new Set(
-      shown.map((plugin) => plugin.label).filter((label, i, all) => all.indexOf(label) !== i),
+      shown.map(({ plugin }) => plugin.label).filter((label, i, all) => all.indexOf(label) !== i),
     );
 
-    return shown.map((plugin) => ({
+    return shown.map(({ plugin, entries }) => ({
       installationName: plugin.installationName,
       label: duplicated.has(plugin.label)
         ? `${plugin.label} (${plugin.organizationName})`
         : plugin.label,
-      items: (plugin.menu[section] ?? []).map((menuItem) => ({
+      items: entries.map((menuItem) => ({
         label: menuItem.label ?? this.labelFor(menuItem.crd),
         crdPlural: menuItem.crd,
         icon: menuItem.icon,
       })),
     }));
+  }
+
+  // Warned once per entry: the nav recomputes whenever the registry changes.
+  private warned = new Set<string>();
+
+  // An unread CRD is kept: its scope arrives with the registry's CRD read.
+  private fitsSection(crdRef: string, section: 'organization' | 'project'): boolean {
+    const scope = this.registry.crdScope(crdRef);
+    const expected = section === 'organization' ? 'Cluster' : 'Namespaced';
+    if (scope === undefined || scope === expected) return true;
+    const key = `${crdRef}:${section}`;
+    if (!this.warned.has(key)) {
+      this.warned.add(key);
+      // eslint-disable-next-line no-console
+      console.warn(`[PluginNav] ${crdRef} is ${scope}-scoped; not shown under menu.${section}`);
+    }
+    return false;
   }
 
   /**

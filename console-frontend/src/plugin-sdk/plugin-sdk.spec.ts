@@ -15,6 +15,7 @@ function sendInit(): void {
         view: 'detail',
         kubeApiProxyUrl: 'https://proxy.example/kube',
         clusterId: 'cluster-1',
+        projectId: 'p1',
         token: 'test-token',
         tokenExpiresAt: Date.now() + 600_000,
       },
@@ -93,5 +94,56 @@ describe('plugin-sdk k8s write verbs', () => {
     await expect(window.fundament.k8s.patch(POOL, { spec: { disks: [] } })).rejects.toThrow(
       /must not be empty/,
     );
+  });
+});
+
+describe('plugin-sdk project scope', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ items: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+    await import('./plugin-sdk');
+    sendInit();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const CERTS = { group: 'cert-manager.io', version: 'v1', resource: 'certificates' };
+
+  it('init exposes projectId', async () => {
+    const ctx = await window.fundament.init;
+    expect(ctx.projectId).toBe('p1');
+  });
+
+  it('list appends fundamentProjectId for a cluster-wide list', async () => {
+    await window.fundament.k8s.list({ ...CERTS, projectId: 'p1' });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://proxy.example/kube/clusters/cluster-1/apis/cert-manager.io/v1/certificates?fundamentProjectId=p1',
+    );
+  });
+
+  it('list encodes projectId', async () => {
+    await window.fundament.k8s.list({ ...CERTS, projectId: 'a b&c' });
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\?fundamentProjectId=a%20b%26c$/);
+  });
+
+  it('list leaves the param off when a namespace is given', async () => {
+    await window.fundament.k8s.list({ ...CERTS, namespace: 'ns1', projectId: 'p1' });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://proxy.example/kube/clusters/cluster-1/apis/cert-manager.io/v1/namespaces/ns1/certificates',
+    );
+  });
+
+  it('list without projectId adds no param', async () => {
+    await window.fundament.k8s.list(CERTS);
+    expect(fetchMock.mock.calls[0][0]).not.toContain('fundamentProjectId');
+  });
+
+  it('get ignores projectId', async () => {
+    await window.fundament.k8s.get({ ...CERTS, name: 'c1', projectId: 'p1' });
+    expect(fetchMock.mock.calls[0][0]).not.toContain('fundamentProjectId');
   });
 });

@@ -33,7 +33,13 @@ export default class PageNavService {
   /** Label of the back button: the sidebar's own heading, so the button names
    *  the place it returns to. */
   backText = computed(() => {
-    const projectId = withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1];
+    const within = withinOrganization(this.currentUrl());
+    const projectId = within.match(/^\/projects\/([^/?#]+)/)?.[1];
+    const pluginClusterId = within.match(/^\/clusters\/([^/?#]+)\/plugin-resources\//)?.[1];
+
+    if (pluginClusterId) {
+      return this.organizationData.getClusterById(pluginClusterId)?.cluster.name ?? 'Cluster';
+    }
 
     if (projectId) {
       const project = this.organizationData.getProjectById(projectId);
