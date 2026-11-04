@@ -73,6 +73,7 @@ SELECT
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
 	plugin_definitions.manifest,
+	plugin_definitions.menu_icons,
 	plugin_definitions.created,
 	plugin_definitions.published,
 	(SELECT submissions.submitted

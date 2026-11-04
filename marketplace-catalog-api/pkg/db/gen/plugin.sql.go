@@ -262,6 +262,24 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo_dark
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo_dark,
   appstore.plugins.updated
 FROM appstore.plugins
 WHERE appstore.plugins.id = $1::uuid
@@ -293,6 +311,8 @@ type PluginGetByIDRow struct {
 	License          string
 	LatestVersionID  uuid.UUID
 	Published        interface{}
+	Logo             string
+	LogoDark         string
 	Updated          pgtype.Timestamptz
 }
 
@@ -313,6 +333,8 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.License,
 		&i.LatestVersionID,
 		&i.Published,
+		&i.Logo,
+		&i.LogoDark,
 		&i.Updated,
 	)
 	return i, err
@@ -431,6 +453,24 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo_dark
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo_dark,
   appstore.plugins.updated
 FROM appstore.plugins
 WHERE
@@ -499,6 +539,8 @@ type PluginListRow struct {
 	Image            string
 	LatestVersionID  uuid.UUID
 	Published        interface{}
+	Logo             string
+	LogoDark         string
 	Updated          pgtype.Timestamptz
 }
 
@@ -524,6 +566,8 @@ func (q *Queries) PluginList(ctx context.Context, arg PluginListParams) ([]Plugi
 			&i.Image,
 			&i.LatestVersionID,
 			&i.Published,
+			&i.Logo,
+			&i.LogoDark,
 			&i.Updated,
 		); err != nil {
 			return nil, err

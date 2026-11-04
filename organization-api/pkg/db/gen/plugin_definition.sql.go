@@ -13,7 +13,7 @@ import (
 )
 
 const pluginDefinitionGetActive = `-- name: PluginDefinitionGetActive :one
-SELECT appstore.plugin_definitions.id, appstore.plugin_definitions.plugin_id, appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.created
+SELECT appstore.plugin_definitions.id, appstore.plugin_definitions.plugin_id, appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.created, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
@@ -35,6 +35,8 @@ type PluginDefinitionGetActiveRow struct {
 	Manifest      []byte
 	Hash          string
 	Created       pgtype.Timestamptz
+	Logo          string
+	MenuIcons     []byte
 }
 
 func (q *Queries) PluginDefinitionGetActive(ctx context.Context, arg PluginDefinitionGetActiveParams) (PluginDefinitionGetActiveRow, error) {
@@ -47,6 +49,8 @@ func (q *Queries) PluginDefinitionGetActive(ctx context.Context, arg PluginDefin
 		&i.Manifest,
 		&i.Hash,
 		&i.Created,
+		&i.Logo,
+		&i.MenuIcons,
 	)
 	return i, err
 }
@@ -87,8 +91,8 @@ func (q *Queries) PluginDefinitionGetByPluginVersionHash(ctx context.Context, ar
 }
 
 const pluginDefinitionInsert = `-- name: PluginDefinitionInsert :one
-INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash)
-VALUES ($1, $2, $3, $4)
+INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash, logo, logo_dark, menu_icons)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, plugin_id, plugin_version, hash, created
 `
 
@@ -97,6 +101,9 @@ type PluginDefinitionInsertParams struct {
 	PluginVersion string
 	Manifest      []byte
 	Hash          string
+	Logo          string
+	LogoDark      string
+	MenuIcons     []byte
 }
 
 type PluginDefinitionInsertRow struct {
@@ -113,6 +120,9 @@ func (q *Queries) PluginDefinitionInsert(ctx context.Context, arg PluginDefiniti
 		arg.PluginVersion,
 		arg.Manifest,
 		arg.Hash,
+		arg.Logo,
+		arg.LogoDark,
+		arg.MenuIcons,
 	)
 	var i PluginDefinitionInsertRow
 	err := row.Scan(

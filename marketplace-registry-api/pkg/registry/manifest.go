@@ -13,6 +13,7 @@ type parsedManifest struct {
 	version string
 	image   string
 	hash    string
+	icons   pluginruntime.ResolvedIcons
 }
 
 // parseManifest validates the pushed bytes and derives everything the server
@@ -20,10 +21,15 @@ type parsedManifest struct {
 // rather than reimplemented: the plugin-controller recomputes the same hash over
 // the same bytes at reconcile time to verify the install's consent pin
 // (FUN-17), so a second implementation is a second chance for them to disagree.
-func parseManifest(manifest []byte) (parsedManifest, error) {
+func parseManifest(manifest []byte, iconFiles map[string][]byte) (parsedManifest, error) {
 	definition, err := pluginruntime.ParseDefinition(manifest)
 	if err != nil {
 		return parsedManifest{}, fmt.Errorf("parsing plugin definition: %w", err)
+	}
+
+	icons, err := pluginruntime.ValidateIcons(&definition, iconFiles)
+	if err != nil {
+		return parsedManifest{}, fmt.Errorf("validating icons: %w", err)
 	}
 
 	return parsedManifest{
@@ -31,6 +37,7 @@ func parseManifest(manifest []byte) (parsedManifest, error) {
 		version: definition.Metadata.Version,
 		image:   definition.Spec.Image,
 		hash:    pluginruntime.HashManifest(manifest),
+		icons:   icons,
 	}, nil
 }
 

@@ -179,6 +179,8 @@ type PluginSummary struct {
 	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,70,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_DefinitionHash   string                 `protobuf:"bytes,80,opt,name=definition_hash,json=definitionHash"`
 	xxx_hidden_OrganizationName string                 `protobuf:"bytes,90,opt,name=organization_name,json=organizationName"`
+	xxx_hidden_Logo             string                 `protobuf:"bytes,100,opt,name=logo"`
+	xxx_hidden_LogoDark         string                 `protobuf:"bytes,110,opt,name=logo_dark,json=logoDark"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -289,6 +291,20 @@ func (x *PluginSummary) GetOrganizationName() string {
 	return ""
 }
 
+func (x *PluginSummary) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -333,6 +349,14 @@ func (x *PluginSummary) SetOrganizationName(v string) {
 	x.xxx_hidden_OrganizationName = v
 }
 
+func (x *PluginSummary) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *PluginSummary) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
+}
+
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -357,6 +381,9 @@ type PluginSummary_builder struct {
 	// Publishing organization's name. With `name` it forms the installation's
 	// metadata.name: "<organization_name>--<name>".
 	OrganizationName string
+	// Latest published logo as a data: URI; empty when none.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -374,6 +401,8 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	x.xxx_hidden_OrganizationName = b.OrganizationName
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -1237,6 +1266,7 @@ type PutPluginDefinitionRequest struct {
 	xxx_hidden_PluginVersion string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_Manifest      []byte                 `protobuf:"bytes,30,opt,name=manifest"`
 	xxx_hidden_Replace       bool                   `protobuf:"varint,40,opt,name=replace"`
+	xxx_hidden_IconFiles     map[string][]byte      `protobuf:"bytes,50,rep,name=icon_files,json=iconFiles" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -1294,6 +1324,13 @@ func (x *PutPluginDefinitionRequest) GetReplace() bool {
 	return false
 }
 
+func (x *PutPluginDefinitionRequest) GetIconFiles() map[string][]byte {
+	if x != nil {
+		return x.xxx_hidden_IconFiles
+	}
+	return nil
+}
+
 func (x *PutPluginDefinitionRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
@@ -1313,6 +1350,10 @@ func (x *PutPluginDefinitionRequest) SetReplace(v bool) {
 	x.xxx_hidden_Replace = v
 }
 
+func (x *PutPluginDefinitionRequest) SetIconFiles(v map[string][]byte) {
+	x.xxx_hidden_IconFiles = v
+}
+
 type PutPluginDefinitionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1324,6 +1365,8 @@ type PutPluginDefinitionRequest_builder struct {
 	// Without this, that case is rejected so a pinned definition is never silently
 	// replaced.
 	Replace bool
+	// Icon files keyed by their sha256 digest, as referenced by the manifest.
+	IconFiles map[string][]byte
 }
 
 func (b0 PutPluginDefinitionRequest_builder) Build() *PutPluginDefinitionRequest {
@@ -1334,6 +1377,7 @@ func (b0 PutPluginDefinitionRequest_builder) Build() *PutPluginDefinitionRequest
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_Manifest = b.Manifest
 	x.xxx_hidden_Replace = b.Replace
+	x.xxx_hidden_IconFiles = b.IconFiles
 	return m0
 }
 
@@ -3148,7 +3192,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\x9d\x03\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xce\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3163,7 +3207,9 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x05image\x18< \x01(\tR\x05image\x12%\n" +
 	"\x0eplugin_version\x18F \x01(\tR\rpluginVersion\x12'\n" +
 	"\x0fdefinition_hash\x18P \x01(\tR\x0edefinitionHash\x12+\n" +
-	"\x11organization_name\x18Z \x01(\tR\x10organizationName\"\x14\n" +
+	"\x11organization_name\x18Z \x01(\tR\x10organizationName\x12\x12\n" +
+	"\x04logo\x18d \x01(\tR\x04logo\x12\x1b\n" +
+	"\tlogo_dark\x18n \x01(\tR\blogoDark\"\x14\n" +
 	"\x12ListPluginsRequest\"O\n" +
 	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +
@@ -3211,13 +3257,18 @@ const file_v1_plugin_proto_rawDesc = "" +
 	" \x01(\tR\bpluginId\"P\n" +
 	"\x17GetPluginDetailResponse\x125\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin\"\x96\x01\n" +
+	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin\"\xaf\x02\n" +
 	"\x1aPutPluginDefinitionRequest\x12\x1b\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tR\bpluginId\x12%\n" +
 	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12\x1a\n" +
 	"\bmanifest\x18\x1e \x01(\fR\bmanifest\x12\x18\n" +
-	"\areplace\x18( \x01(\bR\areplace\"\x85\x01\n" +
+	"\areplace\x18( \x01(\bR\areplace\x12Y\n" +
+	"\n" +
+	"icon_files\x182 \x03(\v2:.organization.v1.PutPluginDefinitionRequest.IconFilesEntryR\ticonFiles\x1a<\n" +
+	"\x0eIconFilesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\x85\x01\n" +
 	"\x1bPutPluginDefinitionResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -3346,7 +3397,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x13PutPluginDefinition\x12+.organization.v1.PutPluginDefinitionRequest\x1a,.organization.v1.PutPluginDefinitionResponse\x12u\n" +
 	"\x13GetPluginDefinition\x12+.organization.v1.GetPluginDefinitionRequest\x1a,.organization.v1.GetPluginDefinitionResponse\"\x03\x88\x02\x01B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_v1_plugin_proto_goTypes = []any{
 	(*Tag)(nil),                           // 0: organization.v1.Tag
 	(*Category)(nil),                      // 1: organization.v1.Category
@@ -3381,9 +3432,10 @@ var file_v1_plugin_proto_goTypes = []any{
 	(*PluginFormGroup)(nil),               // 30: organization.v1.PluginFormGroup
 	(*PluginStatusMapping)(nil),           // 31: organization.v1.PluginStatusMapping
 	(*PluginStatusValue)(nil),             // 32: organization.v1.PluginStatusValue
-	nil,                                   // 33: organization.v1.PluginDefinition.CustomComponentsEntry
-	nil,                                   // 34: organization.v1.PluginDefinition.UiHintsEntry
-	nil,                                   // 35: organization.v1.PluginStatusMapping.ValuesEntry
+	nil,                                   // 33: organization.v1.PutPluginDefinitionRequest.IconFilesEntry
+	nil,                                   // 34: organization.v1.PluginDefinition.CustomComponentsEntry
+	nil,                                   // 35: organization.v1.PluginDefinition.UiHintsEntry
+	nil,                                   // 36: organization.v1.PluginStatusMapping.ValuesEntry
 }
 var file_v1_plugin_proto_depIdxs = []int32{
 	0,  // 0: organization.v1.PluginSummary.tags:type_name -> organization.v1.Tag
@@ -3395,41 +3447,42 @@ var file_v1_plugin_proto_depIdxs = []int32{
 	9,  // 6: organization.v1.PluginDetail.author:type_name -> organization.v1.Author
 	8,  // 7: organization.v1.PluginDetail.documentation_links:type_name -> organization.v1.DocumentationLink
 	10, // 8: organization.v1.GetPluginDetailResponse.plugin:type_name -> organization.v1.PluginDetail
-	20, // 9: organization.v1.GetPluginDefinitionResponse.definition:type_name -> organization.v1.PluginDefinition
-	19, // 10: organization.v1.ListPluginDefinitionsResponse.definitions:type_name -> organization.v1.PluginDefinitionVersion
-	21, // 11: organization.v1.PluginDefinition.metadata:type_name -> organization.v1.PluginDefinitionMetadata
-	23, // 12: organization.v1.PluginDefinition.permissions:type_name -> organization.v1.PluginPermissions
-	25, // 13: organization.v1.PluginDefinition.menu:type_name -> organization.v1.PluginMenu
-	33, // 14: organization.v1.PluginDefinition.custom_components:type_name -> organization.v1.PluginDefinition.CustomComponentsEntry
-	28, // 15: organization.v1.PluginDefinition.allowed_resources:type_name -> organization.v1.PluginAllowedResource
-	34, // 16: organization.v1.PluginDefinition.ui_hints:type_name -> organization.v1.PluginDefinition.UiHintsEntry
-	22, // 17: organization.v1.PluginDefinitionMetadata.urls:type_name -> organization.v1.PluginURLs
-	24, // 18: organization.v1.PluginPermissions.rbac:type_name -> organization.v1.PluginPolicyRule
-	26, // 19: organization.v1.PluginMenu.organization:type_name -> organization.v1.PluginMenuEntry
-	26, // 20: organization.v1.PluginMenu.project:type_name -> organization.v1.PluginMenuEntry
-	30, // 21: organization.v1.PluginUIHint.form_groups:type_name -> organization.v1.PluginFormGroup
-	31, // 22: organization.v1.PluginUIHint.status_mapping:type_name -> organization.v1.PluginStatusMapping
-	35, // 23: organization.v1.PluginStatusMapping.values:type_name -> organization.v1.PluginStatusMapping.ValuesEntry
-	27, // 24: organization.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> organization.v1.PluginComponentMapping
-	29, // 25: organization.v1.PluginDefinition.UiHintsEntry.value:type_name -> organization.v1.PluginUIHint
-	32, // 26: organization.v1.PluginStatusMapping.ValuesEntry.value:type_name -> organization.v1.PluginStatusValue
-	3,  // 27: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
-	11, // 28: organization.v1.PluginService.GetPluginDetail:input_type -> organization.v1.GetPluginDetailRequest
-	6,  // 29: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
-	17, // 30: organization.v1.PluginService.ListPluginDefinitions:input_type -> organization.v1.ListPluginDefinitionsRequest
-	13, // 31: organization.v1.PluginService.PutPluginDefinition:input_type -> organization.v1.PutPluginDefinitionRequest
-	15, // 32: organization.v1.PluginService.GetPluginDefinition:input_type -> organization.v1.GetPluginDefinitionRequest
-	4,  // 33: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
-	12, // 34: organization.v1.PluginService.GetPluginDetail:output_type -> organization.v1.GetPluginDetailResponse
-	7,  // 35: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
-	18, // 36: organization.v1.PluginService.ListPluginDefinitions:output_type -> organization.v1.ListPluginDefinitionsResponse
-	14, // 37: organization.v1.PluginService.PutPluginDefinition:output_type -> organization.v1.PutPluginDefinitionResponse
-	16, // 38: organization.v1.PluginService.GetPluginDefinition:output_type -> organization.v1.GetPluginDefinitionResponse
-	33, // [33:39] is the sub-list for method output_type
-	27, // [27:33] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	33, // 9: organization.v1.PutPluginDefinitionRequest.icon_files:type_name -> organization.v1.PutPluginDefinitionRequest.IconFilesEntry
+	20, // 10: organization.v1.GetPluginDefinitionResponse.definition:type_name -> organization.v1.PluginDefinition
+	19, // 11: organization.v1.ListPluginDefinitionsResponse.definitions:type_name -> organization.v1.PluginDefinitionVersion
+	21, // 12: organization.v1.PluginDefinition.metadata:type_name -> organization.v1.PluginDefinitionMetadata
+	23, // 13: organization.v1.PluginDefinition.permissions:type_name -> organization.v1.PluginPermissions
+	25, // 14: organization.v1.PluginDefinition.menu:type_name -> organization.v1.PluginMenu
+	34, // 15: organization.v1.PluginDefinition.custom_components:type_name -> organization.v1.PluginDefinition.CustomComponentsEntry
+	28, // 16: organization.v1.PluginDefinition.allowed_resources:type_name -> organization.v1.PluginAllowedResource
+	35, // 17: organization.v1.PluginDefinition.ui_hints:type_name -> organization.v1.PluginDefinition.UiHintsEntry
+	22, // 18: organization.v1.PluginDefinitionMetadata.urls:type_name -> organization.v1.PluginURLs
+	24, // 19: organization.v1.PluginPermissions.rbac:type_name -> organization.v1.PluginPolicyRule
+	26, // 20: organization.v1.PluginMenu.organization:type_name -> organization.v1.PluginMenuEntry
+	26, // 21: organization.v1.PluginMenu.project:type_name -> organization.v1.PluginMenuEntry
+	30, // 22: organization.v1.PluginUIHint.form_groups:type_name -> organization.v1.PluginFormGroup
+	31, // 23: organization.v1.PluginUIHint.status_mapping:type_name -> organization.v1.PluginStatusMapping
+	36, // 24: organization.v1.PluginStatusMapping.values:type_name -> organization.v1.PluginStatusMapping.ValuesEntry
+	27, // 25: organization.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> organization.v1.PluginComponentMapping
+	29, // 26: organization.v1.PluginDefinition.UiHintsEntry.value:type_name -> organization.v1.PluginUIHint
+	32, // 27: organization.v1.PluginStatusMapping.ValuesEntry.value:type_name -> organization.v1.PluginStatusValue
+	3,  // 28: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
+	11, // 29: organization.v1.PluginService.GetPluginDetail:input_type -> organization.v1.GetPluginDetailRequest
+	6,  // 30: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
+	17, // 31: organization.v1.PluginService.ListPluginDefinitions:input_type -> organization.v1.ListPluginDefinitionsRequest
+	13, // 32: organization.v1.PluginService.PutPluginDefinition:input_type -> organization.v1.PutPluginDefinitionRequest
+	15, // 33: organization.v1.PluginService.GetPluginDefinition:input_type -> organization.v1.GetPluginDefinitionRequest
+	4,  // 34: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
+	12, // 35: organization.v1.PluginService.GetPluginDetail:output_type -> organization.v1.GetPluginDetailResponse
+	7,  // 36: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
+	18, // 37: organization.v1.PluginService.ListPluginDefinitions:output_type -> organization.v1.ListPluginDefinitionsResponse
+	14, // 38: organization.v1.PluginService.PutPluginDefinition:output_type -> organization.v1.PutPluginDefinitionResponse
+	16, // 39: organization.v1.PluginService.GetPluginDefinition:output_type -> organization.v1.GetPluginDefinitionResponse
+	34, // [34:40] is the sub-list for method output_type
+	28, // [28:34] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_v1_plugin_proto_init() }
@@ -3443,7 +3496,7 @@ func file_v1_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_plugin_proto_rawDesc), len(file_v1_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -109,7 +109,9 @@ SELECT
 	submissions.closed,
 	submissions.reviewer_user_id,
 	submissions.rejection_reason,
-	submissions.feedback
+	submissions.feedback,
+	plugin_definitions.logo,
+	plugin_definitions.logo_dark
 FROM appstore.submissions
 JOIN appstore.plugin_definitions ON plugin_definitions.id = submissions.plugin_definition_id
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
@@ -136,6 +138,8 @@ type SubmissionGetByIDRow struct {
 	ReviewerUserID     pgtype.UUID
 	RejectionReason    pgtype.Text
 	Feedback           string
+	Logo               string
+	LogoDark           string
 }
 
 func (q *Queries) SubmissionGetByID(ctx context.Context, arg SubmissionGetByIDParams) (SubmissionGetByIDRow, error) {
@@ -154,6 +158,8 @@ func (q *Queries) SubmissionGetByID(ctx context.Context, arg SubmissionGetByIDPa
 		&i.ReviewerUserID,
 		&i.RejectionReason,
 		&i.Feedback,
+		&i.Logo,
+		&i.LogoDark,
 	)
 	return i, err
 }
@@ -196,7 +202,9 @@ SELECT
 	submissions.closed,
 	submissions.reviewer_user_id,
 	submissions.rejection_reason,
-	submissions.feedback
+	submissions.feedback,
+	plugin_definitions.logo,
+	plugin_definitions.logo_dark
 FROM appstore.submissions
 JOIN appstore.plugin_definitions ON plugin_definitions.id = submissions.plugin_definition_id
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
@@ -219,6 +227,8 @@ type SubmissionListRow struct {
 	ReviewerUserID     pgtype.UUID
 	RejectionReason    pgtype.Text
 	Feedback           string
+	Logo               string
+	LogoDark           string
 }
 
 // Submission queries for admin.v1.ReviewService. The admin role's policies are
@@ -257,6 +267,8 @@ func (q *Queries) SubmissionList(ctx context.Context) ([]SubmissionListRow, erro
 			&i.ReviewerUserID,
 			&i.RejectionReason,
 			&i.Feedback,
+			&i.Logo,
+			&i.LogoDark,
 		); err != nil {
 			return nil, err
 		}

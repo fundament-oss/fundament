@@ -30,6 +30,10 @@ The stored hash is the anchor for the FUN-17 consent record. A `PluginInstallati
 
 Because the manifest now lives host-side, the permissions a plugin runs under are derived from a document the *platform* stores and the admin pinned — not from something the plugin serves about itself at reconcile time.
 
+== Icons
+
+A plugin's logo, dark logo and menu icon files are stored beside the manifest. `functl` replaces each icon path in the manifest with the file's SHA-256 digest before publishing, and the server rejects a file whose bytes don't match its digest, so the manifest hash pins the icon bytes as it pins the image.
+
 == The definition fetch is a cross-cluster call
 
 The plugin-controller runs in the plugin (sandbox) cluster, while organization-api runs in the management cluster. Moving the definition into organization-api therefore turns what used to be an intra-cluster fetch (controller → plugin pod, same cluster) into a *cross-cluster* one (controller → management-cluster organization-api). Two consequences follow:

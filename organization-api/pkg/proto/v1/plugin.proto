@@ -97,6 +97,9 @@ message PluginSummary {
   // Publishing organization's name. With `name` it forms the installation's
   // metadata.name: "<organization_name>--<name>".
   string organization_name = 90;
+  // Latest published logo as a data: URI; empty when none.
+  string logo = 100;
+  string logo_dark = 110;
 }
 
 // List plugins request
@@ -177,6 +180,8 @@ message PutPluginDefinitionRequest {
   // Without this, that case is rejected so a pinned definition is never silently
   // replaced.
   bool replace = 40;
+  // Icon files keyed by their sha256 digest, as referenced by the manifest.
+  map<string, bytes> icon_files = 50;
 }
 message PutPluginDefinitionResponse {
   string id = 10;

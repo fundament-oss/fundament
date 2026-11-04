@@ -41,6 +41,8 @@ export interface AuthoredPlugin {
   author: PluginAuthor;
   repositoryUrl: string;
   icon: string; // base name under /img/plugins/<icon>.svg
+  logo: string; // data: URI; empty when the plugin has none
+  logoDark: string;
   tags: string[];
   categoryName: string;
   // A listing carries no review state of its own (FUN-20): the reviewed unit is
@@ -151,6 +153,8 @@ export default class PluginDevelopmentService {
       author: { name: plugin.authorName, url: plugin.authorUrl },
       repositoryUrl: plugin.repositoryUrl,
       icon: plugin.name,
+      logo: plugin.logo,
+      logoDark: plugin.logoDark,
       tags: plugin.tags,
       categoryName: PluginDevelopmentService.categoryName(plugin.categoryIds, categories),
       // A listing with no versions has nothing to review yet, which is what a

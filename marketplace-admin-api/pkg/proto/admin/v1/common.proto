@@ -22,8 +22,10 @@ enum RejectionReason {
   REJECTION_REASON_OTHER = 6;
 }
 
-// A plugin version awaiting or having gone through review. Identity plus
-// decision: everything else is resolved through this service's read RPCs.
+// A plugin version awaiting or having gone through review. Identity, decision
+// and the version's logos: everything else is resolved through this service's
+// read RPCs. The logos are inlined so a review list can show them, which adds
+// up to about 44 KB per row.
 // There is no listing snapshot — a reviewer sees the listing as it stands, so
 // an edit made after submitting is visible to the reviewer.
 message Submission {
@@ -48,6 +50,9 @@ message Submission {
   string reviewer_user_id = 90;
   RejectionReason rejection_reason = 100;
   string feedback = 110;
+  // Logo of the submitted version, a data: URI; empty when it declares none.
+  string logo = 120;
+  string logo_dark = 130;
 }
 
 // The listing a submission points at, as it stands now. Deliberately narrower
@@ -96,4 +101,6 @@ message PluginVersion {
   // sections as "asks for nothing"; a version whose review payload cannot be
   // displayed is a version that cannot be approved responsibly.
   string manifest_error = 130;
+  // Menu icon data: URIs, sorted by digest.
+  repeated string menu_icons = 140;
 }

@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -90,7 +91,7 @@ func (s *Server) CreatePluginVersion(
 		return nil, err
 	}
 
-	manifest, err := parseManifest(req.GetManifest())
+	manifest, err := parseManifest(req.GetManifest(), req.GetIconFiles())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -103,6 +104,11 @@ func (s *Server) CreatePluginVersion(
 	// claiming the same semantic version twice.
 	version := normalizeVersion(req.GetVersion())
 
+	menuIcons, err := json.Marshal(manifest.icons.MenuIcons)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("encoding menu icons: %w", err))
+	}
+
 	createParams := db.PluginVersionCreateParams{
 		PluginID:      pluginID,
 		PluginVersion: version,
@@ -110,6 +116,9 @@ func (s *Server) CreatePluginVersion(
 		Hash:          manifest.hash,
 		Image:         manifest.image,
 		ReleaseNotes:  req.GetReleaseNotes(),
+		Logo:          manifest.icons.Logo,
+		LogoDark:      manifest.icons.LogoDark,
+		MenuIcons:     menuIcons,
 	}
 
 	replaceTarget := false
