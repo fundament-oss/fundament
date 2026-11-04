@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -236,5 +237,30 @@ func TestDecision_DefaultsToFalse(t *testing.T) {
 	var d Decision
 	if d.Decision != false {
 		t.Errorf("zero-value Decision.Decision = %v, want false", d.Decision)
+	}
+}
+
+func TestCheckRequestDoesNotShareNestedContext(t *testing.T) {
+	shared := Context{
+		"object": map[string]any{"kept": "yes"},
+		"action": map[string]any{"kept": "yes"},
+	}
+	first := EvaluationRequest{
+		Context:  shared,
+		Resource: Object{Properties: map[string]any{"name": "first"}},
+		Action:   Action{Properties: map[string]any{"name": "first"}},
+	}
+	second := EvaluationRequest{
+		Context:  shared,
+		Resource: Object{Properties: map[string]any{"name": "second"}},
+		Action:   Action{Properties: map[string]any{"name": "second"}},
+	}
+
+	firstCheck := checkRequest(&first)
+	checkRequest(&second)
+
+	for _, key := range []string{"object", "action"} {
+		assert.Equal(t, map[string]any{"kept": "yes", "name": "first"}, (*firstCheck.Context)[key])
+		assert.Equal(t, map[string]any{"kept": "yes"}, shared[key], "the caller's context stays as it was")
 	}
 }

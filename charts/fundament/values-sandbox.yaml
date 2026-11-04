@@ -5,6 +5,7 @@ jwtSecretRef:
 externalUrls:
   authn: https://authn.fundament.projects.digilab.network
   organization: https://organization.fundament.projects.digilab.network
+  authzApi: https://authz-api.fundament.projects.digilab.network
   kubeApiProxy: https://k8s-api.fundament.projects.digilab.network
   pluginProxy: https://plugin-proxy.fundament.projects.digilab.network
   console: https://console.fundament.projects.digilab.network
@@ -57,6 +58,10 @@ pluginProxy:
   mode: mock
 
 organizationApi:
+  enabled: true
+  replicas: 1
+
+authzApi:
   enabled: true
   replicas: 1
 

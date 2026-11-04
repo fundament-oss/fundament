@@ -22,6 +22,7 @@ jwtSecretRef:
 externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
+  authzApi: "" # e.g., https://authz-api.example.com (permission checks the console asks before offering an action)
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; if empty, each API allows the frontend URLs above that call it)
@@ -59,6 +60,7 @@ images:
   dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
   authnApi: ghcr.io/fundament-oss/fundament/authn-api:latest
   organizationApi: ghcr.io/fundament-oss/fundament/organization-api:latest
+  authzApi: ghcr.io/fundament-oss/fundament/authz-api:latest
   consoleFrontend: ghcr.io/fundament-oss/fundament/console-frontend:latest
   consoleDemoFrontend: ghcr.io/fundament-oss/fundament/console-demo-frontend:latest
   docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
@@ -178,6 +180,19 @@ organizationApi:
     #    namespace: gateway-ns
     hostnames: []
     #  - organization.example.com
+
+# Authz API: answers the console's permission checks from OpenFGA. No database.
+authzApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - authz-api.example.com
 
 # Kube Proxy (Kubernetes API proxy for frontend)
 kubeApiProxy:

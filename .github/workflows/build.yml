@@ -171,6 +171,9 @@ jobs:
           - image-name: organization-api
             dockerfile: organization-api/Dockerfile
             context: "."
+          - image-name: authz-api
+            dockerfile: authz-api/Dockerfile
+            context: "."
           - image-name: db-migrations
             dockerfile: db/Dockerfile
             context: db

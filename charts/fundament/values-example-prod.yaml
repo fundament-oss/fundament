@@ -28,6 +28,14 @@ organizationApi:
   # reports "No log backend is configured".
   logsURL: per-shoot
 
+authzApi:
+  enabled: true
+  replicas: 2
+
+# The console needs this to ask which actions to offer.
+externalUrls:
+  authzApi: https://authz-api.example.com
+
 consoleFrontend:
   enabled: true
   replicas: 2
