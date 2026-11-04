@@ -116,6 +116,11 @@ export function validateTextField(el: NlddTextField): boolean {
       return false;
     }
     const num = Number(value);
+    // A long enough run of digits is Infinity, which JSON sends as null.
+    if (!Number.isSafeInteger(num)) {
+      setFieldError(el, 'Enter a smaller number.');
+      return false;
+    }
     const min = el.getAttribute('data-min');
     if (min && num < Number(min)) {
       setFieldError(el, `Enter a value of at least ${min}.`);

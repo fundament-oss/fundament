@@ -218,6 +218,12 @@ describe('validateTextField', () => {
     expect(validateTextField(field('keyboard="numeric" data-min="1"', '3'))).toBe(true);
   });
 
+  it('rejects a number too large to send as one', () => {
+    expect(validateTextField(field('keyboard="numeric" data-min="1"', '9'.repeat(400)))).toBe(
+      false,
+    );
+  });
+
   it('skips fields inside a hidden ancestor', () => {
     document.body.innerHTML = `
       <fieldset hidden><nldd-text-field id="x" required></nldd-text-field></fieldset>`;
