@@ -38,6 +38,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-dashboard',
@@ -110,9 +111,10 @@ export default class DashboardComponent implements OnInit, OnDestroy {
       fetched = response.clusters;
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters. Please try again later.',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load clusters: ${error.message}`
+            : 'Failed to load clusters. Please try again later.'),
       );
       return;
     }

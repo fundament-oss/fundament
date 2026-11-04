@@ -61,6 +61,7 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -339,7 +340,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
           : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
       } catch (err) {
         this.notificationService.error(
-          err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
+          permissionDeniedMessage(err) ??
+            (err instanceof Error
+              ? `Namespace not created: ${err.message}`
+              : 'Namespace not created'),
         );
         return;
       } finally {
@@ -394,7 +398,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await this.load();
     } catch (err) {
       this.notificationService.error(
-        err instanceof Error ? `Permission not changed: ${err.message}` : 'Permission not changed',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Permission not changed: ${err.message}`
+            : 'Permission not changed'),
       );
     } finally {
       this.saving.set(false);
@@ -413,7 +420,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
     } catch (err) {
       this.showRemoveModal.set(false);
       this.notificationService.error(
-        err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed'),
       );
     }
   }

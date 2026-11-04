@@ -1,6 +1,11 @@
 import { Code, ConnectError } from '@connectrpc/connect';
 
-import { GENERIC_REFUSAL, describeRefusals, refusalReason } from './node-pool-refusal';
+import {
+  GENERIC_REFUSAL,
+  describeRefusals,
+  mayHaveBeenApplied,
+  refusalReason,
+} from './node-pool-refusal';
 
 describe('refusalReason', () => {
   it('passes a quota refusal through in the API words', () => {
@@ -12,6 +17,19 @@ describe('refusalReason', () => {
     expect(refusalReason(new ConnectError('failed to create node pool: pq: boom', Code.Internal))).toBe(GENERIC_REFUSAL);
     expect(refusalReason(new Error('network down'))).toBe(GENERIC_REFUSAL);
     expect(refusalReason(undefined)).toBe(GENERIC_REFUSAL);
+  });
+});
+
+describe('mayHaveBeenApplied', () => {
+  it('treats a lost response and a stale-set refusal as possibly applied', () => {
+    expect(mayHaveBeenApplied(new Error('network down'))).toBe(true);
+    expect(mayHaveBeenApplied(new ConnectError('down', Code.Unavailable))).toBe(true);
+    expect(mayHaveBeenApplied(new ConnectError('stale', Code.Aborted))).toBe(true);
+  });
+
+  it('treats a denial and a readable refusal as final', () => {
+    expect(mayHaveBeenApplied(new ConnectError('denied', Code.PermissionDenied))).toBe(false);
+    expect(mayHaveBeenApplied(new ConnectError('quota', Code.ResourceExhausted))).toBe(false);
   });
 });
 

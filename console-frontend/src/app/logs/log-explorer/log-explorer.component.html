@@ -154,694 +154,684 @@
 </nldd-sheet>
 
 <!-- ── Main page ── -->
-<nldd-page sticky-header>
-  <nldd-top-title-bar
-    slot="header"
-    text="Log explorer"
-    [attr.back-text]="pageNav.backText()"
-    collapse-anchor="log-explorer-title"
-  ></nldd-top-title-bar>
-  <!-- Six filters is more than a toolbar can hold in a pane this narrow, so
+@if (loadDenied(); as denied) {
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Log explorer"
+      [attr.back-text]="pageNav.backText()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-inline-dialog [attr.text]="denied"></nldd-inline-dialog>
+        </nldd-container>
+      </nldd-box>
+    </nldd-simple-section>
+  </nldd-page>
+} @else {
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Log explorer"
+      [attr.back-text]="pageNav.backText()"
+      collapse-anchor="log-explorer-title"
+    ></nldd-top-title-bar>
+    <!-- Six filters is more than a toolbar can hold in a pane this narrow, so
        they get a column of their own. Below lg the section folds them into a
        sheet and the Filters button appears; the section owns that switch, this
        page only asks it to open. -->
-  <nldd-sidebar-section
-    #filterSection
-    sidebar-label="Filters"
-    (collapse-change)="filtersCollapsed.set($any($event).detail.collapsed)"
-    translations='{ "components.sidebar-section.sheet-dismiss-action": "Done" }'
-  >
-    <nldd-title
-      slot="header"
-      id="log-explorer-title"
-      size="2"
+    <nldd-sidebar-section
+      #filterSection
+      sidebar-label="Filters"
+      (collapse-change)="filtersCollapsed.set($any($event).detail.collapsed)"
+      translations='{ "components.sidebar-section.sheet-dismiss-action": "Done" }'
     >
-      <h1>
-        Log explorer
-        @if (mockLogs) {
-          &ngsp;<app-mock-badge
-            label="Mock: generated logs"
-            explanation="This environment is not connected to a logs backend yet. The log lines are generated example data."
-          ></app-mock-badge>
-        }
-      </h1>
-    </nldd-title>
-    <nldd-spacer
-      slot="header"
-      size="12"
-    ></nldd-spacer>
-    <!-- The two sources are tabs rather than a setting: picking one swaps the
+      <nldd-title
+        slot="header"
+        id="log-explorer-title"
+        size="2"
+      >
+        <h1>
+          Log explorer
+          @if (mockLogs) {
+            &ngsp;<app-mock-badge
+              label="Mock: generated logs"
+              explanation="This environment is not connected to a logs backend yet. The log lines are generated example data."
+            ></app-mock-badge>
+          }
+        </h1>
+      </nldd-title>
+      <nldd-spacer
+        slot="header"
+        size="12"
+      ></nldd-spacer>
+      <!-- The two sources are tabs rather than a setting: picking one swaps the
          whole page under it, filters and all. Streaming belongs beside them,
          because it is the same question asked of the source you are reading. -->
-    <nldd-toolbar
-      slot="header"
-      label="Log source"
-    >
-      <nldd-toolbar-item
-        slot="start"
-        priority="2"
+      <nldd-toolbar
+        slot="header"
+        label="Log source"
       >
-        <nldd-tab-bar accessible-label="Log source">
-          <nldd-tab-bar-item
-            text="Clusters"
-            [attr.current]="!isLiveMode() ? '' : null"
-            (select)="onSourceModeChange('vali')"
-          ></nldd-tab-bar-item>
-          <nldd-tab-bar-item
-            text="Plugins"
-            [attr.current]="isLiveMode() ? '' : null"
-            (select)="onSourceModeChange('live')"
-          ></nldd-tab-bar-item>
-        </nldd-tab-bar>
-        <nldd-menu-item
-          slot="overflow"
-          type="radio"
-          text="Clusters"
-          [attr.selected]="!isLiveMode() ? '' : null"
-          (select)="onSourceModeChange('vali')"
-        ></nldd-menu-item>
-        <nldd-menu-item
-          slot="overflow"
-          type="radio"
-          text="Plugins"
-          [attr.selected]="isLiveMode() ? '' : null"
-          (select)="onSourceModeChange('live')"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
-      <!-- Up here rather than with the filters: it hands you the query the
-           filters add up to, it does not change what you are looking at. -->
-      <nldd-toolbar-item slot="end">
-        <nldd-button
-          variant="secondary"
-          start-icon="copy"
-          text="Copy query"
-          (click)="copyToClipboard(generatedQuery())"
-        ></nldd-button>
-        <nldd-menu-item
-          slot="overflow"
-          icon="copy"
-          text="Copy query"
-          (select)="copyToClipboard(generatedQuery())"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
-      <!-- Off, there is one thing to do, so the button does it. Once it is
-           running there are two, and only then is a menu worth opening. -->
-      <nldd-toolbar-item
-        slot="end"
-        priority="1"
-      >
-        @if (streamState() === 'off') {
-          <nldd-button
-            variant="secondary"
-            start-icon="play"
-            text="Stream"
-            (click)="setStreamState('streaming')"
-          ></nldd-button>
-        } @else {
-          <nldd-button
-            expandable
-            popup-type="menu"
-            variant="secondary"
-            [attr.text]="streamLabel()"
-          >
-            <nldd-menu
-              slot="popup"
-              accessible-label="Live stream"
-            >
-              @if (streamState() === 'streaming') {
-                <!-- Pausing holds the view still and keeps the connection open,
-                     so what you were reading stays where it was. -->
-                <nldd-menu-item
-                  icon="pause"
-                  text="Pause streaming"
-                  (click)="setStreamState('paused')"
-                ></nldd-menu-item>
-              } @else {
-                <nldd-menu-item
-                  icon="play"
-                  text="Resume streaming"
-                  (click)="setStreamState('streaming')"
-                ></nldd-menu-item>
-              }
-              <nldd-menu-item
-                icon="stop"
-                text="Stop streaming"
-                (click)="setStreamState('off')"
-              ></nldd-menu-item>
-            </nldd-menu>
-          </nldd-button>
-        }
-        @if (streamState() === 'off') {
+        <nldd-toolbar-item
+          slot="start"
+          priority="2"
+        >
+          <nldd-tab-bar accessible-label="Log source">
+            <nldd-tab-bar-item
+              text="Clusters"
+              [attr.current]="!isLiveMode() ? '' : null"
+              (select)="onSourceModeChange('vali')"
+            ></nldd-tab-bar-item>
+            <nldd-tab-bar-item
+              text="Plugins"
+              [attr.current]="isLiveMode() ? '' : null"
+              (select)="onSourceModeChange('live')"
+            ></nldd-tab-bar-item>
+          </nldd-tab-bar>
           <nldd-menu-item
             slot="overflow"
-            icon="play"
-            text="Stream"
-            (select)="setStreamState('streaming')"
+            type="radio"
+            text="Clusters"
+            [attr.selected]="!isLiveMode() ? '' : null"
+            (select)="onSourceModeChange('vali')"
           ></nldd-menu-item>
-        } @else {
-          @if (streamState() === 'streaming') {
-            <nldd-menu-item
-              slot="overflow"
-              icon="pause"
-              text="Pause streaming"
-              (select)="setStreamState('paused')"
-            ></nldd-menu-item>
+          <nldd-menu-item
+            slot="overflow"
+            type="radio"
+            text="Plugins"
+            [attr.selected]="isLiveMode() ? '' : null"
+            (select)="onSourceModeChange('live')"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <!-- Up here rather than with the filters: it hands you the query the
+           filters add up to, it does not change what you are looking at. -->
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="secondary"
+            start-icon="copy"
+            text="Copy query"
+            (click)="copyToClipboard(generatedQuery())"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="copy"
+            text="Copy query"
+            (select)="copyToClipboard(generatedQuery())"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <!-- Off, there is one thing to do, so the button does it. Once it is
+           running there are two, and only then is a menu worth opening. -->
+        <nldd-toolbar-item
+          slot="end"
+          priority="1"
+        >
+          @if (streamState() === 'off') {
+            <nldd-button
+              variant="secondary"
+              start-icon="play"
+              text="Stream"
+              (click)="setStreamState('streaming')"
+            ></nldd-button>
           } @else {
+            <nldd-button
+              expandable
+              popup-type="menu"
+              variant="secondary"
+              [attr.text]="streamLabel()"
+            >
+              <nldd-menu
+                slot="popup"
+                accessible-label="Live stream"
+              >
+                @if (streamState() === 'streaming') {
+                  <!-- Pausing holds the view still and keeps the connection open,
+                     so what you were reading stays where it was. -->
+                  <nldd-menu-item
+                    icon="pause"
+                    text="Pause streaming"
+                    (click)="setStreamState('paused')"
+                  ></nldd-menu-item>
+                } @else {
+                  <nldd-menu-item
+                    icon="play"
+                    text="Resume streaming"
+                    (click)="setStreamState('streaming')"
+                  ></nldd-menu-item>
+                }
+                <nldd-menu-item
+                  icon="stop"
+                  text="Stop streaming"
+                  (click)="setStreamState('off')"
+                ></nldd-menu-item>
+              </nldd-menu>
+            </nldd-button>
+          }
+          @if (streamState() === 'off') {
             <nldd-menu-item
               slot="overflow"
               icon="play"
-              text="Resume streaming"
+              text="Stream"
               (select)="setStreamState('streaming')"
             ></nldd-menu-item>
+          } @else {
+            @if (streamState() === 'streaming') {
+              <nldd-menu-item
+                slot="overflow"
+                icon="pause"
+                text="Pause streaming"
+                (select)="setStreamState('paused')"
+              ></nldd-menu-item>
+            } @else {
+              <nldd-menu-item
+                slot="overflow"
+                icon="play"
+                text="Resume streaming"
+                (select)="setStreamState('streaming')"
+              ></nldd-menu-item>
+            }
+            <nldd-menu-item
+              slot="overflow"
+              icon="stop"
+              text="Stop streaming"
+              (select)="setStreamState('off')"
+            ></nldd-menu-item>
           }
-          <nldd-menu-item
-            slot="overflow"
-            icon="stop"
-            text="Stop streaming"
-            (select)="setStreamState('off')"
-          ></nldd-menu-item>
-        }
-      </nldd-toolbar-item>
-    </nldd-toolbar>
-    <nldd-spacer
-      slot="header"
-      size="16"
-    ></nldd-spacer>
-    <!-- What the source you picked is. It does not come and go, so it reads as
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer
+        slot="header"
+        size="16"
+      ></nldd-spacer>
+      <!-- What the source you picked is. It does not come and go, so it reads as
          page text: a banner would keep announcing something that never
          changes. -->
-    <nldd-rich-text
-      slot="header"
-      spacing="flat"
-    >
-      @if (isLiveMode()) {
-        <p>
-          Plugin logs come straight from one pod, with your own cluster access. Pick a plugin and a
-          pod to read them. History goes back as far as the node kept it, and the search covers the
-          lines that are loaded, not the whole cluster.
-        </p>
-      } @else {
-        <p>
-          System logs from the cluster's logging stack, searchable across every pod for as long as
-          the backend keeps them.
-        </p>
-      }
-    </nldd-rich-text>
-    @if (isNoBackend() && !isLiveMode()) {
-      <nldd-spacer
+      <nldd-rich-text
         slot="header"
-        size="16"
-      ></nldd-spacer>
-      <nldd-banner
-        slot="header"
-        variant="warning"
-        text="No log backend is configured"
-        supporting-text="Configure Loki, or the Kubernetes pod-log fallback, to read logs here."
-      ></nldd-banner>
-    } @else if (isFallback() && !isLiveMode()) {
-      <nldd-spacer
-        slot="header"
-        size="16"
-      ></nldd-spacer>
-      <nldd-banner
-        slot="header"
-        variant="warning"
-        text="Loki is not configured, so these are Kubernetes pod logs"
-        supporting-text="Pick a namespace and a pod to read them. Searching across pods and older history need Loki."
-      ></nldd-banner>
-    }
-    @if (loadError()) {
-      <nldd-spacer
-        slot="header"
-        size="16"
-      ></nldd-spacer>
-      <nldd-banner
-        slot="header"
-        variant="critical"
-        text="Failed to load logs"
-        supporting-text="Try again, or narrow the time range if the query was a large one."
-      ></nldd-banner>
-    }
-
-    <!-- The filter column. The box and the sheet bring no padding of their own,
-         so the container carries it in both. -->
-    <nldd-container
-      slot="sidebar"
-      padding="16"
-    >
-      <!-- A choice of a handful, laid out: a dropdown for two options hides
-           one of them behind a click. -->
-      <nldd-title size="6">
-        <h3>Cluster</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-list
-        type="radiogroup"
-        dividers="never"
-        accessible-label="Cluster"
+        spacing="flat"
       >
-        @for (c of clusters(); track c.id) {
-          <nldd-list-item
-            radio
-            [attr.checked]="selectedCluster() === c.id ? '' : null"
-            [attr.selected]="selectedCluster() === c.id ? '' : null"
-            (change)="onClusterChange(c.id)"
-          >
-            <nldd-cell width="fit-content">
-              <nldd-radio-button
-                decorative
-                [attr.checked]="selectedCluster() === c.id ? '' : null"
-              ></nldd-radio-button>
-            </nldd-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="full"
-              [attr.text]="c.name"
-            ></nldd-text-cell>
-          </nldd-list-item>
+        @if (isLiveMode()) {
+          <p>
+            Plugin logs come straight from one pod, with your own cluster access. Pick a plugin and
+            a pod to read them. History goes back as far as the node kept it, and the search covers
+            the lines that are loaded, not the whole cluster.
+          </p>
+        } @else {
+          <p>
+            System logs from the cluster's logging stack, searchable across every pod for as long as
+            the backend keeps them.
+          </p>
         }
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="6">
-        <h3>{{ isLiveMode() ? 'Plugin' : 'Namespace' }}</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-combo-box
-        [attr.accessible-label]="isLiveMode() ? 'Plugin' : 'Namespace'"
-        [attr.value]="selectedNamespace()"
-        [attr.placeholder]="isLiveMode() ? 'Select a plugin' : 'All namespaces'"
-        (change)="onNamespaceChange($any($event).target.value)"
+      </nldd-rich-text>
+      @if (isNoBackend() && !isLiveMode()) {
+        <nldd-spacer
+          slot="header"
+          size="16"
+        ></nldd-spacer>
+        <nldd-banner
+          slot="header"
+          variant="warning"
+          text="No log backend is configured"
+          supporting-text="Configure Loki, or the Kubernetes pod-log fallback, to read logs here."
+        ></nldd-banner>
+      } @else if (isFallback() && !isLiveMode()) {
+        <nldd-spacer
+          slot="header"
+          size="16"
+        ></nldd-spacer>
+        <nldd-banner
+          slot="header"
+          variant="warning"
+          text="Loki is not configured, so these are Kubernetes pod logs"
+          supporting-text="Pick a namespace and a pod to read them. Searching across pods and older history need Loki."
+        ></nldd-banner>
+      }
+      @if (loadError()) {
+        <nldd-spacer
+          slot="header"
+          size="16"
+        ></nldd-spacer>
+        <nldd-banner
+          slot="header"
+          variant="critical"
+          text="Failed to load logs"
+          supporting-text="Try again, or narrow the time range if the query was a large one."
+        ></nldd-banner>
+      }
+
+      <!-- The filter column. The box and the sheet bring no padding of their own,
+         so the container carries it in both. -->
+      <nldd-container
+        slot="sidebar"
+        padding="16"
       >
-        <nldd-menu>
-          @if (!isLiveMode()) {
+        <!-- A choice of a handful, laid out: a dropdown for two options hides
+           one of them behind a click. -->
+        <nldd-title size="6">
+          <h3>Cluster</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-list
+          type="radiogroup"
+          dividers="never"
+          accessible-label="Cluster"
+        >
+          @for (c of clusters(); track c.id) {
+            <nldd-list-item
+              radio
+              [attr.checked]="selectedCluster() === c.id ? '' : null"
+              [attr.selected]="selectedCluster() === c.id ? '' : null"
+              (change)="onClusterChange(c.id)"
+            >
+              <nldd-cell width="fit-content">
+                <nldd-radio-button
+                  decorative
+                  [attr.checked]="selectedCluster() === c.id ? '' : null"
+                ></nldd-radio-button>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="c.name"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="6">
+          <h3>{{ isLiveMode() ? 'Plugin' : 'Namespace' }}</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-combo-box
+          [attr.accessible-label]="isLiveMode() ? 'Plugin' : 'Namespace'"
+          [attr.value]="selectedNamespace()"
+          [attr.placeholder]="isLiveMode() ? 'Select a plugin' : 'All namespaces'"
+          (change)="onNamespaceChange($any($event).target.value)"
+        >
+          <nldd-menu>
+            @if (!isLiveMode()) {
+              <nldd-menu-item
+                value=""
+                text="All namespaces"
+              ></nldd-menu-item>
+            }
+            @for (ns of namespaces(); track ns) {
+              <nldd-menu-item
+                [attr.value]="ns"
+                [attr.text]="ns"
+              ></nldd-menu-item>
+            }
+          </nldd-menu>
+        </nldd-combo-box>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="6">
+          <h3>Pod</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-combo-box
+          accessible-label="Pod"
+          [attr.value]="selectedPod()"
+          [attr.placeholder]="isLiveMode() ? 'Select a pod' : 'All pods'"
+          (change)="onPodChange($any($event).target.value)"
+        >
+          <nldd-menu>
+            @if (!isLiveMode()) {
+              <nldd-menu-item
+                value=""
+                text="All pods"
+              ></nldd-menu-item>
+            }
+            @for (pod of pods(); track pod) {
+              <nldd-menu-item
+                [attr.value]="pod"
+                [attr.text]="pod"
+              ></nldd-menu-item>
+            }
+          </nldd-menu>
+        </nldd-combo-box>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="6">
+          <h3>Container</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-combo-box
+          accessible-label="Container"
+          [attr.value]="selectedContainer()"
+          placeholder="All containers"
+          (change)="onContainerChange($any($event).target.value)"
+        >
+          <nldd-menu>
             <nldd-menu-item
               value=""
-              text="All namespaces"
+              text="All containers"
             ></nldd-menu-item>
-          }
-          @for (ns of namespaces(); track ns) {
-            <nldd-menu-item
-              [attr.value]="ns"
-              [attr.text]="ns"
-            ></nldd-menu-item>
-          }
-        </nldd-menu>
-      </nldd-combo-box>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="6">
-        <h3>Pod</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-combo-box
-        accessible-label="Pod"
-        [attr.value]="selectedPod()"
-        [attr.placeholder]="isLiveMode() ? 'Select a pod' : 'All pods'"
-        (change)="onPodChange($any($event).target.value)"
-      >
-        <nldd-menu>
-          @if (!isLiveMode()) {
-            <nldd-menu-item
-              value=""
-              text="All pods"
-            ></nldd-menu-item>
-          }
-          @for (pod of pods(); track pod) {
-            <nldd-menu-item
-              [attr.value]="pod"
-              [attr.text]="pod"
-            ></nldd-menu-item>
-          }
-        </nldd-menu>
-      </nldd-combo-box>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="6">
-        <h3>Container</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-combo-box
-        accessible-label="Container"
-        [attr.value]="selectedContainer()"
-        placeholder="All containers"
-        (change)="onContainerChange($any($event).target.value)"
-      >
-        <nldd-menu>
-          <nldd-menu-item
-            value=""
-            text="All containers"
-          ></nldd-menu-item>
-          @for (c of containers(); track c) {
-            <nldd-menu-item
-              [attr.value]="c"
-              [attr.text]="c"
-            ></nldd-menu-item>
-          }
-        </nldd-menu>
-      </nldd-combo-box>
-      <nldd-spacer size="24"></nldd-spacer>
-      <!-- A list rather than a bare radio group: the count belongs in a column
+            @for (c of containers(); track c) {
+              <nldd-menu-item
+                [attr.value]="c"
+                [attr.text]="c"
+              ></nldd-menu-item>
+            }
+          </nldd-menu>
+        </nldd-combo-box>
+        <nldd-spacer size="24"></nldd-spacer>
+        <!-- A list rather than a bare radio group: the count belongs in a column
            of its own, right-aligned and quiet, instead of in the label. -->
-      <nldd-title size="6">
-        <h3>Level</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-list
-        dividers="never"
-        accessible-label="Level"
-      >
-        <!-- Checkboxes, because Error plus Warning together is the question
+        <nldd-title size="6">
+          <h3>Level</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-list
+          dividers="never"
+          accessible-label="Level"
+        >
+          <!-- Checkboxes, because Error plus Warning together is the question
                you ask most often. The row is the control and the box inside it
                only draws the state. -->
-        <nldd-list-item
-          checkbox
-          [attr.checked]="selectedLevels().size === ALL_LEVELS.length ? '' : null"
-          (change)="toggleAllLevels()"
-        >
-          <nldd-cell width="fit-content">
-            <nldd-checkbox
-              decorative
-              [attr.checked]="selectedLevels().size === ALL_LEVELS.length ? '' : null"
-            ></nldd-checkbox>
-          </nldd-cell>
-          <nldd-spacer-cell size="12"></nldd-spacer-cell>
-          <nldd-text-cell
-            width="full"
-            text="All levels"
-          ></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            color="secondary"
-            [attr.text]="allLevelsCountLabel()"
-          ></nldd-text-cell>
-        </nldd-list-item>
-        @for (level of ALL_LEVELS; track level) {
           <nldd-list-item
             checkbox
-            [attr.checked]="
-              selectedLevels().size !== ALL_LEVELS.length && selectedLevels().has(level) ? '' : null
-            "
-            (change)="toggleLevel(level)"
+            [attr.checked]="selectedLevels().size === ALL_LEVELS.length ? '' : null"
+            (change)="toggleAllLevels()"
           >
             <nldd-cell width="fit-content">
               <nldd-checkbox
                 decorative
-                [attr.checked]="
-                  selectedLevels().size !== ALL_LEVELS.length && selectedLevels().has(level)
-                    ? ''
-                    : null
-                "
+                [attr.checked]="selectedLevels().size === ALL_LEVELS.length ? '' : null"
               ></nldd-checkbox>
             </nldd-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
-              [attr.text]="levelLabel(level)"
+              text="All levels"
             ></nldd-text-cell>
             <nldd-text-cell
               width="fit-content"
               color="secondary"
-              [attr.text]="levelCountLabel(level)"
+              [attr.text]="allLevelsCountLabel()"
             ></nldd-text-cell>
           </nldd-list-item>
-        }
-      </nldd-list>
-      <nldd-spacer size="24"></nldd-spacer>
-      <nldd-title size="6">
-        <h3>Time range</h3>
-      </nldd-title>
-      <nldd-spacer size="4"></nldd-spacer>
-      <nldd-list
-        type="radiogroup"
-        dividers="never"
-        accessible-label="Time range"
-      >
-        @for (preset of TIME_PRESETS; track preset.value) {
-          <nldd-list-item
-            radio
-            [attr.checked]="timePreset() === preset.value ? '' : null"
-            [attr.selected]="timePreset() === preset.value ? '' : null"
-            (change)="onTimePresetChange(preset.value)"
-          >
-            <nldd-cell width="fit-content">
-              <nldd-radio-button
-                decorative
-                [attr.checked]="timePreset() === preset.value ? '' : null"
-              ></nldd-radio-button>
-            </nldd-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="full"
-              [attr.text]="preset.label"
-            ></nldd-text-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
-    </nldd-container>
+          @for (level of ALL_LEVELS; track level) {
+            <nldd-list-item
+              checkbox
+              [attr.checked]="
+                selectedLevels().size !== ALL_LEVELS.length && selectedLevels().has(level)
+                  ? ''
+                  : null
+              "
+              (change)="toggleLevel(level)"
+            >
+              <nldd-cell width="fit-content">
+                <nldd-checkbox
+                  decorative
+                  [attr.checked]="
+                    selectedLevels().size !== ALL_LEVELS.length && selectedLevels().has(level)
+                      ? ''
+                      : null
+                  "
+                ></nldd-checkbox>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="levelLabel(level)"
+              ></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                color="secondary"
+                [attr.text]="levelCountLabel(level)"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="6">
+          <h3>Time range</h3>
+        </nldd-title>
+        <nldd-spacer size="4"></nldd-spacer>
+        <nldd-list
+          type="radiogroup"
+          dividers="never"
+          accessible-label="Time range"
+        >
+          @for (preset of TIME_PRESETS; track preset.value) {
+            <nldd-list-item
+              radio
+              [attr.checked]="timePreset() === preset.value ? '' : null"
+              [attr.selected]="timePreset() === preset.value ? '' : null"
+              (change)="onTimePresetChange(preset.value)"
+            >
+              <nldd-cell width="fit-content">
+                <nldd-radio-button
+                  decorative
+                  [attr.checked]="timePreset() === preset.value ? '' : null"
+                ></nldd-radio-button>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="preset.label"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      </nldd-container>
 
-    @if (showFilterControls()) {
-      <!-- Searching stays out here: it is the one filter you type into while
+      @if (showFilterControls()) {
+        <!-- Searching stays out here: it is the one filter you type into while
      reading, and the Filters button beside it only appears once the column
      has folded into a sheet. It also stays when the query came back empty
      because of what you typed: taking the field away would leave reloading
      the page as the only way to change the search. -->
-      <nldd-toolbar label="Search and filter">
-        <nldd-toolbar-item
-          slot="start"
-          priority="2"
-          width="320px"
-          min-width="200px"
-        >
-          <nldd-search-field
-            placeholder="Search log messages"
-            accessible-label="Search log messages"
-            [attr.value]="searchText()"
-            (input)="onSearchInput($event)"
-          ></nldd-search-field>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item slot="end">
-          <nldd-button
-            expandable
-            popup-type="menu"
-            variant="secondary"
-            start-icon="sort"
-            [attr.text]="sortNewestFirst() ? 'Newest first' : 'Oldest first'"
+        <nldd-toolbar label="Search and filter">
+          <nldd-toolbar-item
+            slot="start"
+            priority="2"
+            width="320px"
+            min-width="200px"
           >
-            <nldd-menu
-              slot="popup"
-              accessible-label="Sort order"
+            <nldd-search-field
+              placeholder="Search log messages"
+              accessible-label="Search log messages"
+              [attr.value]="searchText()"
+              (input)="onSearchInput($event)"
+            ></nldd-search-field>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              expandable
+              popup-type="menu"
+              variant="secondary"
+              start-icon="sort"
+              [attr.text]="sortNewestFirst() ? 'Newest first' : 'Oldest first'"
             >
-              <nldd-menu-item
-                type="radio"
-                text="Newest first"
-                [attr.selected]="sortNewestFirst() ? '' : null"
-                (click)="sortNewestFirst.set(true); currentPage.set(0)"
-              ></nldd-menu-item>
-              <nldd-menu-item
-                type="radio"
-                text="Oldest first"
-                [attr.selected]="!sortNewestFirst() ? '' : null"
-                (click)="sortNewestFirst.set(false); currentPage.set(0)"
-              ></nldd-menu-item>
-            </nldd-menu>
-          </nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            type="radio"
-            text="Newest first"
-            [attr.selected]="sortNewestFirst() ? '' : null"
-            (select)="sortNewestFirst.set(true); currentPage.set(0)"
-          ></nldd-menu-item>
-          <nldd-menu-item
-            slot="overflow"
-            type="radio"
-            text="Oldest first"
-            [attr.selected]="!sortNewestFirst() ? '' : null"
-            (select)="sortNewestFirst.set(false); currentPage.set(0)"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item
-          id="filter-trigger"
-          slot="end"
-        >
-          <nldd-button
-            variant="secondary"
-            start-icon="list-decreasing-lines"
-            text="Filters"
-            aria-haspopup="dialog"
-            (click)="$any(filterSection).show()"
-          ></nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            icon="list-decreasing-lines"
-            text="Filters"
-            (select)="$any(filterSection).show()"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
-      </nldd-toolbar>
-      <nldd-spacer size="16"></nldd-spacer>
-    }
-    <!-- One row: the choices you cannot skip, as menus, and beside them what you
+              <nldd-menu
+                slot="popup"
+                accessible-label="Sort order"
+              >
+                <nldd-menu-item
+                  type="radio"
+                  text="Newest first"
+                  [attr.selected]="sortNewestFirst() ? '' : null"
+                  (click)="sortNewestFirst.set(true); currentPage.set(0)"
+                ></nldd-menu-item>
+                <nldd-menu-item
+                  type="radio"
+                  text="Oldest first"
+                  [attr.selected]="!sortNewestFirst() ? '' : null"
+                  (click)="sortNewestFirst.set(false); currentPage.set(0)"
+                ></nldd-menu-item>
+              </nldd-menu>
+            </nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              type="radio"
+              text="Newest first"
+              [attr.selected]="sortNewestFirst() ? '' : null"
+              (select)="sortNewestFirst.set(true); currentPage.set(0)"
+            ></nldd-menu-item>
+            <nldd-menu-item
+              slot="overflow"
+              type="radio"
+              text="Oldest first"
+              [attr.selected]="!sortNewestFirst() ? '' : null"
+              (select)="sortNewestFirst.set(false); currentPage.set(0)"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item
+            id="filter-trigger"
+            slot="end"
+          >
+            <nldd-button
+              variant="secondary"
+              start-icon="list-decreasing-lines"
+              text="Filters"
+              aria-haspopup="dialog"
+              (click)="$any(filterSection).show()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="list-decreasing-lines"
+              text="Filters"
+              (select)="$any(filterSection).show()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <!-- One row: the choices you cannot skip, as menus, and beside them what you
          filtered on beyond that, each with the way back out. The menus are only
          here while the filter column is a sheet; with the column beside the list
          it already shows them. -->
-    <!-- Not in the empty state, unless a filter is what emptied it: with
+      <!-- Not in the empty state, unless a filter is what emptied it: with
          nothing on screen and nothing narrowing it, a row of filters is chrome
          around an absence. -->
-    @if (showFilterControls() && (filtersCollapsed() || activeFilterChips().length > 0)) {
-      <nldd-container
-        layout="wrap"
-        gap="8"
-      >
-        @if (filtersCollapsed()) {
-          <nldd-token
-            control="menu"
-            [attr.text]="'Cluster: ' + clusterLabel()"
-            menu-text="Choose a cluster"
-          >
-            <nldd-menu
-              slot="menu"
-              accessible-label="Cluster"
-            >
-              @for (c of clusters(); track c.id) {
-                <nldd-menu-item
-                  type="radio"
-                  [attr.text]="c.name"
-                  [attr.selected]="selectedCluster() === c.id ? '' : null"
-                  (click)="onClusterChange(c.id)"
-                ></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-token>
-          @if (isLiveMode()) {
+      @if (showFilterControls() && (filtersCollapsed() || activeFilterChips().length > 0)) {
+        <nldd-container
+          layout="wrap"
+          gap="8"
+        >
+          @if (filtersCollapsed()) {
             <nldd-token
               control="menu"
-              [attr.text]="selectedNamespace() ? 'Plugin: ' + selectedNamespace() : 'Plugin'"
-              menu-text="Choose a plugin"
+              [attr.text]="'Cluster: ' + clusterLabel()"
+              menu-text="Choose a cluster"
             >
               <nldd-menu
                 slot="menu"
-                accessible-label="Plugin"
+                accessible-label="Cluster"
               >
-                @for (ns of namespaces(); track ns) {
+                @for (c of clusters(); track c.id) {
                   <nldd-menu-item
                     type="radio"
-                    [attr.text]="ns"
-                    [attr.selected]="selectedNamespace() === ns ? '' : null"
-                    (click)="onNamespaceChange(ns)"
-                  ></nldd-menu-item>
-                }
-                @if (namespaces().length === 0) {
-                  <nldd-menu-item
-                    text="No plugins installed"
-                    disabled
+                    [attr.text]="c.name"
+                    [attr.selected]="selectedCluster() === c.id ? '' : null"
+                    (click)="onClusterChange(c.id)"
                   ></nldd-menu-item>
                 }
               </nldd-menu>
             </nldd-token>
+            @if (isLiveMode()) {
+              <nldd-token
+                control="menu"
+                [attr.text]="selectedNamespace() ? 'Plugin: ' + selectedNamespace() : 'Plugin'"
+                menu-text="Choose a plugin"
+              >
+                <nldd-menu
+                  slot="menu"
+                  accessible-label="Plugin"
+                >
+                  @for (ns of namespaces(); track ns) {
+                    <nldd-menu-item
+                      type="radio"
+                      [attr.text]="ns"
+                      [attr.selected]="selectedNamespace() === ns ? '' : null"
+                      (click)="onNamespaceChange(ns)"
+                    ></nldd-menu-item>
+                  }
+                  @if (namespaces().length === 0) {
+                    <nldd-menu-item
+                      text="No plugins installed"
+                      disabled
+                    ></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-token>
+              <nldd-token
+                control="menu"
+                [attr.text]="selectedPod() ? 'Pod: ' + selectedPod() : 'Pod'"
+                menu-text="Choose a pod"
+              >
+                <nldd-menu
+                  slot="menu"
+                  accessible-label="Pod"
+                >
+                  @for (pod of pods(); track pod) {
+                    <nldd-menu-item
+                      type="radio"
+                      [attr.text]="pod"
+                      [attr.selected]="selectedPod() === pod ? '' : null"
+                      (click)="onPodChange(pod)"
+                    ></nldd-menu-item>
+                  }
+                  @if (pods().length === 0) {
+                    <nldd-menu-item
+                      text="Pick a plugin first"
+                      disabled
+                    ></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-token>
+            }
             <nldd-token
               control="menu"
-              [attr.text]="selectedPod() ? 'Pod: ' + selectedPod() : 'Pod'"
-              menu-text="Choose a pod"
+              [attr.text]="'Time: ' + timeLabel()"
+              menu-text="Choose a time range"
             >
               <nldd-menu
                 slot="menu"
-                accessible-label="Pod"
+                accessible-label="Time range"
               >
-                @for (pod of pods(); track pod) {
+                @for (preset of TIME_PRESETS; track preset.value) {
                   <nldd-menu-item
                     type="radio"
-                    [attr.text]="pod"
-                    [attr.selected]="selectedPod() === pod ? '' : null"
-                    (click)="onPodChange(pod)"
-                  ></nldd-menu-item>
-                }
-                @if (pods().length === 0) {
-                  <nldd-menu-item
-                    text="Pick a plugin first"
-                    disabled
+                    [attr.text]="preset.label"
+                    [attr.selected]="timePreset() === preset.value ? '' : null"
+                    (click)="onTimePresetChange(preset.value)"
                   ></nldd-menu-item>
                 }
               </nldd-menu>
             </nldd-token>
           }
-          <nldd-token
-            control="menu"
-            [attr.text]="'Time: ' + timeLabel()"
-            menu-text="Choose a time range"
-          >
-            <nldd-menu
-              slot="menu"
-              accessible-label="Time range"
-            >
-              @for (preset of TIME_PRESETS; track preset.value) {
-                <nldd-menu-item
-                  type="radio"
-                  [attr.text]="preset.label"
-                  [attr.selected]="timePreset() === preset.value ? '' : null"
-                  (click)="onTimePresetChange(preset.value)"
-                ></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-token>
-        }
-        @for (chip of activeFilterChips(); track chip.key) {
-          <nldd-token
-            control="dismiss"
-            [attr.text]="chip.label"
-            [attr.dismiss-text]="'Remove ' + chip.label"
-            (dismiss)="removeChip(chip.key)"
-          ></nldd-token>
-        }
-      </nldd-container>
-      <nldd-spacer size="12"></nldd-spacer>
-    }
-    <!-- Two different nothings. Nothing came back at all: the filters are the
+          @for (chip of activeFilterChips(); track chip.key) {
+            <nldd-token
+              control="dismiss"
+              [attr.text]="chip.label"
+              [attr.dismiss-text]="'Remove ' + chip.label"
+              (dismiss)="removeChip(chip.key)"
+            ></nldd-token>
+          }
+        </nldd-container>
+        <nldd-spacer size="12"></nldd-spacer>
+      }
+      <!-- Two different nothings. Nothing came back at all: the filters are the
          way out, so the page steps aside for one line that says so and offers
          them. Something came back but the search narrowed it to nothing: the
          toolbar and the count stay, because widening is what you do next.
          The search runs on the backend, so a term that matches nothing lands in
          the first branch as well - and there it says so, and offers the way
          back. -->
-    @if (hasNoLogs()) {
-      @if (isLoading()) {
-        <nldd-activity-indicator
-          show-text
-          text="Loading logs"
-        ></nldd-activity-indicator>
-      } @else if (hasSearchText()) {
-        <nldd-inline-dialog
-          icon="search"
-          icon-color="secondary"
-          text="No log entries match your search"
-          supporting-text="Try another search term, a wider time range, or fewer filters."
-        >
-          <nldd-button
-            slot="actions"
-            type="button"
-            text="Clear search"
-            variant="secondary"
-            (click)="clearSearch()"
-          ></nldd-button>
-        </nldd-inline-dialog>
-      } @else {
-        <nldd-inline-dialog text="No log entries"></nldd-inline-dialog>
-      }
-    } @else {
-      <nldd-text color="secondary">
-        {{ filteredLogs().length | number }} entr{{ filteredLogs().length === 1 ? 'y' : 'ies' }}
-      </nldd-text>
-      <nldd-spacer size="8"></nldd-spacer>
-      @if (filteredLogs().length === 0) {
-        <nldd-inline-dialog
-          [attr.icon]="hasSearchText() ? 'search' : null"
-          icon-color="secondary"
-          [attr.text]="
-            hasSearchText()
-              ? 'No log entries match your search'
-              : 'No log entries match the current filters'
-          "
-          supporting-text="Try a wider time range, fewer filters, or another search term."
-        >
-          @if (hasSearchText()) {
+      @if (hasNoLogs()) {
+        @if (isLoading()) {
+          <nldd-activity-indicator
+            show-text
+            text="Loading logs"
+          ></nldd-activity-indicator>
+        } @else if (hasSearchText()) {
+          <nldd-inline-dialog
+            icon="search"
+            icon-color="secondary"
+            text="No log entries match your search"
+            supporting-text="Try another search term, a wider time range, or fewer filters."
+          >
             <nldd-button
               slot="actions"
               type="button"
@@ -849,106 +839,137 @@
               variant="secondary"
               (click)="clearSearch()"
             ></nldd-button>
-          }
-        </nldd-inline-dialog>
+          </nldd-inline-dialog>
+        } @else {
+          <nldd-inline-dialog text="No log entries"></nldd-inline-dialog>
+        }
       } @else {
-        <!-- Histogram. The counts come from the backend's aggregation over the
+        <nldd-text color="secondary">
+          {{ filteredLogs().length | number }} entr{{ filteredLogs().length === 1 ? 'y' : 'ies' }}
+        </nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
+        @if (filteredLogs().length === 0) {
+          <nldd-inline-dialog
+            [attr.icon]="hasSearchText() ? 'search' : null"
+            icon-color="secondary"
+            [attr.text]="
+              hasSearchText()
+                ? 'No log entries match your search'
+                : 'No log entries match the current filters'
+            "
+            supporting-text="Try a wider time range, fewer filters, or another search term."
+          >
+            @if (hasSearchText()) {
+              <nldd-button
+                slot="actions"
+                type="button"
+                text="Clear search"
+                variant="secondary"
+                (click)="clearSearch()"
+              ></nldd-button>
+            }
+          </nldd-inline-dialog>
+        } @else {
+          <!-- Histogram. The counts come from the backend's aggregation over the
            whole window, so this is a picture of the range you selected rather
            than of the page below it. It is dropped entirely when those counts
            are missing: an empty chart above a full list reads as "no traffic",
            which is the one thing it must never say. -->
-        @if (histogramBuckets().length > 0) {
-          <nldd-box background="base">
-            <nldd-container padding="16">
-              <div class="pt-3 pb-1">
-                <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                  <span class="flex items-center gap-1.5"
-                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span
-                    >Error</span
-                  >
-                  <span class="flex items-center gap-1.5"
-                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span
-                    >Warn</span
-                  >
-                  <span class="flex items-center gap-1.5"
-                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span
-                    >Info</span
-                  >
-                  <span class="flex items-center gap-1.5"
-                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span
-                    >Debug</span
-                  >
-                  <!-- Plugin and pod-log sources cannot be aggregated, so their
+          @if (histogramBuckets().length > 0) {
+            <nldd-box background="base">
+              <nldd-container padding="16">
+                <div class="pt-3 pb-1">
+                  <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="flex items-center gap-1.5"
+                      ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span
+                      >Error</span
+                    >
+                    <span class="flex items-center gap-1.5"
+                      ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span
+                      >Warn</span
+                    >
+                    <span class="flex items-center gap-1.5"
+                      ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span
+                      >Info</span
+                    >
+                    <span class="flex items-center gap-1.5"
+                      ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span
+                      >Debug</span
+                    >
+                    <!-- Plugin and pod-log sources cannot be aggregated, so their
                    counts are the loaded lines. Saying so is the difference
                    between a sample and a claim about the cluster. -->
-                  @if (!histogramExact()) {
-                    <span class="ml-auto">Counted from the loaded lines, not the whole range</span>
-                  }
+                    @if (!histogramExact()) {
+                      <span class="ml-auto"
+                        >Counted from the loaded lines, not the whole range</span
+                      >
+                    }
+                  </div>
                 </div>
-              </div>
-              <div
-                class="pb-3"
-                style="height: 100px"
-              >
-                <canvas #histogramChart></canvas>
-              </div>
-            </nldd-container>
-          </nldd-box>
+                <div
+                  class="pb-3"
+                  style="height: 100px"
+                >
+                  <canvas #histogramChart></canvas>
+                </div>
+              </nldd-container>
+            </nldd-box>
 
-          <nldd-spacer size="16"></nldd-spacer>
-        }
-        <!-- The count and the sort belong to the list, so they ride in its own
+            <nldd-spacer size="16"></nldd-spacer>
+          }
+          <!-- The count and the sort belong to the list, so they ride in its own
            toolbar slot instead of a bar of their own above it. -->
-        <nldd-list accessible-label="Log entries">
-          <!-- The message is the row. Where and when it came from sits under it,
+          <nldd-list accessible-label="Log entries">
+            <!-- The message is the row. Where and when it came from sits under it,
              because you only need that once a line has caught your eye, and the
              level goes right: four tags of different widths line up on their
              right edge, so the column reads as one. The search term is marked in
              the message it matched. -->
-          @for (log of pagedLogs(); track log.id) {
-            <nldd-list-item
-              button
-              (click)="selectLog(log)"
-            >
-              <nldd-text-cell
-                width="full"
-                query-mark-mode="match"
-                [attr.query]="searchText()"
-                [attr.text]="log.message"
-                [attr.supporting-text]="
-                  formatTimestamp(log.timestamp) + ' · ' + log.pod + ' · ' + log.container
-                "
-              ></nldd-text-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <nldd-cell
-                width="fit-content"
-                horizontal-alignment="right"
+            @for (log of pagedLogs(); track log.id) {
+              <nldd-list-item
+                button
+                (click)="selectLog(log)"
               >
-                <nldd-tag
-                  [attr.color]="levelTagColor(log.level)"
-                  [attr.text]="levelLabel(log.level)"
-                ></nldd-tag>
-              </nldd-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <!-- The row opens the entry in a sheet, and a chevron is how a row
+                <nldd-text-cell
+                  width="full"
+                  query-mark-mode="match"
+                  [attr.query]="searchText()"
+                  [attr.text]="log.message"
+                  [attr.supporting-text]="
+                    formatTimestamp(log.timestamp) + ' · ' + log.pod + ' · ' + log.container
+                  "
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                >
+                  <nldd-tag
+                    [attr.color]="levelTagColor(log.level)"
+                    [attr.text]="levelLabel(log.level)"
+                  ></nldd-tag>
+                </nldd-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <!-- The row opens the entry in a sheet, and a chevron is how a row
                  says that before you click it. -->
-              <nldd-icon-cell
-                icon="chevron-right"
-                size="20"
-                color="secondary"
-              ></nldd-icon-cell>
-            </nldd-list-item>
+                <nldd-icon-cell
+                  icon="chevron-right"
+                  size="20"
+                  color="secondary"
+                ></nldd-icon-cell>
+              </nldd-list-item>
+            }
+          </nldd-list>
+          @if (totalPages() > 1) {
+            <nldd-spacer size="24"></nldd-spacer>
+            <nldd-pagination
+              [current]="currentPage() + 1"
+              [total]="totalPages()"
+              (page-change)="onPageChange($event)"
+            ></nldd-pagination>
           }
-        </nldd-list>
-        @if (totalPages() > 1) {
-          <nldd-spacer size="24"></nldd-spacer>
-          <nldd-pagination
-            [current]="currentPage() + 1"
-            [total]="totalPages()"
-            (page-change)="onPageChange($event)"
-          ></nldd-pagination>
         }
       }
-    }
-  </nldd-sidebar-section>
-</nldd-page>
+    </nldd-sidebar-section>
+  </nldd-page>
+}

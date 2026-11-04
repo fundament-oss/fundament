@@ -49,6 +49,7 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/title-cell';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-cluster-namespaces',
@@ -132,9 +133,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.selection.retainVisible();
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load namespaces: ${error.message}`
+            : 'Failed to load namespaces'),
       );
     }
   }
@@ -147,9 +149,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.projects.set(response.projects);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load projects: ${error.message}`
-          : 'Failed to load projects',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load projects: ${error.message}`
+            : 'Failed to load projects'),
       );
     } finally {
       this.isLoadingProjects.set(false);
@@ -191,9 +194,10 @@ export default class ClusterNamespacesComponent implements OnInit {
       ]);
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to delete namespace: ${error.message}`
-          : 'Failed to delete namespace',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to delete namespace: ${error.message}`
+            : 'Failed to delete namespace'),
       );
     }
   }
@@ -231,7 +235,12 @@ export default class ClusterNamespacesComponent implements OnInit {
         );
       }
       if (failed > 0) {
-        this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
+        const denied = results
+          .map((r) => (r.status === 'rejected' ? permissionDeniedMessage(r.reason) : null))
+          .find((message) => message !== null);
+        this.errorMessage.set(
+          denied ?? `Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`,
+        );
       }
 
       this.selection.clear();

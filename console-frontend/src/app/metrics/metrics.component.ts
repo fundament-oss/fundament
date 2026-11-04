@@ -70,6 +70,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 Chart.register(...registerables, ZoomPlugin);
 
@@ -885,7 +886,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       obs = this.buildStreamObservable();
     } catch (err) {
       this.setLoading(false);
-      this.errorMessage.set(err instanceof Error ? err.message : 'Failed to start stream');
+      this.errorMessage.set(
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'Failed to start stream'),
+      );
       return;
     }
 
@@ -913,9 +917,15 @@ export default class MetricsComponent implements OnInit, OnDestroy {
           this.updateChartsInPlace();
         }
       },
-      error: () => {
+      error: (err: unknown) => {
         this.setLoading(false);
         this.isLive.set(false);
+        // A denial is not an outage: retrying would only be denied again.
+        const denied = permissionDeniedMessage(err);
+        if (denied) {
+          this.errorMessage.set(denied);
+          return;
+        }
         this.connectionError.set(true);
         this.metricsHealth.report(false);
         const delay = Math.min(5_000 * 2 ** this.reconnectAttempt, MAX_RECONNECT_DELAY_MS);

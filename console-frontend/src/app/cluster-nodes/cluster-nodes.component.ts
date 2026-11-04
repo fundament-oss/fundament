@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import {
@@ -31,7 +30,7 @@ import { fetchClusterName } from '../utils/cluster-status';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { readableRefusal } from '../utils/node-pool-refusal';
+import { mayHaveBeenApplied, readableRefusal } from '../utils/node-pool-refusal';
 import { nodePoolsMatch } from '../utils/node-pools-match';
 
 import '@nldd/design-system/activity-indicator';
@@ -43,6 +42,7 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 /**
  * What the submit did, in one line. One pool by name, because the name is what
@@ -162,9 +162,10 @@ export default class ClusterNodesComponent implements OnInit {
       );
     } catch (error) {
       const message =
-        error instanceof Error
+        permissionDeniedMessage(error) ??
+        (error instanceof Error
           ? `Failed to load node pools: ${error.message}`
-          : 'Failed to load node pools';
+          : 'Failed to load node pools');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -227,9 +228,7 @@ export default class ClusterNodesComponent implements OnInit {
         // (Aborted), since the pools changed to this save's. A refusal in the
         // API's own words is final. If the cluster already has exactly what
         // was asked, it is done.
-        const maybeApplied =
-          !readableRefusal(error) || (error instanceof ConnectError && error.code === Code.Aborted);
-        if (!maybeApplied || !(await this.alreadyApplied(newPools))) {
+        if (!mayHaveBeenApplied(error) || !(await this.alreadyApplied(newPools))) {
           throw error;
         }
       }
@@ -246,7 +245,8 @@ export default class ClusterNodesComponent implements OnInit {
       // backend detail.
       const reason = readableRefusal(error);
       this.errorMessage.set(
-        reason ? `Failed to update cluster nodes: ${reason}` : 'Failed to update cluster nodes',
+        permissionDeniedMessage(error) ??
+          (reason ? `Failed to update cluster nodes: ${reason}` : 'Failed to update cluster nodes'),
       );
     } finally {
       this.isSubmitting.set(false);

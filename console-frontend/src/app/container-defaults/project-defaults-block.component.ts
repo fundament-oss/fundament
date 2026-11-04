@@ -47,6 +47,7 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 /**
  * The project's per-container defaults, as a block on the project General page.
@@ -125,8 +126,8 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
       );
       this.values.set(valuesFrom(response.defaults));
       this.clusterValues.set(valuesFrom(response.clusterDefaults));
-    } catch {
-      this.loadError.set('Failed to load the project defaults.');
+    } catch (err) {
+      this.loadError.set(permissionDeniedMessage(err) ?? 'Failed to load the project defaults.');
     } finally {
       this.loading.set(false);
     }
@@ -188,7 +189,7 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
     } catch (err) {
       // An InvalidArgument says which value is too high and what the cluster
       // allows, so the API's own message is what belongs here.
-      this.saveError.set(ConnectError.from(err).rawMessage);
+      this.saveError.set(permissionDeniedMessage(err) ?? ConnectError.from(err).rawMessage);
     } finally {
       this.saving.set(false);
     }

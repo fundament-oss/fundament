@@ -52,6 +52,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 interface OrganizationMember {
   id: string;
@@ -310,7 +311,10 @@ export default class OrganizationMembersComponent implements OnInit {
       await this.organizationDataService.reloadMembers();
     } catch (err) {
       this.error.set(
-        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to load members: ${err.message}`
+            : 'Failed to load members'),
       );
     } finally {
       this.isLoading.set(false);
@@ -330,7 +334,9 @@ export default class OrganizationMembersComponent implements OnInit {
     } catch (err) {
       this.actionError.set({
         title: 'Invitation not cancelled',
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.cancelInvitation(id),
       });
@@ -356,7 +362,9 @@ export default class OrganizationMembersComponent implements OnInit {
       this.showDeleteModal.set(false);
       this.actionError.set({
         title: 'Member not removed',
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.confirmDeleteMember(),
       });
@@ -382,7 +390,9 @@ export default class OrganizationMembersComponent implements OnInit {
     } catch (err) {
       this.actionError.set({
         title: `${who} ${stays} ${member.permission}`,
-        message: err instanceof Error ? err.message : 'The request failed.',
+        message:
+          permissionDeniedMessage(err) ??
+          (err instanceof Error ? err.message : 'The request failed.'),
         attempts: 1,
         retry: () => this.setPermission(member),
       });

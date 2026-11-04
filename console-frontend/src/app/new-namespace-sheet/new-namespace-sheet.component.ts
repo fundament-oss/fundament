@@ -49,6 +49,7 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 /** What a 63-character label leaves for project and namespace name together
  *  after "tnt-" and "--" (kubename.maxCombinedLength in Go). */
@@ -263,9 +264,10 @@ export default class NewNamespaceSheetComponent {
       await this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {});
     } catch (error) {
       this.createErrorMessage.set(
-        error instanceof Error
-          ? `Failed to create namespace: ${error.message}`
-          : 'Failed to create namespace',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to create namespace: ${error.message}`
+            : 'Failed to create namespace'),
       );
     } finally {
       this.isCreatingNamespace.set(false);

@@ -50,6 +50,7 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 /** One member's standing in this namespace. */
 interface NamespaceMember {
   member: ProjectMember;
@@ -320,7 +321,8 @@ export default class NamespaceSheetComponent implements OnInit {
       this.onClose();
     } catch (err) {
       this.notificationService.error(
-        err instanceof Error ? `Namespace not deleted: ${err.message}` : 'Namespace not deleted',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error ? `Namespace not deleted: ${err.message}` : 'Namespace not deleted'),
       );
     }
   }

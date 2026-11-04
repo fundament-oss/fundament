@@ -43,6 +43,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-namespaces',
@@ -153,9 +154,10 @@ export default class NamespacesComponent implements OnInit {
       this.namespaces.set(response.namespaces);
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load namespaces: ${error.message}`
+            : 'Failed to load namespaces'),
       );
     } finally {
       this.isLoading.set(false);

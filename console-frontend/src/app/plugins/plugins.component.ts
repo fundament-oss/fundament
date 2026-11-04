@@ -75,6 +75,7 @@ import '@nldd/design-system/tag';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
   plugin.categories.map((category) => category.name).join(', ') || '—';
@@ -414,7 +415,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       this.startInstallPollingIfNeeded();
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data'),
       );
       this.isLoading.set(false);
     }

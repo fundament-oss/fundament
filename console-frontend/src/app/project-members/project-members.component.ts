@@ -50,6 +50,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -277,7 +278,10 @@ export default class ProjectMembersComponent implements OnInit {
       this.availableUsers.set(available);
     } catch (err) {
       this.error.set(
-        err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to load members: ${err.message}`
+            : 'Failed to load members'),
       );
     } finally {
       this.isLoading.set(false);

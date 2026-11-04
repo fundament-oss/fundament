@@ -11,8 +11,7 @@ import {
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { Code, ConnectError } from '@connectrpc/connect';
-import { NodePoolNotCreated, readableRefusal, refusalReason } from '../utils/node-pool-refusal';
+import { NodePoolNotCreated, mayHaveBeenApplied, refusalReason } from '../utils/node-pool-refusal';
 import { DesiredNodePool, nodePoolsMatch } from '../utils/node-pools-match';
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -40,6 +39,7 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-new-cluster-summary',
@@ -134,7 +134,8 @@ export default class NewClusterSummaryComponent {
       clusterId = response.clusterId;
     } catch (error) {
       this.errorMessage.set(
-        error instanceof Error ? error.message : 'The cluster could not be created.',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error ? error.message : 'The cluster could not be created.'),
       );
       this.isCreating.set(false);
       return;
@@ -197,9 +198,7 @@ export default class NewClusterSummaryComponent {
       // A call whose response was lost may still have been applied: then the
       // pools are there. A refusal in the API's own words is final, except a
       // stale-set refusal (Aborted), which is what a repeated call gets.
-      const maybeApplied =
-        !readableRefusal(error) || (error instanceof ConnectError && error.code === Code.Aborted);
-      if (maybeApplied && (await this.poolsAreThere(clusterId, pools))) return [];
+      if (mayHaveBeenApplied(error) && (await this.poolsAreThere(clusterId, pools))) return [];
       const reason = refusalReason(error);
       return pools.map((pool) => ({ name: pool.name, reason }));
     }

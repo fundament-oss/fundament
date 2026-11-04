@@ -47,6 +47,7 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 /**
  * The cluster's per-container defaults, as a block on the cluster detail page:
@@ -127,8 +128,8 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
       );
       this.values.set(valuesFrom(response.defaults));
       this.suggested.set(valuesFrom(response.suggested));
-    } catch {
-      this.loadError.set('Failed to load the cluster defaults.');
+    } catch (err) {
+      this.loadError.set(permissionDeniedMessage(err) ?? 'Failed to load the cluster defaults.');
     } finally {
       this.loading.set(false);
     }
@@ -181,7 +182,7 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
     } catch (err) {
       // A FailedPrecondition names the project to lower first, so the API's own
       // message is more use here than anything this page could write.
-      this.saveError.set(ConnectError.from(err).rawMessage);
+      this.saveError.set(permissionDeniedMessage(err) ?? ConnectError.from(err).rawMessage);
     } finally {
       this.saving.set(false);
     }

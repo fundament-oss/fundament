@@ -66,6 +66,7 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -238,9 +239,10 @@ export default class ApiKeysComponent {
       this.maxExpiresIn.set(response.maxExpiresIn);
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to load API keys: ${err.message}`
-          : 'Failed to load API keys',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to load API keys: ${err.message}`
+            : 'Failed to load API keys'),
       );
     } finally {
       this.loading.set(false);
@@ -277,9 +279,10 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to revoke API key: ${err.message}`
-          : 'Failed to revoke API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to revoke API key: ${err.message}`
+            : 'Failed to revoke API key'),
       );
       this.loading.set(false);
     }
@@ -303,9 +306,10 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       this.error.set(
-        err instanceof Error
-          ? `Failed to delete API key: ${err.message}`
-          : 'Failed to delete API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to delete API key: ${err.message}`
+            : 'Failed to delete API key'),
       );
       this.loading.set(false);
     }
@@ -373,9 +377,10 @@ export default class ApiKeysComponent {
         return;
       }
       this.error.set(
-        err instanceof Error
-          ? `Failed to create API key: ${err.message}`
-          : 'Failed to create API key',
+        permissionDeniedMessage(err) ??
+          (err instanceof Error
+            ? `Failed to create API key: ${err.message}`
+            : 'Failed to create API key'),
       );
     } finally {
       this.loading.set(false);

@@ -45,6 +45,7 @@ import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
   selector: 'app-new-project',
@@ -119,9 +120,10 @@ export default class NewProjectComponent implements OnInit {
       }
     } catch (error) {
       this.notificationService.error(
-        error instanceof Error
-          ? `Failed to load clusters: ${error.message}`
-          : 'Failed to load clusters',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to load clusters: ${error.message}`
+            : 'Failed to load clusters'),
       );
     } finally {
       this.isLoadingClusters.set(false);
@@ -182,9 +184,10 @@ export default class NewProjectComponent implements OnInit {
         return;
       }
       this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to create project: ${error.message}`
-          : 'Failed to create project',
+        permissionDeniedMessage(error) ??
+          (error instanceof Error
+            ? `Failed to create project: ${error.message}`
+            : 'Failed to create project'),
       );
     } finally {
       this.isSubmitting.set(false);

@@ -57,6 +57,13 @@
           supporting-text="Inviting only works for people who already have a Fundament account. New users must be requested from the Fundament operators in the ~users-poc channel on Digilab Mattermost."
         ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
+        @if (inviteDenied(); as denied) {
+          <nldd-banner
+            variant="critical"
+            [attr.text]="denied"
+          ></nldd-banner>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
         <nldd-form
           (submit)="submitInvitation($event)"
           (keydown.enter)="submitInvitation($event)"

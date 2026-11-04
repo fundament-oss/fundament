@@ -27,6 +27,15 @@ export function readableRefusal(error: unknown): string | undefined {
   return undefined;
 }
 
+/** Whether a failed set-node-pools call may still have been applied: its
+ *  response was lost, or a repeat got the stale-set refusal (Aborted). A denial
+ *  and a refusal in the API's own words are final. */
+export function mayHaveBeenApplied(error: unknown): boolean {
+  if (!(error instanceof ConnectError)) return true;
+  if (error.code === Code.PermissionDenied) return false;
+  return error.code === Code.Aborted || !readableRefusal(error);
+}
+
 /** The reason a request was refused, as a line to show. */
 export function refusalReason(error: unknown): string {
   return readableRefusal(error) ?? GENERIC_REFUSAL;
