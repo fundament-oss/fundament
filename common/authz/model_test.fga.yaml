@@ -124,6 +124,7 @@ tests:
           can_list_namespaces: true
           can_create_project: true
           can_list_projects: true
+          can_view_logs: true
       - user: user:bart
         object: cluster:c1
         assertions:
@@ -135,12 +136,14 @@ tests:
           can_delete: false
           can_create_node_pool: false
           can_create_project: false
+          can_view_logs: false
       - user: user:mallory
         object: cluster:c1
         assertions:
           can_view: false
           can_edit: false
           can_delete: false
+          can_view_logs: false
           can_list_projects: false
 
   - name: a project inherits its admin from the owning cluster
@@ -175,10 +178,10 @@ tests:
     check:
       - user: user:alice
         object: namespace:ns1
-        assertions: { can_view: true, can_edit: true, can_delete: true }
+        assertions: { can_view: true, can_delete: true }
       - user: user:carol
         object: namespace:ns1
-        assertions: { can_view: true, can_edit: false, can_delete: false }
+        assertions: { can_view: true, can_delete: false }
       - user: user:alice
         object: project_member:pm1
         assertions: { can_view: true, can_edit: true, can_delete: true }
@@ -187,7 +190,7 @@ tests:
         assertions: { can_view: true, can_edit: false, can_delete: false }
       - user: user:mallory
         object: namespace:ns1
-        assertions: { can_view: false, can_edit: false, can_delete: false }
+        assertions: { can_view: false, can_delete: false }
 
   - name: node pools follow their cluster
     check:

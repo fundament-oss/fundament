@@ -52,6 +52,7 @@ type cluster
     define can_list_namespaces: admin or viewer
     define can_create_project: admin
     define can_list_projects: viewer
+    define can_view_logs: admin
 
 type node_pool
   relations
@@ -64,7 +65,6 @@ type namespace
   relations
     define parent: [project]
     define can_view: project_admin from parent or project_viewer from parent
-    define can_edit: project_admin from parent
     define can_delete: project_admin from parent
 
 type api_key

@@ -1,0 +1,49 @@
+edition = "2023";
+
+package authz.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "v1/actions.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/authz-api/pkg/proto/gen/v1;authzv1";
+
+// The role that grants an action.
+enum RequiredRole {
+  REQUIRED_ROLE_UNSPECIFIED = 0;
+  REQUIRED_ROLE_ORGANIZATION_ADMIN = 1;
+  REQUIRED_ROLE_ORGANIZATION_MEMBER = 2;
+  REQUIRED_ROLE_PROJECT_ADMIN = 3;
+  REQUIRED_ROLE_PROJECT_MEMBER = 4;
+  REQUIRED_ROLE_API_KEY_OWNER = 5; // The key's creator or an organization admin
+}
+
+// Attached to a permission-denied error to say what was denied and who may do it.
+message PermissionDeniedDetail {
+  Action action = 10;
+  RequiredRole required_role = 20;
+}
+
+message PermissionCheck {
+  Action action = 10 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string object_id = 20 [(buf.validate.field).string.uuid = true];
+}
+
+message CheckPermissionsRequest {
+  repeated PermissionCheck checks = 10 [(buf.validate.field).repeated.max_items = 500];
+}
+
+message CheckPermissionsResponse {
+  // One entry per check, in request order.
+  repeated bool allowed = 10;
+}
+
+service AuthzService {
+  // Reports, per check, whether the caller may take the action on the object.
+  rpc CheckPermissions(CheckPermissionsRequest) returns (CheckPermissionsResponse);
+}

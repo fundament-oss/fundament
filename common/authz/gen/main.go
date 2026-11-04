@@ -24,11 +24,18 @@ type Type struct {
 
 func main() {
 	input := flag.String("input", "", "path to OpenFGA model file")
-	output := flag.String("output", "", "path to output Go file")
+	output := flag.String("output", "", "path to output Go file for the authz types")
+	lock := flag.String("actions-lock", "", "path to the action number lock file")
+	proto := flag.String("actions-proto", "", "path to output proto file for the Action enum")
+	goSrc := flag.String("actions-go", "", "path to output Go file for the action catalogue")
+	initLock := flag.Bool("actions-init-lock", false, "create a missing lock file, numbering every action afresh")
 	flag.Parse()
 
-	if *input == "" || *output == "" {
-		fmt.Fprintln(os.Stderr, "usage: go run main.go -input model.fga -output types_gen.go")
+	// One run writes the types, the action catalogue, or both.
+	actionPathsSet := *lock != "" && *proto != "" && *goSrc != ""
+	actionPathsEmpty := *lock == "" && *proto == "" && *goSrc == ""
+	if *input == "" || (*output == "" && actionPathsEmpty) || (!actionPathsSet && !actionPathsEmpty) {
+		fmt.Fprintln(os.Stderr, "usage: gen -input model.fga [-output types_gen.go] [-actions-lock lock.json -actions-proto actions.proto -actions-go actions_gen.go]")
 		os.Exit(1)
 	}
 
@@ -38,9 +45,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := generateCode(model, *output); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate code: %v\n", err)
-		os.Exit(1)
+	if *output != "" {
+		if err := generateCode(model, *output); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to generate code: %v\n", err)
+			os.Exit(1)
+		}
+	}
+	if actionPathsSet {
+		if err := generateActions(model, actionPaths{lock: *lock, proto: *proto, goSrc: *goSrc, initLock: *initLock}); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to generate actions: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
 
