@@ -110,11 +110,12 @@ export function validateTextField(el: NlddTextField): boolean {
   // design system's text field has no type="number", and nldd-number-field
   // cannot be left empty. Its bounds are ours to check, so they are data-*.
   if (el.getAttribute('keyboard') === 'numeric') {
-    const num = Number(value);
-    if (!Number.isInteger(num)) {
+    // Digits only: Number() also takes 0x50, 0b1 and 1e3.
+    if (!/^-?\d+$/.test(value)) {
       setFieldError(el, 'Enter a whole number.');
       return false;
     }
+    const num = Number(value);
     const min = el.getAttribute('data-min');
     if (min && num < Number(min)) {
       setFieldError(el, `Enter a value of at least ${min}.`);

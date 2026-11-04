@@ -121,7 +121,6 @@
           @for (asset of orderedAssets(); track asset.id) {
             <nldd-list-item
               [attr.href]="assetPath(asset.id)"
-              [attr.accessible-label]="'Open ' + asset.model"
               (click)="openAsset($event, asset.id)"
             >
               <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>

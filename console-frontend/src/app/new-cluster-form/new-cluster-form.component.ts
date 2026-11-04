@@ -15,6 +15,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import type { StepBarStatus } from '@nldd/design-system/step-bar';
+import '@nldd/design-system/step-bar';
 import { NewClusterFormStateService } from './new-cluster-form-state.service';
 import SheetSyncDirective, { rewireFormFields } from '../sheet-sync.directive';
 import NewClusterComponent from '../new-cluster/new-cluster.component';

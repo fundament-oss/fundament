@@ -38,9 +38,9 @@ plugin-proxy serves the SDK on the page's own origin under `/plugins/sdk/v1/`:
 
 ### Design system version
 
-`nldd-design-system.js` is built from the version of `@nldd/design-system` the Console pins, currently `0.14.0`. Your plugin does not choose it: a Console upgrade upgrades the components on every plugin page with it. The design system renames attributes in minor and patch releases, and a component ignores an attribute it no longer knows without any warning, so check your markup after an upgrade.
+`nldd-design-system.js` is built from the version of `@nldd/design-system` the Console pins, currently `0.15.0`. Your plugin does not choose it: a Console upgrade upgrades the components on every plugin page with it. The bundle sets the design system's shipped English for the texts the components write themselves; a `translations` property on an element still overrides it. The design system renames attributes in minor and patch releases, and a component ignores an attribute it no longer knows without any warning, so check your markup after an upgrade.
 
-The renames from `0.8.91` to `0.14.0` that plugin pages are most likely to use:
+The renames from `0.8.91` to `0.15.0` that plugin pages are most likely to use:
 
 | Element | Before | After |
 |---------|--------|-------|

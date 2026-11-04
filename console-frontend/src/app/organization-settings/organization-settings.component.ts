@@ -108,6 +108,8 @@ export default class OrganizationComponent implements OnInit {
     // handled, so the keydown that follows is not a second submit.
     if (event?.defaultPrevented) return;
     event?.preventDefault();
+    // A repeated Enter or a second click while the first is out.
+    if (this.loading()) return;
     const currentOrganization = this.organization();
     const nameToSave = this.editingName();
 

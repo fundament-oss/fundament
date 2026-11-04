@@ -41,7 +41,7 @@
     "@connectrpc/connect": "2.2.0",
     "@connectrpc/connect-web": "2.2.0",
     "@dotglitch/ngx-common": "3.0.0-beta.2",
-    "@nldd/design-system": "0.14.0",
+    "@nldd/design-system": "0.15.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "react": "19.3.1",

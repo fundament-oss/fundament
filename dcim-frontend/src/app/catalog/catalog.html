@@ -67,7 +67,6 @@
           @for (row of rows(); track row.entry.id) {
             <nldd-list-item
               [attr.href]="entryPath(row.entry.id)"
-              [attr.accessible-label]="'Open ' + row.entry.model"
               (click)="openEntry($event, row.entry.id)"
             >
               <nldd-icon-cell

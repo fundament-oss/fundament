@@ -320,6 +320,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
     // handled, so the keydown that follows is not a second submit.
     if (event?.defaultPrevented) return;
     event?.preventDefault();
+    // A repeated Enter or a second click while the first is out.
+    if (this.creatingNamespace()) return;
     this.accessSubmitted.set(true);
     if (!this.canSaveAccess()) return;
 

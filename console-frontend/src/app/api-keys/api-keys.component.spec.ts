@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { type Observable, NEVER, Subject, of, throwError } from 'rxjs';
+import { type Observable, BehaviorSubject, NEVER, Subject, of, throwError } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import { Code, ConnectError, type CallOptions } from '@connectrpc/connect';
 import ApiKeysComponent from './api-keys.component';
@@ -36,14 +36,20 @@ const createdCall = (_request: unknown, options?: CallOptions) => {
   return of(created);
 };
 
-async function render(client: Record<string, unknown>) {
+async function render(
+  client: Record<string, unknown>,
+  {
+    user$ = of<{ id: string } | null>({ id: 'user-1' }),
+    organizationId = signal<string | null>('org-1'),
+  } = {},
+) {
   TestBed.configureTestingModule({
     imports: [ApiKeysComponent],
     providers: [
       { provide: APIKEY, useValue: client },
       { provide: NotificationService, useValue: { success: vi.fn() } },
-      { provide: AuthnApiService, useValue: { currentUser$: of({ id: 'user-1' }) } },
-      { provide: OrganizationContextService, useValue: { currentOrganizationId: signal('org-1') } },
+      { provide: AuthnApiService, useValue: { currentUser$: user$ } },
+      { provide: OrganizationContextService, useValue: { currentOrganizationId: organizationId } },
     ],
   });
   const fixture = TestBed.createComponent(ApiKeysComponent);
@@ -173,7 +179,68 @@ describe('ApiKeysComponent', () => {
     expect(component.error()).toBe('Failed to create API key: the database is unavailable');
   });
 
-  it('refuses a malformed duration and an empty name before sending anything', async () => {
+  it('drops a list asked for by the previous organization', async () => {
+    const organizationId = signal<string | null>('org-1');
+    const late = new Subject<ListAPIKeysResponse>();
+    const listAPIKeys = vi.fn<() => Observable<ListAPIKeysResponse>>(() => list(key));
+    const fixture = await render({ listAPIKeys }, { organizationId });
+    const { componentInstance: component } = fixture;
+
+    // Out for org-1 when the sheet closes and the organization changes.
+    listAPIKeys.mockImplementation(() => late);
+    component.loadApiKeys();
+    fixture.componentRef.setInput('show', false);
+    organizationId.set('org-2');
+    fixture.detectChanges();
+    late.next(create(ListAPIKeysResponseSchema, { apiKeys: [key] }));
+    late.complete();
+    await fixture.whenStable();
+
+    expect(component.apiKeys()).toEqual([]);
+  });
+
+  it('keeps no token from a create that finishes after a logout', async () => {
+    const user$ = new BehaviorSubject<{ id: string } | null>({ id: 'user-1' });
+    const response = new Subject<typeof created>();
+    const fixture = await render(
+      {
+        listAPIKeys: () => list(key),
+        createAPIKey: (_request: unknown, options?: CallOptions) => {
+          options?.onHeader?.(new Headers({ 'Idempotency-Status': 'completed' }));
+          return response;
+        },
+      },
+      { user$ },
+    );
+    const { componentInstance: component } = fixture;
+    component.startCreating();
+    component.newKeyName.set('ci');
+
+    const pending = component.createApiKey(new Event('submit', { cancelable: true }));
+    user$.next(null);
+    response.next(created);
+    response.complete();
+    await pending;
+
+    expect(component.createdToken()).toBeNull();
+  });
+
+  it('keeps a late refusal of a name off the name typed since', async () => {
+    const response = new Subject<typeof created>();
+    const fixture = await render({ listAPIKeys: () => list(), createAPIKey: () => response });
+    const { componentInstance: component } = fixture;
+    component.startCreating();
+    component.newKeyName.set('ci');
+
+    const pending = component.createApiKey(new Event('submit', { cancelable: true }));
+    component.newKeyName.set('ci-2');
+    response.error(new ConnectError('an API key with this name already exists', Code.AlreadyExists));
+    await pending;
+
+    expect(component.newKeyNameError()).toBeNull();
+  });
+
+  it('holds rules that refuse a malformed duration and an empty name', async () => {
     const fixture = await render({ listAPIKeys: () => list() });
     fixture.componentInstance.startCreating();
     fixture.detectChanges();

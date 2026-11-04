@@ -6,6 +6,8 @@
 //
 // Its own module rather than the entrypoint: the demo build boots from
 // main.demo.ts, and two lists of the same components would drift apart.
+import { setTranslations } from '@nldd/design-system/translations';
+import enUS from '@nldd/design-system/translations/en-US';
 import '@nldd/design-system/shell';
 import '@nldd/design-system/avatar';
 import '@nldd/design-system/activity-indicator';
@@ -77,3 +79,8 @@ import '@nldd/design-system/token-field';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/window';
+
+// The components are Dutch first. English for the texts they write
+// themselves, such as the line a validation list adds under a field it
+// cannot otherwise explain. A `translations` set on an element still wins.
+setTranslations(enUS);

@@ -1,5 +1,6 @@
 // Demo/presentation entrypoint: boots the real app against in-memory mock data and
 // mounts the walkthrough overlay. Never imported by the production entrypoint (main.ts).
+import './design-system-translations';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { createComponent } from '@angular/core';
 import App, { isBarePageUrl } from './app/app';

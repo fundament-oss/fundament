@@ -222,11 +222,9 @@ export default class ApiKeysComponent {
     // owner would read as "no organization" and the id arriving would look like
     // a change — emptying the list the sheet had just fetched.
     effect(() => {
-      const userId = this.currentUser()?.id;
-      const organizationId = this.organizationContext.currentOrganizationId();
-      if (!userId || !organizationId) return;
+      const owner = this.currentOwner();
+      if (owner === undefined) return;
 
-      const owner = `${userId}/${organizationId}`;
       untracked(() => {
         if (this.owner === undefined || this.owner === owner) {
           const firstOwner = this.owner === undefined;
@@ -246,6 +244,14 @@ export default class ApiKeysComponent {
     });
   }
 
+  /** Whose keys they are right now: unknown while either half is, as after a
+   *  logout. `owner` keeps the last known one through that gap. */
+  private currentOwner(): string | undefined {
+    const userId = this.currentUser()?.id;
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return userId && organizationId ? `${userId}/${organizationId}` : undefined;
+  }
+
   /** Everything a visit leaves behind. The list stays: a reopen refetches it. */
   private resetTransientState() {
     this.dismissToken();
@@ -260,6 +266,10 @@ export default class ApiKeysComponent {
   private resetState() {
     this.resetTransientState();
     this.apiKeys.set([]);
+    // A fetch still out is for the previous owner. With the sheet closed no
+    // newer one passes it, so it is dropped here.
+    this.listRequest += 1;
+    this.listPending = false;
   }
 
   async loadApiKeys() {
@@ -380,24 +390,26 @@ export default class ApiKeysComponent {
     if (this.creating()) return;
 
     // A logout or another organization while the call is out: its token is not
-    // for whoever the sheet holds by then.
-    const { owner, visit } = this;
+    // for whoever is signed in by then. The live owner, not `owner`, which a
+    // logout leaves standing.
+    const owner = this.currentOwner();
+    const { visit } = this;
     this.creating.set(true);
     this.error.set(null);
     this.newKeyNameError.set(null);
     this.newKeyExpiresInError.set(null);
 
-    try {
-      const request = create(CreateAPIKeyRequestSchema, {
-        name: this.newKeyName().trim(),
-        expiresIn: this.newKeyExpiresIn(),
-      });
+    const request = create(CreateAPIKeyRequestSchema, {
+      name: this.newKeyName().trim(),
+      expiresIn: this.newKeyExpiresIn(),
+    });
 
+    try {
       const response = await withIdempotency(
         (opts) => this.apiKeyClient.createAPIKey(request, opts),
         { signal: this.idempotency.reset() },
       );
-      if (this.owner !== owner) return;
+      if (this.currentOwner() !== owner) return;
 
       // A sheet closed while the call was out still takes the token: it was
       // never shown, and dropping it would leave a key nobody can use. The next
@@ -418,18 +430,21 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       // A refusal, though, is about a form the close already threw away.
-      if (this.owner === owner && this.visit === visit) this.showCreateError(err);
+      if (this.currentOwner() === owner && this.visit === visit) this.showCreateError(err, request);
     } finally {
       this.creating.set(false);
     }
   }
 
-  /** Puts a refusal under the field it is about, and anything else in the banner. */
-  private showCreateError(err: unknown) {
+  /** Puts a refusal under the field it is about, and anything else in the banner.
+   *  The fields stay editable while the call is out, so a refusal of a value
+   *  that has been changed since is about nothing on screen, and goes. */
+  private showCreateError(err: unknown, submitted: { name: string; expiresIn: string }) {
     if (isAborted(err)) return;
     if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
       // Unique across the organization, while the list shows only your own
       // keys: the name may be taken by a key you cannot see.
+      if (this.newKeyName().trim() !== submitted.name) return;
       this.newKeyNameError.set(
         'An API key with this name already exists in this organization, possibly made by another member.',
       );
@@ -437,7 +452,9 @@ export default class ApiKeysComponent {
     }
     const expiresInRefusal = getExpiresInRefusal(err);
     if (expiresInRefusal) {
-      this.newKeyExpiresInError.set(expiresInRefusal);
+      if (this.newKeyExpiresIn() === submitted.expiresIn) {
+        this.newKeyExpiresInError.set(expiresInRefusal);
+      }
       return;
     }
     this.error.set(`Failed to create API key: ${errorText(err)}`);

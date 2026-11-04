@@ -193,7 +193,6 @@
                  apart. -->
             <nldd-list-item
               [attr.href]="'/inventory/' + asset.id"
-              [attr.accessible-label]="'Open ' + asset.assetTag"
               (click)="openAsset($event, asset.id)"
             >
               <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>

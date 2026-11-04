@@ -74,10 +74,11 @@ export function fieldError(el: TextField): string | null {
     return el.getAttribute('data-error') ?? '';
   }
   if (el.getAttribute('keyboard') === 'numeric') {
+    // Digits only: Number() also takes 0x50, 0b1 and 1e3.
+    if (!/^-?\d+$/.test(value)) return 'Enter a whole number.';
     const num = Number(value);
     const minAttr = el.getAttribute('data-min');
     const maxAttr = el.getAttribute('data-max');
-    if (!Number.isInteger(num)) return 'Enter a whole number.';
     if (num < Number(minAttr ?? -Infinity) || num > Number(maxAttr ?? Infinity)) {
       if (minAttr === null) return `Enter a number of at most ${maxAttr}.`;
       if (maxAttr === null) return `Enter a number of at least ${minAttr}.`;

@@ -1,19 +1,18 @@
 /**
- * English strings for the design system components on screen here.
+ * The console's own wording for the date picker.
  *
- * The design system is Dutch first: every component ships Dutch defaults and
- * only takes an override through its own `translations` property. There is no
- * app-level language, so an English console has to hand one to every instance
- * that carries user-facing text. Keeping them here means the wording is decided
- * once instead of per template.
+ * The design system is Dutch first. `design-system-translations.ts` sets its
+ * shipped English for the whole app, and these replace that on the instances
+ * that take them, through their own `translations` property. Keeping them here
+ * means the wording is decided once instead of per template.
  */
 
 const datePickerTranslations = {
   'components.date-picker.view-previous-month-action': 'Previous month',
   'components.date-picker.view-next-month-action': 'Next month',
   'components.date-picker.view-today-action': 'Today',
-  'components.date-picker.choose-month-action': 'Choose a month',
-  'components.date-picker.choose-year-action': 'Choose a year',
+  'components.date-picker.to-choose-month-action': 'Choose a month',
+  'components.date-picker.to-choose-year-action': 'Choose a year',
   'components.date-picker.january-lowercase': 'January',
   'components.date-picker.january-capitalize': 'January',
   'components.date-picker.february-lowercase': 'February',
