@@ -51,6 +51,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -150,6 +152,13 @@ export default class ProjectMembersComponent implements OnInit {
   private notificationService = inject(NotificationService);
 
   projectId = signal<string>('');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.PROJECT_CAN_MANAGE_MEMBERS, id)] : [];
+  });
+
+  canManageMembers = computed(() => this.mayDo(Action.PROJECT_CAN_MANAGE_MEMBERS, this.projectId()));
 
   memberViews = signal<ProjectMemberView[]>([]);
 

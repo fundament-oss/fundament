@@ -20,7 +20,7 @@
          makes the same offer in the middle of the page, and two primary buttons
          with one label and one action are a choice that is not a choice. Hidden
          while loading too, so it does not arrive and then leave again. -->
-    @if (namespaces().length > 0) {
+    @if (namespaces().length > 0 && canCreateNamespace()) {
       <nldd-toolbar label="Namespace actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
@@ -52,14 +52,16 @@
         text="No namespaces in this project yet"
         supporting-text="A namespace is where the project's workloads actually run."
       >
-        <nldd-button
-          slot="actions"
-          type="button"
-          (click)="overlays.newNamespace.set(projectId())"
-          text="New namespace…"
-          start-icon="plus-small"
-          variant="primary"
-        ></nldd-button>
+        @if (canCreateNamespace()) {
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="overlays.newNamespace.set(projectId())"
+            text="New namespace…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        }
       </nldd-inline-dialog>
     } @else {
       <nldd-list

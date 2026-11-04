@@ -38,6 +38,8 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import { organizationPermission } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 import permissionDeniedMessage from '../utils/permission-denied';
 
 @Component({
@@ -57,6 +59,8 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   private organizationDataService = inject(OrganizationDataService);
 
   private client = inject(CLUSTER);
+
+  protected canCreateCluster = organizationPermission(Action.ORGANIZATION_CAN_CREATE_CLUSTER);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 

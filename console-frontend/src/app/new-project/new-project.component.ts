@@ -1,11 +1,13 @@
 import {
   Component,
-  OnInit,
   Input,
   Output,
   EventEmitter,
   inject,
   signal,
+  computed,
+  effect,
+  untracked,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -13,16 +15,12 @@ import { Router } from '@angular/router';
 import { AbstractControl, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { ConnectError, Code } from '@connectrpc/connect';
-import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT, CLUSTER } from '../../connect/tokens';
+import OrganizationContextService from '../organization-context.service';
+import { PROJECT } from '../../connect/tokens';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
-import {
-  ListClustersRequestSchema,
-  type ListClustersResponse_ClusterSummary as ClusterSummary,
-} from '../../generated/v1/cluster_pb';
 import AutofocusDirective from '../autofocus.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
@@ -46,6 +44,8 @@ import '@nldd/design-system/toggle-button-group';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 @Component({
   selector: 'app-new-project',
@@ -54,7 +54,7 @@ import permissionDeniedMessage from '../utils/permission-denied';
   templateUrl: './new-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class NewProjectComponent implements OnInit {
+export default class NewProjectComponent {
   protected pageNav = inject(PageNavService);
 
   /** Owned by the shell: the sheet opens over the page you were on, and that
@@ -71,8 +71,6 @@ export default class NewProjectComponent implements OnInit {
 
   private client = inject(PROJECT);
 
-  private clusterClient = inject(CLUSTER);
-
   private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
@@ -85,9 +83,50 @@ export default class NewProjectComponent implements OnInit {
 
   isSubmitting = signal<boolean>(false);
 
-  clusters = signal<ClusterSummary[]>([]);
+  /** The organization's clusters, so a switch of organization changes the picker. */
+  clusters = computed(() => this.organizationDataService.clusterSummaries());
 
-  isLoadingClusters = signal<boolean>(false);
+  private organizationContext = inject(OrganizationContextService);
+
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return [
+      ...(organizationId ? [check(Action.ORGANIZATION_CAN_CREATE_CLUSTER, organizationId)] : []),
+      ...this.clusters().map((cluster) => check(Action.CLUSTER_CAN_CREATE_PROJECT, cluster.id)),
+    ];
+  });
+
+  canCreateCluster = computed(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return !!organizationId && this.mayDo(Action.ORGANIZATION_CAN_CREATE_CLUSTER, organizationId);
+  });
+
+  /** Only the clusters where the caller may create a project. */
+  allowedClusters = computed(() =>
+    this.clusters().filter((cluster) => this.mayDo(Action.CLUSTER_CAN_CREATE_PROJECT, cluster.id)),
+  );
+
+  /** Until the answers are in, an empty picker would read as "no clusters". */
+  isCheckingClusters = computed(() => !this.mayDo.settled());
+
+  /** Keeps the selection on a cluster that is offered. */
+  private selectOfferedCluster = effect(() => {
+    const offered = this.allowedClusters();
+    untracked(() => {
+      const control = this.projectForm.controls.clusterId;
+      if (!offered.some((cluster) => cluster.id === control.value)) {
+        control.setValue(offered[0]?.id ?? '');
+      }
+    });
+  });
+
+  isLoadingClusters = computed(
+    () =>
+      !this.organizationDataService.clustersLoaded() &&
+      !this.organizationDataService.clustersLoadFailed(),
+  );
+
+  clustersLoadFailed = computed(() => this.organizationDataService.clustersLoadFailed());
 
   projectForm = this.fb.group({
     clusterId: ['', Validators.required],
@@ -104,31 +143,6 @@ export default class NewProjectComponent implements OnInit {
       ],
     ],
   });
-
-  async ngOnInit() {
-    await this.loadClusters();
-  }
-
-  async loadClusters() {
-    try {
-      this.isLoadingClusters.set(true);
-      const request = create(ListClustersRequestSchema, {});
-      const response = await firstValueFrom(this.clusterClient.listClusters(request));
-      this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
-        this.projectForm.patchValue({ clusterId: response.clusters[0].id });
-      }
-    } catch (error) {
-      this.notificationService.error(
-        permissionDeniedMessage(error) ??
-          (error instanceof Error
-            ? `Failed to load clusters: ${error.message}`
-            : 'Failed to load clusters'),
-      );
-    } finally {
-      this.isLoadingClusters.set(false);
-    }
-  }
 
   onClusterChange(event: Event): void {
     const { value } = (event as CustomEvent<{ value: string }>).detail;

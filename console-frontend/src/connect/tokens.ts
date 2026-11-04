@@ -11,6 +11,7 @@ import { InviteService } from '../generated/v1/invite_pb';
 import { APIKeyService } from '../generated/v1/apikey_pb';
 import { CatalogService } from '../generated/catalog/v1/catalog_pb';
 import { InstallService } from '../generated/install/v1/install_pb';
+import { AuthzService } from '../generated/v1/authz_pb';
 import { OverviewService } from '../generated/platform/v1/overview_pb';
 import {
   createClientToken,
@@ -19,6 +20,7 @@ import {
   MARKETPLACE_TRANSPORT,
   INSTALL_TRANSPORT,
   PLATFORM_TRANSPORT,
+  AUTHZ_TRANSPORT,
 } from './connect.module';
 
 // Create an injection token for the Authn service client
@@ -69,3 +71,6 @@ export const INSTALL = createClientToken(InstallService, INSTALL_TRANSPORT);
 // The public platform overview: every organization with its counts (FUN-23).
 // Anonymous, so it has its own transport and never sends the session cookie.
 export const PLATFORM_OVERVIEW = createClientToken(OverviewService, PLATFORM_TRANSPORT);
+
+// Batched permission checks against authz-api.
+export const AUTHZ = createClientToken(AuthzService, AUTHZ_TRANSPORT);

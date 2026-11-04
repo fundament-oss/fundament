@@ -61,49 +61,53 @@
                 </span>
               </nldd-title-cell>
               <nldd-cell width="fit-content">
-                <nldd-button
-                  type="button"
-                  (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
-                  text="Delete"
-                  start-icon="delete"
-                  size="sm"
-                  variant="destructive"
-                ></nldd-button>
+                @if (canDeleteNamespace(namespace.id)) {
+                  <nldd-button
+                    type="button"
+                    (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
+                    text="Delete"
+                    start-icon="delete"
+                    size="sm"
+                    variant="destructive"
+                  ></nldd-button>
+                }
               </nldd-cell>
             </nldd-list-item>
           }
         </nldd-list>
-        <nldd-spacer size="24"></nldd-spacer>
-        <!-- Not a bulk selection in the list: picking every row one by one to
-             empty a cluster is work, and a checkbox column that is only there
-             for that case makes every row heavier. One box, one door, and the
-             dialog after it still asks. -->
-        <nldd-box background="critical">
-          <nldd-container padding="16">
-            <nldd-title size="5">
-              <h3>
-                Delete all {{ namespaces().length }} namespace{{
-                  namespaces().length === 1 ? '' : 's'
-                }}
-              </h3>
-            </nldd-title>
-            <nldd-spacer size="8"></nldd-spacer>
-            <nldd-rich-text spacing="flat">
-              <p>
-                Deleting a namespace removes every resource running in it. This cannot be undone.
-              </p>
-            </nldd-rich-text>
-            <nldd-spacer size="16"></nldd-spacer>
-            <nldd-button
-              type="button"
-              (click)="openBulkDeleteModal()"
-              text="Delete namespaces"
-              start-icon="delete"
-              variant="destructive"
-              [attr.loading]="isBulkDeleting() ? '' : null"
-            ></nldd-button>
-          </nldd-container>
-        </nldd-box>
+        @if (canDeleteAll()) {
+          <nldd-spacer size="24"></nldd-spacer>
+          <!-- Not a bulk selection in the list: picking every row one by one to
+               empty a cluster is work, and a checkbox column that is only there
+               for that case makes every row heavier. One box, one door, and the
+               dialog after it still asks. -->
+          <nldd-box background="critical">
+            <nldd-container padding="16">
+              <nldd-title size="5">
+                <h3>
+                  Delete all {{ namespaces().length }} namespace{{
+                    namespaces().length === 1 ? '' : 's'
+                  }}
+                </h3>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-rich-text spacing="flat">
+                <p>
+                  Deleting a namespace removes every resource running in it. This cannot be undone.
+                </p>
+              </nldd-rich-text>
+              <nldd-spacer size="16"></nldd-spacer>
+              <nldd-button
+                type="button"
+                (click)="openBulkDeleteModal()"
+                text="Delete namespaces"
+                start-icon="delete"
+                variant="destructive"
+                [attr.loading]="isBulkDeleting() ? '' : null"
+              ></nldd-button>
+            </nldd-container>
+          </nldd-box>
+        }
       }
     </nldd-simple-section>
   </nldd-page>

@@ -44,6 +44,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import { organizationPermission } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 @Component({
   selector: 'app-organization-settings',
@@ -62,6 +64,8 @@ export default class OrganizationComponent implements OnInit {
   private organizationContextService = inject(OrganizationContextService);
 
   private organizationDataService = inject(OrganizationDataService);
+
+  canEditOrganization = organizationPermission(Action.ORGANIZATION_CAN_EDIT);
 
   organization = signal<OrganizationData | null>(null);
 

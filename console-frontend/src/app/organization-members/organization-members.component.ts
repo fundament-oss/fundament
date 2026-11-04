@@ -53,6 +53,9 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import OrganizationContextService from '../organization-context.service';
+import { Action } from '../../generated/v1/actions_pb';
 
 interface OrganizationMember {
   id: string;
@@ -151,6 +154,30 @@ export default class OrganizationMembersComponent implements OnInit {
   private notificationService = inject(NotificationService);
 
   private memberClient = inject(MEMBER);
+
+  private organizationContext = inject(OrganizationContextService);
+
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return organizationId
+      ? [
+          check(Action.ORGANIZATION_CAN_INVITE_MEMBER, organizationId),
+          check(Action.ORGANIZATION_CAN_EDIT_MEMBER, organizationId),
+          check(Action.ORGANIZATION_CAN_DELETE_MEMBER, organizationId),
+        ]
+      : [];
+  });
+
+  private mayOnOrganization = (action: Action) => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return !!organizationId && this.mayDo(action, organizationId);
+  };
+
+  canInviteMember = computed(() => this.mayOnOrganization(Action.ORGANIZATION_CAN_INVITE_MEMBER));
+
+  canEditMember = computed(() => this.mayOnOrganization(Action.ORGANIZATION_CAN_EDIT_MEMBER));
+
+  canDeleteMember = computed(() => this.mayOnOrganization(Action.ORGANIZATION_CAN_DELETE_MEMBER));
 
   private inviteClient = inject(INVITE);
 

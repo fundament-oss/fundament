@@ -44,6 +44,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 @Component({
   selector: 'app-namespaces',
@@ -76,6 +78,13 @@ export default class NamespacesComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.PROJECT_CAN_CREATE_NAMESPACE, id)] : [];
+  });
+
+  canCreateNamespace = computed(() => this.mayDo(Action.PROJECT_CAN_CREATE_NAMESPACE, this.projectId()));
 
   /** Named in the sheet title, so it says which project the namespace lands in;
    *  the page header is behind the sheet while it is open. */

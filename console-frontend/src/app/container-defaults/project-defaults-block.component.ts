@@ -48,6 +48,8 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 /**
  * The project's per-container defaults, as a block on the project General page.
@@ -79,9 +81,19 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
 
   protected loadError = signal<string | null>(null);
 
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.PROJECT_CAN_EDIT, id)] : [];
+  });
+
+  /** Whether the caller may change the defaults at all; otherwise no edit control is shown. */
+  protected mayEdit = computed(() => this.mayDo(Action.PROJECT_CAN_EDIT, this.projectId()));
+
   /** The editor starts from what is stored, so it waits until that is known:
    *  a draft seeded while loading or after a failed read would save as unset. */
-  protected canEdit = computed(() => !this.loading() && this.loadError() === null);
+  protected canEdit = computed(
+    () => this.mayEdit() && !this.loading() && this.loadError() === null,
+  );
 
   private values = signal<ContainerDefaultValues>(NO_DEFAULTS);
 

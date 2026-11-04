@@ -108,23 +108,25 @@
                   }
                   <!-- The ellipsis warns that picking this asks for more
                          before anything happens. -->
-                  <nldd-list-item
-                    checkbox
-                    [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
-                    (click)="toggleDraftNamespace(NEW_NAMESPACE)"
-                  >
-                    <nldd-cell width="fit-content">
-                      <nldd-checkbox
-                        decorative
-                        [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
-                      ></nldd-checkbox>
-                    </nldd-cell>
-                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell
-                      width="full"
-                      text="New namespace…"
-                    ></nldd-text-cell>
-                  </nldd-list-item>
+                  @if (canCreateNamespace()) {
+                    <nldd-list-item
+                      checkbox
+                      [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                      (click)="toggleDraftNamespace(NEW_NAMESPACE)"
+                    >
+                      <nldd-cell width="fit-content">
+                        <nldd-checkbox
+                          decorative
+                          [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                        ></nldd-checkbox>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-text-cell
+                        width="full"
+                        text="New namespace…"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
                 </nldd-list>
                 @if (namespaceSelectionInvalid()) {
                   <nldd-validation-list>
@@ -251,7 +253,7 @@
             ></nldd-text-cell>
             <!-- An inherited role has no action here; the paragraph below
                  says why, so the row does not repeat it. -->
-            @if (!isLocked(view)) {
+            @if (!isLocked(view) && canEditMember()) {
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-icon-button
@@ -312,23 +314,25 @@
           </h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
-        <nldd-toolbar label="Namespace access">
-          <nldd-toolbar-item slot="start">
-            <nldd-button
-              type="button"
-              (click)="addAccess()"
-              text="Add namespace access…"
-              start-icon="plus-small"
-              variant="secondary"
-            ></nldd-button>
-            <nldd-menu-item
-              slot="overflow"
-              icon="plus-small"
-              text="Add namespace access…"
-              (select)="addAccess()"
-            ></nldd-menu-item>
-          </nldd-toolbar-item>
-        </nldd-toolbar>
+        @if (canAddAccess()) {
+          <nldd-toolbar label="Namespace access">
+            <nldd-toolbar-item slot="start">
+              <nldd-button
+                type="button"
+                (click)="addAccess()"
+                text="Add namespace access…"
+                start-icon="plus-small"
+                variant="secondary"
+              ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="plus-small"
+                text="Add namespace access…"
+                (select)="addAccess()"
+              ></nldd-menu-item>
+            </nldd-toolbar-item>
+          </nldd-toolbar>
+        }
         <nldd-spacer size="12"></nldd-spacer>
         @if (bindings().length === 0) {
           <!-- In a box: an inline dialog fills the column it is given, which is
@@ -388,7 +392,7 @@
           </nldd-list>
         }
         <nldd-spacer size="24"></nldd-spacer>
-        @if (!isLocked(view)) {
+        @if (!isLocked(view) && canRemoveMember()) {
           <nldd-box background="critical">
             <nldd-container padding="16">
               <nldd-title size="5">

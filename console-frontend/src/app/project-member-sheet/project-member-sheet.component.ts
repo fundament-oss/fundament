@@ -62,6 +62,8 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -106,6 +108,26 @@ export default class ProjectMemberSheetComponent implements OnInit {
   projectId = signal('');
 
   memberId = signal('');
+
+  private mayDo = watchPermissions(() => {
+    const memberId = this.memberId();
+    const projectId = this.projectId();
+    return [
+      ...(memberId
+        ? [
+            check(Action.PROJECT_MEMBER_CAN_EDIT, memberId),
+            check(Action.PROJECT_MEMBER_CAN_DELETE, memberId),
+          ]
+        : []),
+      ...(projectId ? [check(Action.PROJECT_CAN_CREATE_NAMESPACE, projectId)] : []),
+    ];
+  });
+
+  canEditMember = computed(() => this.mayDo(Action.PROJECT_MEMBER_CAN_EDIT, this.memberId()));
+
+  canRemoveMember = computed(() => this.mayDo(Action.PROJECT_MEMBER_CAN_DELETE, this.memberId()));
+
+  canCreateNamespace = computed(() => this.mayDo(Action.PROJECT_CAN_CREATE_NAMESPACE, this.projectId()));
 
   member = signal<ProjectMemberView | null>(null);
 
@@ -191,7 +213,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
   /** With the all-grant in place the only choice left is a new namespace: no
    *  list of one, the name field alone says it. Having every existing namespace
    *  separately is not the same thing, "All" still adds the future ones. */
-  impliedNew = computed(() => this.hasAllGrant());
+  impliedNew = computed(() => this.hasAllGrant() && this.canCreateNamespace());
+
+  /** Under an all-grant the only thing to add is a new namespace. */
+  canAddAccess = computed(() => !this.hasAllGrant() || this.canCreateNamespace());
 
   /** Every existing namespace granted one by one. Worth saying, because the
    *  list that follows then holds nothing they do not already have, and the

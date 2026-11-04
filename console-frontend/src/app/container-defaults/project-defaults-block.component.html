@@ -2,18 +2,20 @@
   <nldd-container padding="16">
     <nldd-title size="5">
       <h3>Defaults</h3>
-      <!-- Disabled until the stored values are known: a draft seeded from
-           nothing would save as "clear everything". -->
-      <nldd-button
-        slot="end"
-        type="button"
-        (click)="openEdit()"
-        [attr.disabled]="canEdit() ? null : ''"
-        text="Edit"
-        start-icon="pencil"
-        variant="secondary"
-        size="sm"
-      ></nldd-button>
+      @if (mayEdit()) {
+        <!-- Disabled until the stored values are known: a draft seeded from
+             nothing would save as "clear everything". -->
+        <nldd-button
+          slot="end"
+          type="button"
+          (click)="openEdit()"
+          [attr.disabled]="canEdit() ? null : ''"
+          text="Edit"
+          start-icon="pencil"
+          variant="secondary"
+          size="sm"
+        ></nldd-button>
+      }
     </nldd-title>
     <nldd-spacer size="8"></nldd-spacer>
     <nldd-rich-text spacing="flat">
@@ -37,6 +39,7 @@
     } @else {
       <app-container-defaults-summary
         [sections]="sections()"
+        [editable]="mayEdit()"
         (edit)="openEdit()"
       ></app-container-defaults-summary>
     }

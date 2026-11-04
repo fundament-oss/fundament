@@ -5,6 +5,7 @@ import {
   Output,
   EventEmitter,
   signal,
+  computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
@@ -67,6 +68,8 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -179,6 +182,30 @@ export default class ApiKeysComponent {
   private currentUser = toSignal(inject(AuthnApiService).currentUser$);
 
   private organizationContext = inject(OrganizationContextService);
+
+  private mayDo = watchPermissions(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return [
+      ...(organizationId ? [check(Action.ORGANIZATION_CAN_CREATE_APIKEY, organizationId)] : []),
+      ...this.apiKeys().flatMap((apiKey) => [
+        check(Action.API_KEY_CAN_EDIT, apiKey.id),
+        check(Action.API_KEY_CAN_DELETE, apiKey.id),
+      ]),
+    ];
+  });
+
+  canCreateApiKey = computed(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return !!organizationId && this.mayDo(Action.ORGANIZATION_CAN_CREATE_APIKEY, organizationId);
+  });
+
+  canRevokeApiKey = (apiKeyId: string): boolean => this.mayDo(Action.API_KEY_CAN_EDIT, apiKeyId);
+
+  canDeleteApiKey = (apiKeyId: string): boolean => this.mayDo(Action.API_KEY_CAN_DELETE, apiKeyId);
+
+  /** Revoke applies to a key that is still live, and only if the caller may. */
+  showRevoke = (apiKey: APIKey): boolean =>
+    this.canRevokeApiKey(apiKey.id) && !isRevoked(apiKey.revoked) && !isExpired(apiKey.expires);
 
   /** Whose keys this sheet holds: the user and the organization they were for. */
   private owner: string | undefined;

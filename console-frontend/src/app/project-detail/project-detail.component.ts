@@ -62,6 +62,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 @Component({
   selector: 'app-project-detail',
@@ -95,6 +97,21 @@ export default class ProjectDetailComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
+
+  private mayDo = watchPermissions(() => {
+    const id = this.project()?.id;
+    return id ? [check(Action.PROJECT_CAN_EDIT, id), check(Action.PROJECT_CAN_DELETE, id)] : [];
+  });
+
+  canEditProject = computed(() => {
+    const id = this.project()?.id;
+    return !!id && this.mayDo(Action.PROJECT_CAN_EDIT, id);
+  });
+
+  canDeleteProject = computed(() => {
+    const id = this.project()?.id;
+    return !!id && this.mayDo(Action.PROJECT_CAN_DELETE, id);
+  });
 
   /** Falls back to the bare noun while the project is still loading, so no
    *  button or dialog ever says "Delete undefined". */

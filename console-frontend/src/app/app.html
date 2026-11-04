@@ -113,12 +113,14 @@
                       placement="bottom-end"
                       accessible-label="Create"
                     >
-                      <nldd-menu-item
-                        icon="new-kubernetes"
-                        text="New cluster…"
-                        [attr.href]="path('/clusters/new')"
-                        (click)="pageNav.openHere($event, overlays.newCluster, true)"
-                      ></nldd-menu-item>
+                      @if (canCreateCluster()) {
+                        <nldd-menu-item
+                          icon="new-kubernetes"
+                          text="New cluster…"
+                          [attr.href]="path('/clusters/new')"
+                          (click)="pageNav.openHere($event, overlays.newCluster, true)"
+                        ></nldd-menu-item>
+                      }
                       <!-- Installing starts where plugins are found: the
                            marketplace when there is one, since the console's
                            page then lists only what is already installed. -->
@@ -127,57 +129,79 @@
                         text="Install plugins…"
                         [attr.href]="browsePluginsUrl || path('/plugins')"
                       ></nldd-menu-item>
-                      <nldd-menu-item
-                        icon="add-user"
-                        text="Invite member…"
-                        [attr.href]="path('/members/invite')"
-                        (click)="pageNav.openHere($event, overlays.inviteMember, true)"
-                      ></nldd-menu-item>
+                      @if (canInviteMember()) {
+                        <nldd-menu-item
+                          icon="add-user"
+                          text="Invite member…"
+                          [attr.href]="path('/members/invite')"
+                          (click)="pageNav.openHere($event, overlays.inviteMember, true)"
+                        ></nldd-menu-item>
+                      }
                       <!-- A project has two things you can add to it, so each one
                          carries its own submenu rather than a flat list that
                          repeats every project name twice. -->
-                      <nldd-menu-group text="Projects">
-                        @for (project of organizationProjects(); track project.id) {
-                          <nldd-menu-item
-                            icon="folder"
-                            [attr.text]="project.name"
-                          >
-                            <nldd-menu [attr.accessible-label]="project.name">
+                      @if (showCreateProjectsGroup()) {
+                        <nldd-menu-group text="Projects">
+                          @for (project of organizationProjects(); track project.id) {
+                            @if (
+                              canCreateNamespace(project.id) || canManageProjectMembers(project.id)
+                            ) {
                               <nldd-menu-item
-                                icon="new-namespace"
-                                text="New namespace…"
-                                [attr.href]="path('/projects/' + project.id + '/namespaces/new')"
-                                (click)="
-                                  pageNav.openHere($event, overlays.newNamespace, project.id)
-                                "
-                              ></nldd-menu-item>
-                              <nldd-menu-item
-                                icon="add-user"
-                                text="Add project member…"
-                                [attr.href]="path('/projects/' + project.id + '/members/add')"
-                                (click)="
-                                  pageNav.openHere($event, overlays.addProjectMember, project.id)
-                                "
-                              ></nldd-menu-item>
-                            </nldd-menu>
-                          </nldd-menu-item>
-                        }
-                        <nldd-menu-item
-                          icon="new-folder"
-                          text="New project…"
-                          [attr.href]="path('/projects/new')"
-                          (click)="openNewProject($event)"
-                        ></nldd-menu-item>
-                      </nldd-menu-group>
+                                icon="folder"
+                                [attr.text]="project.name"
+                              >
+                                <nldd-menu [attr.accessible-label]="project.name">
+                                  @if (canCreateNamespace(project.id)) {
+                                    <nldd-menu-item
+                                      icon="new-namespace"
+                                      text="New namespace…"
+                                      [attr.href]="
+                                        path('/projects/' + project.id + '/namespaces/new')
+                                      "
+                                      (click)="
+                                        pageNav.openHere($event, overlays.newNamespace, project.id)
+                                      "
+                                    ></nldd-menu-item>
+                                  }
+                                  @if (canManageProjectMembers(project.id)) {
+                                    <nldd-menu-item
+                                      icon="add-user"
+                                      text="Add project member…"
+                                      [attr.href]="path('/projects/' + project.id + '/members/add')"
+                                      (click)="
+                                        pageNav.openHere(
+                                          $event,
+                                          overlays.addProjectMember,
+                                          project.id
+                                        )
+                                      "
+                                    ></nldd-menu-item>
+                                  }
+                                </nldd-menu>
+                              </nldd-menu-item>
+                            }
+                          }
+                          @if (canCreateProject()) {
+                            <nldd-menu-item
+                              icon="new-folder"
+                              text="New project…"
+                              [attr.href]="path('/projects/new')"
+                              (click)="openNewProject($event)"
+                            ></nldd-menu-item>
+                          }
+                        </nldd-menu-group>
+                      }
                     </nldd-menu>
                   </nldd-icon-button>
                 </nldd-just-in-time-education>
-                <nldd-menu-item
-                  slot="overflow"
-                  icon="plus-small"
-                  text="Create"
-                  [attr.href]="path('/clusters/new')"
-                ></nldd-menu-item>
+                @if (canCreateCluster()) {
+                  <nldd-menu-item
+                    slot="overflow"
+                    icon="plus-small"
+                    text="Create"
+                    [attr.href]="path('/clusters/new')"
+                  ></nldd-menu-item>
+                }
               </nldd-toolbar-item>
             }
             @if (true) {
@@ -507,26 +531,28 @@
                       <!-- Under the heading rather than beside it: a named button
                          says what it makes, where an icon in the corner only
                          says "plus". -->
-                      <nldd-toolbar
-                        label="Project actions"
-                        size="sm"
-                      >
-                        <nldd-toolbar-item slot="start">
-                          <nldd-button
-                            text="New project…"
-                            start-icon="plus-small"
-                            [attr.href]="path('/projects/new')"
-                            (click)="openNewProject($event)"
-                          ></nldd-button>
-                          <nldd-menu-item
-                            slot="overflow"
-                            icon="plus-small"
-                            text="New project…"
-                            [attr.href]="path('/projects/new')"
-                            (select)="openNewProject($event)"
-                          ></nldd-menu-item>
-                        </nldd-toolbar-item>
-                      </nldd-toolbar>
+                      @if (canCreateProject()) {
+                        <nldd-toolbar
+                          label="Project actions"
+                          size="sm"
+                        >
+                          <nldd-toolbar-item slot="start">
+                            <nldd-button
+                              text="New project…"
+                              start-icon="plus-small"
+                              [attr.href]="path('/projects/new')"
+                              (click)="openNewProject($event)"
+                            ></nldd-button>
+                            <nldd-menu-item
+                              slot="overflow"
+                              icon="plus-small"
+                              text="New project…"
+                              [attr.href]="path('/projects/new')"
+                              (select)="openNewProject($event)"
+                            ></nldd-menu-item>
+                          </nldd-toolbar-item>
+                        </nldd-toolbar>
+                      }
                       @if (organizationProjects().length > 0) {
                         <nldd-spacer size="8"></nldd-spacer>
                         <nldd-list

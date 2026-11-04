@@ -99,6 +99,9 @@ import '@nldd/design-system/tooltip';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import routeParam from '../utils/route-param';
+import { Action } from '../../generated/v1/actions_pb';
 
 interface ClusterResourceUsage {
   cpu: { used: number; total: number; unit: string };
@@ -333,6 +336,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   private pluginInstallationService = inject(PluginInstallationService);
 
   private cdr = inject(ChangeDetectorRef);
+
+  private routeClusterId = routeParam('id');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.routeClusterId();
+    return id ? [check(Action.CLUSTER_CAN_DELETE, id), check(Action.CLUSTER_CAN_CREATE_NODE_POOL, id)] : [];
+  });
+
+  canDeleteCluster = computed(() => this.mayDo(Action.CLUSTER_CAN_DELETE, this.routeClusterId()));
+
+  canEditNodePools = computed(() => this.mayDo(Action.CLUSTER_CAN_CREATE_NODE_POOL, this.routeClusterId()));
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 

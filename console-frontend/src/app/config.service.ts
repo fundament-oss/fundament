@@ -3,6 +3,8 @@ import { Injectable } from '@angular/core';
 export interface AppConfiguration {
   authnApiUrl: string;
   organizationApiUrl: string;
+  /** authz-api (authz.v1): batched permission checks. */
+  authzApiUrl: string;
   /** Anonymous storefront API (catalog.v1); plugin browsing reads from here. */
   marketplaceApiUrl: string;
   /**
@@ -73,6 +75,7 @@ export class ConfigService {
       this.config = {
         authnApiUrl: '',
         organizationApiUrl: '',
+        authzApiUrl: '',
         marketplaceApiUrl: '',
         kubeApiProxyUrl: '',
         pluginProxyUrl: '',

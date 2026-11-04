@@ -54,6 +54,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 const stringToRole = (value: string): ProjectMemberRole =>
   value === 'admin' ? ProjectMemberRole.ADMIN : ProjectMemberRole.VIEWER;
@@ -72,6 +74,13 @@ const stringToRole = (value: string): ProjectMemberRole =>
 })
 export default class AddProjectMemberSheetComponent {
   readonly projectId = input.required<string>();
+
+  private mayDo = watchPermissions(() => {
+    const id = this.projectId();
+    return id ? [check(Action.PROJECT_CAN_CREATE_NAMESPACE, id)] : [];
+  });
+
+  canCreateNamespace = computed(() => this.mayDo(Action.PROJECT_CAN_CREATE_NAMESPACE, this.projectId()));
 
   readonly show = input(false);
 

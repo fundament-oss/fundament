@@ -50,6 +50,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 import permissionDeniedMessage from '../utils/permission-denied';
 /** One member's standing in this namespace. */
 interface NamespaceMember {
@@ -98,6 +100,13 @@ export default class NamespaceSheetComponent implements OnInit {
 
   /** Set once the namespace is found; the delete call needs it. */
   namespaceId = signal('');
+
+  private mayDo = watchPermissions(() => {
+    const id = this.namespaceId();
+    return id ? [check(Action.NAMESPACE_CAN_DELETE, id)] : [];
+  });
+
+  canDeleteNamespace = computed(() => this.mayDo(Action.NAMESPACE_CAN_DELETE, this.namespaceId()));
 
   created = signal('');
 

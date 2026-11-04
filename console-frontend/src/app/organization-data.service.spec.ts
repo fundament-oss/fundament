@@ -200,6 +200,21 @@ describe('OrganizationDataService setClusters', () => {
   const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
   const bravo = summary('cluster-b', 'bravo', ClusterStatus.RUNNING);
 
+  it('clears a failed load once a later list arrives', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+    server.fail = true;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    vi.restoreAllMocks();
+    expect(service.clustersLoadFailed()).toBe(true);
+    expect(service.clustersLoaded()).toBe(false);
+
+    service.setClusters([alpha], service.beginClusterListFetch());
+
+    expect(service.clustersLoadFailed()).toBe(false);
+    expect(service.clustersLoaded()).toBe(true);
+  });
+
   it('lets go of a cluster once the server stops listing it', async () => {
     const { service } = build([alpha, bravo]);
     await service.loadOrganizationData(ORGANIZATION_ID);

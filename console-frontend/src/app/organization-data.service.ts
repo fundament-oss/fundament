@@ -218,6 +218,9 @@ export class OrganizationDataService {
    *  reads "no clusters" as a state rather than as "not fetched yet" waits on this. */
   clustersLoaded = signal(false);
 
+  /** The cluster list could not be fetched for the current org. */
+  clustersLoadFailed = signal(false);
+
   async loadOrganizationData(organizationId?: string) {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
@@ -229,6 +232,7 @@ export class OrganizationDataService {
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
     this.clustersLoaded.set(false);
+    this.clustersLoadFailed.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
 
@@ -271,6 +275,9 @@ export class OrganizationDataService {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading organization data:', error);
+      if (generation === this.generation && !this.clustersLoaded()) {
+        this.clustersLoadFailed.set(true);
+      }
     } finally {
       this.loading.set(false);
     }
@@ -430,18 +437,20 @@ export class OrganizationDataService {
     const ticket = this.beginClusterListFetch();
 
     let clusters: ClusterSummary[];
+    let listed = false;
     try {
       const response = await firstValueFrom(
         this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
       );
       clusters = response.clusters;
+      listed = true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error reloading clusters:', error);
       clusters = this.clustersWithFallback(fallback);
     }
 
-    this.applyClusters(clusters, ticket);
+    if (this.applyClusters(clusters, ticket) && listed) this.markClustersListed();
   }
 
   /**
@@ -458,7 +467,15 @@ export class OrganizationDataService {
    * something the caller should prefer to its own response.
    */
   setClusters(clusters: readonly ClusterSummary[], ticket: ClusterListTicket): boolean {
-    return this.applyClusters([...clusters], ticket);
+    const applied = this.applyClusters([...clusters], ticket);
+    if (applied) this.markClustersListed();
+    return applied;
+  }
+
+  /** A real list has come back, also if the organization load before it failed. */
+  private markClustersListed() {
+    this.clustersLoaded.set(true);
+    this.clustersLoadFailed.set(false);
   }
 
   private applyClusters(clusters: ClusterSummary[], ticket: ClusterListTicket): boolean {
@@ -599,6 +616,7 @@ export class OrganizationDataService {
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);
     this.clustersLoaded.set(false);
+    this.clustersLoadFailed.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
     this.loadProjectsPromise = null;

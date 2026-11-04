@@ -1,4 +1,5 @@
 {{- if $.Values.consoleFrontend.enabled }}
+{{- if not (and $.Values.authzApi.enabled $.Values.externalUrls.authzApi) }}{{ fail "consoleFrontend requires authzApi.enabled and externalUrls.authzApi: without them the console hides every action" }}{{ end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -11,6 +12,7 @@ data:
     {
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
+      "authzApiUrl": "{{ $.Values.externalUrls.authzApi }}",
       "marketplaceApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
       "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
@@ -47,7 +49,7 @@ spec:
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.platformPublicApi }}"
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.authzApi }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.platformPublicApi }}"
             # frame-src in nginx.conf. Plugin console UIs are iframed from the
             # dedicated plugin-proxy origin (FUN-17); the console never fetches
             # from it, so it stays out of connect-src.

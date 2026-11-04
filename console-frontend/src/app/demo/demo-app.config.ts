@@ -5,6 +5,7 @@ import AuthnApiService from '../authn-api.service';
 import { TitleService } from '../title.service';
 import {
   AUTHN_TRANSPORT,
+  AUTHZ_TRANSPORT,
   MARKETPLACE_TRANSPORT,
   INSTALL_TRANSPORT,
   ORGANIZATION_TRANSPORT,
@@ -36,6 +37,7 @@ import FakePluginResourceStoreService from './fake-plugin-resource-store.service
 const demoConfig: AppConfiguration = {
   authnApiUrl: 'demo://authn',
   organizationApiUrl: 'demo://organization',
+  authzApiUrl: 'demo://authz',
   marketplaceApiUrl: 'demo://marketplace',
   platformApiUrl: 'demo://platform',
   kubeApiProxyUrl: 'demo://kube',
@@ -87,6 +89,7 @@ const demoAppConfig: ApplicationConfig = {
         inject(FakePluginResourceStoreService) as unknown as PluginResourceStoreService,
     },
     { provide: AUTHN_TRANSPORT, useFactory: () => createDemoTransport() },
+    { provide: AUTHZ_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: MARKETPLACE_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: INSTALL_TRANSPORT, useFactory: () => createDemoTransport() },

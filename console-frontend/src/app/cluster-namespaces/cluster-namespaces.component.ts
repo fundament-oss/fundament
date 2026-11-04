@@ -7,6 +7,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  computed,
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
@@ -50,6 +51,8 @@ import '@nldd/design-system/title';
 import '@nldd/design-system/title-cell';
 import '@nldd/design-system/top-title-bar';
 import permissionDeniedMessage from '../utils/permission-denied';
+import watchPermissions, { check } from '../utils/permission-checks';
+import { Action } from '../../generated/v1/actions_pb';
 
 @Component({
   selector: 'app-cluster-namespaces',
@@ -98,6 +101,19 @@ export default class ClusterNamespacesComponent implements OnInit {
   isBulkDeleting = signal<boolean>(false);
 
   projects = signal<Project[]>([]);
+
+  private mayDo = watchPermissions(() =>
+    this.namespaces().map((n) => check(Action.NAMESPACE_CAN_DELETE, n.id)),
+  );
+
+  canDeleteNamespace = (namespaceId: string): boolean =>
+    this.mayDo(Action.NAMESPACE_CAN_DELETE, namespaceId);
+
+  /** Bulk delete removes every row, so it needs every row to be allowed. */
+  canDeleteAll = computed(() => {
+    const rows = this.namespaces();
+    return rows.length > 0 && rows.every((n) => this.canDeleteNamespace(n.id));
+  });
 
   isLoadingProjects = signal<boolean>(false);
 

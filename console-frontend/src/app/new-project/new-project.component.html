@@ -61,21 +61,31 @@
           label="Cluster"
           supporting-label="Select the cluster this project will belong to"
         >
-          @if (isLoadingClusters()) {
+          @if (isLoadingClusters() || isCheckingClusters()) {
             <nldd-activity-indicator
               show-text
               text="Loading clusters..."
             ></nldd-activity-indicator>
-          } @else if (clusters().length === 0) {
+          } @else if (clustersLoadFailed()) {
             <nldd-rich-text>
-              <p>
-                No clusters available.
-                <nldd-link
-                  [attr.href]="pageNav.path('/clusters/new')"
-                  text="Add a cluster first"
-                ></nldd-link
-                >.
-              </p>
+              <p>Failed to load clusters.</p>
+            </nldd-rich-text>
+          } @else if (allowedClusters().length === 0) {
+            <nldd-rich-text>
+              @if (clusters().length > 0) {
+                <p>No cluster is available for new projects.</p>
+              } @else if (canCreateCluster()) {
+                <p>
+                  No clusters available.
+                  <nldd-link
+                    [attr.href]="pageNav.path('/clusters/new')"
+                    text="Add a cluster first"
+                  ></nldd-link
+                  >.
+                </p>
+              } @else {
+                <p>No clusters available.</p>
+              }
             </nldd-rich-text>
           } @else {
             <nldd-toggle-button-group
@@ -86,7 +96,7 @@
               unmet="new-project-cluster-error"
               (change)="onClusterChange($event)"
             >
-              @for (cluster of clusters(); track cluster.id) {
+              @for (cluster of allowedClusters(); track cluster.id) {
                 <nldd-toggle-button
                   type="radio"
                   [value]="cluster.id"

@@ -6,6 +6,7 @@ const DEVELOPER_URL = 'https://marketplace-registry.fundament.localhost:8443';
 const config: AppConfiguration = {
   authnApiUrl: '',
   organizationApiUrl: '',
+  authzApiUrl: '',
   marketplaceApiUrl: '',
   kubeApiProxyUrl: '',
   pluginProxyUrl: '',
