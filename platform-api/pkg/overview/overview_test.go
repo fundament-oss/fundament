@@ -65,12 +65,12 @@ func (c *fakeClock) Advance(d time.Duration) {
 }
 
 // getOverview calls the RPC the way the console does: an anonymous HTTP GET.
-func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOverviewResponse, *http.Response, string) {
+func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOverviewResponse, http.Header, string) {
 	t.Helper()
 
 	query := url.Values{"connect": {"v1"}, "encoding": {"json"}, "message": {"{}"}}
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
-		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure+"?"+query.Encode(), nil)
+		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure+"?"+query.Encode(), http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := ts.Client().Do(req)
@@ -82,7 +82,7 @@ func getOverview(t *testing.T, ts *httptest.Server) (*platformv1.GetPlatformOver
 
 	out := &platformv1.GetPlatformOverviewResponse{}
 	require.NoError(t, protojson.Unmarshal(body, out))
-	return out, resp, string(body)
+	return out, resp.Header, string(body)
 }
 
 func findOrganization(resp *platformv1.GetPlatformOverviewResponse, name string) *platformv1.OrganizationOverview {
@@ -145,7 +145,7 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 		namespaces += o.GetNamespaces()
 	}
 	totals := resp.GetTotals()
-	assert.Equal(t, int32(len(resp.GetOrganizations())), totals.GetOrganizations())
+	assert.Len(t, resp.GetOrganizations(), int(totals.GetOrganizations()))
 	assert.Equal(t, clusters, totals.GetClusters())
 	assert.Equal(t, projects, totals.GetProjects())
 	assert.Equal(t, namespaces, totals.GetNamespaces())
@@ -174,7 +174,7 @@ func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
 	for _, o := range resp.GetOrganizations() {
 		clusters += o.GetClusters()
 	}
-	assert.Equal(t, int32(len(resp.GetOrganizations())), resp.GetTotals().GetOrganizations())
+	assert.Len(t, resp.GetOrganizations(), int(resp.GetTotals().GetOrganizations()))
 	assert.Equal(t, clusters, resp.GetTotals().GetClusters(), "the unlisted cluster is not counted")
 }
 
@@ -212,8 +212,8 @@ func TestOverviewIsCached(t *testing.T) {
 
 	clock := &fakeClock{now: time.Now()}
 	ts := newServerWithClock(t, env, clock.Now)
-	first, resp, _ := getOverview(t, ts)
-	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
+	first, header, _ := getOverview(t, ts)
+	assert.Equal(t, "public, max-age=60", header.Get("Cache-Control"))
 
 	seed.Cluster(org, "second")
 	second, _, _ := getOverview(t, ts)
@@ -222,14 +222,14 @@ func TestOverviewIsCached(t *testing.T) {
 
 	// A cached answer is advertised for what remains of the TTL, not afresh.
 	clock.Advance(cacheTTL - 1500*time.Millisecond)
-	_, resp, _ = getOverview(t, ts)
-	assert.Equal(t, "public, max-age=2", resp.Header.Get("Cache-Control"))
+	_, header, _ = getOverview(t, ts)
+	assert.Equal(t, "public, max-age=2", header.Get("Cache-Control"))
 
 	// Once the TTL has passed the server reads again.
 	clock.Advance(1500 * time.Millisecond)
-	fresh, resp, _ := getOverview(t, ts)
+	fresh, header, _ := getOverview(t, ts)
 	assert.Equal(t, int32(2), findOrganization(fresh, "cached").GetClusters())
-	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
+	assert.Equal(t, "public, max-age=60", header.Get("Cache-Control"))
 }
 
 // The console calls without credentials, so CORS allows its origin and never
@@ -239,7 +239,7 @@ func TestOverviewCORS(t *testing.T) {
 	ts := newServer(t, env)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodOptions,
-		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure, nil)
+		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure, http.NoBody)
 	require.NoError(t, err)
 	req.Header.Set("Origin", consoleOrigin)
 	req.Header.Set("Access-Control-Request-Method", http.MethodGet)

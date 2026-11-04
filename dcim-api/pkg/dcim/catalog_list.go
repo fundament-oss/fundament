@@ -32,8 +32,8 @@ func (s *Server) ListCatalog(
 	}
 
 	ids := make([]uuid.UUID, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.ID)
+	for i := range rows {
+		ids = append(ids, rows[i].ID)
 	}
 
 	counts, err := s.queries.DeviceCatalogAssetCounts(ctx, db.DeviceCatalogAssetCountsParams{Ids: ids})
@@ -47,12 +47,12 @@ func (s *Server) ListCatalog(
 	}
 
 	entries := make([]*dcimv1.ListCatalogResponse_CatalogSummary, 0, len(rows))
-	for _, row := range rows {
+	for i := range rows {
 		summary := dcimv1.ListCatalogResponse_CatalogSummary_builder{
-			Entry: catalogFromListRow(&row),
+			Entry: catalogFromListRow(&rows[i]),
 		}
 
-		if c, ok := countMap[row.ID]; ok {
+		if c, ok := countMap[rows[i].ID]; ok {
 			summary.Total = c.Total
 			summary.Deployed = c.Deployed
 			summary.Available = c.Available

@@ -50,7 +50,7 @@ func TestResolveUserAccessIgnoresDeletedProjectMembershipHistory(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "access-project-history")
 	projectAdminID := insertUser(t, db, "Project Admin")
 	userID := insertUser(t, db, "Project History User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
 
 	projectID := insertProjectWithMembers(t, db, clusterID,
 		projectMember{
@@ -85,7 +85,7 @@ func TestResolveUserAccessAdmin(t *testing.T) {
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "access-admin")
 	userID := insertUser(t, db, "Admin User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 
 	access, err := queries.ResolveUserAccess(t.Context(), dbgen.ResolveUserAccessParams{
 		UserID:    userID,
@@ -106,7 +106,7 @@ func TestResolveUserAccessMember(t *testing.T) {
 	projectAdminID := insertUser(t, db, "Project Admin M")
 
 	// User is an org viewer (not admin), but a project member.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
@@ -130,7 +130,7 @@ func TestResolveUserAccessNone(t *testing.T) {
 	userID := insertUser(t, db, "No Access User")
 
 	// User is in the org as viewer but not a project member.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
 
 	access, err := queries.ResolveUserAccess(t.Context(), dbgen.ResolveUserAccessParams{
 		UserID:    userID,
@@ -151,7 +151,7 @@ func TestResolveUserAccessAdminDemotedButProjectMember(t *testing.T) {
 	projectAdminID := insertUser(t, db, "Project Admin D")
 
 	// User was admin, still a project member.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
@@ -185,7 +185,7 @@ func TestResolveUserAccessMultiProject(t *testing.T) {
 	projectAdminID := insertUser(t, db, "Project Admin MP")
 
 	// User is a viewer in the org (not admin), member of two projects on the same cluster.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
 
 	insertProjectWithMembersNamed(t, db, clusterID, "proj-a",
 		projectMember{UserID: projectAdminID, Role: "admin"},
@@ -252,14 +252,14 @@ func TestResolveUserAccessProjectMemberWithoutOrgMembership(t *testing.T) {
 	}
 }
 
-// insertOrgUser inserts an organizations_users row.
-func insertOrgUser(t *testing.T, db *testDB, orgID, userID uuid.UUID, permission, status string) {
+// insertOrgUser inserts an accepted organizations_users row.
+func insertOrgUser(t *testing.T, db *testDB, orgID, userID uuid.UUID, permission string) {
 	t.Helper()
 
 	_, err := db.adminPool.Exec(t.Context(),
 		`INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
-		 VALUES ($1, $2, $3, $4)`,
-		orgID, userID, permission, status,
+		 VALUES ($1, $2, $3, 'accepted')`,
+		orgID, userID, permission,
 	)
 	require.NoError(t, err)
 }

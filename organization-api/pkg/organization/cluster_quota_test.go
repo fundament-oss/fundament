@@ -64,7 +64,7 @@ func (q *quotaEnv) createCluster(name string) (string, error) {
 		KubernetesVersion: "1.28",
 	}.Build())
 	if err != nil {
-		return "", err
+		return "", err //nolint:wrapcheck // tests assert on the raw connect error
 	}
 	return res.GetClusterId(), nil
 }

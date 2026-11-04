@@ -108,7 +108,7 @@ func (h *Handler) syncOrgUser(ctx context.Context, orgUserID uuid.UUID) error {
 	// syncs these clusters again: record their success on that final run, not
 	// on every deferral.
 	if len(errs) == 0 && unreachable != nil {
-		return handler.NewShootUnreachableError(unreachable)
+		return handler.NewShootUnreachableError(unreachable) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 	for _, clusterID := range synced {
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncSucceeded,
@@ -133,7 +133,7 @@ func (h *Handler) syncProjectMember(ctx context.Context, projectMemberID uuid.UU
 
 	if err := h.syncUserToCluster(ctx, pm.UserID, pm.ClusterID); err != nil {
 		if !pm.ClusterReady && shoot.IsUnreachable(err) {
-			return handler.NewShootUnreachableError(err)
+			return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 		}
 		h.createUserSyncEvent(ctx, pm.ClusterID, dbconst.ClusterEventEventType_UserSyncFailed,
 			fmt.Sprintf("Project member sync failed for user %s: %s", pm.UserID, err))
@@ -156,7 +156,7 @@ func (h *Handler) syncClusterAccessible(ctx context.Context, clusterID uuid.UUID
 		h.logger.Debug("no users for cluster, ensuring namespace only", "cluster_id", clusterID)
 		if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 			if shoot.IsUnreachable(err) {
-				return handler.NewShootUnreachableError(err)
+				return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 			}
 			return fmt.Errorf("ensure namespace: %w", err)
 		}
@@ -167,7 +167,7 @@ func (h *Handler) syncClusterAccessible(ctx context.Context, clusterID uuid.UUID
 	// Ensure namespace exists before creating SAs.
 	if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
 		if shoot.IsUnreachable(err) {
-			return handler.NewShootUnreachableError(err)
+			return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 		}
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncFailed, "ensure namespace: "+err.Error())
 		return fmt.Errorf("ensure namespace: %w", err)

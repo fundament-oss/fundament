@@ -52,7 +52,7 @@ func Parse(r *http.Request) (Attributes, error) {
 	// subresource "status"/"finalize"), not as a namespace-scoped resource.
 	// Mirror that so the SAR checks the same attributes the apiserver enforces.
 	if parts[i] == "namespaces" && i+2 < len(parts) &&
-		!(i+3 == len(parts) && (parts[i+2] == "status" || parts[i+2] == "finalize")) {
+		(i+3 != len(parts) || (parts[i+2] != "status" && parts[i+2] != "finalize")) {
 		out.Namespace = parts[i+1]
 		i += 2
 	}

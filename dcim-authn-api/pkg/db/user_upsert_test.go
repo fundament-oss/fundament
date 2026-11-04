@@ -14,11 +14,11 @@ import (
 // the query holds the identity rules (patch semantics, the partial conflict
 // target) and the grants must admit exactly the writes it needs.
 
-func upsert(t *testing.T, env *testEnv, name, ref, email string) db.UserUpsertRow {
+func upsert(t *testing.T, env *testEnv, name, email string) db.UserUpsertRow {
 	t.Helper()
 	row, err := env.queries.UserUpsert(context.Background(), db.UserUpsertParams{
 		Name:        name,
-		ExternalRef: ref,
+		ExternalRef: "idp-sub-1",
 		Email:       email,
 	})
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func userByID(t *testing.T, env *testEnv, id any) (name string, email, deleted *
 func TestUserUpsert_FirstLoginProvisions(t *testing.T) {
 	env := newTestEnv(t)
 
-	row := upsert(t, env, "Alice", "idp-sub-1", "alice@example.com")
+	row := upsert(t, env, "Alice", "alice@example.com")
 
 	assert.Equal(t, "Alice", row.Name)
 	name, email, deleted := userByID(t, env, row.ID)
@@ -53,9 +53,9 @@ func TestUserUpsert_FirstLoginProvisions(t *testing.T) {
 // email claim must not erase what the directory already holds.
 func TestUserUpsert_AbsentClaimsKeepDirectoryValues(t *testing.T) {
 	env := newTestEnv(t)
-	first := upsert(t, env, "Alice", "idp-sub-1", "alice@example.com")
+	first := upsert(t, env, "Alice", "alice@example.com")
 
-	patched := upsert(t, env, "", "idp-sub-1", "")
+	patched := upsert(t, env, "", "")
 
 	assert.Equal(t, first.ID, patched.ID)
 	assert.Equal(t, "Alice", patched.Name)
@@ -68,9 +68,9 @@ func TestUserUpsert_AbsentClaimsKeepDirectoryValues(t *testing.T) {
 // Present claims do land: a rename at the IdP shows up on the next login.
 func TestUserUpsert_PresentClaimsUpdate(t *testing.T) {
 	env := newTestEnv(t)
-	first := upsert(t, env, "Alice", "idp-sub-1", "alice@example.com")
+	first := upsert(t, env, "Alice", "alice@example.com")
 
-	renamed := upsert(t, env, "Alice Renamed", "idp-sub-1", "")
+	renamed := upsert(t, env, "Alice Renamed", "")
 
 	assert.Equal(t, first.ID, renamed.ID)
 	assert.Equal(t, "Alice Renamed", renamed.Name)
@@ -84,13 +84,13 @@ func TestUserUpsert_PresentClaimsUpdate(t *testing.T) {
 // stays on the dead row.
 func TestUserUpsert_SoftDeletedUserGetsFreshRow(t *testing.T) {
 	env := newTestEnv(t)
-	first := upsert(t, env, "Alice", "idp-sub-1", "alice@example.com")
+	first := upsert(t, env, "Alice", "alice@example.com")
 
 	_, err := env.superPool.Exec(context.Background(),
 		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, first.ID)
 	require.NoError(t, err)
 
-	second := upsert(t, env, "Alice", "idp-sub-1", "alice@example.com")
+	second := upsert(t, env, "Alice", "alice@example.com")
 
 	assert.NotEqual(t, first.ID, second.ID)
 	_, _, deleted := userByID(t, env, first.ID)

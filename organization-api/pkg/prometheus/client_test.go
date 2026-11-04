@@ -24,9 +24,9 @@ func TestHTTPClientWithAuth_SendsBasicAuth(t *testing.T) {
 		gotUser, gotPass, gotOK = r.BasicAuth()
 		switch r.URL.Path {
 		case "/api/v1/query":
-			w.Write([]byte(vectorBody))
+			_, _ = w.Write([]byte(vectorBody))
 		case "/api/v1/query_range":
-			w.Write([]byte(matrixBody))
+			_, _ = w.Write([]byte(matrixBody))
 		default:
 			http.NotFound(w, r)
 		}
@@ -54,7 +54,7 @@ func TestHTTPClient_NoAuthHeaderWithoutCredentials(t *testing.T) {
 	var sawAuth bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _, sawAuth = r.BasicAuth()
-		w.Write([]byte(vectorBody))
+		_, _ = w.Write([]byte(vectorBody))
 	}))
 	defer srv.Close()
 
@@ -68,7 +68,7 @@ func TestHTTPClient_PathPrefixPreserved(t *testing.T) {
 	var gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		w.Write([]byte(vectorBody))
+		_, _ = w.Write([]byte(vectorBody))
 	}))
 	defer srv.Close()
 
@@ -95,7 +95,7 @@ func TestHTTPClient_StatusError(t *testing.T) {
 
 func TestHTTPClient_WithTransport(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte(vectorBody))
+		_, _ = w.Write([]byte(vectorBody))
 	}))
 	defer srv.Close()
 
@@ -127,10 +127,10 @@ func TestHTTPClient_RetriesOnceOnConnectionReset(t *testing.T) {
 			require.True(t, ok)
 			conn, _, err := hj.Hijack()
 			require.NoError(t, err)
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
-		w.Write([]byte(vectorBody))
+		_, _ = w.Write([]byte(vectorBody))
 	}))
 	defer srv.Close()
 

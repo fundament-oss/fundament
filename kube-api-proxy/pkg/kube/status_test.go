@@ -83,7 +83,7 @@ func TestMultiClusterProxy_FailsClosedWithoutToken(t *testing.T) {
 	t.Parallel()
 	m := &MultiClusterProxy{logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/pods", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/pods", http.NoBody)
 	req = req.WithContext(context.WithValue(req.Context(), ClusterIDContextKey{}, "c1"))
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)

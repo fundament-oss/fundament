@@ -153,7 +153,7 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/bucket-pages.js",
 		"console/sheet.js",
 	} {
-		src, err := os.ReadFile(path)
+		src, err := os.ReadFile(path) //nolint:gosec // test helper, paths are not user-controlled
 		require.NoError(t, err)
 		assert.NotContains(t, string(src), "k8s.delete", "%s must not delete a DiskPool", path)
 		assert.NotContains(t, string(src), "delete-btn", "%s must not offer a delete button", path)

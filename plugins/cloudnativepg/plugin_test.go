@@ -308,7 +308,7 @@ func TestSetUp(t *testing.T) {
 	plugin.install = func(ctx context.Context, kube client.Client) error {
 		for _, crd := range []client.Object{ourCRD(cnpg.CRDNames[0]), ourCRD(cnpg.CRDNames[1])} {
 			if err := kube.Create(ctx, crd); err != nil {
-				return err
+				return err //nolint:wrapcheck // test double passes through
 			}
 		}
 		return nil

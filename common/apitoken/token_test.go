@@ -216,8 +216,9 @@ func TestIsAPIToken(t *testing.T) {
 
 func TestIsBase62(t *testing.T) {
 	// Test all valid base62 characters
-	for _, c := range base62Chars {
-		if !isBase62(byte(c)) {
+	for i := range len(base62Chars) {
+		c := base62Chars[i]
+		if !isBase62(c) {
 			t.Errorf("isBase62(%c) = false, want true", c)
 		}
 	}

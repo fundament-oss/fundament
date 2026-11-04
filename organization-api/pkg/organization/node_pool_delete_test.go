@@ -15,7 +15,7 @@ const lastPoolMessage = "a cluster needs at least one node pool; add another nod
 
 func (q *quotaEnv) deleteNodePool(nodePoolID string) error {
 	_, err := q.client.DeleteNodePool(q.ctx, organizationv1.DeleteNodePoolRequest_builder{NodePoolId: nodePoolID}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func requireLastPoolRefused(t *testing.T, err error) {
@@ -115,7 +115,7 @@ func (q *quotaEnv) createSizedNodePool(clusterID, name string, minNodes, maxNode
 		AutoscaleMax: maxNodes,
 	}.Build())
 	if err != nil {
-		return "", err
+		return "", err //nolint:wrapcheck // tests assert on the raw connect error
 	}
 	return res.GetNodePoolId(), nil
 }

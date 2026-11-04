@@ -31,7 +31,7 @@ func (s *Server) ListClusterNamespaces(
 
 	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, namespaceFromRow(namespaces[i]))
+		result = append(result, namespaceFromRow(&namespaces[i]))
 	}
 
 	return organizationv1.ListClusterNamespacesResponse_builder{
@@ -56,7 +56,7 @@ func (s *Server) ListProjectNamespaces(
 
 	result := make([]*organizationv1.Namespace, 0, len(namespaces))
 	for i := range namespaces {
-		result = append(result, namespaceFromRow((db.NamespaceListByClusterIDRow)(namespaces[i])))
+		result = append(result, namespaceFromRow((*db.NamespaceListByClusterIDRow)(&namespaces[i])))
 	}
 
 	return organizationv1.ListProjectNamespacesResponse_builder{
@@ -64,7 +64,7 @@ func (s *Server) ListProjectNamespaces(
 	}.Build(), nil
 }
 
-func namespaceFromRow(row db.NamespaceListByClusterIDRow) *organizationv1.Namespace {
+func namespaceFromRow(row *db.NamespaceListByClusterIDRow) *organizationv1.Namespace {
 	return organizationv1.Namespace_builder{
 		Id:              row.ID.String(),
 		Name:            row.Name,

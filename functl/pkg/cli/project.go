@@ -46,13 +46,13 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tALIAS\tCLUSTER ID\tCREATED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tALIAS\tCLUSTER ID\tCREATED")
 	for _, project := range projects {
 		created := ""
 		if project.GetCreated() != nil {
 			created = project.GetCreated().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			project.GetId(),
 			project.GetName(),
 			project.GetAlias(),
@@ -60,7 +60,10 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 			created,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // ProjectGetCmd handles the project get command.
@@ -98,7 +101,10 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 		PrintKeyValue(w, "Created", project.GetCreated().AsTime().Format(TimeFormat))
 	}
 
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // ProjectCreateCmd handles the project create command.

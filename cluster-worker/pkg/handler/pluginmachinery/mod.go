@@ -151,7 +151,7 @@ func (h *Handler) provision(ctx context.Context, clusterID uuid.UUID) error {
 	// burn outbox retries; the cluster-ready fan-out and the reconcile loop
 	// re-run this once the shoot is up. Mirrors the namespace handler.
 	if !row.ShootStatus.Valid || row.ShootStatus.String != string(gardener.StatusReady) {
-		return handler.NewPreconditionError("shoot not ready")
+		return handler.NewPreconditionError("shoot not ready") //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 
 	params := &manifests.DeploymentParams{

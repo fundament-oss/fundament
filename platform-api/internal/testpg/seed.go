@@ -166,7 +166,7 @@ type Finding struct {
 }
 
 // DriftFinding inserts a finding, open unless f.Resolved.
-func (s *Seed) DriftFinding(f Finding) uuid.UUID {
+func (s *Seed) DriftFinding(f *Finding) uuid.UUID {
 	s.t.Helper()
 	var clusterID *uuid.UUID
 	if f.ClusterID != uuid.Nil {

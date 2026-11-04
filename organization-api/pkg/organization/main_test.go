@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 		cacheDir = filepath.Join(userCache, "fundament-test-pg")
 	}
 
-	err := os.MkdirAll(cacheDir, 0o755)
+	err := os.MkdirAll(cacheDir, 0o750) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		log.Fatalf("failed to create cache directory: %v", err)
 	}
@@ -45,12 +45,12 @@ func TestMain(m *testing.M) {
 	var stopPostgres func()
 
 	if dirExists(dataDir) && dirExists(pgBin) {
-		log.Printf("existing embedded-postgres detected at %q", cacheDir)
+		log.Printf("existing embedded-postgres detected at %q", cacheDir) //nolint:gosec // test log
 		startExistingEmbeddedPostgres(pgBin, dataDir)
 
 		stopPostgres = func() {
 			pgCtl := filepath.Join(pgBin, "pg_ctl")
-			cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+			cmd := exec.CommandContext(context.Background(), pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 	} else {
-		log.Printf("setting up new embedded-postgres installation %q", cacheDir)
+		log.Printf("setting up new embedded-postgres installation %q", cacheDir) //nolint:gosec // test log
 		epDB := createAndStartNewEmbeddedPostgres(cacheDir, dataDir)
 
 		stopPostgres = func() {
@@ -78,15 +78,16 @@ func TestMain(m *testing.M) {
 	}()
 
 	adminPool := newAdminPool()
-	defer adminPool.Close()
 
 	testdb.UseGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
 	err = setupTemplateDatabaseWithMigrations(adminPool)
 	if err != nil {
+		adminPool.Close()
 		log.Fatalf("failed to setup template database: %v", err)
 	}
+	adminPool.Close()
 
 	code := m.Run()
 
@@ -101,7 +102,7 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 	removeStalePostmasterPID(pgBin, dataDir)
 
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl,
+	cmd := exec.CommandContext(context.Background(), pgCtl, //nolint:gosec // test helper, paths are not user-controlled
 		"-D", dataDir,
 		"-w",
 		"-o", fmt.Sprintf("-p %d -c fsync=off -c synchronous_commit=off", testDBPort),
@@ -121,7 +122,7 @@ func startExistingEmbeddedPostgres(pgBin, dataDir string) {
 func removeStalePostmasterPID(pgBin, dataDir string) {
 	pidFile := filepath.Join(dataDir, "postmaster.pid")
 
-	data, err := os.ReadFile(pidFile)
+	data, err := os.ReadFile(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		return // no pid file, nothing to clean up
 	}
@@ -140,21 +141,21 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 		return
 	}
 
 	// On Unix, FindProcess always succeeds. Send signal 0 to check if alive.
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile) //nolint:gosec // test helper, paths are not user-controlled
 		return
 	}
 
 	// Process is still running — stop it gracefully before we start a fresh instance.
 	log.Printf("stopping already-running postgres (pid %d) before restart", pid)
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
-	cmd := exec.Command(pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop")
+	cmd := exec.CommandContext(context.Background(), pgCtl, "-D", dataDir, "-w", "-m", "fast", "stop") //nolint:gosec // test helper, paths are not user-controlled
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -163,7 +164,7 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 }
 
 func createAndStartNewEmbeddedPostgres(runtimePath, dataDir string) *embeddedpostgres.EmbeddedPostgres {
-	err := os.RemoveAll(dataDir)
+	err := os.RemoveAll(dataDir) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
 		log.Fatalf("failed to remove old data directory: %v", err)
 	}
@@ -193,7 +194,7 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err := pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = false WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to unmark fundament as template: %v", err)
+		return fmt.Errorf("failed to unmark fundament as template: %w", err)
 	}
 
 	trekApply(projectRoot)
@@ -207,7 +208,7 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to mark fundament as template: %v", err)
+		return fmt.Errorf("failed to mark fundament as template: %w", err)
 	}
 
 	return nil
@@ -217,18 +218,18 @@ func applyCatalogSeed(projectRoot string) error {
 	conn, err := pgx.Connect(context.Background(),
 		fmt.Sprintf("postgres://postgres:postgres@localhost:%d/fundament?sslmode=disable", testDBPort))
 	if err != nil {
-		return fmt.Errorf("failed to connect to fundament db for seed: %v", err)
+		return fmt.Errorf("failed to connect to fundament db for seed: %w", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	for _, name := range []string{"0100-system-org.sql", "0101-appstore-catalog.sql"} {
-		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name))
+		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name)) //nolint:gosec // test helper, paths are not user-controlled
 		if err != nil {
-			return fmt.Errorf("failed to read seed %s: %v", name, err)
+			return fmt.Errorf("failed to read seed %s: %w", name, err)
 		}
 		// Simple protocol: whole multi-statement file in one implicit transaction.
 		if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
-			return fmt.Errorf("failed to apply seed %s: %v", name, err)
+			return fmt.Errorf("failed to apply seed %s: %w", name, err)
 		}
 	}
 	return nil
@@ -254,7 +255,7 @@ func findProjectRoot() string {
 }
 
 func dirExists(path string) bool {
-	info, err := os.Stat(path)
+	info, err := os.Stat(path) //nolint:gosec // test helper, paths are not user-controlled
 	return err == nil && info.IsDir()
 }
 
@@ -271,11 +272,11 @@ func trekApply(projectRoot string) {
 	if err != nil {
 		// Fallback: check common mise/asdf install locations.
 		candidates := []string{
-			filepath.Join(os.Getenv("HOME"), ".local/share/mise/shims/trek"),
-			filepath.Join(os.Getenv("HOME"), ".asdf/shims/trek"),
+			filepath.Join(os.Getenv("HOME"), ".local", "share", "mise", "shims", "trek"),
+			filepath.Join(os.Getenv("HOME"), ".asdf", "shims", "trek"),
 		}
 		for _, c := range candidates {
-			if _, statErr := os.Stat(c); statErr == nil {
+			if _, statErr := os.Stat(c); statErr == nil { //nolint:gosec // test helper, paths are not user-controlled
 				trekBin = c
 				break
 			}
@@ -285,7 +286,7 @@ func trekApply(projectRoot string) {
 		}
 	}
 
-	cmd := exec.Command(trekBin, "apply",
+	cmd := exec.CommandContext(context.Background(), trekBin, "apply", //nolint:gosec // test helper, paths are not user-controlled
 		"--reset-database",
 		"--insert-test-data",
 		"--postgres-host", "localhost",

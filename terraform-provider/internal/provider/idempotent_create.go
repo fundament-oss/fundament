@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
@@ -42,7 +43,7 @@ func (realClock) Sleep(ctx context.Context, d time.Duration) error {
 	defer t.Stop()
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return ctx.Err() //nolint:wrapcheck // mirrors the context error like time.Sleep would; callers wrap
 	case <-t.C:
 		return nil
 	}
@@ -91,7 +92,7 @@ func createIdempotentWithClock[Req, Resp any](
 		}
 
 		if err := clk.Sleep(deadlineCtx, backoff); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wait for idempotent operation: %w", err)
 		}
 		backoff *= 2
 		if backoff > idempotencyMaxBackoff {

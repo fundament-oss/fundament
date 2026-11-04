@@ -25,7 +25,7 @@ func isGrantDenied(err error) bool {
 // directory entry (and token subject) to another identity.
 func TestAuthnRoleCannotRetargetExternalRef(t *testing.T) {
 	env := newTestEnv(t)
-	row := upsert(t, env, "Alice", "idp-sub-1", "")
+	row := upsert(t, env, "Alice", "")
 
 	_, err := env.servicePool.Exec(context.Background(),
 		`UPDATE dcim.users SET external_ref = 'idp-sub-other' WHERE id = $1`, row.ID)
@@ -37,7 +37,7 @@ func TestAuthnRoleCannotRetargetExternalRef(t *testing.T) {
 // reads live rows.
 func TestAuthnRoleCannotSoftDelete(t *testing.T) {
 	env := newTestEnv(t)
-	row := upsert(t, env, "Alice", "idp-sub-1", "")
+	row := upsert(t, env, "Alice", "")
 
 	_, err := env.servicePool.Exec(context.Background(),
 		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, row.ID)

@@ -163,7 +163,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 // database, as the mock Gardener's shoots live in the provisioning worker.
 func newInventory(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	if err := cfg.Inventory.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid inventory config: %w", err)
 	}
 
 	var reader shoot.InventoryReader
@@ -199,7 +199,7 @@ func newProvisioning(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App
 		return nil, fmt.Errorf("invalid CLUSTER_MAX_RECONCILE_DELETIONS: %d (must be 0 or more)", cfg.Cluster.MaxReconcileDeletions)
 	}
 	if err := cfg.Reconcile.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid reconcile config: %w", err)
 	}
 
 	gardenerClient, err := createGardenerClient(cfg, logger)
@@ -225,7 +225,7 @@ func newProvisioning(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.Gardener, gardenerClient, logger)
+	shootAccess, err := createShootAccess(&cfg.Gardener, gardenerClient, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 			"kubeconfig", g.Kubeconfig,
 			"provider", providerCfg.Type,
 			"cloudProfile", providerCfg.CloudProfile)
-		client, err := gardener.NewReal(g.Kubeconfig, providerCfg, logger)
+		client, err := gardener.NewReal(g.Kubeconfig, &providerCfg, logger)
 		if err != nil {
 			return nil, fmt.Errorf("create gardener client: %w", err)
 		}
@@ -437,7 +437,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
+func createShootAccess(g *GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
 	switch g.Mode {
 	case "mock":
 		if g.SandboxKubeconfig != "" {
@@ -445,7 +445,11 @@ func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger 
 			switch {
 			case err == nil:
 				logger.Info("using mock shoot access with namespaces on the plugin sandbox", "kubeconfig", g.SandboxKubeconfig)
-				return shoot.NewSandboxShootAccess(kubeconfig, logger)
+				sandbox, err := shoot.NewSandboxShootAccess(kubeconfig, logger)
+				if err != nil {
+					return nil, fmt.Errorf("create sandbox shoot access: %w", err)
+				}
+				return sandbox, nil
 			case errors.Is(err, os.ErrNotExist):
 				// The Secret is created after the platform comes up (just
 				// plugin-sandbox-kubeconfig); Reloader restarts the pod then.

@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 )
 
 func TestRackRowService_ListRackRows_FilterBySite(t *testing.T) {

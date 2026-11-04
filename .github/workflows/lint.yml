@@ -1,0 +1,35 @@
+name: Lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Only runs of the same PR share a group; master pushes and scheduled runs never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # --new-from-rev needs the base commit to diff against.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: go golangci-lint
+
+      # Only lines changed since the base are reported, like `just lint`: master
+      # still carries issues from before linting ran in CI.
+      - name: Run golangci-lint
+        env:
+          BASE_REV: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: mise exec -- golangci-lint run --new-from-rev "$BASE_REV" ./...

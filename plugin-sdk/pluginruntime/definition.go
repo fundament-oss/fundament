@@ -336,7 +336,7 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 			}
 		}
 		if entry.Default != "" {
-			if err := validateConfigValue(entry.Default, entry); err != nil {
+			if err := validateConfigValue(entry.Default, &entry); err != nil {
 				return fmt.Errorf("configSchema key %q default: %w", entry.Name, err)
 			}
 			// The console form compares defaults with a strict 'true'/'false'
@@ -353,7 +353,7 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 // validateConfigValue checks one value against its declared entry. Bool uses
 // strconv.ParseBool to match what caarlos0/env accepts in the plugin binary,
 // so a value the schema passes never fails inside the pod.
-func validateConfigValue(value string, entry ConfigSchemaEntry) error {
+func validateConfigValue(value string, entry *ConfigSchemaEntry) error {
 	switch entry.Type {
 	case ConfigTypeString:
 		return nil
@@ -437,7 +437,7 @@ func ValidateConfig(config map[string]string, schema []ConfigSchemaEntry) error 
 			}
 			return fmt.Errorf("config key %q is not declared in the definition's configSchema", key)
 		}
-		if err := validateConfigValue(config[key], entry); err != nil {
+		if err := validateConfigValue(config[key], &entry); err != nil {
 			return fmt.Errorf("config key %q: %w", key, err)
 		}
 	}

@@ -118,7 +118,7 @@ func RunInProcess(plugin pluginruntime.Plugin) (*InProcessPlugin, error) {
 		}
 		h.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseUninstalling, Message: "uninstalling"})
 		if err := installer.Uninstall(ctx, h); err != nil {
-			return err
+			return fmt.Errorf("uninstall plugin: %w", err)
 		}
 		cancel()
 		return nil

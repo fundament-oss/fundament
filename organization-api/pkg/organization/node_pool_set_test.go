@@ -25,7 +25,7 @@ func (q *quotaEnv) setNodePools(clusterID string, pools ...*organizationv1.NodeP
 		ClusterId: clusterID,
 		NodePools: pools,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 // livePoolsByName returns name → id of the organization's live pools.
@@ -89,7 +89,7 @@ func Test_NodePool_Set_RefusesAStaleExpectedSet(t *testing.T) {
 			NodePools:       pools,
 			ExpectedCurrent: organizationv1.ExpectedNodePools_builder{NodePoolIds: expected}.Build(),
 		}.Build())
-		return err
+		return err //nolint:wrapcheck // tests assert on the raw connect error
 	}
 
 	// A new cluster: the wizard expects no pools.

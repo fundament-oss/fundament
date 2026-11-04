@@ -564,10 +564,10 @@ func (m *MockClient) SetStatusOverride(clusterID uuid.UUID, status ShootStatusTy
 }
 
 // SetShootStatusOverride is SetStatusOverride with the operation and health set too.
-func (m *MockClient) SetShootStatusOverride(clusterID uuid.UUID, override StatusOverride) {
+func (m *MockClient) SetShootStatusOverride(clusterID uuid.UUID, override *StatusOverride) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.StatusOverrides[clusterID] = override
+	m.StatusOverrides[clusterID] = *override
 }
 
 // StatusCallsFor returns how many times GetShootStatus was called for the cluster.
@@ -721,7 +721,7 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 	}
 	version := cluster.KubernetesVersion
 	if minorOnlyRegex.MatchString(version) {
-		version = version + ".0"
+		version += ".0"
 	}
 	if !semverRegex.MatchString(version) {
 		return fmt.Errorf("shoot.core.gardener.cloud %q is invalid: failed to parse shoot version %q: %w",

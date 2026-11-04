@@ -67,7 +67,7 @@ func WaitEstablished(ctx context.Context, c client.Client, names []string) error
 					if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
 						return false, nil // not yet visible; keep polling
 					}
-					return false, err
+					return false, err //nolint:wrapcheck // WaitEstablished wraps the poll error
 				}
 				if !isEstablished(&crd) {
 					return false, nil

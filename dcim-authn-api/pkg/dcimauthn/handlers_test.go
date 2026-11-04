@@ -93,7 +93,7 @@ func TestHandleRefresh_ValidToken(t *testing.T) {
 	s := refreshTestServer()
 	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
@@ -128,7 +128,7 @@ func TestHandleRefresh_UnresolvableSubjectIsRefused(t *testing.T) {
 	s := refreshTestServer()
 	token := signRefreshToken(t, s.config.JWTSecret, uuid.NewString())
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
@@ -154,7 +154,7 @@ func TestHandleRefresh_MissingAudienceIsRefused(t *testing.T) {
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.config.JWTSecret)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
@@ -166,7 +166,7 @@ func TestHandleRefresh_MissingAudienceIsRefused(t *testing.T) {
 func TestHandleRefresh_InvalidToken(t *testing.T) {
 	s := refreshTestServer()
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer not-a-valid-token")
 	rec := httptest.NewRecorder()
 
@@ -241,7 +241,7 @@ func TestHandleRefresh_DirectoryOutageIs503(t *testing.T) {
 	s.queries = outageStore{}
 	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/refresh", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 

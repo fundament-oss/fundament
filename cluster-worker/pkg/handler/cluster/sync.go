@@ -273,7 +273,10 @@ func (h *Handler) markShootDeleted(ctx context.Context, clusterID uuid.UUID) err
 	}); err != nil {
 		return fmt.Errorf("create status_deleted event: %w", err)
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
 }
 
 // markShootUpdating marks a ready cluster as updating once Gardener accepted

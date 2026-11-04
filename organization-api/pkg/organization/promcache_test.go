@@ -244,7 +244,7 @@ type ctxGardener struct {
 
 func (c *ctxGardener) Monitoring(ctx context.Context, id uuid.UUID) (*gardener.MonitoringInfo, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // test double
 	}
 	return c.fakeGardener.Monitoring(ctx, id)
 }

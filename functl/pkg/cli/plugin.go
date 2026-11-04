@@ -305,7 +305,7 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	version, err := publishVersion(context.Background(), pubClient, published, def, publishOptions{
+	version, err := publishVersion(context.Background(), pubClient, published, &def, publishOptions{
 		PluginID: c.PluginID, Create: c.Create, Replace: c.Replace, Dev: c.Dev,
 	})
 	if err != nil {
@@ -367,7 +367,7 @@ func prepareManifest(src []byte, image string, dev bool) ([]byte, pluginruntime.
 
 // publishVersion pushes a manifest from prepareManifest as a plugin version.
 // Dev implies Replace.
-func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, published []byte, def pluginruntime.PluginDefinition, opts publishOptions) (*registryv1.PluginVersion, error) {
+func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, published []byte, def *pluginruntime.PluginDefinition, opts publishOptions) (*registryv1.PluginVersion, error) {
 	var err error
 	pluginID := opts.PluginID
 	if pluginID == "" {
@@ -429,7 +429,7 @@ var errListingNotFound = errors.New("listing not found")
 // createPlugin reserves the listing, seeded from the manifest's metadata. The
 // listing copy (display name, descriptions, tags) is authored properly through
 // the developer portal afterwards; this is just enough to publish against.
-func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def pluginruntime.PluginDefinition) (string, error) {
+func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def *pluginruntime.PluginDefinition) (string, error) {
 	displayName := def.Metadata.DisplayName
 	if displayName == "" {
 		displayName = def.Metadata.Name

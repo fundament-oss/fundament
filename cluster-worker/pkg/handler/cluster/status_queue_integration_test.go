@@ -57,7 +57,7 @@ func TestRunStatusWorkers(t *testing.T) {
 
 	clusterID := readyCluster(t, db, "queue-workers")
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
-	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
 	})
 

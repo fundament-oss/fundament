@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // Ensure ClusterNamespacesDataSource satisfies various datasource interfaces.
@@ -102,7 +103,7 @@ func (d *ClusterNamespacesDataSource) Configure(ctx context.Context, req datasou
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *ClusterNamespacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var state ClusterNamespacesDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)

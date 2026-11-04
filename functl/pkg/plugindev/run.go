@@ -20,13 +20,13 @@ import (
 const stopGrace = 10 * time.Second
 
 // BuildConsole runs the initial Vite build so the first image has console assets.
-func BuildConsole(ctx context.Context, l Layout) error {
+func BuildConsole(ctx context.Context, l *Layout) error {
 	if !l.Vite {
 		return nil
 	}
 	dir := filepath.Join(l.PluginDir, "console-ui")
 	for _, args := range [][]string{{"install"}, {"run", "build"}} {
-		cmd := exec.CommandContext(ctx, "bun", args...)
+		cmd := exec.CommandContext(ctx, "bun", args...) //nolint:gosec // fixed binary and fixed argument lists
 		cmd.Dir = dir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -39,7 +39,7 @@ func BuildConsole(ctx context.Context, l Layout) error {
 
 // BuildImage builds and pushes the dev image and returns its repo@sha256 reference.
 func BuildImage(ctx context.Context, renderDir string, t Target) (string, error) {
-	cmd := exec.CommandContext(ctx, "skaffold", "build",
+	cmd := exec.CommandContext(ctx, "skaffold", "build", //nolint:gosec // fixed binary, argv only (no shell)
 		"-f", "skaffold.yaml",
 		"--default-repo", t.Registry,
 		"--file-output", "build.json",
@@ -51,7 +51,7 @@ func BuildImage(ctx context.Context, renderDir string, t Target) (string, error)
 		return "", fmt.Errorf("skaffold build: %w", err)
 	}
 
-	raw, err := os.ReadFile(filepath.Join(renderDir, "build.json"))
+	raw, err := os.ReadFile(filepath.Join(renderDir, "build.json")) //nolint:gosec // skaffold output in functl's own render dir
 	if err != nil {
 		return "", fmt.Errorf("read skaffold build output: %w", err)
 	}
@@ -85,18 +85,18 @@ func digestRef(tag string) (string, error) {
 
 // Dev runs the Vite watcher (for Vite plugins) and skaffold dev until either exits or ctx is done.
 // Once force is done, the children are killed without waiting out their grace period.
-func Dev(ctx, force context.Context, renderDir string, l Layout, t Target, namespace string, cleanup bool) error {
+func Dev(ctx, force context.Context, renderDir string, l *Layout, t Target, namespace string, cleanup bool) error {
 	var mu sync.Mutex
 	var cmds []*exec.Cmd
 
 	if l.Vite {
-		vite := exec.Command("bunx", "vite", "build", "--watch", "--emptyOutDir=false")
+		vite := exec.Command("bunx", "vite", "build", "--watch", "--emptyOutDir=false") //nolint:noctx // supervise stops the process group gracefully; CommandContext would SIGKILL on cancel
 		vite.Dir = filepath.Join(l.PluginDir, "console-ui")
 		prefixOutput(vite, "[vite] ", &mu)
 		cmds = append(cmds, vite)
 	}
 
-	skaffold := exec.Command("skaffold", "dev",
+	skaffold := exec.Command("skaffold", "dev", //nolint:gosec,noctx // fixed binary, argv only (no shell); supervise stops the process group gracefully, CommandContext would SIGKILL on cancel
 		"-f", "skaffold.yaml",
 		"--default-repo", t.Registry,
 		"-n", namespace,
@@ -199,7 +199,7 @@ func announceExit(cmd *exec.Cmd, name string) {
 		_, _ = w.Write([]byte(msg))
 		return
 	}
-	fmt.Fprint(os.Stdout, msg)
+	_, _ = fmt.Fprint(os.Stdout, msg)
 }
 
 // prefixOutput sends cmd's stdout and stderr through one line-buffered, prefixed writer.

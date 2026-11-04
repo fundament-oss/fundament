@@ -10,8 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/google/uuid"
+
+	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 )
 
 const (

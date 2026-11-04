@@ -10,6 +10,9 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
+	"github.com/rs/cors"
+	"github.com/svrana/go-connect-middleware/interceptors/logging"
+
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/circuitbreaker"
@@ -23,8 +26,6 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
-	"github.com/rs/cors"
-	"github.com/svrana/go-connect-middleware/interceptors/logging"
 )
 
 type Config struct {

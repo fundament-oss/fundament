@@ -108,5 +108,5 @@ func NewTableWriter() *tabwriter.Writer {
 
 // PrintKeyValue prints a key-value pair to the given writer.
 func PrintKeyValue(w io.Writer, key string, value any) {
-	fmt.Fprintf(w, "%s:\t%v\n", key, value)
+	_, _ = fmt.Fprintf(w, "%s:\t%v\n", key, value)
 }

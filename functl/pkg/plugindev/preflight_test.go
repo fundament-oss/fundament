@@ -73,7 +73,7 @@ func TestCheckToolsMissingSkaffold(t *testing.T) {
 		}
 		return lookAll(name)
 	}
-	err := CheckTools(Layout{}, look, func() error { return nil })
+	err := CheckTools(&Layout{}, look, func() error { return nil })
 	requireCheckError(t, err, "skaffold.dev")
 }
 
@@ -84,13 +84,13 @@ func TestCheckToolsBunOnlyForVite(t *testing.T) {
 		}
 		return lookAll(name)
 	}
-	require.NoError(t, CheckTools(Layout{Vite: false}, look, func() error { return nil }))
-	err := CheckTools(Layout{Vite: true}, look, func() error { return nil })
+	require.NoError(t, CheckTools(&Layout{Vite: false}, look, func() error { return nil }))
+	err := CheckTools(&Layout{Vite: true}, look, func() error { return nil })
 	requireCheckError(t, err, "bun.sh")
 }
 
 func TestCheckToolsDockerDaemonDown(t *testing.T) {
-	err := CheckTools(Layout{}, lookAll, func() error { return errors.New("down") })
+	err := CheckTools(&Layout{}, lookAll, func() error { return errors.New("down") })
 	requireCheckError(t, err, "docker")
 }
 
@@ -246,6 +246,6 @@ func TestCheckToolsMissingKubectl(t *testing.T) {
 		}
 		return "/bin/" + name, nil
 	}
-	err := CheckTools(Layout{}, look, func() error { return nil })
+	err := CheckTools(&Layout{}, look, func() error { return nil })
 	requireCheckError(t, err, "kubernetes.io")
 }

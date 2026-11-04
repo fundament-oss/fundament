@@ -25,7 +25,7 @@ func TestIsResourceGet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := isResourceGet(tc.path, "cert-manager.io", "v1", "certificates")
 			gotCluster := isResourceGet(tc.path, "cert-manager.io", "v1", "clusterissuers")
-			if !(got || gotCluster) && tc.want {
+			if (!got && !gotCluster) && tc.want {
 				t.Fatalf("expected match, got none for %q", tc.path)
 			}
 			if (got || gotCluster) && !tc.want {
@@ -45,7 +45,7 @@ func TestResourceGetResponse(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("status = %d", status)
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 	b, _ := io.ReadAll(body)
 	var item map[string]any
 	if err := json.Unmarshal(b, &item); err != nil {
@@ -60,7 +60,7 @@ func TestResourceGetResponse(t *testing.T) {
 	if status != 404 {
 		t.Fatalf("expected 404, got %d", status)
 	}
-	body.Close()
+	_ = body.Close()
 }
 
 func TestResourceGetResponseNamespaceDisambiguation(t *testing.T) {
@@ -77,7 +77,7 @@ func TestResourceGetResponseNamespaceDisambiguation(t *testing.T) {
 			t.Fatalf("ns %q: status = %d", ns, status)
 		}
 		b, _ := io.ReadAll(body)
-		body.Close()
+		_ = body.Close()
 		var item map[string]any
 		if err := json.Unmarshal(b, &item); err != nil {
 			t.Fatalf("ns %q: unmarshal: %v", ns, err)
@@ -103,7 +103,7 @@ func TestMockClientDoResourceGet(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("status = %d", status)
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 	b, _ := io.ReadAll(body)
 	var obj map[string]any
 	if err := json.Unmarshal(b, &obj); err != nil {
@@ -133,7 +133,7 @@ func TestMockFSCInstallations(t *testing.T) {
 		t.Fatalf("list status = %d", status)
 	}
 	b, _ := io.ReadAll(body)
-	body.Close()
+	_ = body.Close()
 	if !strings.Contains(string(b), `"kind": "FSCInstallationList"`) {
 		t.Errorf("body did not contain FSCInstallationList: %s", string(b))
 	}
@@ -147,7 +147,7 @@ func TestMockFSCInstallations(t *testing.T) {
 		t.Fatalf("get status = %d", status)
 	}
 	b, _ = io.ReadAll(body)
-	body.Close()
+	_ = body.Close()
 	var item map[string]any
 	if err := json.Unmarshal(b, &item); err != nil {
 		t.Fatalf("unmarshal: %v", err)
@@ -180,7 +180,7 @@ func TestMockFSCInstallationCreate(t *testing.T) {
 		t.Fatalf("create status = %d", status)
 	}
 	b, _ := io.ReadAll(body)
-	body.Close()
+	_ = body.Close()
 	var created map[string]any
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatalf("unmarshal created: %v", err)
@@ -196,7 +196,7 @@ func TestMockFSCInstallationCreate(t *testing.T) {
 	// The new installation appears in the list and via a namespaced get.
 	_, body, _ = mc.Do(ctx, http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
 	b, _ = io.ReadAll(body)
-	body.Close()
+	_ = body.Close()
 	if !strings.Contains(string(b), "new-peer") {
 		t.Errorf("created item not in list: %s", string(b))
 	}
@@ -206,13 +206,13 @@ func TestMockFSCInstallationCreate(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("get status = %d", status)
 	}
-	body.Close()
+	_ = body.Close()
 
 	// Creations are scoped per cluster.
 	otherCtx := context.WithValue(context.Background(), ClusterIDContextKey{}, "c2")
 	_, body, _ = mc.Do(otherCtx, http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
 	b, _ = io.ReadAll(body)
-	body.Close()
+	_ = body.Close()
 	if strings.Contains(string(b), "new-peer") {
 		t.Errorf("cluster isolation broken: %s", string(b))
 	}
@@ -227,7 +227,7 @@ func TestMockCertificateRequestList(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("status = %d", status)
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 	b, _ := io.ReadAll(body)
 	if !strings.Contains(string(b), `"kind": "CertificateRequestList"`) {
 		t.Errorf("body did not contain CertificateRequestList: %s", string(b))

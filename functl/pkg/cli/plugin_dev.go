@@ -39,7 +39,7 @@ type PluginDevDownCmd struct {
 func detectNamed(dir string, needVersion bool) (plugindev.Layout, error) {
 	l, err := plugindev.Detect(dir)
 	if err != nil {
-		return l, err
+		return l, fmt.Errorf("detect plugin: %w", err)
 	}
 	if l.Name == "" {
 		return l, errors.New("definition.yaml has no metadata.name")
@@ -95,7 +95,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	}
 	config, err := plugindev.ResolveConfig(def.Spec.ConfigSchema, c.Config, c.Set)
 	if err != nil {
-		return err
+		return fmt.Errorf("resolve config: %w", err)
 	}
 
 	// The first signal stops the loop gracefully; a second kills the children
@@ -115,7 +115,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 		force()
 	}()
 
-	s, err := c.start(runCtx, ctx, l, config)
+	s, err := c.start(runCtx, ctx, &l, config)
 	if runCtx.Err() != nil {
 		// Interrupted before anything was installed.
 		return nil
@@ -133,21 +133,24 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	}
 
 	namespace := kubename.PluginNamespace(s.installation)
-	devErr := plugindev.Dev(runCtx, forceCtx, s.renderDir, s.layout, s.target, namespace, c.Cleanup)
+	devErr := plugindev.Dev(runCtx, forceCtx, s.renderDir, &s.layout, s.target, namespace, c.Cleanup)
+	if devErr != nil {
+		devErr = fmt.Errorf("dev loop: %w", devErr)
+	}
 	if !c.Cleanup {
 		return devErr
 	}
 	if forceCtx.Err() != nil {
-		return errors.Join(devErr, fmt.Errorf("killed before cleanup finished; run `functl plugin dev-down` if %s is still there", s.installation))
+		return errors.Join(devErr, fmt.Errorf("killed before cleanup finished; run `functl plugin dev-down` if %s is still there", s.installation)) //nolint:wrapcheck // joins errors that are wrapped above
 	}
 	checkCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return errors.Join(devErr, plugindev.CheckCleanedUp(checkCtx, s.cluster, s.installation))
+	return errors.Join(devErr, plugindev.CheckCleanedUp(checkCtx, s.cluster, s.installation)) //nolint:wrapcheck // joins errors that already name what failed
 }
 
 // start runs the startup checks, builds the image, publishes the dev version
 // and renders the files skaffold dev needs.
-func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.Layout, config map[string]string) (devSession, error) {
+func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l *plugindev.Layout, config map[string]string) (devSession, error) {
 	apiClient, orgID, org, err := orgClient(runCtx, ctx)
 	if err != nil {
 		return devSession{}, err
@@ -159,29 +162,29 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.L
 	target := plugindev.Sandbox
 
 	if err := plugindev.CheckTools(l, exec.LookPath, plugindev.DockerInfo); err != nil {
-		return devSession{}, err
+		return devSession{}, err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 
 	cluster, err := plugindev.NewCluster(target)
 	if err != nil {
-		return devSession{}, err
+		return devSession{}, err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 	if err := plugindev.CheckCluster(runCtx, cluster, target, orgID); err != nil {
-		return devSession{}, err
+		return devSession{}, err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 
 	installation := plugindev.InstallationName(org, l.Name)
 	if err := plugindev.WaitIfTerminating(runCtx, cluster, installation, os.Stdout, plugindev.TeardownPollInterval, plugindev.TeardownTimeout); err != nil {
-		return devSession{}, err
+		return devSession{}, fmt.Errorf("wait for previous installation: %w", err)
 	}
 	if err := plugindev.CheckVersionBump(runCtx, cluster, installation, devVersion(l.Version)); err != nil {
-		return devSession{}, err
+		return devSession{}, err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
-	if err := l.ResolveSourceDirs(); err != nil {
-		return devSession{}, err
+	if err := l.ResolveSourceDirs(runCtx); err != nil {
+		return devSession{}, fmt.Errorf("resolve source dirs: %w", err)
 	}
 	if err := plugindev.BuildConsole(runCtx, l); err != nil {
-		return devSession{}, err
+		return devSession{}, fmt.Errorf("build console: %w", err)
 	}
 
 	cacheDir, err := os.UserCacheDir()
@@ -192,28 +195,28 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.L
 	if err := os.MkdirAll(renderDir, 0o755); err != nil { //nolint:gosec // cache dir, not secret
 		return devSession{}, fmt.Errorf("create %s: %w", renderDir, err)
 	}
-	params := plugindev.RenderParams{Layout: l, Target: target, OrgName: org, Config: config}
-	if err := plugindev.Render(renderDir, params); err != nil {
-		return devSession{}, err
+	params := plugindev.RenderParams{Layout: *l, Target: target, OrgName: org, Config: config}
+	if err := plugindev.Render(renderDir, &params); err != nil {
+		return devSession{}, fmt.Errorf("render dev files: %w", err)
 	}
 
 	image, err := plugindev.BuildImage(runCtx, renderDir, target)
 	if err != nil {
-		return devSession{}, err
+		return devSession{}, fmt.Errorf("build image: %w", err)
 	}
 
 	manifest, def, err := prepareManifest(l.Definition, image, true)
 	if err != nil {
 		return devSession{}, err
 	}
-	published, err := publishVersion(runCtx, pubClient, manifest, def, publishOptions{Create: true, Dev: true})
+	published, err := publishVersion(runCtx, pubClient, manifest, &def, publishOptions{Create: true, Dev: true})
 	if err != nil {
 		return devSession{}, err
 	}
-	if err := plugindev.RenderInstallation(renderDir, params, published.GetVersion()); err != nil {
-		return devSession{}, err
+	if err := plugindev.RenderInstallation(renderDir, &params, published.GetVersion()); err != nil {
+		return devSession{}, fmt.Errorf("render installation: %w", err)
 	}
-	return devSession{layout: l, target: target, cluster: cluster, installation: installation, renderDir: renderDir}, nil
+	return devSession{layout: *l, target: target, cluster: cluster, installation: installation, renderDir: renderDir}, nil
 }
 
 // Run executes the plugin dev-down command.
@@ -228,8 +231,8 @@ func (c *PluginDevDownCmd) Run(ctx *Context) error {
 	}
 	cluster, err := plugindev.NewCluster(plugindev.Sandbox)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck // CheckError text is the user-facing copy
 	}
 	installation := plugindev.InstallationName(org, l.Name)
-	return plugindev.DevDown(context.Background(), cluster, installation, os.Stdout, plugindev.TeardownPollInterval, plugindev.TeardownTimeout)
+	return plugindev.DevDown(context.Background(), cluster, installation, os.Stdout, plugindev.TeardownPollInterval, plugindev.TeardownTimeout) //nolint:wrapcheck // CheckError text is the user-facing copy
 }

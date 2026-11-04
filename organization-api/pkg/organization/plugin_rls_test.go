@@ -32,7 +32,7 @@ func Test_Plugins_RLS_Policies(t *testing.T) {
 	conn, err := pgx.Connect(t.Context(),
 		fmt.Sprintf("postgres://fun_fundament_api@localhost:%d/%s?sslmode=disable", testDBPort, dbName))
 	require.NoError(t, err)
-	t.Cleanup(func() { conn.Close(context.Background()) })
+	t.Cleanup(func() { _ = conn.Close(context.Background()) })
 
 	setOrg := func(orgID string) {
 		_, err := conn.Exec(t.Context(), "SELECT set_config('app.current_organization_id', $1, false)", orgID)
@@ -42,7 +42,7 @@ func Test_Plugins_RLS_Policies(t *testing.T) {
 		_, err := conn.Exec(t.Context(),
 			"INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash) VALUES ($1, 'v1', $2, 'sha256:x')",
 			pluginID, []byte("m"))
-		return err
+		return err //nolint:wrapcheck // isRLSDenied inspects the raw pg error
 	}
 	isRLSDenied := func(err error) bool {
 		var pgErr *pgconn.PgError

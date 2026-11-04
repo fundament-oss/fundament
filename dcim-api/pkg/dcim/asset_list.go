@@ -41,8 +41,8 @@ func (s *Server) ListAssets(
 	}
 
 	assets := make([]*dcimv1.Asset, 0, len(rows))
-	for _, row := range rows {
-		assets = append(assets, assetFromListRow(&row))
+	for i := range rows {
+		assets = append(assets, assetFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListAssetsResponse_builder{

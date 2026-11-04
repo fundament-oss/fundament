@@ -14,8 +14,6 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -160,9 +158,14 @@ func run() error {
 		AllowCredentials: true,
 	})
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(corsHandler.Handler(mux), &http2.Server{}),
+		Handler:           corsHandler.Handler(mux),
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

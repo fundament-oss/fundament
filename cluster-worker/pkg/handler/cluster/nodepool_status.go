@@ -241,7 +241,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		return
 	}
 	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, push.SyncPending) {
-		if err := h.writeNodePoolStatus(ctx, cluster.ID, update); err != nil {
+		if err := h.writeNodePoolStatus(ctx, cluster.ID, &update); err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
 		}
@@ -254,7 +254,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 }
 
 // writeNodePoolStatus commits one pool's status row and its events together.
-func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update nodePoolUpdate) error {
+func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update *nodePoolUpdate) error {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin: %w", err)

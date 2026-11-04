@@ -24,7 +24,11 @@ type SessionStore struct {
 // distinct info label, so that keys used for different purposes are
 // cryptographically independent even when seeded from the same input secret.
 func deriveKey(secret []byte, info string, length int) ([]byte, error) {
-	return hkdf.Key(sha256.New, secret, nil, info, length)
+	key, err := hkdf.Key(sha256.New, secret, nil, info, length)
+	if err != nil {
+		return nil, fmt.Errorf("hkdf: %w", err)
+	}
+	return key, nil
 }
 
 // NewSessionStore creates a new session store keyed from the given secret.

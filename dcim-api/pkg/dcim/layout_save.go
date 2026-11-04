@@ -32,8 +32,8 @@ func (s *Server) SaveLayout(
 	}
 
 	allowed := make(map[uuid.UUID]struct{}, len(devices))
-	for _, d := range devices {
-		allowed[d.ID] = struct{}{}
+	for i := range devices {
+		allowed[devices[i].ID] = struct{}{}
 	}
 
 	for _, pos := range req.GetPositions() {

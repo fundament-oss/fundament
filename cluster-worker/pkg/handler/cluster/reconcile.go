@@ -39,17 +39,18 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	}
 
 	dbClusterByID := make(map[uuid.UUID]db.ClusterListActiveRow)
-	for _, c := range dbClusters {
-		dbClusterByID[c.ID] = c
+	for i := range dbClusters {
+		dbClusterByID[dbClusters[i].ID] = dbClusters[i]
 	}
 
 	var findings []driftFinding
 	shootByClusterID := make(map[uuid.UUID]gardener.ShootInfo)
-	for _, s := range shoots {
+	for i := range shoots {
+		s := &shoots[i]
 		if s.InvalidClusterID {
 			findings = append(findings, driftFinding{
 				kind:     dbconst.DriftFindingKind_ShootInvalidClusterId,
-				shoot:    s,
+				shoot:    *s,
 				observed: s.Labels[gardener.LabelClusterID],
 			})
 			continue
@@ -57,10 +58,10 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		// Two shoots with one cluster id (a recreate in flight, a copied
 		// label) keep the oldest, so a finding's subject, which includes the
 		// shoot uid, does not change with Gardener's list order.
-		if prev, ok := shootByClusterID[s.ClusterID]; ok && !olderShoot(s, prev) {
+		if prev, ok := shootByClusterID[s.ClusterID]; ok && !olderShoot(s, &prev) {
 			continue
 		}
-		shootByClusterID[s.ClusterID] = s
+		shootByClusterID[s.ClusterID] = *s
 	}
 
 	// Synced clusters whose shoot is missing in Gardener are not recreated: a
@@ -74,13 +75,14 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	// logged here on every pass until a change to the cluster creates it
 	// again.
 	var missingCount int
-	for _, cluster := range dbClusters {
+	for i := range dbClusters {
+		cluster := &dbClusters[i]
 		if !cluster.LatestSyncCompleted {
 			continue
 		}
 		s, exists := shootByClusterID[cluster.ID]
 		if exists {
-			if f, ok := versionMismatch(&cluster, s); ok {
+			if f, ok := versionMismatch(cluster, &s); ok {
 				findings = append(findings, f)
 			}
 			continue
@@ -125,7 +127,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		h.logger.Error("failed to record Gardener observation", "error", err)
 	}
 
-	h.deleteOrphans(ctx, orphans, shootByClusterID)
+	h.deleteOrphans(ctx, &orphans, shootByClusterID)
 
 	h.logger.Info("cluster reconciliation complete",
 		"clusters", len(dbClusters),
@@ -153,7 +155,7 @@ type driftFinding struct {
 // maintenance moves patch versions forward on its own, and the database keeps
 // the version the user chose. The caller has checked that the cluster's latest
 // sync completed, so the shoot's spec reflects the database.
-func versionMismatch(cluster *db.ClusterListActiveRow, s gardener.ShootInfo) (driftFinding, bool) {
+func versionMismatch(cluster *db.ClusterListActiveRow, s *gardener.ShootInfo) (driftFinding, bool) {
 	if gardener.ShootStatusType(cluster.ShootStatus.String) != gardener.StatusReady || cluster.ShootUpdating {
 		return driftFinding{}, false
 	}
@@ -163,7 +165,7 @@ func versionMismatch(cluster *db.ClusterListActiveRow, s gardener.ShootInfo) (dr
 	return driftFinding{
 		kind:      dbconst.DriftFindingKind_KubernetesVersionMismatch,
 		clusterID: cluster.ID,
-		shoot:     s,
+		shoot:     *s,
 		expected:  cluster.KubernetesVersion,
 		observed:  s.KubernetesVersion,
 	}, true
@@ -171,7 +173,7 @@ func versionMismatch(cluster *db.ClusterListActiveRow, s gardener.ShootInfo) (dr
 
 // olderShoot orders shoots by creation, then by uid for shoots created in the
 // same second.
-func olderShoot(a, b gardener.ShootInfo) bool {
+func olderShoot(a, b *gardener.ShootInfo) bool {
 	if !a.Created.Equal(b.Created) {
 		return a.Created.Before(b.Created)
 	}
@@ -257,7 +259,7 @@ func (h *Handler) findOrphans(ctx context.Context, dbClusterByID map[uuid.UUID]d
 // deleteOrphans deletes the shoots of deleted clusters. Refusing does not fail
 // the pass: the reconcile worker exits after a few failed passes, which would
 // stop the outbox and status workers as well.
-func (h *Handler) deleteOrphans(ctx context.Context, o orphans, shootByClusterID map[uuid.UUID]gardener.ShootInfo) {
+func (h *Handler) deleteOrphans(ctx context.Context, o *orphans, shootByClusterID map[uuid.UUID]gardener.ShootInfo) {
 	toStart := o.toStart
 	if len(toStart) > h.cfg.MaxReconcileDeletions {
 		h.logger.Error("refusing to delete shoots: too many in one pass, check the database",
@@ -299,7 +301,8 @@ func (h *Handler) recordObservation(ctx context.Context, shoots []gardener.Shoot
 		Regions:            make([]string, 0, n),
 		ShootCreated:       make([]pgtype.Timestamptz, 0, n),
 	}
-	for _, s := range shoots {
+	for i := range shoots {
+		s := &shoots[i]
 		// A shoot without a cluster id is reported as a finding only.
 		if s.InvalidClusterID {
 			continue
@@ -378,7 +381,8 @@ func driftFindingParams(findings []driftFinding, seen pgtype.Timestamptz) db.Dri
 		Expected:        make([]string, 0, n),
 		Observed:        make([]string, 0, n),
 	}
-	for _, f := range findings {
+	for i := range findings {
+		f := &findings[i]
 		clusterID := ""
 		if f.clusterID != uuid.Nil {
 			clusterID = f.clusterID.String()

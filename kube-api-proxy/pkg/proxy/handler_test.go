@@ -50,8 +50,8 @@ func TestPeekTokenType(t *testing.T) {
 		{"plugin bearer", "Bearer " + pluginTok, nil, auth.TokenTypePlugin},
 		{"user bearer", "Bearer " + userTok, nil, auth.TokenTypeUser},
 		{"mixed audience is plugin", "Bearer " + mixedTok, nil, auth.TokenTypePlugin},
-		{"cookie only", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: "irrelevant"}, auth.TokenTypeUser},
-		{"empty cookie value", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: ""}, ""},
+		{"cookie only", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: "irrelevant"}, auth.TokenTypeUser}, //nolint:gosec // request cookie in a test
+		{"empty cookie value", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: ""}, ""},                    //nolint:gosec // request cookie in a test
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

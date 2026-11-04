@@ -23,8 +23,8 @@ func (s *Server) ListConnections(
 	}
 
 	connections := make([]*dcimv1.LogicalConnection, 0, len(rows))
-	for _, row := range rows {
-		connections = append(connections, logicalConnectionFromListRow(&row))
+	for i := range rows {
+		connections = append(connections, logicalConnectionFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListConnectionsResponse_builder{

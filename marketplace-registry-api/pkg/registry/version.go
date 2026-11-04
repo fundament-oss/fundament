@@ -132,7 +132,7 @@ func (s *Server) CreatePluginVersion(
 
 	var created db.PluginVersionCreateRow
 	if replaceTarget {
-		created, err = s.replaceDraftVersion(ctx, pluginID, version, createParams)
+		created, err = s.replaceDraftVersion(ctx, pluginID, version, &createParams)
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,7 @@ func (s *Server) replaceDraftVersion(
 	ctx context.Context,
 	pluginID uuid.UUID,
 	version string,
-	createParams db.PluginVersionCreateParams,
+	createParams *db.PluginVersionCreateParams,
 ) (db.PluginVersionCreateRow, error) {
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *Server) replaceDraftVersion(
 			errors.New("only draft versions can be replaced"))
 	}
 
-	created, err := qtx.PluginVersionCreate(ctx, createParams)
+	created, err := qtx.PluginVersionCreate(ctx, *createParams)
 	if err != nil {
 		// A concurrent replace raced past the draft check above and lost the
 		// unique index; the slot now holds the winner's draft, so a retry works.
