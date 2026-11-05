@@ -22,8 +22,10 @@ import (
 )
 
 type fakeVisibilityAuthz struct {
-	admin     bool
-	projects  []string
+	admin    bool
+	projects []string
+	// parents maps a project id to its cluster's id.
+	parents   map[string]string
 	err       error
 	evaluates atomic.Int32
 	lists     atomic.Int32
@@ -41,8 +43,17 @@ func (f *fakeVisibilityAuthz) Evaluate(_ context.Context, req authz.EvaluationRe
 	return authz.Decision{Decision: f.admin}, f.err
 }
 
-func (f *fakeVisibilityAuthz) ListObjects(ctx context.Context, _ authz.Object, action authz.Action, objectType authz.ObjectType) ([]string, error) {
+func (f *fakeVisibilityAuthz) ListObjects(ctx context.Context, subject authz.Object, action authz.Action, objectType authz.ObjectType) ([]string, error) {
 	f.lists.Add(1)
+	if action.Name == authz.ActionParent && subject.Type == authz.ObjectTypeCluster && objectType == authz.ObjectTypeProject {
+		var ids []string
+		for project, cluster := range f.parents {
+			if cluster == subject.ID {
+				ids = append(ids, project)
+			}
+		}
+		return ids, f.err
+	}
 	if f.listing != nil {
 		f.listing <- struct{}{}
 		select {
