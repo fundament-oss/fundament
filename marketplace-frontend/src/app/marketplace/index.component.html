@@ -33,7 +33,7 @@
       <p
         class="text-accent-700 flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase"
       >
-        <nldd-icon name="puzzle-piece" class="block! h-4 w-4"></nldd-icon>
+        <nldd-icon icon="puzzle-piece" class="block! h-4 w-4"></nldd-icon>
         Fundament Marketplace
       </p>
       <h1 class="font-display mt-4 text-4xl font-semibold text-balance sm:text-5xl">
@@ -137,7 +137,7 @@
           class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors md:w-full"
         >
           <span class="flex items-center gap-2.5">
-            <nldd-icon name="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
+            <nldd-icon icon="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
             All plugins
           </span>
           <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
@@ -157,7 +157,7 @@
           >
             <span class="flex items-center gap-2.5">
               <nldd-icon
-                [name]="categoryIcon(category)"
+                [icon]="categoryIcon(category)"
                 class="block! h-4 w-4 shrink-0"
               ></nldd-icon>
               {{ category.name }}
@@ -207,7 +207,7 @@
                     slot="actions"
                     (click)="selectCategory('all')"
                     [text]="'Search all categories (' + widenableMatchCount() + ')'"
-                    variant="secondary"
+                    appearance="secondary"
                   ></nldd-button>
                 }
               </nldd-inline-dialog>
@@ -269,7 +269,7 @@
                   >
                     View plugin
                     <nldd-icon
-                      name="arrow-right"
+                      icon="arrow-right"
                       class="block! h-4 w-4 transition-transform group-hover:translate-x-px"
                     ></nldd-icon>
                   </span>
@@ -329,7 +329,7 @@
                 <nldd-button
                   text="Build a plugin"
                   end-icon="arrow-right"
-                  variant="primary"
+                  appearance="primary"
                 ></nldd-button>
               </app-developer-link>
             </div>

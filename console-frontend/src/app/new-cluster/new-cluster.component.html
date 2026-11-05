@@ -8,7 +8,6 @@
 <nldd-form
   [formGroup]="clusterForm"
   (submit)="onSubmit($event)"
-  (keydown.enter)="onSubmit($event)"
 >
   <nldd-form-field label="Cluster name">
     <nldd-text-field
@@ -78,7 +77,7 @@
       text="Continue to Node pools"
       end-icon="chevron-right"
       width="full"
-      variant="primary"
+      appearance="primary"
     ></nldd-button>
   </nldd-form-actions>
 </nldd-form>

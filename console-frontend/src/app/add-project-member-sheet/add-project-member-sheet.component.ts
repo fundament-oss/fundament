@@ -233,7 +233,12 @@ export default class AddProjectMemberSheetComponent {
   }
 
   async saveMember(event?: Event) {
+    // No defaultPrevented guard as in the other sheets: [formGroup] cancels the
+    // submit before this runs, and the keydown that requested it is marked
+    // handled too, so the guard would drop both. Both still arrive, though, so
+    // the second one finds the first already out.
     event?.preventDefault();
+    if (this.isAddingMember()) return;
 
     this.addSubmitted.set(true);
     if (!this.selectedUserId()) this.userFieldTouched.set(true);

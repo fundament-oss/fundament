@@ -1,5 +1,5 @@
 <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+  <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
   My plugins
 </a>
 
@@ -17,18 +17,18 @@
       <h2 class="text-lg font-semibold">Before you start</h2>
       <ul class="mt-3 space-y-2 text-gray-700 dark:text-gray-300">
         <li class="flex gap-2">
-          <nldd-icon name="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
+          <nldd-icon icon="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
           <span
             >Install the <span class="font-mono text-sm">functl</span> CLI and make sure it is on
             your PATH.</span
           >
         </li>
         <li class="flex gap-2">
-          <nldd-icon name="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
+          <nldd-icon icon="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
           <span>Have access to a cluster you can sideload onto for testing.</span>
         </li>
         <li class="flex gap-2">
-          <nldd-icon name="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
+          <nldd-icon icon="check-mark" class="text-accent-600 mt-1 h-4 w-4 shrink-0"></nldd-icon>
           <span
             >A container registry account is not needed —
             <span class="font-mono text-sm">functl</span> pushes to the Fundament registry.</span
@@ -75,16 +75,20 @@
         the plugin is published to the marketplace catalog for everyone to install.
       </p>
       <div class="mt-5 flex flex-wrap gap-3">
-        <nldd-button routerLink="/manage" text="Go to my plugins" variant="primary"></nldd-button>
+        <nldd-button
+          routerLink="/manage"
+          text="Go to my plugins"
+          appearance="primary"
+        ></nldd-button>
         @if (storefrontUrl) {
           <a [href]="storefrontUrl">
-            <nldd-button text="Browse the marketplace" variant="secondary"></nldd-button>
+            <nldd-button text="Browse the marketplace" appearance="secondary"></nldd-button>
           </a>
         } @else {
           <nldd-button
             routerLink="/"
             text="Browse the marketplace"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
         }
       </div>

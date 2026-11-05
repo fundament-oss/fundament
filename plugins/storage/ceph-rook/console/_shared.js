@@ -159,8 +159,8 @@ export function formActionsHtml({ submitId, submitText, cancelId }) {
   return `
     <nldd-form-actions>
       <nldd-button-group orientation="horizontal">
-        <nldd-button id="${submitId}" type="submit" variant="primary" text="${escapeHtml(submitText)}"></nldd-button>
-        <nldd-button id="${cancelId}" type="button" variant="secondary" text="Cancel"></nldd-button>
+        <nldd-button id="${submitId}" type="submit" appearance="primary" text="${escapeHtml(submitText)}"></nldd-button>
+        <nldd-button id="${cancelId}" type="button" appearance="secondary" text="Cancel"></nldd-button>
       </nldd-button-group>
     </nldd-form-actions>`;
 }

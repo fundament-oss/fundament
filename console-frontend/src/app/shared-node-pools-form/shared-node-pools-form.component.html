@@ -36,7 +36,7 @@
                   text="Remove"
                   start-icon="delete"
                   size="sm"
-                  variant="destructive"
+                  appearance="destructive"
                 ></nldd-button>
               }
             </nldd-title>
@@ -45,7 +45,7 @@
                    and a popup shows them one at a time. Same shape as choosing a
                    role or a project. -->
               <nldd-list
-                variant="box-base"
+                appearance="box-base"
                 accessible-label="Machine type"
               >
                 @for (mt of machineTypes; track mt.value) {
@@ -127,7 +127,7 @@
             (click)="addNodePool()"
             text="New node pool"
             start-icon="plus-small"
-            variant="secondary"
+            appearance="secondary"
             size="md"
             width="full"
           ></nldd-button>

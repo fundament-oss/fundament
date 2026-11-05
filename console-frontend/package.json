@@ -58,7 +58,7 @@
     "@connectrpc/connect": "2.2.0",
     "@connectrpc/connect-web": "2.2.0",
     "@hey-api/client-fetch": "0.13.1",
-    "@nldd/design-system": "0.8.91",
+    "@nldd/design-system": "0.15.0",
     "chart.js": "4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",
     "marked": "18.1.1",

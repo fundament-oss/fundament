@@ -62,7 +62,7 @@ const DEFAULT_DESCRIPTION =
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  // The host is a flex item of nldd-app-view, so it needs a display and a share
+  // The host is a flex item of nldd-shell, so it needs a display and a share
   // of the height, or the page inside it collapses to its content.
   styles: `
     :host {

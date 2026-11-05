@@ -11,7 +11,7 @@
         slot="end"
         href="/login"
         text="Sign in"
-        variant="secondary"
+        appearance="secondary"
       ></nldd-button>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
@@ -47,7 +47,7 @@
       >
         <nldd-collection
           layout="grid"
-          item-width="200px"
+          item-min-width="200px"
           gap="16"
         >
           @for (tile of tiles(); track tile.label) {
@@ -66,7 +66,7 @@
         </nldd-collection>
         <nldd-box>
           <nldd-container padding="16">
-            <nldd-toolbar label="Organizations">
+            <nldd-toolbar accessible-label="Organizations">
               <nldd-toolbar-item slot="start">
                 <nldd-rich-text spacing="flat">
                   <p>As of {{ asOf() }}</p>
@@ -96,15 +96,15 @@
                 <nldd-text-cell text="Organization"></nldd-text-cell>
                 <nldd-text-cell
                   text="Clusters"
-                  horizontal-alignment="end"
+                  horizontal-alignment="right"
                 ></nldd-text-cell>
                 <nldd-text-cell
                   text="Projects"
-                  horizontal-alignment="end"
+                  horizontal-alignment="right"
                 ></nldd-text-cell>
                 <nldd-text-cell
                   text="Namespaces"
-                  horizontal-alignment="end"
+                  horizontal-alignment="right"
                 ></nldd-text-cell>
               </nldd-table-row>
               @for (organization of matching(); track organization.name) {
@@ -115,15 +115,15 @@
                     [attr.query]="query()"
                   ></nldd-text-cell>
                   <nldd-text-cell
-                    horizontal-alignment="end"
+                    horizontal-alignment="right"
                     [attr.text]="organization.clusters"
                   ></nldd-text-cell>
                   <nldd-text-cell
-                    horizontal-alignment="end"
+                    horizontal-alignment="right"
                     [attr.text]="organization.projects"
                   ></nldd-text-cell>
                   <nldd-text-cell
-                    horizontal-alignment="end"
+                    horizontal-alignment="right"
                     [attr.text]="organization.namespaces"
                   ></nldd-text-cell>
                 </nldd-table-row>

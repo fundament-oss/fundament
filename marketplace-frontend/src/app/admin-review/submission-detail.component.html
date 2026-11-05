@@ -2,7 +2,7 @@
   <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading submission...</div>
 } @else if (errorMessage(); as error) {
   <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     Back to review queue
   </a>
   <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
@@ -10,7 +10,7 @@
   </div>
 } @else if (submission(); as submission) {
   <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     Review queue
   </a>
 
@@ -50,19 +50,19 @@
             (click)="approve()"
             text="Approve"
             start-icon="check-mark"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
           <nldd-button
             (click)="openRequestChanges()"
             text="Request changes"
             start-icon="arrow-left"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
           <nldd-button
             (click)="openReject()"
             text="Reject"
             start-icon="dismiss"
-            variant="destructive"
+            appearance="destructive"
           ></nldd-button>
         </div>
       </div>
@@ -205,7 +205,7 @@
         <nldd-icon-button
           icon="dismiss"
           text="Close"
-          variant="neutral-transparent"
+          appearance="neutral-transparent"
           size="sm"
           (click)="closeDecision()"
         ></nldd-icon-button>
@@ -272,14 +272,14 @@
           (click)="closeDecision()"
           type="button"
           text="Cancel"
-          variant="secondary"
+          appearance="secondary"
         ></nldd-button>
         <nldd-button
           (click)="submitDecision()"
           type="button"
           [attr.text]="decisionMode() === 'changes' ? 'Request changes' : 'Reject submission'"
           [attr.start-icon]="decisionMode() === 'changes' ? 'arrow-left' : 'dismiss'"
-          [attr.variant]="decisionMode() === 'changes' ? 'primary' : 'destructive'"
+          [attr.appearance]="decisionMode() === 'changes' ? 'primary' : 'destructive'"
           [disabled]="!canSubmitDecision() || isSubmitting()"
         ></nldd-button>
       </div>

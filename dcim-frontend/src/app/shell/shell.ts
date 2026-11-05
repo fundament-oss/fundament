@@ -26,6 +26,7 @@ import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
 import opensElsewhere from '../shared/opens-elsewhere';
+import MainPaneDirective from '../shared/main-pane.directive';
 import TaskStatusDialogsComponent from '../task-management/task-status-dialogs/task-status-dialogs';
 
 /**
@@ -110,6 +111,7 @@ function sectionOf(url: string): string {
   imports: [
     RouterOutlet,
     NgTemplateOutlet,
+    MainPaneDirective,
     ProductSheetComponent,
     DatacenterSheetComponent,
     RackSheetComponent,

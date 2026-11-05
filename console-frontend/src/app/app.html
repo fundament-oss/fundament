@@ -18,11 +18,11 @@
       type="button"
       (click)="reloadApp()"
       text="Reload now"
-      variant="secondary"
+      appearance="secondary"
     ></nldd-button>
   </nldd-banner>
 }
-<nldd-app-view>
+<nldd-shell>
   @if (isBarePage()) {
     <router-outlet />
   } @else {
@@ -42,7 +42,7 @@
           padding-right="8"
           padding-block="8"
         >
-          <nldd-toolbar label="Application">
+          <nldd-toolbar accessible-label="Application">
             <!-- The mark before the name, not instead of it: it is the same
                  glyph as the favicon, so the tab and the toolbar say the same
                  thing. Empty alt because the name stands right beside it.
@@ -70,7 +70,7 @@
                   rel="noopener noreferrer"
                   icon="play"
                   size="sm"
-                  variant="secondary"
+                  appearance="secondary"
                   accessible-label="Take a tour"
                 ></nldd-icon-button>
                 <nldd-menu-item
@@ -102,7 +102,7 @@
                   <nldd-icon-button
                     icon="plus-small"
                     size="md"
-                    variant="secondary"
+                    appearance="secondary"
                     accessible-label="Create"
                     expandable
                     popup-type="menu"
@@ -184,7 +184,7 @@
               <nldd-toolbar-item slot="end">
                 <nldd-button-bar
                   size="md"
-                  variant="secondary"
+                  appearance="secondary"
                 >
                   <!-- A switcher with nothing to switch to is a control that never
                      does anything; the sidebar already names the organization. -->
@@ -347,7 +347,7 @@
              nldd-top-title-bar then shows a back button up to the sidebar. -->
           <nldd-navigation-split-view
             #splitView
-            sidebar-accessible-label="Navigation"
+            primary-sidebar-accessible-label="Navigation"
             (back)="onPaneBack($event)"
             (nldd-single-column-change)="onSingleColumnChange($event)"
           >
@@ -364,8 +364,10 @@
                 has-content
               >
                 <!-- The page owns the scroll region: a pane clips what does not fit, so a
-                   menu longer than the pane would be cut off without one. -->
-                <nldd-page>
+                   menu longer than the pane would be cut off without one. Named,
+                   because a page beside others is a region and only a name
+                   makes it a landmark. -->
+                <nldd-page accessible-label="Organization">
                   <nldd-simple-section>
                     @if (currentOrganization(); as org) {
                       <nldd-title size="3">
@@ -508,7 +510,7 @@
                          says what it makes, where an icon in the corner only
                          says "plus". -->
                       <nldd-toolbar
-                        label="Project actions"
+                        accessible-label="Project actions"
                         size="sm"
                       >
                         <nldd-toolbar-item slot="start">
@@ -576,7 +578,10 @@
                    carries the back button, and the split view shows or hides it
                    per pane depending on whether the organization is visible
                    alongside. -->
-                <nldd-page sticky-header>
+                <nldd-page
+                  sticky-header
+                  accessible-label="Project"
+                >
                   <!-- No (back) of its own: the event bubbles, and the split
                        view above already listens for it. Bound in both places
                        one press was handled twice and the stack fell two steps. -->
@@ -590,7 +595,7 @@
                        open. The counts moved into the menu items they describe. -->
                     <nldd-title size="3">
                       <h1>{{ project.name }}</h1>
-                      <span slot="subtitle">Cluster {{ project.clusterName }}</span>
+                      <span slot="supporting-text">Cluster {{ project.clusterName }}</span>
                     </nldd-title>
                     <nldd-spacer size="16"></nldd-spacer>
                     <nldd-list
@@ -702,11 +707,12 @@
                steal the page's height. -->
             <nldd-split-view-pane
               slot="main"
+              appMainPane
               [attr.has-content]="stackDepth() >= 2 ? '' : null"
             >
               @if (selectedOrgId()) {
                 @if (isProjectRoot()) {
-                  <nldd-page>
+                  <nldd-page landmarks="page">
                     <nldd-simple-section width="full">
                       <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
                     </nldd-simple-section>
@@ -721,7 +727,7 @@
       </nldd-split-view-pane>
     </nldd-bar-split-view>
   }
-</nldd-app-view>
+</nldd-shell>
 <!-- Your account and your keys sit above the app rather than in it: opening one
      leaves the page you were on mounted and untouched behind it. Deferred, so
      neither costs anything until you first open it. -->
@@ -784,13 +790,13 @@
     type="button"
     (click)="acceptInvitationFromMenu()"
     text="Accept"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="declineInvitationFromMenu()"
     text="Decline"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

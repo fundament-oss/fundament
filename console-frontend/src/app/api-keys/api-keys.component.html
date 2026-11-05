@@ -37,24 +37,38 @@
           </nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
         }
-        <nldd-form
-          (submit)="createApiKey($event)"
-          (keydown.enter)="createApiKey($event)"
-        >
+        <!-- Submit is the only trigger: Enter in a field submits the form too, and
+             the browser holds it back while a rule below fails. What only the
+             server can refuse is named in `unmet`, and only while it stands, so
+             its line stays out of the way of a rule that fails. -->
+        <nldd-form (submit)="createApiKey($event)">
           <nldd-form-field label="Name">
             <nldd-text-field
               appAutofocus
               id="name"
               [value]="newKeyName()"
-              (input)="newKeyName.set($any($event.target).value)"
+              (input)="newKeyName.set($any($event.target).value); newKeyNameError.set(null)"
               (keyup.escape)="cancelCreating()"
-              [invalid]="!newKeyName().trim() && newKeySubmitted()"
-              unmet="api-key-name-error"
+              [invalid]="!!newKeyNameError()"
+              [attr.unmet]="newKeyNameError() ? 'api-key-name-taken' : null"
             ></nldd-text-field>
             <nldd-validation-list>
-              <nldd-validation-item id="api-key-name-error"
+              <!-- `required` alone lets a name of only spaces through, which the
+                   trim before sending turns into no name at all. -->
+              <nldd-validation-item
+                id="api-key-name-required"
+                required
+                match="\S"
                 >A name is required.</nldd-validation-item
               >
+              <nldd-validation-item
+                id="api-key-name-length"
+                maxlength="255"
+                >At most 255 characters.</nldd-validation-item
+              >
+              <nldd-validation-item id="api-key-name-taken">{{
+                newKeyNameError()
+              }}</nldd-validation-item>
             </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field
@@ -70,10 +84,18 @@
               "
               (keyup.escape)="cancelCreating()"
               [invalid]="!!newKeyExpiresInError()"
-              unmet="api-key-expires-in-error"
+              [attr.unmet]="newKeyExpiresInError() ? 'api-key-expires-in-refused' : null"
             ></nldd-text-field>
             <nldd-validation-list>
-              <nldd-validation-item id="api-key-expires-in-error">{{
+              <!-- The proto's own rule (apikey.proto), so a typo is refused here
+                   rather than after a round trip. An empty value passes it, and
+                   whether the server accepts no expiry is its call. -->
+              <nldd-validation-item
+                id="api-key-expires-in-format"
+                match="^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$"
+                >Must be a duration such as 300s, 5m or 1h.</nldd-validation-item
+              >
+              <nldd-validation-item id="api-key-expires-in-refused">{{
                 newKeyExpiresInError()
               }}</nldd-validation-item>
             </nldd-validation-list>
@@ -87,11 +109,10 @@
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button
-              type="button"
-              (click)="createApiKey()"
+              type="submit"
               text="Create API key"
-              [attr.loading]="loading() ? '' : null"
-              variant="primary"
+              [attr.loading]="creating() ? '' : null"
+              appearance="primary"
               width="full"
             ></nldd-button>
           </nldd-form-actions>
@@ -111,7 +132,7 @@
           <nldd-banner
             variant="success"
             text="API key created"
-            supporting-text="Copy the token now. It is not shown again."
+            supporting-text="Copy the token now. It is not shown again, and closing this sheet hides it."
           ></nldd-banner>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-form-field label="Your API token">
@@ -122,14 +143,14 @@
             ></nldd-text-field>
           </nldd-form-field>
           <nldd-spacer size="12"></nldd-spacer>
-          <nldd-toolbar label="Token actions">
+          <nldd-toolbar accessible-label="Token actions">
             <nldd-toolbar-item slot="start">
               <nldd-button
                 type="button"
                 (click)="copyToken()"
                 text="Copy token"
                 start-icon="rectangle-stack"
-                variant="primary"
+                appearance="primary"
               ></nldd-button>
               <nldd-menu-item
                 slot="overflow"
@@ -144,7 +165,7 @@
                 (click)="dismissToken()"
                 text="I saved it"
                 start-icon="check-mark"
-                variant="secondary"
+                appearance="secondary"
               ></nldd-button>
               <nldd-menu-item
                 slot="overflow"
@@ -165,14 +186,14 @@
           </nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
         }
-        <nldd-toolbar label="API key actions">
+        <nldd-toolbar accessible-label="API key actions">
           <nldd-toolbar-item slot="start">
             <nldd-button
               type="button"
               (click)="startCreating()"
               text="New API key…"
               start-icon="plus-small"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
@@ -205,7 +226,7 @@
           </nldd-box>
         } @else {
           <nldd-list
-            variant="box-tinted"
+            appearance="box-tinted"
             accessible-label="API keys"
           >
             @for (apiKey of apiKeys(); track apiKey.id) {
@@ -240,7 +261,7 @@
                   <nldd-icon-button
                     icon="more"
                     size="sm"
-                    variant="secondary"
+                    appearance="secondary"
                     popup-type="menu"
                     [attr.accessible-label]="'Actions for ' + apiKey.name"
                     [attr.disabled]="loading() ? '' : null"
@@ -288,14 +309,14 @@
     type="button"
     (click)="showRevokeModal.set(false)"
     text="Keep key active"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="confirmRevoke()"
     text="Revoke key"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Delete API Key Modal -->
@@ -315,13 +336,13 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep key"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDelete()"
     text="Delete key"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

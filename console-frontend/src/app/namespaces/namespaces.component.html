@@ -21,14 +21,14 @@
          with one label and one action are a choice that is not a choice. Hidden
          while loading too, so it does not arrive and then leave again. -->
     @if (namespaces().length > 0) {
-      <nldd-toolbar label="Namespace actions">
+      <nldd-toolbar accessible-label="Namespace actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
             type="button"
             (click)="overlays.newNamespace.set(projectId())"
             text="New namespace…"
             start-icon="plus-small"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
@@ -58,12 +58,12 @@
           (click)="overlays.newNamespace.set(projectId())"
           text="New namespace…"
           start-icon="plus-small"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       </nldd-inline-dialog>
     } @else {
       <nldd-list
-        variant="box-tinted"
+        appearance="box-tinted"
         accessible-label="Namespaces"
       >
         @for (namespace of namespaces(); track namespace.id) {
@@ -120,7 +120,7 @@
     type="button"
     (click)="errorMessage.set(null)"
     text="Close"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
 </nldd-modal-dialog>
 <router-outlet />

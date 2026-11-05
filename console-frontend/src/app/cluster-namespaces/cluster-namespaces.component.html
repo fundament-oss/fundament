@@ -45,7 +45,7 @@
         </nldd-inline-dialog>
       } @else {
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Namespaces"
         >
           @for (namespace of namespaces(); track namespace.id) {
@@ -67,7 +67,7 @@
                   text="Delete"
                   start-icon="delete"
                   size="sm"
-                  variant="destructive"
+                  appearance="destructive"
                 ></nldd-button>
               </nldd-cell>
             </nldd-list-item>
@@ -99,7 +99,7 @@
               (click)="openBulkDeleteModal()"
               text="Delete namespaces"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
               [attr.loading]="isBulkDeleting() ? '' : null"
             ></nldd-button>
           </nldd-container>
@@ -125,14 +125,14 @@
     type="button"
     (click)="showDeleteNamespaceModal.set(false)"
     text="Keep namespace"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDeleteNamespace()"
     text="Delete namespace"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Bulk Delete Namespaces Modal -->
@@ -155,7 +155,7 @@
     (click)="showBulkDeleteModal.set(false)"
     [disabled]="isBulkDeleting()"
     [text]="selection.count() === 1 ? 'Keep namespace' : 'Keep namespaces'"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -169,6 +169,6 @@
           : 'Delete namespaces'
     "
     [disabled]="isBulkDeleting()"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

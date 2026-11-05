@@ -75,7 +75,7 @@
           md-padding="24"
         >
           <nldd-list
-            variant="simple"
+            appearance="simple"
             accessible-label="Resource details"
           >
             @if (resource()!.metadata.namespace) {
@@ -146,7 +146,7 @@
             <!-- A row per field rather than a grid: what a field renders is up to
                  the plugin, and a full-width row fits a table as well as a word. -->
             <nldd-list
-              variant="simple"
+              appearance="simple"
               [attr.accessible-label]="group.name"
             >
               @for (field of group.fields; track field[0]) {
@@ -208,7 +208,7 @@
                  condition last flipped. Usually there is one, but a controller
                  may keep more, and each of those has its own history. -->
             <nldd-list
-              variant="simple"
+              appearance="simple"
               accessible-label="Conditions"
             >
               @for (cond of conditions(); track $index) {
@@ -261,7 +261,7 @@
               type="button"
               [attr.text]="'Delete ' + kind()"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
               (click)="openDeleteModal()"
             ></nldd-button>
           </nldd-container>
@@ -290,7 +290,7 @@
       slot="actions"
       [routerLink]="listLink"
       text="Back to list"
-      variant="primary"
+      appearance="primary"
     ></nldd-button>
   </nldd-inline-dialog>
 }

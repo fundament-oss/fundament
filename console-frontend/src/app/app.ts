@@ -16,7 +16,7 @@ import '@nldd/design-system/button';
 import '@nldd/design-system/button-bar';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/spacer';
-import '@nldd/design-system/app-view';
+import '@nldd/design-system/shell';
 import '@nldd/design-system/bar-split-view';
 import '@nldd/design-system/container';
 import '@nldd/design-system/toolbar';
@@ -45,6 +45,7 @@ import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import DialogSyncDirective from './dialog-sync.directive';
+import MainPaneDirective from './main-pane.directive';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
@@ -115,6 +116,7 @@ export function isBarePageUrl(url: string): boolean {
   imports: [
     RouterOutlet,
     DialogSyncDirective,
+    MainPaneDirective,
     OrgPickerComponent,
     ProfileComponent,
     ApiKeysComponent,
@@ -126,7 +128,7 @@ export function isBarePageUrl(url: string): boolean {
   ],
   templateUrl: './app.html',
   // The outlet is an empty element that still counts as a flex item of
-  // nldd-app-view: it took a share of the height and pushed the page it renders
+  // nldd-shell: it took a share of the height and pushed the page it renders
   // off the top. Angular puts the component beside it, so hiding it costs
   // nothing.
   styles: 'router-outlet { display: none; }',

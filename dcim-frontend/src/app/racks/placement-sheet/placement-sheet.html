@@ -110,7 +110,7 @@
               [attr.value]="form()?.rackUnitStart ?? 1"
               min="1"
               [attr.max]="maxUnit()"
-              full-width
+              width="full"
               [attr.invalid]="isFieldInvalid('location.rack.rack_unit_start') ? '' : null"
               unmet="error-placement-rack-unit"
               (keydown.enter)="save()"
@@ -124,7 +124,12 @@
           <!-- Under the form rather than docked at the bottom of the sheet: the
                button belongs to the fields above it. -->
           <nldd-form-actions>
-            <nldd-button variant="primary" width="full" text="Add" (click)="save()"></nldd-button>
+            <nldd-button
+              appearance="primary"
+              width="full"
+              text="Add"
+              (click)="save()"
+            ></nldd-button>
           </nldd-form-actions>
         </nldd-form>
       }

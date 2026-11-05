@@ -102,9 +102,9 @@
                   id="backend-port"
                   name="backend-port"
                   required
-                  type="number"
-                  min="1"
-                  max="65535"
+                  keyboard="numeric"
+                  data-min="1"
+                  data-max="65535"
                   value="9000"
                   unmet="backend-port-error"
                 ></nldd-text-field>
@@ -122,13 +122,13 @@
               <nldd-button
                 id="submit"
                 type="button"
-                variant="primary"
+                appearance="primary"
                 text="Create GRPCRoute"
               ></nldd-button>
               <nldd-button
                 id="back"
                 type="button"
-                variant="secondary"
+                appearance="secondary"
                 text="Back"
               ></nldd-button>
             </nldd-button-group>

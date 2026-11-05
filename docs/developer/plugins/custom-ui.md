@@ -40,6 +40,24 @@ plugin-proxy serves the SDK on the page's own origin under `/plugins/sdk/v1/`:
 | `plugin-sdk.js` | Sets `window.fundament`; handles the console message protocol, theme, iframe resize, the PluginToken and Kubernetes calls |
 | `nldd-design-system.js` | NLDD Design System web components |
 
+### Design system version
+
+`nldd-design-system.js` is built from the version of `@nldd/design-system` the Console pins, currently `0.15.0`. Your plugin does not choose it: a Console upgrade upgrades the components on every plugin page with it. The bundle sets the design system's shipped English for the texts the components write themselves; a `translations` property on an element still overrides it. The design system renames attributes in minor and patch releases, and a component ignores an attribute it no longer knows without any warning, so check your markup after an upgrade.
+
+The renames from `0.8.91` to `0.15.0` that plugin pages are most likely to use:
+
+| Element | Before | After |
+|---------|--------|-------|
+| `nldd-button`, `nldd-icon-button`, `nldd-button-bar`, `nldd-list` | `variant` | `appearance` (`nldd-banner` and `nldd-notification` keep `variant`) |
+| `nldd-icon` | `name` | `icon` |
+| `nldd-toolbar` | `label` | `accessible-label` |
+| `nldd-collection` | `item-width` | `item-min-width` |
+| `nldd-title` | `slot="subtitle"` | `slot="supporting-text"` |
+
+`nldd-text-field` takes no `type="number"`, `min` or `max`: use `nldd-number-field`, or `keyboard="numeric"` on a text field that may stay empty.
+
+The package has a linter. Run `bunx nldd lint --fix` in a project that depends on `@nldd/design-system` to apply the renames, and `bunx nldd lint` to list what is left. For markup in JavaScript strings, check a snippet with `bunx nldd lint --stdin --filename page.html < snippet.html`.
+
 The cert-manager plugin's `_shared.js:loadSdk()` is the reference implementation: copy it as a starting point.
 
 ```js

@@ -60,13 +60,13 @@
       </nldd-title>
       @if (canCreate()) {
         <nldd-spacer size="12"></nldd-spacer>
-        <nldd-toolbar [attr.label]="kindLabel() + ' actions'">
+        <nldd-toolbar [attr.accessible-label]="kindLabel() + ' actions'">
           <nldd-toolbar-item slot="start">
             <nldd-button
               [routerLink]="createLink"
               [attr.text]="'New ' + singularKindLabelMidSentence() + '…'"
               start-icon="plus-small"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
@@ -97,7 +97,7 @@
              beside it however many there turn out to be. -->
         <nldd-collection
           layout="grid"
-          item-width="280px"
+          item-min-width="280px"
         >
           @for (resource of resources(); track resource.metadata.uid) {
             <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
@@ -116,7 +116,7 @@
                   }
                 </nldd-title>
                 <nldd-spacer size="16"></nldd-spacer>
-                <nldd-list variant="simple">
+                <nldd-list appearance="simple">
                   @if (resource.metadata.namespace) {
                     <nldd-list-item size="sm">
                       <nldd-text-cell text="Namespace"></nldd-text-cell>
@@ -154,7 +154,7 @@
                 <nldd-button
                   [attr.href]="detailHref(resource)"
                   text="View details"
-                  variant="primary"
+                  appearance="primary"
                   (click)="onDetailClick($event, resource)"
                 ></nldd-button>
               </nldd-container>
@@ -172,7 +172,7 @@
             slot="actions"
             text="New cluster…"
             start-icon="plus-small"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {

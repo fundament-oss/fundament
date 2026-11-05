@@ -179,7 +179,7 @@ function deleteSectionHtml(clusterName, backups) {
               </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-actions>
-              <nldd-button id="delete-btn" type="submit" variant="destructive" start-icon="delete"
+              <nldd-button id="delete-btn" type="submit" appearance="destructive" start-icon="delete"
                            text="Delete database"></nldd-button>
             </nldd-form-actions>
           </form>
