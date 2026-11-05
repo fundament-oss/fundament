@@ -2,7 +2,7 @@
 
 Installs cert-manager and serves console pages for its resources.
 
-- Helm chart `cert-manager` v1.17.2 from `https://charts.jetstack.io`, release `cert-manager`, `crds.enabled=true`
+- Helm chart `cert-manager` v1.21.3 from `https://charts.jetstack.io`, release `cert-manager`, `crds.enabled=true`
 - CRDs: Certificate, CertificateRequest, Issuer, ClusterIssuer
 - Console: list and detail pages in `console/`
 - Config: none
