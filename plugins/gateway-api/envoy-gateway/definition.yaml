@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: gateway-api-envoy
   displayName: Gateway API (Envoy Gateway)
-  version: v0.1.0
+  version: v0.2.0
   description: Gateway API implementation powered by Envoy Gateway. Manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
   author: Fundament
   license: Apache-2.0
@@ -48,7 +48,7 @@ spec:
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm
       # --create-namespace --wait`. These cluster-wide rules grant exactly what Helm and the
-      # Envoy Gateway v1.8 chart need to create and wait on the release: the controller
+      # Envoy Gateway v1.9 chart need to create and wait on the release: the controller
       # Deployment, the certgen Job, ServiceAccounts, RBAC, webhooks/admission policies, and
       # the bundled Gateway API + Envoy CRDs. Also covers Gateway TLS listener secrets the
       # plugin reads at runtime.

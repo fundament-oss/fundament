@@ -3,13 +3,13 @@
 Installs Envoy Gateway and the Gateway API CRDs, and serves create forms for Gateway API and Envoy Gateway resources.
 
 - Helm chart `oci://docker.io/envoyproxy/gateway-helm`, release `eg`
-- CRDs: Gateway API (bundle v1.5.1, experimental channel) and Envoy Gateway policies, from the chart
+- CRDs: Gateway API (bundle v1.6.1, experimental channel) and Envoy Gateway policies, from the chart
 - GatewayClass `eg`
 - Console: Vite app in `console-ui/`, built into the image by the Dockerfile
 
 | Config (`FUNP_`) | Default |
 |---|---|
-| `ENVOY_GATEWAY_VERSION` | `v1.8.3` |
+| `ENVOY_GATEWAY_VERSION` | `v1.9.3` |
 | `GATEWAY_NAMESPACE` | `envoy-gateway-system` |
 | `GATEWAY_CLASS_NAME` | `eg` |
 
