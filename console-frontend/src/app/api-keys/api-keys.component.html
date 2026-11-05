@@ -71,42 +71,70 @@
               }}</nldd-validation-item>
             </nldd-validation-list>
           </nldd-form-field>
-          <nldd-form-field
-            label="Expires after"
-            [attr.optional]="maxExpiresIn() ? null : ''"
-            optional-label="Optional"
-          >
-            <nldd-text-field
-              id="expiresIn"
-              [value]="newKeyExpiresIn()"
-              (input)="
-                newKeyExpiresIn.set($any($event.target).value); newKeyExpiresInError.set(null)
-              "
+          <!-- A handful of lifetimes, laid out rather than behind a dropdown, and
+               the longest the server allows checked from the start. -->
+          <nldd-form-field label="Expires after">
+            <nldd-radio-button-group
+              name="expiry"
+              accessible-label="Expires after"
+              (change)="onExpiryChange($event)"
               (keyup.escape)="cancelCreating()"
-              [invalid]="!!newKeyExpiresInError()"
-              [attr.unmet]="newKeyExpiresInError() ? 'api-key-expires-in-refused' : null"
-            ></nldd-text-field>
-            <nldd-validation-list>
-              <!-- The proto's own rule (apikey.proto), so a typo is refused here
-                   rather than after a round trip. An empty value passes it, and
-                   whether the server accepts no expiry is its call. -->
-              <nldd-validation-item
-                id="api-key-expires-in-format"
-                match="^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$"
-                >Must be a duration such as 300s, 5m or 1h.</nldd-validation-item
-              >
-              <nldd-validation-item id="api-key-expires-in-refused">{{
-                newKeyExpiresInError()
-              }}</nldd-validation-item>
-            </nldd-validation-list>
-            <nldd-form-field-help-text>
-              @if (maxExpiresIn()) {
-                A duration, for example 300s, 5m or 1h, at most {{ maxExpiresIn() }}.
-              } @else {
-                A duration, for example 300s, 5m or 1h. Leave it empty and the key never expires.
+            >
+              @for (option of expiryOptions(); track option.value) {
+                <nldd-radio-button-field
+                  [attr.value]="option.value"
+                  [attr.label]="option.label"
+                  [attr.checked]="selectedExpiry() === option.value ? '' : null"
+                ></nldd-radio-button-field>
               }
-            </nldd-form-field-help-text>
+            </nldd-radio-button-group>
+            @if (maxExpiryLabel(); as maximum) {
+              <nldd-form-field-help-text>
+                Keys can last at most {{ maximum }}.
+              </nldd-form-field-help-text>
+            }
           </nldd-form-field>
+          @if (selectedExpiry() === customExpiry) {
+            <nldd-form-field label="Custom duration">
+              <nldd-text-field
+                id="expiresIn"
+                [value]="newKeyExpiresIn()"
+                (input)="
+                  newKeyExpiresIn.set($any($event.target).value); newKeyExpiresInError.set(null)
+                "
+                (keyup.escape)="cancelCreating()"
+                [invalid]="!!newKeyExpiresInError()"
+                [attr.unmet]="newKeyExpiresInError() ? 'api-key-expires-in-refused' : null"
+              ></nldd-text-field>
+              <nldd-validation-list>
+                <!-- Empty would be a key that never expires, which is not what
+                     "Custom" asks for. -->
+                <nldd-validation-item
+                  id="api-key-expires-in-required"
+                  required
+                  match="\S"
+                  >Enter a duration.</nldd-validation-item
+                >
+                <!-- The proto's own rule (apikey.proto), so a typo is refused here
+                     rather than after a round trip. -->
+                <nldd-validation-item
+                  id="api-key-expires-in-format"
+                  [attr.match]="durationPattern"
+                  >Must be a duration such as 300s, 5m or 1h.</nldd-validation-item
+                >
+                <nldd-validation-item id="api-key-expires-in-refused">{{
+                  newKeyExpiresInError()
+                }}</nldd-validation-item>
+              </nldd-validation-list>
+              <nldd-form-field-help-text>
+                @if (maxExpiresIn()) {
+                  A duration, for example 300s, 5m or 1h, at most {{ maxExpiresIn() }}.
+                } @else {
+                  A duration, for example 300s, 5m or 1h.
+                }
+              </nldd-form-field-help-text>
+            </nldd-form-field>
+          }
           <nldd-form-actions>
             <nldd-button
               type="submit"
