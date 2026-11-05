@@ -170,17 +170,19 @@ func TestOrganizationDelete_AlreadyDeletedIsNotFound(t *testing.T) {
 	assert.Equal(t, 1, all, "a second delete does not remove the soft-deleted row")
 }
 
-// A cluster runs only with a node pool, and a pool needs a node quota, so an
-// organization is created with its starting node quotas or not at all.
-func TestOrganizationCreate_RequiresAStartingNodeQuota(t *testing.T) {
+// The starting node quota is optional: without one the organization exists,
+// has no quota rows, and gets its pools once an operator runs quota set-nodes.
+func TestOrganizationCreate_WithoutNodeQuota(t *testing.T) {
 	ctx := newTestContext(t)
 
-	err := (&OrganizationCreateCmd{Name: "no-quota"}).Run(ctx)
-	require.EqualError(t, err, "an organization needs a starting node quota: give at least one --node-quota REGION/MACHINE-TYPE=MAX")
+	require.NoError(t, (&OrganizationCreateCmd{Name: "no-quota"}).Run(ctx))
 
-	live, all := organizationRows(t, ctx, "no-quota")
-	assert.Zero(t, live)
-	assert.Zero(t, all)
+	live, _ := organizationRows(t, ctx, "no-quota")
+	assert.Equal(t, 1, live)
+
+	clusters, machines := quotaRows(t, ctx, "no-quota")
+	assert.Equal(t, int32(1), clusters.QuotaClusters)
+	assert.Empty(t, machines)
 }
 
 func TestOrganizationCreate_RejectsMalformedNodeQuota(t *testing.T) {
