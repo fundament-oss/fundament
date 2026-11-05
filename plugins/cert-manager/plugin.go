@@ -19,7 +19,7 @@ const (
 	releaseName  = "cert-manager"
 	chartName    = "cert-manager"
 	repoURL      = "https://charts.jetstack.io"
-	chartVersion = "v1.17.2"
+	chartVersion = "v1.21.3"
 	namespace    = "cert-manager"
 )
 

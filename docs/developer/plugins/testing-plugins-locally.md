@@ -226,7 +226,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: cert-manager
-    pluginVersion: "1.17.2"
+    pluginVersion: "1.21.3"
     definitionHash: "<hash printed by publish>"   # includes the sha256: prefix
 YAML
 
@@ -234,7 +234,7 @@ just plugins status
 just plugins cert-manager test
 ```
 
-- `publish` prints `published plugin=cert-manager version=1.17.2 hash=sha256:…`; the listing exists, so no `--create`.
+- `publish` prints `published plugin=cert-manager version=1.21.3 hash=sha256:…`; the listing exists, so no `--create`.
 - `status` shows `system--cert-manager   cert-manager   system   Running   true`; `test` ends with `test-cert   True   test-cert-tls`.
 - `just plugins logs system--cert-manager` streams the plugin log: `cert-manager is running`.
 - In the console as `alice@acme-corp.com`: **acme-project** → **Cert Manager** → **Certificates** lists `test-cert` in `fundament`, Ready.
