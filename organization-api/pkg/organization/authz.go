@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,8 +23,12 @@ const (
 	authzRetryReadBudget = 1 * time.Second
 )
 
+var errAuthzUnavailable = errors.New(
+	"permissions could not be checked because the authorization service is unavailable; try again in a moment")
+
 // checkPermission performs an OpenFGA authorization check for the current user.
-// Returns a connect PermissionDenied error if the check fails.
+// Returns a connect PermissionDenied error if the check fails, and Unavailable
+// when OpenFGA could not be asked.
 func (s *Server) checkPermission(ctx context.Context, action authz.Action, resource authz.Object) error {
 	if s.authz == nil {
 		return nil
@@ -44,7 +49,18 @@ func (s *Server) checkPermission(ctx context.Context, action authz.Action, resou
 		Resource: resource,
 	})
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("authorization check failed: %w", err))
+		// A caller that went away or ran out of time is not an outage.
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return connect.NewError(connect.CodeCanceled, ctx.Err())
+		}
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return connect.NewError(connect.CodeDeadlineExceeded, ctx.Err())
+		}
+
+		// The detail names OpenFGA's address, which is for the log and not for
+		// whoever made the request. Unavailable tells them asking again may work.
+		s.logger.ErrorContext(ctx, "authorization check failed", "error", err, "action", action, "resource", resource)
+		return connect.NewError(connect.CodeUnavailable, errAuthzUnavailable)
 	}
 
 	if !decision.Decision {
