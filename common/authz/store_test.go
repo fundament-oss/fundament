@@ -224,6 +224,31 @@ func TestReadyStaysReadyWhenOpenFGABecomesUnreachable(t *testing.T) {
 	require.NoError(t, ref.Ready(t.Context()))
 }
 
+// An error response hits every replica just as an unreachable OpenFGA does, and
+// does not say the store is gone.
+func TestReadyStaysReadyWhenOpenFGAAnswersWithAnError(t *testing.T) {
+	var failing, gone atomic.Bool
+
+	healthy := removableStoreServer(t, &gone).Config.Handler
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if failing.Load() {
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		healthy.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	ref := newRef(t, srv.URL)
+	require.NoError(t, ref.Ready(t.Context()))
+
+	failing.Store(true)
+
+	require.NoError(t, ref.Ready(t.Context()))
+}
+
 // A pod that has never resolved the store cannot authorize anything, and helm
 // --wait must not count it as deployed.
 func TestReadyFailsWhenOpenFGAWasNeverReachable(t *testing.T) {

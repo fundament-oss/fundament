@@ -89,8 +89,9 @@ func (s *Store) Healthy(ctx context.Context) error {
 //
 // It fails until the store has been resolved once, and whenever OpenFGA answers
 // that the store does not exist: the deployment is not finished. It does not
-// fail when OpenFGA is merely unreachable after that. Every replica would then
-// leave its Service at once, and callers would get a 503 from the gateway in
+// fail on any other OpenFGA error after that, whether a connection failure or an
+// error response. Each hits every replica alike, so failing would take them all
+// out of their Service at once, and callers would get a 503 from the gateway in
 // place of the error the API returns from the requests that need OpenFGA, which
 // fail closed. Requests that do not need it keep working.
 //
