@@ -2,7 +2,7 @@
 
 Installs ExternalDNS, reading records from DNSEndpoint resources.
 
-- Helm chart `external-dns` 1.16.1 from `https://kubernetes-sigs.github.io/external-dns/`, release `external-dns`, `sources={crd}`
+- Helm chart `external-dns` 1.23.0 from `https://kubernetes-sigs.github.io/external-dns/`, release `external-dns`, `sources={crd}`, `policy=upsert-only`
 - CRD: DNSEndpoint (from the chart)
 - Console: no custom pages
 - Config: none. The chart's default provider is `aws`, with no credentials: ExternalDNS runs and logs Route 53 errors, and writes no records.
