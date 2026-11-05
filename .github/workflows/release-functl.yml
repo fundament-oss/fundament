@@ -29,7 +29,7 @@ jobs:
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/arm64 windows/amd64; do
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             GOOS="${target%/*}"
             GOARCH="${target#*/}"
             OUT_DIR="dist/functl_${GOOS}_${GOARCH}"
@@ -80,6 +80,7 @@ jobs:
           gh release upload functl-latest \
             dist/functl_linux_amd64.tar.gz \
             dist/functl_linux_arm64.tar.gz \
+            dist/functl_darwin_amd64.tar.gz \
             dist/functl_darwin_arm64.tar.gz \
             dist/functl_windows_amd64.zip \
             dist/SHA256SUMS \

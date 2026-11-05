@@ -15,11 +15,11 @@ has the full option list of `functl plugin create`.
 
 ## Install
 
-Prebuilt binaries for Linux (amd64, arm64), macOS (Apple Silicon) and Windows
-(amd64) are published to the rolling `functl-latest` release:
+Prebuilt binaries for Linux (amd64, arm64), macOS (Apple Silicon, Intel) and
+Windows (amd64) are published to the rolling `functl-latest` release:
 
 ```bash
-# Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
+# Pick your platform: linux_amd64, linux_arm64, darwin_arm64 (Apple Silicon), or darwin_amd64 (Intel Mac)
 curl -fsSL https://github.com/fundament-oss/fundament/releases/download/functl-latest/functl_linux_amd64.tar.gz \
   | tar -xzf - functl
 sudo mv functl /usr/local/bin/
