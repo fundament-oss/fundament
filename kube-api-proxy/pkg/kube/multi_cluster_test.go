@@ -94,6 +94,66 @@ func TestReverseProxy_UnauthorizedReportsRejectedToken(t *testing.T) {
 	assert.Equal(t, 1, rejected, "a denied request does not reject the token")
 }
 
+// A request with a retry gets a new answer instead of the cluster's 401 for a
+// token whose ServiceAccount was deleted or created again.
+func TestReverseProxy_UnauthorizedCallsRetry(t *testing.T) {
+	t.Parallel()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(upstream.Close)
+	target, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+	proxy := buildReverseProxy(target, http.DefaultTransport, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	var calls []string
+	ctx := WithTokenRejected(context.WithValue(t.Context(), SATokenContextKey{}, "sa-token"), func() { calls = append(calls, "rejected") })
+	ctx = WithTokenRetry(ctx, func(w http.ResponseWriter) {
+		calls = append(calls, "retry")
+		w.WriteHeader(http.StatusForbidden)
+	})
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/namespaces", http.NoBody))
+	assert.Equal(t, http.StatusForbidden, rec.Code, "the retry answers, not the 401")
+	assert.Equal(t, []string{"rejected", "retry"}, calls, "the token is dropped before the retry fetches a new one")
+}
+
+// A 401 from a workload behind pods, services or nodes /proxy says nothing
+// about the token: it is passed on, and the token stays cached.
+func TestReverseProxy_WorkloadUnauthorizedKeepsToken(t *testing.T) {
+	t.Parallel()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(upstream.Close)
+	target, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+	proxy := buildReverseProxy(target, http.DefaultTransport, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	var calls []string
+	ctx := WithTokenRejected(context.WithValue(t.Context(), SATokenContextKey{}, "sa-token"), func() { calls = append(calls, "rejected") })
+	ctx = WithTokenRetry(ctx, func(http.ResponseWriter) { calls = append(calls, "retry") })
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/namespaces/apps/pods/web/proxy/login", http.NoBody))
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Empty(t, calls)
+}
+
+func TestIsProxySubresource(t *testing.T) {
+	t.Parallel()
+	for path, want := range map[string]bool{
+		"/api/v1/namespaces/apps/pods/web/proxy/login":      true,
+		"/api/v1/namespaces/apps/services/web:80/proxy/":    true,
+		"/api/v1/nodes/node-1/proxy/metrics":                true,
+		"/api/v1/namespaces/apps/configmaps":                false,
+		"/api/v1/namespaces/apps/pods/web/log":              false,
+		"/apis/metrics.k8s.io/v1beta1/namespaces/apps/pods": false,
+	} {
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, http.NoBody)
+		assert.Equal(t, want, isProxySubresource(r), path)
+	}
+}
+
 // TestWithTokenRejected_KeepsOuterCallback pins that a request that swaps in
 // another token still drops the one it was given first.
 func TestWithTokenRejected_KeepsOuterCallback(t *testing.T) {
