@@ -106,15 +106,18 @@ spec:
               value: {{ $.Values.openfga.playground.enabled | quote }}
             - name: OPENFGA_HTTP_ADDR
               value: "0.0.0.0:{{ $.Values.openfga.apiPort | default 8080 }}"
+          # /healthz pings the datastore and checks its schema revision, with a
+          # 2s budget, so it decides readiness only. Liveness on it would turn a
+          # database outage into a restart loop.
           readinessProbe:
             httpGet:
               path: /healthz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
           livenessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10

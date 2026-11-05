@@ -215,12 +215,11 @@ func run() error {
 		if err := db.Pool.Ping(ctx); err != nil {
 			errs = append(errs, "database: "+err.Error())
 		}
-		if err := authzStore.Healthy(ctx); err != nil {
+		if err := authzStore.Ready(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
 		}
-		if breaker.IsOpen() {
-			errs = append(errs, "authz_outbox: sync lag exceeds threshold")
-		}
+		// The outbox circuit breaker stays out of this: every replica sees the
+		// same lag, and its interceptor already answers with CodeUnavailable.
 
 		if len(errs) > 0 {
 			w.WriteHeader(http.StatusServiceUnavailable)

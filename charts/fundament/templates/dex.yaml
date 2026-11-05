@@ -62,6 +62,9 @@ spec:
           ports:
             - name: http
               containerPort: 5556
+          # TCP: Dex's /healthz sits under the issuer's path, which differs per
+          # environment.
+          {{- include "fundament.tcpProbes" (dict "port" "http") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /etc/dex

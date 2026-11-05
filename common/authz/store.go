@@ -85,6 +85,36 @@ func (s *Store) Healthy(ctx context.Context) error {
 	return nil
 }
 
+// Ready reports whether a service may receive traffic, for its readiness probe.
+//
+// It fails until the store has been resolved once, and whenever OpenFGA answers
+// that the store does not exist: the deployment is not finished. It does not
+// fail when OpenFGA is merely unreachable after that. Every replica would then
+// leave its Service at once, and callers would get a 503 from the gateway in
+// place of the error the API returns from the requests that need OpenFGA, which
+// fail closed. Requests that do not need it keep working.
+//
+// It runs Healthy either way: the probe is what notices a replaced store and
+// moves this service to the new one.
+func (s *Store) Ready(ctx context.Context) error {
+	err := s.Healthy(ctx)
+	if err == nil {
+		return nil
+	}
+
+	s.mu.RLock()
+	resolved := s.id != ""
+	s.mu.RUnlock()
+
+	if !resolved || errors.Is(err, ErrNoStore) {
+		return err
+	}
+
+	slog.WarnContext(ctx, "OpenFGA is unavailable; staying ready, requests that need it fail", "error", err)
+
+	return nil
+}
+
 // refresh resolves the id again and replaces the cache, for when the cached
 // store no longer exists.
 func (s *Store) refresh(ctx context.Context) (string, error) {

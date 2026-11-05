@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/openfga/go-sdk/client"
@@ -165,4 +166,98 @@ func TestResolveWarnsOnDuplicateStores(t *testing.T) {
 			assert.Contains(t, logged, "found=2")
 		})
 	}
+}
+
+// removableStoreServer serves one store until gone is set, then answers as an
+// OpenFGA whose store no longer exists.
+func removableStoreServer(t *testing.T, gone *atomic.Bool) *httptest.Server {
+	t.Helper()
+
+	stored := map[string]any{"id": "01abc", "name": "fundament", "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.URL.Path == "/stores" {
+			stores := []map[string]any{stored}
+			if gone.Load() {
+				stores = nil
+			}
+
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"stores": stores, "continuation_token": ""}))
+
+			return
+		}
+
+		if gone.Load() {
+			w.WriteHeader(http.StatusNotFound)
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"code": "store_id_not_found", "message": "store not found"}))
+
+			return
+		}
+
+		assert.NoError(t, json.NewEncoder(w).Encode(stored))
+	}))
+	t.Cleanup(srv.Close)
+
+	return srv
+}
+
+func TestReadyWhenStoreExists(t *testing.T) {
+	var gone atomic.Bool
+
+	ref := newRef(t, removableStoreServer(t, &gone).URL)
+
+	require.NoError(t, ref.Ready(t.Context()))
+}
+
+// An outage must not take every replica out of its Service at once.
+func TestReadyStaysReadyWhenOpenFGABecomesUnreachable(t *testing.T) {
+	var gone atomic.Bool
+
+	srv := removableStoreServer(t, &gone)
+	ref := newRef(t, srv.URL)
+	require.NoError(t, ref.Ready(t.Context()))
+
+	srv.Close()
+
+	require.NoError(t, ref.Ready(t.Context()))
+}
+
+// A pod that has never resolved the store cannot authorize anything, and helm
+// --wait must not count it as deployed.
+func TestReadyFailsWhenOpenFGAWasNeverReachable(t *testing.T) {
+	var gone atomic.Bool
+
+	srv := removableStoreServer(t, &gone)
+	ref := newRef(t, srv.URL)
+	srv.Close()
+
+	require.Error(t, ref.Ready(t.Context()))
+}
+
+func TestReadyFailsUntilStoreIsProvisioned(t *testing.T) {
+	var gone atomic.Bool
+	gone.Store(true)
+
+	srv := removableStoreServer(t, &gone)
+	ref := newRef(t, srv.URL)
+	require.ErrorIs(t, ref.Ready(t.Context()), ErrNoStore)
+
+	gone.Store(false)
+
+	require.NoError(t, ref.Ready(t.Context()))
+}
+
+// OpenFGA answered and the store is gone: that is a replaced datastore, not an
+// outage, so readiness has to report it.
+func TestReadyFailsWhenStoreDisappears(t *testing.T) {
+	var gone atomic.Bool
+
+	ref := newRef(t, removableStoreServer(t, &gone).URL)
+	require.NoError(t, ref.Ready(t.Context()))
+
+	gone.Store(true)
+
+	require.ErrorIs(t, ref.Ready(t.Context()), ErrNoStore)
 }

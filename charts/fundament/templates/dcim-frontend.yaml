@@ -41,6 +41,9 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          # / is index.html under nginx and under the hot-reload dev server alike.
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /usr/share/nginx/html/assets/config
