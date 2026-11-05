@@ -81,6 +81,8 @@ spec:
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
+          resources:
+            {{- toYaml $.Values.pluginProxy.resources | nindent 12 }}
       {{- if or $.Values.pluginProxy.gardenerKubeconfigSecret $.Values.pluginProxy.sandboxKubeconfigSecret }}
       volumes:
         {{- if $.Values.pluginProxy.gardenerKubeconfigSecret }}

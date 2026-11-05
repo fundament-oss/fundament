@@ -48,6 +48,8 @@ spec:
             - name: config
               mountPath: /app/public/assets/config
               readOnly: true
+          resources:
+            {{- toYaml $.Values.dcimFrontend.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:

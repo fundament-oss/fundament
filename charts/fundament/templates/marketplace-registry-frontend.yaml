@@ -105,6 +105,8 @@ spec:
               mountPath: /app/public/assets/config/config.json
               subPath: config.json
               readOnly: true
+          resources:
+            {{- toYaml $.Values.marketplaceRegistryFrontend.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:

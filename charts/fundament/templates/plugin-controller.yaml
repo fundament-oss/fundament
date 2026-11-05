@@ -198,6 +198,8 @@ spec:
             - name: fundament-token
               mountPath: /var/run/secrets/fundament
               readOnly: true
+          resources:
+            {{- toYaml $.Values.pluginController.resources | nindent 12 }}
       # The controller's fundament credential (FUN-22). KEEP IN SYNC with
       # Deployment() in cluster-worker/pkg/handler/pluginmachinery/manifests:
       # audience fundament-authn-api, 3600 seconds (never 3607: kube-apiserver's

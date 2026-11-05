@@ -80,6 +80,8 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+          resources:
+            {{- toYaml $.Values.waitForDb.resources | nindent 12 }}
       containers:
         - name: openfga
           image: {{ $.Values.openfga.image }}
@@ -118,6 +120,8 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+          resources:
+            {{- toYaml $.Values.openfga.resources | nindent 12 }}
 
 ---
 apiVersion: v1

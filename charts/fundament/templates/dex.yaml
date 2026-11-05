@@ -66,6 +66,8 @@ spec:
             - name: config
               mountPath: /etc/dex
               readOnly: true
+          resources:
+            {{- toYaml $.Values.dex.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:

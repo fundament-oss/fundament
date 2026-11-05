@@ -44,4 +44,6 @@ spec:
               value: {{ include "fundament.openfga.storeName" $ }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          resources:
+            {{- toYaml $.Values.authzWorker.resources | nindent 12 }}
 {{- end }}

@@ -22,6 +22,8 @@ spec:
       owner: fundament
   storage:
     size: {{ $.Values.db.storageSize }}
+  resources:
+    {{- toYaml $.Values.db.resources | nindent 4 }}
   managed:
     roles:
       - name: fun_authn_api

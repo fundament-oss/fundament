@@ -53,6 +53,8 @@ spec:
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          resources:
+            {{- toYaml $.Values.marketplaceCatalogApi.resources | nindent 12 }}
 
 ---
 apiVersion: v1
