@@ -3,6 +3,8 @@ package organization
 import (
 	"context"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -15,11 +17,21 @@ import (
 )
 
 // unreachableAuthzServer is a Server whose OpenFGA cannot be reached, as in an
-// outage: nothing listens on port 1, so resolving the store already fails.
+// outage: the address it has was closed before asking, so resolving the store
+// already fails.
 func unreachableAuthzServer(t *testing.T) *Server {
 	t.Helper()
 
-	store, err := authz.NewStore(authz.Config{APIURL: "http://127.0.0.1:1", StoreName: "fundament"})
+	gone := httptest.NewServer(http.NotFoundHandler())
+	gone.Close()
+
+	return authzServerAt(t, gone.URL)
+}
+
+func authzServerAt(t *testing.T, url string) *Server {
+	t.Helper()
+
+	store, err := authz.NewStore(authz.Config{APIURL: url, StoreName: "fundament"})
 	require.NoError(t, err)
 
 	return &Server{
@@ -38,6 +50,30 @@ func TestCheckPermission_AuthzUnreachable(t *testing.T) {
 	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
 	assert.NotContains(t, err.Error(), "127.0.0.1")
 	assert.NotContains(t, err.Error(), "http")
+}
+
+// A check OpenFGA turns down, here for a relation its model lacks, is turned
+// down again on the next try: that is not an outage to wait out.
+func TestCheckPermission_AuthzRefusesTheRequest(t *testing.T) {
+	fga := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && r.URL.Path == "/stores" {
+			_, _ = w.Write([]byte(`{"stores":[{"id":"01ARZ3NDEKTSV4RRFFQ69G5FAV","name":"fundament"}]}`))
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"code":"validation_error","message":"relation not found"}`))
+	}))
+	t.Cleanup(fga.Close)
+
+	s := authzServerAt(t, fga.URL)
+	ctx := WithUserID(t.Context(), uuid.New())
+
+	err := s.checkPermission(ctx, authz.CanView(), authz.Organization(uuid.New()))
+
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInternal, connect.CodeOf(err))
+	assert.NotContains(t, err.Error(), "127.0.0.1")
 }
 
 func TestCheckPermission_CallerGoneIsNotAnOutage(t *testing.T) {

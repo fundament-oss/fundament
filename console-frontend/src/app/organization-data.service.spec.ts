@@ -396,10 +396,20 @@ describe('OrganizationDataService loadError', () => {
     const leaving = service.loadOrganizationData(ORGANIZATION_ID);
 
     server.getOrganization = organizationResponse;
-    await service.loadOrganizationData(ORGANIZATION_ID);
+    await service.loadOrganizationData('019b4000-1000-7000-8000-000000000002');
 
     stale.error(outage());
     await leaving;
+    expect(service.loadError()).toBeNull();
+  });
+
+  it('forgets the failure on logout', async () => {
+    const { service, server } = build([]);
+    server.getOrganization = unavailable;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    service.clearAll();
+
     expect(service.loadError()).toBeNull();
   });
 });

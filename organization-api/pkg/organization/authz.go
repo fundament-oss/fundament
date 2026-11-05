@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	openfga "github.com/openfga/go-sdk"
 
 	"github.com/fundament-oss/fundament/common/authz"
 )
@@ -23,12 +24,15 @@ const (
 	authzRetryReadBudget = 1 * time.Second
 )
 
-var errAuthzUnavailable = errors.New(
-	"permissions could not be checked because the authorization service is unavailable; try again in a moment")
+var (
+	errAuthzUnavailable = errors.New(
+		"permissions could not be checked because the authorization service is unavailable; try again in a moment")
+	errAuthzFailed = errors.New("permissions could not be checked")
+)
 
 // checkPermission performs an OpenFGA authorization check for the current user.
-// Returns a connect PermissionDenied error if the check fails, and Unavailable
-// when OpenFGA could not be asked.
+// Returns a connect PermissionDenied error if the check fails, Unavailable when
+// OpenFGA could not be asked, and Internal when it turned the request down.
 func (s *Server) checkPermission(ctx context.Context, action authz.Action, resource authz.Object) error {
 	if s.authz == nil {
 		return nil
@@ -58,8 +62,18 @@ func (s *Server) checkPermission(ctx context.Context, action authz.Action, resou
 		}
 
 		// The detail names OpenFGA's address, which is for the log and not for
-		// whoever made the request. Unavailable tells them asking again may work.
+		// whoever made the request.
 		s.logger.ErrorContext(ctx, "authorization check failed", "error", err, "action", action, "resource", resource)
+
+		// A request OpenFGA refused, for a relation the model lacks or with
+		// credentials it does not take, is refused again on the next try.
+		var invalid openfga.FgaApiValidationError
+		var unauthenticated openfga.FgaApiAuthenticationError
+		if errors.As(err, &invalid) || errors.As(err, &unauthenticated) {
+			return connect.NewError(connect.CodeInternal, errAuthzFailed)
+		}
+
+		// Unavailable tells them asking again may work.
 		return connect.NewError(connect.CodeUnavailable, errAuthzUnavailable)
 	}
 

@@ -22,7 +22,7 @@
     ></nldd-button>
   </nldd-banner>
 }
-@if (organizationDataService.loadError(); as message) {
+@if (!isBarePage() && organizationDataService.loadError(); as message) {
   <nldd-banner
     variant="critical"
     text="The console could not load your organization"

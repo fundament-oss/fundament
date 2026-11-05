@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
@@ -246,7 +246,8 @@ describe('App', () => {
   // With the organizations out of reach the console would otherwise stay
   // empty: the shell says why, and checking again once it is back clears it.
   it('says why the organizations could not be loaded, until they can', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    onTestFinished(() => quiet.mockRestore());
     const { outage, providers } = duringOutage();
     const { app, loadError } = await setUpShell('/clusters', null, providers);
 
@@ -258,7 +259,6 @@ describe('App', () => {
     await app.handleOrganizationsRecheck();
     expect(loadError()).toBeNull();
     expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
-    vi.restoreAllMocks();
   });
 
   it('settles on the organization an operator has since added someone to', async () => {

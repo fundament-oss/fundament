@@ -612,6 +612,7 @@ export class OrganizationDataService {
     this.clustersLoaded.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
+    this.loadError.set(null);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
   }
