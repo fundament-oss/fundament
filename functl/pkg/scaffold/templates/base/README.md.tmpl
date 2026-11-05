@@ -51,8 +51,12 @@ NLDD design-system styles are deliberately not bundled. The console host serves
 them at run time from `/plugin-ui/`, so every plugin picks up design-system
 updates without rebuilding.
 {{end}}
+Image builds need the `docker buildx` plugin (with Homebrew and Colima:
+`brew install docker-buildx`):
+
 ```shell
-just docker
+just docker                         # linux/amd64 image, also on an Apple Silicon Mac
+PLATFORM=linux/arm64 just docker    # for an arm64 cluster
 ```
 
 ## Hot reload
