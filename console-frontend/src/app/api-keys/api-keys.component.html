@@ -78,6 +78,7 @@
               name="expiry"
               accessible-label="Expires after"
               (change)="onExpiryChange($event)"
+              (keyup.escape)="cancelCreating()"
             >
               @for (option of expiryOptions(); track option.value) {
                 <nldd-radio-button-field
@@ -87,9 +88,9 @@
                 ></nldd-radio-button-field>
               }
             </nldd-radio-button-group>
-            @if (maxExpiresIn()) {
+            @if (maxExpiryLabel(); as maximum) {
               <nldd-form-field-help-text>
-                Keys can last at most {{ maxExpiresIn() }}.
+                Keys can last at most {{ maximum }}.
               </nldd-form-field-help-text>
             }
           </nldd-form-field>
@@ -118,7 +119,7 @@
                      rather than after a round trip. -->
                 <nldd-validation-item
                   id="api-key-expires-in-format"
-                  match="^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$"
+                  [attr.match]="durationPattern"
                   >Must be a duration such as 300s, 5m or 1h.</nldd-validation-item
                 >
                 <nldd-validation-item id="api-key-expires-in-refused">{{

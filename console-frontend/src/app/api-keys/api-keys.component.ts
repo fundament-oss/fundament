@@ -38,7 +38,14 @@ import {
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
 import AutofocusDirective from '../autofocus.directive';
-import { CUSTOM, NEVER, defaultExpiry, expiryOptions } from './expiry-options';
+import {
+  CUSTOM,
+  DURATION,
+  NEVER,
+  defaultExpiry,
+  expiryOptions,
+  maximumLabel,
+} from './expiry-options';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/badge';
@@ -181,12 +188,25 @@ export default class ApiKeysComponent {
 
   newKeyExpiresInError = signal<string | null>(null);
 
-  /** Longest lifetime the server allows, such as "8760h"; empty when keys may never expire. */
-  maxExpiresIn = signal('');
+  /** Longest lifetime the server allows, such as "8760h"; empty when keys may
+   *  never expire, and null until a list has said which. */
+  maxExpiresIn = signal<string | null>(null);
 
   expiryOptions = computed(() => expiryOptions(this.maxExpiresIn()));
 
-  selectedExpiry = computed(() => this.newKeyExpiryChoice() ?? defaultExpiry(this.maxExpiresIn()));
+  /** The pick, while it is still on offer: a list that brings a lower maximum
+   *  takes options away, and a pick that went with them would be sent unseen. */
+  selectedExpiry = computed(() => {
+    const choice = this.newKeyExpiryChoice();
+    const options = this.expiryOptions();
+    if (choice !== null && options.some((option) => option.value === choice)) return choice;
+    return defaultExpiry(options);
+  });
+
+  maxExpiryLabel = computed(() => {
+    const max = this.maxExpiresIn();
+    return max ? maximumLabel(max) : null;
+  });
 
   /** What the create sends: an empty duration is a key that never expires. */
   expiresInToSend = computed(() => {
@@ -197,6 +217,8 @@ export default class ApiKeysComponent {
   });
 
   readonly customExpiry = CUSTOM;
+
+  readonly durationPattern = DURATION.source;
 
   // Modal state
   showRevokeModal = signal(false);
@@ -429,6 +451,7 @@ export default class ApiKeysComponent {
       name: this.newKeyName().trim(),
       expiresIn: this.expiresInToSend(),
     });
+    const expiry = this.selectedExpiry();
 
     try {
       const response = await withIdempotency(
@@ -457,7 +480,8 @@ export default class ApiKeysComponent {
       await this.loadApiKeys();
     } catch (err) {
       // A refusal, though, is about a form the close already threw away.
-      if (this.currentOwner() === owner && this.visit === visit) this.showCreateError(err, request);
+      if (this.currentOwner() === owner && this.visit === visit)
+        this.showCreateError(err, { ...request, expiry });
     } finally {
       this.creating.set(false);
     }
@@ -466,7 +490,10 @@ export default class ApiKeysComponent {
   /** Puts a refusal under the field it is about, and anything else in the banner.
    *  The fields stay editable while the call is out, so a refusal of a value
    *  that has been changed since is about nothing on screen, and goes. */
-  private showCreateError(err: unknown, submitted: { name: string; expiresIn: string }) {
+  private showCreateError(
+    err: unknown,
+    submitted: { name: string; expiresIn: string; expiry: string },
+  ) {
     if (isAborted(err)) return;
     if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
       // Unique across the organization, while the list shows only your own
@@ -477,13 +504,24 @@ export default class ApiKeysComponent {
       );
       return;
     }
-    // Only a typed duration has a field to put the refusal under. A preset is
-    // refused only when the maximum changed since the list came, and then the
-    // banner says so.
     const expiresInRefusal = getExpiresInRefusal(err);
-    if (expiresInRefusal && this.selectedExpiry() === CUSTOM) {
-      if (this.expiresInToSend() === submitted.expiresIn) {
+    if (expiresInRefusal) {
+      // A preset is refused only when the maximum is not the one the options
+      // were made for: it changed since the list came, or no list has come. A
+      // fresh list brings the options that hold now. It clears the banner as it
+      // starts, so it goes first.
+      if (submitted.expiry !== CUSTOM) this.loadApiKeys();
+      if (
+        this.selectedExpiry() !== submitted.expiry ||
+        this.expiresInToSend() !== submitted.expiresIn
+      ) {
+        return;
+      }
+      // Only a typed duration has a field to put the refusal under.
+      if (submitted.expiry === CUSTOM) {
         this.newKeyExpiresInError.set(expiresInRefusal);
+      } else {
+        this.error.set(`This lifetime is not allowed. ${expiresInRefusal}`);
       }
       return;
     }

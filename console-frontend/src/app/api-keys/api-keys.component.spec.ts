@@ -328,7 +328,77 @@ describe('ApiKeysComponent', () => {
 
     component.newKeyExpiryChoice.set('8760h');
     await component.createApiKey(new Event('submit', { cancelable: true }));
-    expect(component.error()).toContain('must be at most 720h');
+    expect(component.error()).toBe('This lifetime is not allowed. Must be at most 720h.');
+  });
+
+  it('refetches the maximum when a preset is refused, and drops the pick it took away', async () => {
+    let maximum = '8760h';
+    const listAPIKeys = vi.fn(() => listWithMaximum(maximum));
+    const fixture = await render({
+      listAPIKeys,
+      createAPIKey: () =>
+        throwError(
+          () =>
+            new ConnectError(
+              'validation error:\n - expires_in: must be at most 720h',
+              Code.InvalidArgument,
+            ),
+        ),
+    });
+    const { componentInstance: component } = fixture;
+    const fetches = listAPIKeys.mock.calls.length;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('2160h');
+    maximum = '720h';
+    await component.createApiKey(new Event('submit', { cancelable: true }));
+    await fixture.whenStable();
+
+    expect(listAPIKeys.mock.calls.length).toBe(fetches + 1);
+    expect(component.expiryOptions().map((option) => option.value)).toEqual([
+      '168h',
+      '720h',
+      'custom',
+    ]);
+    expect(component.selectedExpiry()).toBe('720h');
+    expect(component.expiresInToSend()).toBe('720h');
+  });
+
+  it('drops a refusal of a lifetime that has been changed since it was sent', async () => {
+    const response = new Subject<never>();
+    const fixture = await render({
+      listAPIKeys: () => listWithMaximum('8760h'),
+      createAPIKey: () => response,
+    });
+    const { componentInstance: component } = fixture;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('custom');
+    component.newKeyExpiresIn.set('1000h');
+    const pending = component.createApiKey(new Event('submit', { cancelable: true }));
+    component.newKeyExpiryChoice.set('720h');
+    response.error(
+      new ConnectError(
+        'validation error:\n - expires_in: must be at most 720h',
+        Code.InvalidArgument,
+      ),
+    );
+    await pending;
+
+    expect(component.newKeyExpiresInError()).toBeNull();
+    expect(component.error()).toBeNull();
+  });
+
+  it('offers no never, and does not send it, before the list has said there is no maximum', async () => {
+    const fixture = await render({ listAPIKeys: () => NEVER });
+    const { componentInstance: component } = fixture;
+
+    component.startCreating();
+
+    expect(component.expiryOptions().map((option) => option.value)).not.toContain('never');
+    expect(component.expiresInToSend()).toBe('8760h');
   });
 
   it('sends one create however often the form is submitted while it is out', async () => {
