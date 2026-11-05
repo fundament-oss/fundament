@@ -529,6 +529,45 @@ func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
 
 func firstErr(_ ctrl.Result, err error) error { return err }
 
+// On one node every pool has one replica, so Ceph never reports an OSD
+// ok-to-stop and Rook would wait for it forever on each reconcile.
+func TestReconcileLetsRookUpdateOSDsOnlyOnASingleNode(t *testing.T) {
+	t.Parallel()
+	continueUnhealthy := func(t *testing.T, c client.Client) bool {
+		t.Helper()
+		cc := rookStub("CephCluster")
+		require.NoError(t, c.Get(context.Background(),
+			types.NamespacedName{Namespace: testNamespace, Name: cephClusterName}, cc))
+		v, _, err := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
+		require.NoError(t, err)
+		return v
+	}
+	now := time.Now()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a-1", "node-a", "/dev/sdb", 100, true),
+		testDisk("a-2", "node-a", "/dev/sdc", 100, true),
+		testDisk("b-1", "node-b", "/dev/sdb", 100, true),
+		testPool("pool", now, "a-1", "a-2"),
+	)
+	r := newReconciler(c)
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	assert.True(t, continueUnhealthy(t, c), "two disks on one node")
+
+	pool := getPool(t, c, "pool")
+	pool.Spec.Disks = poolDisks("a-1", "a-2", "b-1")
+	require.NoError(t, c.Update(context.Background(), pool))
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	assert.False(t, continueUnhealthy(t, c), "disks on two nodes")
+
+	pool = getPool(t, c, "pool")
+	pool.Spec.Disks = poolDisks("b-1")
+	require.NoError(t, c.Update(context.Background(), pool))
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	assert.True(t, continueUnhealthy(t, c), "back to one node")
+}
+
 // Owns() and Watches() resolve a watched type's GVK through apiutil at builder
 // time, which is the one thing about an unstructured stub that can fail — and
 // it would fail at manager start, not here, so it is worth pinning for every
