@@ -11,6 +11,7 @@ import {
   ElementRef,
   effect,
   untracked,
+  computed,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
@@ -37,6 +38,7 @@ import {
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
 import AutofocusDirective from '../autofocus.directive';
+import { CUSTOM, NEVER, defaultExpiry, expiryOptions } from './expiry-options';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/badge';
@@ -55,6 +57,8 @@ import '@nldd/design-system/list-item';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
+import '@nldd/design-system/radio-button-field';
+import '@nldd/design-system/radio-button-group';
 import '@nldd/design-system/rich-text';
 import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
@@ -167,12 +171,32 @@ export default class ApiKeysComponent {
    *  in its validation list. */
   newKeyNameError = signal<string | null>(null);
 
+  /** The lifetime picked in the group; null until one is, which is the default.
+   *  The default is only known once the list has brought the maximum, and that
+   *  answer may land after the form was opened. */
+  newKeyExpiryChoice = signal<string | null>(null);
+
+  /** The duration typed under "Custom…". */
   newKeyExpiresIn = signal('');
 
   newKeyExpiresInError = signal<string | null>(null);
 
   /** Longest lifetime the server allows, such as "8760h"; empty when keys may never expire. */
   maxExpiresIn = signal('');
+
+  expiryOptions = computed(() => expiryOptions(this.maxExpiresIn()));
+
+  selectedExpiry = computed(() => this.newKeyExpiryChoice() ?? defaultExpiry(this.maxExpiresIn()));
+
+  /** What the create sends: an empty duration is a key that never expires. */
+  expiresInToSend = computed(() => {
+    const choice = this.selectedExpiry();
+    if (choice === NEVER) return '';
+    if (choice === CUSTOM) return this.newKeyExpiresIn();
+    return choice;
+  });
+
+  readonly customExpiry = CUSTOM;
 
   // Modal state
   showRevokeModal = signal(false);
@@ -369,6 +393,7 @@ export default class ApiKeysComponent {
     this.isCreating.set(true);
     this.newKeyName.set('');
     this.newKeyNameError.set(null);
+    this.newKeyExpiryChoice.set(null);
     this.newKeyExpiresIn.set('');
     this.newKeyExpiresInError.set(null);
     this.error.set(null);
@@ -378,6 +403,7 @@ export default class ApiKeysComponent {
     this.isCreating.set(false);
     this.newKeyName.set('');
     this.newKeyNameError.set(null);
+    this.newKeyExpiryChoice.set(null);
     this.newKeyExpiresIn.set('');
     this.newKeyExpiresInError.set(null);
     this.error.set(null);
@@ -401,7 +427,7 @@ export default class ApiKeysComponent {
 
     const request = create(CreateAPIKeyRequestSchema, {
       name: this.newKeyName().trim(),
-      expiresIn: this.newKeyExpiresIn(),
+      expiresIn: this.expiresInToSend(),
     });
 
     try {
@@ -424,6 +450,7 @@ export default class ApiKeysComponent {
       // Reset the creation form
       this.isCreating.set(false);
       this.newKeyName.set('');
+      this.newKeyExpiryChoice.set(null);
       this.newKeyExpiresIn.set('');
 
       // Reload the list to show the new key
@@ -450,14 +477,23 @@ export default class ApiKeysComponent {
       );
       return;
     }
+    // Only a typed duration has a field to put the refusal under. A preset is
+    // refused only when the maximum changed since the list came, and then the
+    // banner says so.
     const expiresInRefusal = getExpiresInRefusal(err);
-    if (expiresInRefusal) {
-      if (this.newKeyExpiresIn() === submitted.expiresIn) {
+    if (expiresInRefusal && this.selectedExpiry() === CUSTOM) {
+      if (this.expiresInToSend() === submitted.expiresIn) {
         this.newKeyExpiresInError.set(expiresInRefusal);
       }
       return;
     }
     this.error.set(`Failed to create API key: ${errorText(err)}`);
+  }
+
+  onExpiryChange(event: Event) {
+    const { value } = (event as CustomEvent<{ value: string }>).detail;
+    this.newKeyExpiryChoice.set(value);
+    this.newKeyExpiresInError.set(null);
   }
 
   async copyToken() {
