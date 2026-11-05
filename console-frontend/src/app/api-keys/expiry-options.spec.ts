@@ -23,12 +23,12 @@ describe('parseDuration', () => {
 
 describe('expiryOptions', () => {
   it('offers every preset up to a maximum of a year, and defaults to the year', () => {
-    expect(values('8760h')).toEqual(['168h', '720h', '2160h', '8760h', 'custom']);
+    expect(values('8760h')).toEqual(['24h', '168h', '720h', '8760h', 'custom']);
     expect(defaultFor('8760h')).toBe('8760h');
   });
 
   it('leaves out the presets above the maximum', () => {
-    expect(values('720h')).toEqual(['168h', '720h', 'custom']);
+    expect(values('720h')).toEqual(['24h', '168h', '720h', 'custom']);
     expect(defaultFor('720h')).toBe('720h');
   });
 
@@ -52,17 +52,17 @@ describe('expiryOptions', () => {
   });
 
   it('offers never, and defaults to it, when there is no maximum', () => {
-    expect(values('')).toEqual(['168h', '720h', '2160h', '8760h', 'never', 'custom']);
+    expect(values('')).toEqual(['24h', '168h', '720h', '8760h', 'never', 'custom']);
     expect(defaultFor('')).toBe('never');
   });
 
   it('holds never back, and defaults to the longest preset, while the maximum is unknown', () => {
-    expect(values(null)).toEqual(['168h', '720h', '2160h', '8760h', 'custom']);
+    expect(values(null)).toEqual(['24h', '168h', '720h', '8760h', 'custom']);
     expect(defaultFor(null)).toBe('8760h');
   });
 
   it('keeps the presets when the maximum cannot be read, and defaults to the longest', () => {
-    expect(values('8760h0m0s0x')).toEqual(['168h', '720h', '2160h', '8760h', 'custom']);
+    expect(values('8760h0m0s0x')).toEqual(['24h', '168h', '720h', '8760h', 'custom']);
     expect(defaultFor('8760h0m0s0x')).toBe('8760h');
   });
 });

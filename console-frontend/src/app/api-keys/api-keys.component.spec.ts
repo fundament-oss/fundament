@@ -350,13 +350,14 @@ describe('ApiKeysComponent', () => {
 
     component.startCreating();
     component.newKeyName.set('ci');
-    component.newKeyExpiryChoice.set('2160h');
+    component.newKeyExpiryChoice.set('8760h');
     maximum = '720h';
     await component.createApiKey(new Event('submit', { cancelable: true }));
     await fixture.whenStable();
 
     expect(listAPIKeys.mock.calls.length).toBe(fetches + 1);
     expect(component.expiryOptions().map((option) => option.value)).toEqual([
+      '24h',
       '168h',
       '720h',
       'custom',

@@ -21,9 +21,9 @@ const DAY = 24 * HOUR;
 
 /** In hours: the server parses with Go's `time.ParseDuration`, which knows no days. */
 const PRESETS: (ExpiryOption & { ms: number })[] = [
+  { value: '24h', label: '1 day', ms: DAY },
   { value: '168h', label: '7 days', ms: 7 * DAY },
   { value: '720h', label: '30 days', ms: 30 * DAY },
-  { value: '2160h', label: '90 days', ms: 90 * DAY },
   { value: '8760h', label: '1 year', ms: 365 * DAY },
 ];
 
@@ -55,8 +55,7 @@ export function parseDuration(value: string): number | null {
 /** A maximum that is no preset, worded like the presets when it is whole days. */
 function maximumOption(maxExpiresIn: string, maximum: number): ExpiryOption {
   if (maximum % DAY !== 0) return { value: maxExpiresIn, label: maxExpiresIn, ms: maximum };
-  const days = maximum / DAY;
-  return { value: maxExpiresIn, label: days === 1 ? '1 day' : `${days} days`, ms: maximum };
+  return { value: maxExpiresIn, label: `${maximum / DAY} days`, ms: maximum };
 }
 
 /**
