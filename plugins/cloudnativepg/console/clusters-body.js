@@ -11,7 +11,7 @@ export const CLUSTER_RESOURCE = { group: 'postgresql.cnpg.io', version: 'v1', re
 // the catalog.
 const IMAGE_CATALOG = 'fundament-postgresql';
 
-// Operator 1.26 runs PostgreSQL 13 to 17; 18 needs operator 1.27. First is the
+// The form offers two of the majors operator 1.30 runs (14 to 18). First is the
 // default.
 export const POSTGRES_MAJORS = [
   { major: 17, label: 'PostgreSQL 17' },

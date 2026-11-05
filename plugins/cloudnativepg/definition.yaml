@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: cloudnativepg
   displayName: CloudNativePG
-  version: v0.1.0
+  version: v0.2.0
   description: PostgreSQL databases for projects. Installs the CloudNativePG operator; project members create single-instance databases from the console.
   author: Fundament
   license: Apache-2.0
@@ -11,7 +11,7 @@ metadata:
   urls:
     homepage: https://cloudnative-pg.io
     repository: https://github.com/cloudnative-pg/cloudnative-pg
-    documentation: https://cloudnative-pg.io/documentation/1.26/
+    documentation: https://cloudnative-pg.io/docs/1.30/
   tags:
     - postgresql
     - database
@@ -42,7 +42,7 @@ spec:
 
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install --create-namespace --wait` for
-      # CloudNativePG 0.24.0 (release fundament-cloudnativepg in cnpg-system), and
+      # CloudNativePG 0.29.1 (release fundament-cloudnativepg in cnpg-system), and
       # `helm uninstall` on uninstall. These rules cover Helm's release storage and
       # what the chart creates: CRDs, webhooks, the operator Deployment,
       # ServiceAccount, Service, ConfigMap and cluster-wide RBAC (no Role or
