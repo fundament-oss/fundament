@@ -44,6 +44,7 @@ spec:
       containers:
         - name: console-frontend
           image: {{ $.Values.images.consoleFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC

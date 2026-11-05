@@ -21,6 +21,7 @@ spec:
       containers:
         - name: platform-admin-api
           image: {{ $.Values.images.platformAdminApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080

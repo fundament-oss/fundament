@@ -30,6 +30,7 @@ spec:
       containers:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080

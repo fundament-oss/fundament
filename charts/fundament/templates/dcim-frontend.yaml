@@ -35,6 +35,7 @@ spec:
       containers:
         - name: dcim-frontend
           image: {{ $.Values.images.dcimFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             - name: CONNECT_SRC
               value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }} {{ $.Values.externalUrls.platformAdminApi }}"

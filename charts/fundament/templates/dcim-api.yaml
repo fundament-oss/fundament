@@ -21,6 +21,7 @@ spec:
       containers:
         - name: dcim-api
           image: {{ $.Values.images.dcimApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080

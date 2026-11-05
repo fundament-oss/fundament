@@ -47,6 +47,7 @@ spec:
       containers:
         - name: cluster-worker
           image: {{ $.Values.images.clusterWorker }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: health
               containerPort: 8097
