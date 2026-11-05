@@ -57,14 +57,14 @@ grpcAppProtocol: kubernetes.io/h2c
 # Each resources block below holds the container's requests, set above usage
 # measured with `kubectl top`, so the scheduler knows each pod's size and the
 # pods are not BestEffort. No limits for now: Fundament is the only large
-# consumer on its cluster. Add `memoryLimit: true` to a block to limit memory to
-# its request; a limit that differs from the request cannot be configured.
+# consumer on its cluster. A block can add limitCpu (a quantity) and
+# limitMemoryEnabled: true, which limits memory to requestMemory.
 
 # wait-for-db init containers on the db-migrations and OpenFGA pods
 waitForDb:
   resources:
-    cpu: 10m
-    memory: 16Mi
+    requestCpu: 10m
+    requestMemory: 16Mi
 
 # Container images
 images:
@@ -111,21 +111,21 @@ db:
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
   # Changing this restarts Postgres: CNPG rolls the instances.
   resources:
-    cpu: 50m
-    memory: 256Mi
+    requestCpu: 50m
+    requestMemory: 256Mi
   # The db-migrations Job (trek and psql).
   migrations:
     resources:
-      cpu: 50m
-      memory: 64Mi
+      requestCpu: 50m
+      requestMemory: 64Mi
 
 # Authentication API
 authnApi:
   enabled: true
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   # Shoot workload token verification (FUN-22): "auto" picks TokenReview via
   # Gardener (clusterWorker.gardenerKubeconfigSecret), else the plugin sandbox
@@ -177,8 +177,8 @@ organizationApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 20m
-    memory: 64Mi
+    requestCpu: 20m
+    requestMemory: 64Mi
   logLevel: info
   # Metrics backend: "mock" uses generated data; "per-shoot" queries each
   # cluster's per-shoot Gardener Prometheus at the monitoring secret's
@@ -211,8 +211,8 @@ kubeApiProxy:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
@@ -237,8 +237,8 @@ clusterWorker:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   # Fleet inventory (FUN-23): how often every ready shoot's nodes, pods and
   # namespaces are counted, how many shoots at once, and how long one may take.
@@ -298,8 +298,8 @@ consoleFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   httproute:
     enabled: false
     parentRefs: []
@@ -314,8 +314,8 @@ consoleDemoFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   httproute:
     enabled: false
     parentRefs: []
@@ -329,8 +329,8 @@ docsFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   httproute:
     enabled: false
     parentRefs: []
@@ -347,8 +347,8 @@ marketplaceFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   # Base URLs the server-side renderer uses for its own API calls. In-cluster
   # addresses (e.g. http://marketplace-catalog-api), so rendering a page does not
   # leave the cluster and come back in through the gateway. Empty falls back to
@@ -369,8 +369,8 @@ marketplaceRegistryFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   internalApiUrls:
     registry: ""
   httproute:
@@ -385,8 +385,8 @@ marketplaceAdminFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   internalApiUrls:
     admin: ""
   httproute:
@@ -399,8 +399,8 @@ authzWorker:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   pollInterval: "5s"
   batchSize: 100
@@ -412,22 +412,22 @@ openfga:
   image: openfga/openfga:v1.22.1
   replicas: 1
   resources:
-    cpu: 25m
-    memory: 64Mi
+    requestCpu: 25m
+    requestMemory: 64Mi
   playground:
     enabled: false
   # The bootstrap Job: its migrate init container and the bootstrap itself.
   bootstrap:
     resources:
-      cpu: 10m
-      memory: 32Mi
+      requestCpu: 10m
+      requestMemory: 32Mi
 
 # Plugin Controller
 pluginController:
   enabled: false
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   logLevel: info
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
@@ -469,8 +469,8 @@ pluginProxy:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   mode: mock # "mock" or "real"
   # sandboxKubeconfigSecret: name of a Secret whose "kubeconfig" key is a
@@ -496,8 +496,8 @@ dcimApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   httproute:
     enabled: false
@@ -509,8 +509,8 @@ dcimAuthnApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   # ROPC password login. Keep false in production; enable only for local/dev.
   passwordLoginEnabled: false
@@ -526,8 +526,8 @@ dcimAuthnApi:
 dexDcim:
   enabled: false
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   issuer: ""
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
@@ -545,8 +545,8 @@ dcimFrontend:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 64Mi
+    requestCpu: 10m
+    requestMemory: 64Mi
   httproute:
     enabled: false
     parentRefs: []
@@ -557,8 +557,8 @@ marketplaceCatalogApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   httproute:
     enabled: false
@@ -570,8 +570,8 @@ marketplaceRegistryApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   httproute:
     enabled: false
@@ -583,8 +583,8 @@ marketplaceAdminApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   httproute:
     enabled: false
@@ -597,8 +597,8 @@ platformPublicApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   cacheTTL: 60s # how long one overview answer is served to every visitor
   httproute:
@@ -612,8 +612,8 @@ platformAdminApi:
   enabled: false
   replicas: 1
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   logLevel: info
   httproute:
     enabled: false
@@ -624,8 +624,8 @@ platformAdminApi:
 dex:
   enabled: true
   resources:
-    cpu: 10m
-    memory: 32Mi
+    requestCpu: 10m
+    requestMemory: 32Mi
   issuer: ""
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
@@ -645,5 +645,5 @@ hostAliases: []
 shootProxy:
   enabled: false
   resources:
-    cpu: 10m
-    memory: 16Mi
+    requestCpu: 10m
+    requestMemory: 16Mi

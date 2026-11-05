@@ -168,19 +168,25 @@ https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
 {{- end }}
 
 {{/*
-A container's resources from a values block with cpu, memory and optionally
-memoryLimit. With memoryLimit: true the memory limit equals the request, so what
-the scheduler reserves is what the container may use.
+A container's resources from a values block with requestCpu, requestMemory and
+optionally limitCpu and limitMemoryEnabled. The memory limit, when enabled,
+equals requestMemory, so what the scheduler reserves is what the container may
+use.
 
 Usage: {{- include "fundament.resources" $.Values.authnApi.resources | nindent 10 }}
 */}}
 {{- define "fundament.resources" -}}
 resources:
   requests:
-    cpu: {{ required "a resources block must set cpu" .cpu }}
-    memory: {{ required "a resources block must set memory" .memory }}
-  {{- if .memoryLimit }}
+    cpu: {{ required "a resources block must set requestCpu" .requestCpu }}
+    memory: {{ required "a resources block must set requestMemory" .requestMemory }}
+  {{- if or .limitCpu .limitMemoryEnabled }}
   limits:
-    memory: {{ .memory }}
+    {{- with .limitCpu }}
+    cpu: {{ . }}
+    {{- end }}
+    {{- if .limitMemoryEnabled }}
+    memory: {{ .requestMemory }}
+    {{- end }}
   {{- end }}
 {{- end }}
