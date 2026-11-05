@@ -34,8 +34,7 @@ spec:
                 sleep 2
               done
               echo "tcp ${host}:5432 is accepting connections"
-          resources:
-            {{- toYaml $.Values.waitForDb.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.waitForDb.resources | nindent 10 }}
       containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
@@ -136,6 +135,5 @@ spec:
                   name: db-fun-openfga
                   key: uri
 {{- end }}
-          resources:
-            {{- toYaml $.Values.db.migrations.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.db.migrations.resources | nindent 10 }}
 {{- end }}

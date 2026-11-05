@@ -72,8 +72,7 @@ spec:
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          resources:
-            {{- toYaml $.Values.kubeApiProxy.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.kubeApiProxy.resources | nindent 10 }}
       volumes:
         - name: tmp
           emptyDir: {}

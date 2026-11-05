@@ -60,8 +60,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          resources:
-            {{- toYaml $.Values.dcimAuthnApi.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.dcimAuthnApi.resources | nindent 10 }}
 ---
 apiVersion: v1
 kind: Service

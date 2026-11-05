@@ -53,8 +53,7 @@ spec:
               mountPath: /usr/share/nginx/html/assets/config/config.json
               subPath: config.json
               readOnly: true
-          resources:
-            {{- toYaml $.Values.consoleDemoFrontend.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.consoleDemoFrontend.resources | nindent 10 }}
       volumes:
         - name: config
           configMap:

@@ -97,8 +97,7 @@ spec:
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          resources:
-            {{- toYaml $.Values.organizationApi.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.organizationApi.resources | nindent 10 }}
       {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.organizationApi.prometheusCASecret }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

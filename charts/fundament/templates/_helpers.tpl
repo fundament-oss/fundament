@@ -166,3 +166,21 @@ Usage: include "fundament.pocUrl" (dict "root" $ "site" "console")
 https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
 {{- end -}}
 {{- end }}
+
+{{/*
+A container's resources from a values block with cpu, memory and optionally
+memoryLimit. With memoryLimit: true the memory limit equals the request, so what
+the scheduler reserves is what the container may use.
+
+Usage: {{- include "fundament.resources" $.Values.authnApi.resources | nindent 10 }}
+*/}}
+{{- define "fundament.resources" -}}
+resources:
+  requests:
+    cpu: {{ required "a resources block must set cpu" .cpu }}
+    memory: {{ required "a resources block must set memory" .memory }}
+  {{- if .memoryLimit }}
+  limits:
+    memory: {{ .memory }}
+  {{- end }}
+{{- end }}

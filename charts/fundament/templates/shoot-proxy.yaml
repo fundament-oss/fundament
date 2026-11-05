@@ -30,8 +30,7 @@ spec:
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
-          resources:
-            {{- toYaml $.Values.shootProxy.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.shootProxy.resources | nindent 10 }}
           ports:
             - containerPort: 443
               name: https
@@ -75,8 +74,7 @@ spec:
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}
-          resources:
-            {{- toYaml $.Values.shootProxy.resources | nindent 12 }}
+          {{- include "fundament.resources" $.Values.shootProxy.resources | nindent 10 }}
           ports:
             - containerPort: 443
               name: https
