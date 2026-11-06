@@ -84,7 +84,7 @@ A released address goes back into the shared range and can be handed to anyone. 
 
 ### Keeping an address across deletes
 
-The platform has no self-service for reserving an address yet. If a name has to keep its address even when the Service behind it is replaced, contact a Fundament operator, who can reserve an address for you. Set that address in `spec.loadBalancerIP` and the Service uses it instead of a freshly assigned one:
+The platform has no self-service for reserving an address yet. If a name has to keep its address even when the Service behind it is replaced, ask a Fundament operator whether an address can be reserved for you. A reserved address goes in `spec.loadBalancerIP`, and the Service uses it instead of a freshly assigned one:
 
 ```yaml
 spec:
