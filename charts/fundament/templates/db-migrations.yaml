@@ -35,6 +35,7 @@ spec:
                 sleep 2
               done
               echo "tcp ${host}:5432 is accepting connections"
+          {{- include "fundament.resources" $.Values.waitForDb.resources | nindent 10 }}
       containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
@@ -136,4 +137,5 @@ spec:
                   name: db-fun-openfga
                   key: uri
 {{- end }}
+          {{- include "fundament.resources" $.Values.db.migrations.resources | nindent 10 }}
 {{- end }}

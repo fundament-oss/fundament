@@ -134,6 +134,7 @@ spec:
               readOnly: true
             {{- end }}
           {{- end }}
+          {{- include "fundament.resources" $.Values.authnApi.resources | nindent 10 }}
       {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.authnApi.sandboxKubeconfigSecret }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

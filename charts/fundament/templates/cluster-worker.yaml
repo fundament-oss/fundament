@@ -181,6 +181,7 @@ spec:
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.resources" $.Values.clusterWorker.resources | nindent 10 }}
       {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $sandbox }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

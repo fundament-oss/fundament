@@ -48,6 +48,7 @@ spec:
                   name: {{ $openfgaSecretName }}
                   key: uri
 
+          {{- include "fundament.resources" $.Values.waitForDb.resources | nindent 10 }}
         # The only migration in the release. openfga's /healthz reports not ready
         # until the schema matches the revision its binary expects, so server
         # pods gate themselves on it.
@@ -64,6 +65,7 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+          {{- include "fundament.resources" $.Values.openfga.bootstrap.resources | nindent 10 }}
       containers:
         # Sole creator of the store, and the only writer of the model. The
         # model is embedded in this image, so what it writes and the types the
@@ -76,4 +78,5 @@ spec:
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ | quote }}
+          {{- include "fundament.resources" $.Values.openfga.bootstrap.resources | nindent 10 }}
 {{- end }}

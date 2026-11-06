@@ -106,6 +106,7 @@ spec:
               mountPath: /app/public/assets/config/config.json
               subPath: config.json
               readOnly: true
+          {{- include "fundament.resources" $.Values.marketplaceRegistryFrontend.resources | nindent 10 }}
       volumes:
         - name: config
           configMap:
