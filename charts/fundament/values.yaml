@@ -54,6 +54,14 @@ environmentBanner:
 # support it falls back to HTTP/1.1, which carries Connect and gRPC-Web.
 grpcAppProtocol: kubernetes.io/h2c
 
+# Each `resources` below is a standard Kubernetes resources block for that
+# component's containers. Empty means no requests, so the pods are BestEffort;
+# set sizes in the values file of an environment that needs them.
+
+# wait-for-db init containers on the db-migrations and OpenFGA pods
+waitForDb:
+  resources: {}
+
 # Container images
 images:
   dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
@@ -97,11 +105,17 @@ db:
   instances: 1
   storageSize: 1Gi
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
+  # Changing this restarts Postgres: CNPG rolls the instances.
+  resources: {}
+  # The db-migrations Job (trek and psql).
+  migrations:
+    resources: {}
 
 # Authentication API
 authnApi:
   enabled: true
   replicas: 1
+  resources: {}
   logLevel: info
   # Shoot workload token verification (FUN-22): "auto" picks TokenReview via
   # Gardener (clusterWorker.gardenerKubeconfigSecret), else the plugin sandbox
@@ -152,6 +166,7 @@ authnApi:
 organizationApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   # Metrics backend: "mock" uses generated data; "per-shoot" queries each
   # cluster's per-shoot Gardener Prometheus at the monitoring secret's
@@ -183,6 +198,7 @@ organizationApi:
 kubeApiProxy:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
@@ -206,6 +222,7 @@ kubeApiProxy:
 clusterWorker:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   # Fleet inventory (FUN-23): how often every ready shoot's nodes, pods and
   # namespaces are counted, how many shoots at once, and how long one may take.
@@ -264,6 +281,7 @@ clusterWorker:
 consoleFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   httproute:
     enabled: false
     parentRefs: []
@@ -277,6 +295,7 @@ consoleFrontend:
 consoleDemoFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   httproute:
     enabled: false
     parentRefs: []
@@ -289,6 +308,7 @@ consoleDemoFrontend:
 docsFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   httproute:
     enabled: false
     parentRefs: []
@@ -304,6 +324,7 @@ docsFrontend:
 marketplaceFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   # Base URLs the server-side renderer uses for its own API calls. In-cluster
   # addresses (e.g. http://marketplace-catalog-api), so rendering a page does not
   # leave the cluster and come back in through the gateway. Empty falls back to
@@ -323,6 +344,7 @@ marketplaceFrontend:
 marketplaceRegistryFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   internalApiUrls:
     registry: ""
   httproute:
@@ -336,6 +358,7 @@ marketplaceRegistryFrontend:
 marketplaceAdminFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   internalApiUrls:
     admin: ""
   httproute:
@@ -347,6 +370,7 @@ marketplaceAdminFrontend:
 authzWorker:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   pollInterval: "5s"
   batchSize: 100
@@ -357,12 +381,17 @@ openfga:
   enabled: true
   image: openfga/openfga:v1.22.1
   replicas: 1
+  resources: {}
   playground:
     enabled: false
+  # The bootstrap Job: its migrate init container and the bootstrap itself.
+  bootstrap:
+    resources: {}
 
 # Plugin Controller
 pluginController:
   enabled: false
+  resources: {}
   logLevel: info
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
@@ -403,6 +432,7 @@ pluginController:
 pluginProxy:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   mode: mock # "mock" or "real"
   # sandboxKubeconfigSecret: name of a Secret whose "kubeconfig" key is a
@@ -427,6 +457,7 @@ pluginProxy:
 dcimApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   httproute:
     enabled: false
@@ -437,6 +468,7 @@ dcimApi:
 dcimAuthnApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   # ROPC password login. Keep false in production; enable only for local/dev.
   passwordLoginEnabled: false
@@ -451,6 +483,7 @@ dcimAuthnApi:
 # Dex for DCIM (OIDC Identity Provider)
 dexDcim:
   enabled: false
+  resources: {}
   issuer: ""
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
@@ -467,6 +500,7 @@ dexDcim:
 dcimFrontend:
   enabled: false
   replicas: 1
+  resources: {}
   httproute:
     enabled: false
     parentRefs: []
@@ -476,6 +510,7 @@ dcimFrontend:
 marketplaceCatalogApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   httproute:
     enabled: false
@@ -486,6 +521,7 @@ marketplaceCatalogApi:
 marketplaceRegistryApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   httproute:
     enabled: false
@@ -496,6 +532,7 @@ marketplaceRegistryApi:
 marketplaceAdminApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   httproute:
     enabled: false
@@ -507,6 +544,7 @@ marketplaceAdminApi:
 platformPublicApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   cacheTTL: 60s # how long one overview answer is served to every visitor
   httproute:
@@ -519,6 +557,7 @@ platformPublicApi:
 platformAdminApi:
   enabled: false
   replicas: 1
+  resources: {}
   logLevel: info
   httproute:
     enabled: false
@@ -528,6 +567,7 @@ platformAdminApi:
 # Dex (OIDC Identity Provider)
 dex:
   enabled: true
+  resources: {}
   issuer: ""
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
@@ -546,3 +586,4 @@ hostAliases: []
 # Gardener shoot proxy (local development only)
 shootProxy:
   enabled: false
+  resources: {}
