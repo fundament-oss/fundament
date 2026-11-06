@@ -109,11 +109,12 @@ rebuild after a source change) to finish before kubelet kills the pod —
 a startupProbe wouldn't help here because it only covers the first start.
 
 Usage: {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+"path" overrides /livez, for the frontends, which serve no health endpoint.
 */}}
 {{- define "fundament.livenessProbe" -}}
 livenessProbe:
   httpGet:
-    path: /livez
+    path: {{ .path | default "/livez" }}
     port: {{ .port }}
   initialDelaySeconds: 5
 {{- if .root.Values.hotreload.enabled }}
@@ -129,11 +130,12 @@ readinessProbe rendered with the same hotreload tolerance as liveness so
 the pod isn't yanked out of Service endpoints mid-rebuild either.
 
 Usage: {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+"path" overrides /readyz, as for livenessProbe.
 */}}
 {{- define "fundament.readinessProbe" -}}
 readinessProbe:
   httpGet:
-    path: /readyz
+    path: {{ .path | default "/readyz" }}
     port: {{ .port }}
   initialDelaySeconds: 5
   periodSeconds: 5
@@ -143,6 +145,24 @@ readinessProbe:
 {{- if .root.Values.hotreload.enabled }}
   failureThreshold: 60
 {{- end }}
+{{- end }}
+
+{{/*
+Readiness and liveness for a third-party server with nothing to ask over HTTP
+that is independent of its dependencies: the port accepts connections.
+
+Usage: {{- include "fundament.tcpProbes" (dict "port" "http") | nindent 10 }}
+*/}}
+{{- define "fundament.tcpProbes" -}}
+readinessProbe:
+  tcpSocket:
+    port: {{ .port }}
+  periodSeconds: 5
+livenessProbe:
+  tcpSocket:
+    port: {{ .port }}
+  initialDelaySeconds: 5
+  periodSeconds: 10
 {{- end }}
 
 {{/*

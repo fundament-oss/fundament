@@ -34,6 +34,7 @@ spec:
           ports:
             - containerPort: 443
               name: https
+          {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
 ---
 apiVersion: v1
 kind: Service
@@ -78,6 +79,7 @@ spec:
           ports:
             - containerPort: 443
               name: https
+          {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
 ---
 apiVersion: v1
 kind: Service

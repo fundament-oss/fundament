@@ -41,8 +41,8 @@ func main() {
 	}
 }
 
-// newHealthMux serves the probes. readyz reports the database and OpenFGA
-// because a pod that cannot reach either can serve no write RPC; livez
+// newHealthMux serves the probes. readyz reports the database and whether the
+// OpenFGA store is provisioned (see authz.Store.Ready); livez
 // deliberately reports neither, so a brief outage does not get the container
 // killed and restarted.
 func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB, store *authz.Store) *http.ServeMux {
@@ -67,7 +67,7 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 		if store != nil {
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
-			if err := store.Healthy(ctx); err != nil {
+			if err := store.Ready(ctx); err != nil {
 				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_, _ = w.Write([]byte("openfga unavailable"))
