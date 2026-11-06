@@ -117,17 +117,25 @@ ORDER BY
     tenant.node_pools.id;
 
 -- name: NodePoolListStatusByClusterID :many
--- The status path needs only identity, the machine type its reason names and
--- the stored classification; the worker-group build query above, with its
--- catalog joins, stays with sync.
+-- The status path needs only identity, the machine type its reason names, the
+-- minimum its own nodes are held to and when it was created (older nodes are a
+-- predecessor's), the stored classification, and the node counts last
+-- observed (tenant.node_pool_snapshots, shared with the inventory worker); the
+-- worker-group build query above, with its catalog joins, stays with sync.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
     tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.created,
     tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.status_message,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed
 FROM
     tenant.node_pools
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE
     tenant.node_pools.cluster_id = @cluster_id
     AND tenant.node_pools.deleted IS NULL
