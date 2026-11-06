@@ -83,15 +83,15 @@ spec:
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.
             # Off unless pluginController.provisionShoots: the image must be
-            # pullable from shoot nodes, which local dev registries are not.
+            # pullable from shoot nodes (see pluginController.shoot).
             - name: PLUGIN_CONTROLLER_IMAGE
-              value: {{ $.Values.images.pluginController }}
+              value: {{ $.Values.pluginController.shoot.image | default $.Values.images.pluginController }}
             - name: PLUGIN_MARKETPLACE_CATALOG_API_URL
-              value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.provisionShoots is set" $.Values.externalUrls.marketplaceCatalogApi }}
+              value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.provisionShoots is set" ($.Values.pluginController.shoot.catalogApiUrl | default $.Values.externalUrls.marketplaceCatalogApi) }}
             # Where the shoot-side controller exchanges its projected ServiceAccount
             # token for a WorkloadToken (FUN-22).
             - name: PLUGIN_AUTHN_API_URL
-              value: {{ required "externalUrls.authn must be set when pluginController.provisionShoots is set" $.Values.externalUrls.authn }}
+              value: {{ required "externalUrls.authn must be set when pluginController.provisionShoots is set" ($.Values.pluginController.shoot.authnApiUrl | default $.Values.externalUrls.authn) }}
             - name: PLUGIN_LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             # Always rendered, so the manifest states the shoot fleet's
