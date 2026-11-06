@@ -120,7 +120,8 @@ PLUGIN_REGISTRY=localhost:5112 just plugins publish <path>
 **Plugin in its own project**, from the project directory (names from the scaffolded `my-plugin`):
 
 ```shell
-just docker v0.1.0
+just docker v0.1.0                         # for an amd64 (x86) cluster
+PLATFORM=linux/arm64 just docker v0.1.0    # for an arm64 cluster, such as k3d on Apple Silicon
 docker tag my-plugin-plugin:v0.1.0 localhost:5112/my-plugin:v0.1.0
 docker push localhost:5112/my-plugin:v0.1.0
 functl plugin publish definition.yaml --image=localhost:5112/my-plugin@sha256:<digest from push> --create
