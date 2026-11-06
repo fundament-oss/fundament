@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/mod/module"
 
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
@@ -337,6 +338,16 @@ func TestGoVersionIsConsistent(t *testing.T) {
 		src, err := os.ReadFile(filepath.Join(dir, f)) //nolint:gosec // G304: a path built from t.TempDir().
 		require.NoError(t, err)
 		assert.Contains(t, string(src), GoVersion, "%s must pin Go %s", f, GoVersion)
+	}
+}
+
+// A malformed version would otherwise only show up as a failing `go mod tidy`
+// in a freshly scaffolded project.
+func TestDefaultSDKVersionIsValid(t *testing.T) {
+	v := DefaultSDKVersion
+	require.NoError(t, module.Check("github.com/fundament-oss/fundament", v))
+	if strings.HasPrefix(v, "v0.0.0-") {
+		assert.True(t, module.IsPseudoVersion(v), "%s is not a valid pseudo-version", v)
 	}
 }
 
