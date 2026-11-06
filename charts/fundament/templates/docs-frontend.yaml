@@ -48,6 +48,7 @@ spec:
               mountPath: /usr/share/nginx/html/config/config.js
               subPath: config.js
               readOnly: true
+          {{- include "fundament.resources" $.Values.docsFrontend.resources | nindent 10 }}
       volumes:
         - name: config
           configMap:
