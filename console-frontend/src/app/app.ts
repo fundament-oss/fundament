@@ -385,6 +385,7 @@ export default class App implements OnInit {
    * - If the user belongs to multiple orgs, or to none, show the org picker.
    */
   private async loadUserOrganizations() {
+    this.organizationDataService.loadError.set(null);
     try {
       // Fetch organizations and pending invitations in parallel
       const [orgResponse, inviteResponse] = await Promise.all([
@@ -423,6 +424,9 @@ export default class App implements OnInit {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load organizations:', error);
+      this.organizationDataService.loadError.set(
+        error instanceof Error ? error.message : 'The request failed.',
+      );
     }
   }
 
