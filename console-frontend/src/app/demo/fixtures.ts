@@ -25,15 +25,11 @@ import {
 import { MemberSchema } from '../../generated/v1/member_pb';
 import {
   PluginSummarySchema,
-  PluginDetailSchema,
   PresetSchema,
   TagSchema,
   CategorySchema,
-  AuthorSchema,
-  DocumentationLinkSchema,
-  PluginDefinitionVersionSchema,
-  type PluginDetail,
-  type PluginDefinitionVersion,
+  type Tag,
+  type Category,
 } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
@@ -689,11 +685,27 @@ export const presets = [
   }),
 ];
 
+export interface DemoPluginDetail {
+  id: string;
+  name: string;
+  organizationName: string;
+  displayName: string;
+  description: string;
+  descriptionShort: string;
+  tags: Tag[];
+  categories: Category[];
+  author?: { name: string; url: string };
+  repositoryUrl: string;
+  documentationLinks: { id: string; title: string; urlName: string; url: string }[];
+  pluginVersion: string;
+  definitionHash: string;
+}
+
 /** Detail view, derived from the summary so the two can never disagree. */
-export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
+export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return undefined;
-  return create(PluginDetailSchema, {
+  return {
     id: summary.id,
     name: summary.name,
     organizationName: summary.organizationName,
@@ -702,19 +714,19 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
     descriptionShort: summary.descriptionShort,
     tags: summary.tags,
     categories: summary.categories,
-    author: create(AuthorSchema, { name: 'Fundament', url: 'https://fundament.dev' }),
+    author: { name: 'Fundament', url: 'https://fundament.dev' },
     repositoryUrl: `https://github.com/fundament/plugins/tree/main/${summary.name}`,
     documentationLinks: [
-      create(DocumentationLinkSchema, {
+      {
         id: `doc-${summary.name}`,
         title: 'Documentatie',
         urlName: 'docs',
         url: `https://docs.fundament.dev/plugins/${summary.name}`,
-      }),
+      },
     ],
     pluginVersion: summary.pluginVersion,
     definitionHash: summary.definitionHash,
-  });
+  };
 };
 
 /**
@@ -722,15 +734,15 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
  * picker offers. An unknown plugin gets an empty list, the same "nothing published"
  * answer the real backend gives.
  */
-export const pluginDefinitionVersions = (pluginId: string): PluginDefinitionVersion[] => {
+export const pluginDefinitionVersions = (
+  pluginId: string,
+): { version: string; hash: string }[] => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return [];
-  return (VERSIONS[summary.name] ?? []).map((version) =>
-    create(PluginDefinitionVersionSchema, {
-      version,
-      hash: definitionHash(summary.name, version),
-    }),
-  );
+  return (VERSIONS[summary.name] ?? []).map((version) => ({
+    version,
+    hash: definitionHash(summary.name, version),
+  }));
 };
 
 /** Plugins already running when the walkthrough starts, per cluster. */

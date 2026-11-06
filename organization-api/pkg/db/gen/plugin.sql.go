@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const pluginCategoriesList = `-- name: PluginCategoriesList :many
@@ -44,150 +43,6 @@ func (q *Queries) PluginCategoriesList(ctx context.Context) ([]PluginCategoriesL
 		return nil, err
 	}
 	return items, nil
-}
-
-const pluginCategoriesListByPluginID = `-- name: PluginCategoriesListByPluginID :many
-SELECT cp.plugin_id, c.id, c.name
-FROM appstore.categories_plugins cp
-JOIN appstore.categories c ON c.id = cp.category_id
-WHERE cp.plugin_id = $1 AND c.deleted IS NULL
-ORDER BY c.name
-`
-
-type PluginCategoriesListByPluginIDParams struct {
-	PluginID uuid.UUID
-}
-
-type PluginCategoriesListByPluginIDRow struct {
-	PluginID uuid.UUID
-	ID       uuid.UUID
-	Name     string
-}
-
-func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg PluginCategoriesListByPluginIDParams) ([]PluginCategoriesListByPluginIDRow, error) {
-	rows, err := q.db.Query(ctx, pluginCategoriesListByPluginID, arg.PluginID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PluginCategoriesListByPluginIDRow
-	for rows.Next() {
-		var i PluginCategoriesListByPluginIDRow
-		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const pluginDocumentationLinksList = `-- name: PluginDocumentationLinksList :many
-SELECT id, plugin_id, title, url_name, url
-FROM appstore.plugin_documentation_links
-WHERE plugin_id = $1 AND deleted IS NULL
-ORDER BY position, title
-`
-
-type PluginDocumentationLinksListParams struct {
-	PluginID uuid.UUID
-}
-
-type PluginDocumentationLinksListRow struct {
-	ID       uuid.UUID
-	PluginID uuid.UUID
-	Title    string
-	UrlName  string
-	Url      string
-}
-
-func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]PluginDocumentationLinksListRow, error) {
-	rows, err := q.db.Query(ctx, pluginDocumentationLinksList, arg.PluginID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PluginDocumentationLinksListRow
-	for rows.Next() {
-		var i PluginDocumentationLinksListRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.PluginID,
-			&i.Title,
-			&i.UrlName,
-			&i.Url,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const pluginGetByID = `-- name: PluginGetByID :one
-SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image, appstore.plugins.author_name, appstore.plugins.author_url, appstore.plugins.repository_url,
-  tenant.organizations.name AS organization_name,
-  COALESCE((
-    SELECT appstore.plugin_definitions.plugin_version
-    FROM appstore.plugin_definitions
-    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
-    ORDER BY appstore.plugin_definitions.created DESC
-    LIMIT 1
-  ), '')::text AS latest_version,
-  COALESCE((
-    SELECT appstore.plugin_definitions.hash
-    FROM appstore.plugin_definitions
-    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
-    ORDER BY appstore.plugin_definitions.created DESC
-    LIMIT 1
-  ), '')::text AS latest_hash
-FROM appstore.plugins
-INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
-WHERE appstore.plugins.id = $1 AND appstore.plugins.deleted IS NULL
-`
-
-type PluginGetByIDParams struct {
-	ID uuid.UUID
-}
-
-type PluginGetByIDRow struct {
-	ID               uuid.UUID
-	Name             string
-	DisplayName      string
-	DescriptionShort string
-	Description      string
-	Image            string
-	AuthorName       pgtype.Text
-	AuthorUrl        pgtype.Text
-	RepositoryUrl    pgtype.Text
-	OrganizationName string
-	LatestVersion    string
-	LatestHash       string
-}
-
-func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
-	row := q.db.QueryRow(ctx, pluginGetByID, arg.ID)
-	var i PluginGetByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.DisplayName,
-		&i.DescriptionShort,
-		&i.Description,
-		&i.Image,
-		&i.AuthorName,
-		&i.AuthorUrl,
-		&i.RepositoryUrl,
-		&i.OrganizationName,
-		&i.LatestVersion,
-		&i.LatestHash,
-	)
-	return i, err
 }
 
 const pluginList = `-- name: PluginList :many
@@ -278,44 +133,6 @@ func (q *Queries) PluginTagsList(ctx context.Context) ([]PluginTagsListRow, erro
 	var items []PluginTagsListRow
 	for rows.Next() {
 		var i PluginTagsListRow
-		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const pluginTagsListByPluginID = `-- name: PluginTagsListByPluginID :many
-SELECT pt.plugin_id, t.id, t.name
-FROM appstore.plugins_tags pt
-JOIN appstore.tags t ON t.id = pt.tag_id
-WHERE pt.plugin_id = $1 AND t.deleted IS NULL
-ORDER BY t.name
-`
-
-type PluginTagsListByPluginIDParams struct {
-	PluginID uuid.UUID
-}
-
-type PluginTagsListByPluginIDRow struct {
-	PluginID uuid.UUID
-	ID       uuid.UUID
-	Name     string
-}
-
-func (q *Queries) PluginTagsListByPluginID(ctx context.Context, arg PluginTagsListByPluginIDParams) ([]PluginTagsListByPluginIDRow, error) {
-	rows, err := q.db.Query(ctx, pluginTagsListByPluginID, arg.PluginID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PluginTagsListByPluginIDRow
-	for rows.Next() {
-		var i PluginTagsListByPluginIDRow
 		if err := rows.Scan(&i.PluginID, &i.ID, &i.Name); err != nil {
 			return nil, err
 		}

@@ -267,9 +267,10 @@ The marketplace is implemented as an `appstore` schema in the organization-api d
 
 The `PluginService` API in `organization-api` provides:
 
-* `ListPlugins()` - Returns plugins with tags and categories.
-* `GetPluginDetail()` - Returns detailed plugin info including documentation links.
+* `ListPlugins()` - Returns plugins with tags and categories. Deprecated in favour of `install.v1` (link:/funs/fun-20[FUN-20], link:/funs/fun-22[FUN-22]).
 * `ListPresets()` - Returns predefined plugin collections.
+
+Plugin detail is served by `install.v1` `GetPlugin` (link:/funs/fun-22[FUN-22]); organization-api's `GetPluginDetail` is removed.
 
 === Installing, viewing, and deleting plugins
 

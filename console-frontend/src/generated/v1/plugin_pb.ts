@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/plugin.proto.
  */
 export const file_v1_plugin: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIp0CCg1QbHVnaW5TdW1tYXJ5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMZGlzcGxheV9uYW1lGBkgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEhkKEWRlc2NyaXB0aW9uX3Nob3J0GCMgASgJEiIKBHRhZ3MYKCADKAsyFC5vcmdhbml6YXRpb24udjEuVGFnEi0KCmNhdGVnb3JpZXMYMiADKAsyGS5vcmdhbml6YXRpb24udjEuQ2F0ZWdvcnkSDQoFaW1hZ2UYPCABKAkSFgoOcGx1Z2luX3ZlcnNpb24YRiABKAkSFwoPZGVmaW5pdGlvbl9oYXNoGFAgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGFogASgJIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCJGChNMaXN0UGx1Z2luc1Jlc3BvbnNlEi8KB3BsdWdpbnMYCiADKAsyHi5vcmdhbml6YXRpb24udjEuUGx1Z2luU3VtbWFyeSJLCgZQcmVzZXQSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRISCgpwbHVnaW5faWRzGCggAygJIhQKEkxpc3RQcmVzZXRzUmVxdWVzdCI/ChNMaXN0UHJlc2V0c1Jlc3BvbnNlEigKB3ByZXNldHMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUHJlc2V0Ik0KEURvY3VtZW50YXRpb25MaW5rEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhAKCHVybF9uYW1lGB4gASgJEgsKA3VybBgoIAEoCSIjCgZBdXRob3ISDAoEbmFtZRgKIAEoCRILCgN1cmwYFCABKAkijwMKDFBsdWdpbkRldGFpbBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgZIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgjIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5EicKBmF1dGhvchg8IAEoCzIXLm9yZ2FuaXphdGlvbi52MS5BdXRob3ISFgoOcmVwb3NpdG9yeV91cmwYRiABKAkSPwoTZG9jdW1lbnRhdGlvbl9saW5rcxhQIAMoCzIiLm9yZ2FuaXphdGlvbi52MS5Eb2N1bWVudGF0aW9uTGluaxIWCg5wbHVnaW5fdmVyc2lvbhhaIAEoCRIXCg9kZWZpbml0aW9uX2hhc2gYZCABKAkSGQoRb3JnYW5pemF0aW9uX25hbWUYbiABKAkiKwoWR2V0UGx1Z2luRGV0YWlsUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkiSAoXR2V0UGx1Z2luRGV0YWlsUmVzcG9uc2USLQoGcGx1Z2luGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRldGFpbCJqChpQdXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkSEAoIbWFuaWZlc3QYHiABKAwSDwoHcmVwbGFjZRgoIAEoCCJiChtQdXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2USCgoCaWQYCiABKAkSEQoJcGx1Z2luX2lkGBQgASgJEhYKDnBsdWdpbl92ZXJzaW9uGB4gASgJEgwKBGhhc2gYKCABKAkiZAoaR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QSEwoLcGx1Z2luX25hbWUYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkSGQoRb3JnYW5pemF0aW9uX25hbWUYHiABKAkidAobR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEhAKCG1hbmlmZXN0GAogASgMEgwKBGhhc2gYFCABKAkSNQoKZGVmaW5pdGlvbhgeIAEoCzIhLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uIjEKHExpc3RQbHVnaW5EZWZpbml0aW9uc1JlcXVlc3QSEQoJcGx1Z2luX2lkGAogASgJIl4KHUxpc3RQbHVnaW5EZWZpbml0aW9uc1Jlc3BvbnNlEj0KC2RlZmluaXRpb25zGAogAygLMigub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb25WZXJzaW9uIjgKF1BsdWdpbkRlZmluaXRpb25WZXJzaW9uEg8KB3ZlcnNpb24YCiABKAkSDAoEaGFzaBgUIAEoCSL1BAoQUGx1Z2luRGVmaW5pdGlvbhI7CghtZXRhZGF0YRgKIAEoCzIpLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNwoLcGVybWlzc2lvbnMYKCABKAsyIi5vcmdhbml6YXRpb24udjEuUGx1Z2luUGVybWlzc2lvbnMSKQoEbWVudRgyIAEoCzIbLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51EgwKBGNyZHMYPCADKAkSUgoRY3VzdG9tX2NvbXBvbmVudHMYRiADKAsyNy5vcmdhbml6YXRpb24udjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQQoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJi5vcmdhbml6YXRpb24udjEuUGx1Z2luQWxsb3dlZFJlc291cmNlEkAKCHVpX2hpbnRzGFogAygLMi4ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb24uVWlIaW50c0VudHJ5GmAKFUN1c3RvbUNvbXBvbmVudHNFbnRyeRILCgNrZXkYASABKAkSNgoFdmFsdWUYAiABKAsyJy5vcmdhbml6YXRpb24udjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTQoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5VSUhpbnQ6AjgBIswBChhQbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDAoEbmFtZRgKIAEoCRIUCgxkaXNwbGF5X25hbWUYFCABKAkSDwoHdmVyc2lvbhgeIAEoCRITCgtkZXNjcmlwdGlvbhgoIAEoCRIOCgZhdXRob3IYMiABKAkSDwoHbGljZW5zZRg8IAEoCRIMCgRpY29uGEYgASgJEikKBHVybHMYUCABKAsyGy5vcmdhbml6YXRpb24udjEuUGx1Z2luVVJMcxIMCgR0YWdzGFogAygJIkkKClBsdWdpblVSTHMSEAoIaG9tZXBhZ2UYCiABKAkSEgoKcmVwb3NpdG9yeRgUIAEoCRIVCg1kb2N1bWVudGF0aW9uGB4gASgJIloKEVBsdWdpblBlcm1pc3Npb25zEhQKDGNhcGFiaWxpdGllcxgKIAMoCRIvCgRyYmFjGBQgAygLMiEub3JnYW5pemF0aW9uLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ3CgpQbHVnaW5NZW51EjYKDG9yZ2FuaXphdGlvbhgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkSMQoHcHJvamVjdBgUIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkicQoPUGx1Z2luTWVudUVudHJ5EgsKA2NyZBgKIAEoCRIMCgRsaXN0GBQgASgIEg4KBmRldGFpbBgeIAEoCBIMCgRpY29uGCggASgJEg0KBWxhYmVsGDIgASgJEhYKDnNpbmd1bGFyX2xhYmVsGDwgASgJIlQKFlBsdWdpbkNvbXBvbmVudE1hcHBpbmcSDAoEbGlzdBgKIAEoCRIOCgZkZXRhaWwYFCABKAkSDgoGY3JlYXRlGB4gASgJEgwKBGVkaXQYKCABKAkiWAoVUGx1Z2luQWxsb3dlZFJlc291cmNlEg0KBWdyb3VwGAogASgJEg8KB3ZlcnNpb24YFCABKAkSEAoIcmVzb3VyY2UYHiABKAkSDQoFdmVyYnMYKCADKAkigwEKDFBsdWdpblVJSGludBI1Cgtmb3JtX2dyb3VwcxgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5Gb3JtR3JvdXASPAoOc3RhdHVzX21hcHBpbmcYFCABKAsyJC5vcmdhbml6YXRpb24udjEuUGx1Z2luU3RhdHVzTWFwcGluZyIvCg9QbHVnaW5Gb3JtR3JvdXASDAoEbmFtZRgKIAEoCRIOCgZmaWVsZHMYFCADKAkivQEKE1BsdWdpblN0YXR1c01hcHBpbmcSEQoJanNvbl9wYXRoGAogASgJEkAKBnZhbHVlcxgUIAMoCzIwLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNNYXBwaW5nLlZhbHVlc0VudHJ5GlEKC1ZhbHVlc0VudHJ5EgsKA2tleRgBIAEoCRIxCgV2YWx1ZRgCIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkymQUKDVBsdWdpblNlcnZpY2USXQoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2UiA4gCARJpCg9HZXRQbHVnaW5EZXRhaWwSJy5vcmdhbml6YXRpb24udjEuR2V0UGx1Z2luRGV0YWlsUmVxdWVzdBooLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZXRhaWxSZXNwb25zZSIDiAIBElgKC0xpc3RQcmVzZXRzEiMub3JnYW5pemF0aW9uLnYxLkxpc3RQcmVzZXRzUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJlc2V0c1Jlc3BvbnNlEnsKFUxpc3RQbHVnaW5EZWZpbml0aW9ucxItLm9yZ2FuaXphdGlvbi52MS5MaXN0UGx1Z2luRGVmaW5pdGlvbnNSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5EZWZpbml0aW9uc1Jlc3BvbnNlIgOIAgEScAoTUHV0UGx1Z2luRGVmaW5pdGlvbhIrLm9yZ2FuaXphdGlvbi52MS5QdXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBosLm9yZ2FuaXphdGlvbi52MS5QdXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2USdQoTR2V0UGx1Z2luRGVmaW5pdGlvbhIrLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBosLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2UiA4gCAUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features]);
+  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIp0CCg1QbHVnaW5TdW1tYXJ5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMZGlzcGxheV9uYW1lGBkgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEhkKEWRlc2NyaXB0aW9uX3Nob3J0GCMgASgJEiIKBHRhZ3MYKCADKAsyFC5vcmdhbml6YXRpb24udjEuVGFnEi0KCmNhdGVnb3JpZXMYMiADKAsyGS5vcmdhbml6YXRpb24udjEuQ2F0ZWdvcnkSDQoFaW1hZ2UYPCABKAkSFgoOcGx1Z2luX3ZlcnNpb24YRiABKAkSFwoPZGVmaW5pdGlvbl9oYXNoGFAgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGFogASgJIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCJGChNMaXN0UGx1Z2luc1Jlc3BvbnNlEi8KB3BsdWdpbnMYCiADKAsyHi5vcmdhbml6YXRpb24udjEuUGx1Z2luU3VtbWFyeSJLCgZQcmVzZXQSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRISCgpwbHVnaW5faWRzGCggAygJIhQKEkxpc3RQcmVzZXRzUmVxdWVzdCI/ChNMaXN0UHJlc2V0c1Jlc3BvbnNlEigKB3ByZXNldHMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUHJlc2V0ImQKGkdldFBsdWdpbkRlZmluaXRpb25SZXF1ZXN0EhMKC3BsdWdpbl9uYW1lGAogASgJEhYKDnBsdWdpbl92ZXJzaW9uGBQgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGB4gASgJInQKG0dldFBsdWdpbkRlZmluaXRpb25SZXNwb25zZRIQCghtYW5pZmVzdBgKIAEoDBIMCgRoYXNoGBQgASgJEjUKCmRlZmluaXRpb24YHiABKAsyIS5vcmdhbml6YXRpb24udjEuUGx1Z2luRGVmaW5pdGlvbiL1BAoQUGx1Z2luRGVmaW5pdGlvbhI7CghtZXRhZGF0YRgKIAEoCzIpLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNwoLcGVybWlzc2lvbnMYKCABKAsyIi5vcmdhbml6YXRpb24udjEuUGx1Z2luUGVybWlzc2lvbnMSKQoEbWVudRgyIAEoCzIbLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51EgwKBGNyZHMYPCADKAkSUgoRY3VzdG9tX2NvbXBvbmVudHMYRiADKAsyNy5vcmdhbml6YXRpb24udjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQQoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJi5vcmdhbml6YXRpb24udjEuUGx1Z2luQWxsb3dlZFJlc291cmNlEkAKCHVpX2hpbnRzGFogAygLMi4ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb24uVWlIaW50c0VudHJ5GmAKFUN1c3RvbUNvbXBvbmVudHNFbnRyeRILCgNrZXkYASABKAkSNgoFdmFsdWUYAiABKAsyJy5vcmdhbml6YXRpb24udjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTQoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5VSUhpbnQ6AjgBIswBChhQbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDAoEbmFtZRgKIAEoCRIUCgxkaXNwbGF5X25hbWUYFCABKAkSDwoHdmVyc2lvbhgeIAEoCRITCgtkZXNjcmlwdGlvbhgoIAEoCRIOCgZhdXRob3IYMiABKAkSDwoHbGljZW5zZRg8IAEoCRIMCgRpY29uGEYgASgJEikKBHVybHMYUCABKAsyGy5vcmdhbml6YXRpb24udjEuUGx1Z2luVVJMcxIMCgR0YWdzGFogAygJIkkKClBsdWdpblVSTHMSEAoIaG9tZXBhZ2UYCiABKAkSEgoKcmVwb3NpdG9yeRgUIAEoCRIVCg1kb2N1bWVudGF0aW9uGB4gASgJIloKEVBsdWdpblBlcm1pc3Npb25zEhQKDGNhcGFiaWxpdGllcxgKIAMoCRIvCgRyYmFjGBQgAygLMiEub3JnYW5pemF0aW9uLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ3CgpQbHVnaW5NZW51EjYKDG9yZ2FuaXphdGlvbhgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkSMQoHcHJvamVjdBgUIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkicQoPUGx1Z2luTWVudUVudHJ5EgsKA2NyZBgKIAEoCRIMCgRsaXN0GBQgASgIEg4KBmRldGFpbBgeIAEoCBIMCgRpY29uGCggASgJEg0KBWxhYmVsGDIgASgJEhYKDnNpbmd1bGFyX2xhYmVsGDwgASgJIlQKFlBsdWdpbkNvbXBvbmVudE1hcHBpbmcSDAoEbGlzdBgKIAEoCRIOCgZkZXRhaWwYFCABKAkSDgoGY3JlYXRlGB4gASgJEgwKBGVkaXQYKCABKAkiWAoVUGx1Z2luQWxsb3dlZFJlc291cmNlEg0KBWdyb3VwGAogASgJEg8KB3ZlcnNpb24YFCABKAkSEAoIcmVzb3VyY2UYHiABKAkSDQoFdmVyYnMYKCADKAkigwEKDFBsdWdpblVJSGludBI1Cgtmb3JtX2dyb3VwcxgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5Gb3JtR3JvdXASPAoOc3RhdHVzX21hcHBpbmcYFCABKAsyJC5vcmdhbml6YXRpb24udjEuUGx1Z2luU3RhdHVzTWFwcGluZyIvCg9QbHVnaW5Gb3JtR3JvdXASDAoEbmFtZRgKIAEoCRIOCgZmaWVsZHMYFCADKAkivQEKE1BsdWdpblN0YXR1c01hcHBpbmcSEQoJanNvbl9wYXRoGAogASgJEkAKBnZhbHVlcxgUIAMoCzIwLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNNYXBwaW5nLlZhbHVlc0VudHJ5GlEKC1ZhbHVlc0VudHJ5EgsKA2tleRgBIAEoCRIxCgV2YWx1ZRgCIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkyvwIKDVBsdWdpblNlcnZpY2USXQoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2UiA4gCARJYCgtMaXN0UHJlc2V0cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJlc2V0c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdFByZXNldHNSZXNwb25zZRJ1ChNHZXRQbHVnaW5EZWZpbml0aW9uEisub3JnYW5pemF0aW9uLnYxLkdldFBsdWdpbkRlZmluaXRpb25SZXF1ZXN0Giwub3JnYW5pemF0aW9uLnYxLkdldFBsdWdpbkRlZmluaXRpb25SZXNwb25zZSIDiAIBQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
 
 /**
  * Tag information
@@ -248,258 +248,6 @@ export const ListPresetsResponseSchema: GenMessage<ListPresetsResponse> = /*@__P
   messageDesc(file_v1_plugin, 7);
 
 /**
- * Documentation link for a plugin
- *
- * @generated from message organization.v1.DocumentationLink
- */
-export type DocumentationLink = Message<"organization.v1.DocumentationLink"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string title = 20;
-   */
-  title: string;
-
-  /**
-   * @generated from field: string url_name = 30;
-   */
-  urlName: string;
-
-  /**
-   * @generated from field: string url = 40;
-   */
-  url: string;
-};
-
-/**
- * Describes the message organization.v1.DocumentationLink.
- * Use `create(DocumentationLinkSchema)` to create a new message.
- */
-export const DocumentationLinkSchema: GenMessage<DocumentationLink> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 8);
-
-/**
- * Author information
- *
- * @generated from message organization.v1.Author
- */
-export type Author = Message<"organization.v1.Author"> & {
-  /**
-   * @generated from field: string name = 10;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string url = 20;
-   */
-  url: string;
-};
-
-/**
- * Describes the message organization.v1.Author.
- * Use `create(AuthorSchema)` to create a new message.
- */
-export const AuthorSchema: GenMessage<Author> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 9);
-
-/**
- * Detailed plugin information
- *
- * @generated from message organization.v1.PluginDetail
- */
-export type PluginDetail = Message<"organization.v1.PluginDetail"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-
-  /**
-   * Stable identifier (e.g. "openfsc"); see PluginSummary.name.
-   *
-   * @generated from field: string name = 20;
-   */
-  name: string;
-
-  /**
-   * Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
-   *
-   * @generated from field: string display_name = 25;
-   */
-  displayName: string;
-
-  /**
-   * @generated from field: string description = 30;
-   */
-  description: string;
-
-  /**
-   * @generated from field: string description_short = 35;
-   */
-  descriptionShort: string;
-
-  /**
-   * @generated from field: repeated organization.v1.Tag tags = 40;
-   */
-  tags: Tag[];
-
-  /**
-   * @generated from field: repeated organization.v1.Category categories = 50;
-   */
-  categories: Category[];
-
-  /**
-   * @generated from field: organization.v1.Author author = 60;
-   */
-  author?: Author | undefined;
-
-  /**
-   * @generated from field: string repository_url = 70;
-   */
-  repositoryUrl: string;
-
-  /**
-   * @generated from field: repeated organization.v1.DocumentationLink documentation_links = 80;
-   */
-  documentationLinks: DocumentationLink[];
-
-  /**
-   * Latest published definition; see PluginSummary.plugin_version.
-   *
-   * @generated from field: string plugin_version = 90;
-   */
-  pluginVersion: string;
-
-  /**
-   * @generated from field: string definition_hash = 100;
-   */
-  definitionHash: string;
-
-  /**
-   * Publishing organization's name; see PluginSummary.organization_name.
-   *
-   * @generated from field: string organization_name = 110;
-   */
-  organizationName: string;
-};
-
-/**
- * Describes the message organization.v1.PluginDetail.
- * Use `create(PluginDetailSchema)` to create a new message.
- */
-export const PluginDetailSchema: GenMessage<PluginDetail> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 10);
-
-/**
- * Get plugin detail request
- *
- * @generated from message organization.v1.GetPluginDetailRequest
- */
-export type GetPluginDetailRequest = Message<"organization.v1.GetPluginDetailRequest"> & {
-  /**
-   * @generated from field: string plugin_id = 10;
-   */
-  pluginId: string;
-};
-
-/**
- * Describes the message organization.v1.GetPluginDetailRequest.
- * Use `create(GetPluginDetailRequestSchema)` to create a new message.
- */
-export const GetPluginDetailRequestSchema: GenMessage<GetPluginDetailRequest> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 11);
-
-/**
- * Get plugin detail response
- *
- * @generated from message organization.v1.GetPluginDetailResponse
- */
-export type GetPluginDetailResponse = Message<"organization.v1.GetPluginDetailResponse"> & {
-  /**
-   * @generated from field: organization.v1.PluginDetail plugin = 10;
-   */
-  plugin?: PluginDetail | undefined;
-};
-
-/**
- * Describes the message organization.v1.GetPluginDetailResponse.
- * Use `create(GetPluginDetailResponseSchema)` to create a new message.
- */
-export const GetPluginDetailResponseSchema: GenMessage<GetPluginDetailResponse> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 12);
-
-/**
- * @generated from message organization.v1.PutPluginDefinitionRequest
- */
-export type PutPluginDefinitionRequest = Message<"organization.v1.PutPluginDefinitionRequest"> & {
-  /**
-   * @generated from field: string plugin_id = 10;
-   */
-  pluginId: string;
-
-  /**
-   * @generated from field: string plugin_version = 20;
-   */
-  pluginVersion: string;
-
-  /**
-   * @generated from field: bytes manifest = 30;
-   */
-  manifest: Uint8Array;
-
-  /**
-   * Republish: when an active definition already exists for (plugin_id, version)
-   * with a different hash, soft-delete it and store this one in its place.
-   * Without this, that case is rejected so a pinned definition is never silently
-   * replaced.
-   *
-   * @generated from field: bool replace = 40;
-   */
-  replace: boolean;
-};
-
-/**
- * Describes the message organization.v1.PutPluginDefinitionRequest.
- * Use `create(PutPluginDefinitionRequestSchema)` to create a new message.
- */
-export const PutPluginDefinitionRequestSchema: GenMessage<PutPluginDefinitionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 13);
-
-/**
- * @generated from message organization.v1.PutPluginDefinitionResponse
- */
-export type PutPluginDefinitionResponse = Message<"organization.v1.PutPluginDefinitionResponse"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string plugin_id = 20;
-   */
-  pluginId: string;
-
-  /**
-   * @generated from field: string plugin_version = 30;
-   */
-  pluginVersion: string;
-
-  /**
-   * @generated from field: string hash = 40;
-   */
-  hash: string;
-};
-
-/**
- * Describes the message organization.v1.PutPluginDefinitionResponse.
- * Use `create(PutPluginDefinitionResponseSchema)` to create a new message.
- */
-export const PutPluginDefinitionResponseSchema: GenMessage<PutPluginDefinitionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 14);
-
-/**
  * @generated from message organization.v1.GetPluginDefinitionRequest
  */
 export type GetPluginDefinitionRequest = Message<"organization.v1.GetPluginDefinitionRequest"> & {
@@ -527,7 +275,7 @@ export type GetPluginDefinitionRequest = Message<"organization.v1.GetPluginDefin
  * Use `create(GetPluginDefinitionRequestSchema)` to create a new message.
  */
 export const GetPluginDefinitionRequestSchema: GenMessage<GetPluginDefinitionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 15);
+  messageDesc(file_v1_plugin, 8);
 
 /**
  * @generated from message organization.v1.GetPluginDefinitionResponse
@@ -554,66 +302,7 @@ export type GetPluginDefinitionResponse = Message<"organization.v1.GetPluginDefi
  * Use `create(GetPluginDefinitionResponseSchema)` to create a new message.
  */
 export const GetPluginDefinitionResponseSchema: GenMessage<GetPluginDefinitionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 16);
-
-/**
- * @generated from message organization.v1.ListPluginDefinitionsRequest
- */
-export type ListPluginDefinitionsRequest = Message<"organization.v1.ListPluginDefinitionsRequest"> & {
-  /**
-   * @generated from field: string plugin_id = 10;
-   */
-  pluginId: string;
-};
-
-/**
- * Describes the message organization.v1.ListPluginDefinitionsRequest.
- * Use `create(ListPluginDefinitionsRequestSchema)` to create a new message.
- */
-export const ListPluginDefinitionsRequestSchema: GenMessage<ListPluginDefinitionsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 17);
-
-/**
- * @generated from message organization.v1.ListPluginDefinitionsResponse
- */
-export type ListPluginDefinitionsResponse = Message<"organization.v1.ListPluginDefinitionsResponse"> & {
-  /**
-   * @generated from field: repeated organization.v1.PluginDefinitionVersion definitions = 10;
-   */
-  definitions: PluginDefinitionVersion[];
-};
-
-/**
- * Describes the message organization.v1.ListPluginDefinitionsResponse.
- * Use `create(ListPluginDefinitionsResponseSchema)` to create a new message.
- */
-export const ListPluginDefinitionsResponseSchema: GenMessage<ListPluginDefinitionsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 18);
-
-/**
- * A published definition's pin: the version an install references and the
- * sha256 hash of that manifest.
- *
- * @generated from message organization.v1.PluginDefinitionVersion
- */
-export type PluginDefinitionVersion = Message<"organization.v1.PluginDefinitionVersion"> & {
-  /**
-   * @generated from field: string version = 10;
-   */
-  version: string;
-
-  /**
-   * @generated from field: string hash = 20;
-   */
-  hash: string;
-};
-
-/**
- * Describes the message organization.v1.PluginDefinitionVersion.
- * Use `create(PluginDefinitionVersionSchema)` to create a new message.
- */
-export const PluginDefinitionVersionSchema: GenMessage<PluginDefinitionVersion> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 19);
+  messageDesc(file_v1_plugin, 9);
 
 /**
  * @generated from message organization.v1.PluginDefinition
@@ -670,7 +359,7 @@ export type PluginDefinition = Message<"organization.v1.PluginDefinition"> & {
  * Use `create(PluginDefinitionSchema)` to create a new message.
  */
 export const PluginDefinitionSchema: GenMessage<PluginDefinition> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 20);
+  messageDesc(file_v1_plugin, 10);
 
 /**
  * @generated from message organization.v1.PluginDefinitionMetadata
@@ -727,7 +416,7 @@ export type PluginDefinitionMetadata = Message<"organization.v1.PluginDefinition
  * Use `create(PluginDefinitionMetadataSchema)` to create a new message.
  */
 export const PluginDefinitionMetadataSchema: GenMessage<PluginDefinitionMetadata> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 21);
+  messageDesc(file_v1_plugin, 11);
 
 /**
  * @generated from message organization.v1.PluginURLs
@@ -754,7 +443,7 @@ export type PluginURLs = Message<"organization.v1.PluginURLs"> & {
  * Use `create(PluginURLsSchema)` to create a new message.
  */
 export const PluginURLsSchema: GenMessage<PluginURLs> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 22);
+  messageDesc(file_v1_plugin, 12);
 
 /**
  * @generated from message organization.v1.PluginPermissions
@@ -776,7 +465,7 @@ export type PluginPermissions = Message<"organization.v1.PluginPermissions"> & {
  * Use `create(PluginPermissionsSchema)` to create a new message.
  */
 export const PluginPermissionsSchema: GenMessage<PluginPermissions> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 23);
+  messageDesc(file_v1_plugin, 13);
 
 /**
  * @generated from message organization.v1.PluginPolicyRule
@@ -803,7 +492,7 @@ export type PluginPolicyRule = Message<"organization.v1.PluginPolicyRule"> & {
  * Use `create(PluginPolicyRuleSchema)` to create a new message.
  */
 export const PluginPolicyRuleSchema: GenMessage<PluginPolicyRule> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 24);
+  messageDesc(file_v1_plugin, 14);
 
 /**
  * @generated from message organization.v1.PluginMenu
@@ -825,7 +514,7 @@ export type PluginMenu = Message<"organization.v1.PluginMenu"> & {
  * Use `create(PluginMenuSchema)` to create a new message.
  */
 export const PluginMenuSchema: GenMessage<PluginMenu> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 25);
+  messageDesc(file_v1_plugin, 15);
 
 /**
  * @generated from message organization.v1.PluginMenuEntry
@@ -867,7 +556,7 @@ export type PluginMenuEntry = Message<"organization.v1.PluginMenuEntry"> & {
  * Use `create(PluginMenuEntrySchema)` to create a new message.
  */
 export const PluginMenuEntrySchema: GenMessage<PluginMenuEntry> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 26);
+  messageDesc(file_v1_plugin, 16);
 
 /**
  * @generated from message organization.v1.PluginComponentMapping
@@ -901,7 +590,7 @@ export type PluginComponentMapping = Message<"organization.v1.PluginComponentMap
  * Use `create(PluginComponentMappingSchema)` to create a new message.
  */
 export const PluginComponentMappingSchema: GenMessage<PluginComponentMapping> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 27);
+  messageDesc(file_v1_plugin, 17);
 
 /**
  * @generated from message organization.v1.PluginAllowedResource
@@ -933,7 +622,7 @@ export type PluginAllowedResource = Message<"organization.v1.PluginAllowedResour
  * Use `create(PluginAllowedResourceSchema)` to create a new message.
  */
 export const PluginAllowedResourceSchema: GenMessage<PluginAllowedResource> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 28);
+  messageDesc(file_v1_plugin, 18);
 
 /**
  * @generated from message organization.v1.PluginUIHint
@@ -955,7 +644,7 @@ export type PluginUIHint = Message<"organization.v1.PluginUIHint"> & {
  * Use `create(PluginUIHintSchema)` to create a new message.
  */
 export const PluginUIHintSchema: GenMessage<PluginUIHint> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 29);
+  messageDesc(file_v1_plugin, 19);
 
 /**
  * @generated from message organization.v1.PluginFormGroup
@@ -977,7 +666,7 @@ export type PluginFormGroup = Message<"organization.v1.PluginFormGroup"> & {
  * Use `create(PluginFormGroupSchema)` to create a new message.
  */
 export const PluginFormGroupSchema: GenMessage<PluginFormGroup> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 30);
+  messageDesc(file_v1_plugin, 20);
 
 /**
  * @generated from message organization.v1.PluginStatusMapping
@@ -999,7 +688,7 @@ export type PluginStatusMapping = Message<"organization.v1.PluginStatusMapping">
  * Use `create(PluginStatusMappingSchema)` to create a new message.
  */
 export const PluginStatusMappingSchema: GenMessage<PluginStatusMapping> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 31);
+  messageDesc(file_v1_plugin, 21);
 
 /**
  * @generated from message organization.v1.PluginStatusValue
@@ -1021,7 +710,7 @@ export type PluginStatusValue = Message<"organization.v1.PluginStatusValue"> & {
  * Use `create(PluginStatusValueSchema)` to create a new message.
  */
 export const PluginStatusValueSchema: GenMessage<PluginStatusValue> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 32);
+  messageDesc(file_v1_plugin, 22);
 
 /**
  * PluginService provides information about available plugins and presets
@@ -1045,21 +734,6 @@ export const PluginService: GenService<{
     output: typeof ListPluginsResponseSchema;
   },
   /**
-   * Get detailed information about a specific plugin.
-   *
-   * Deprecated: superseded by catalog.v1.CatalogService.GetPlugin in
-   * marketplace-api. Note the replacement derives capabilities and permissions
-   * from the pinned manifest rather than from columns.
-   *
-   * @generated from rpc organization.v1.PluginService.GetPluginDetail
-   * @deprecated
-   */
-  getPluginDetail: {
-    methodKind: "unary";
-    input: typeof GetPluginDetailRequestSchema;
-    output: typeof GetPluginDetailResponseSchema;
-  },
-  /**
    * List all available presets
    *
    * @generated from rpc organization.v1.PluginService.ListPresets
@@ -1068,38 +742,6 @@ export const PluginService: GenService<{
     methodKind: "unary";
     input: typeof ListPresetsRequestSchema;
     output: typeof ListPresetsResponseSchema;
-  },
-  /**
-   * List the definitions (version + hash) for a plugin, latest first. Used by
-   * the console to offer a version to pin on install.
-   *
-   * Deprecated: moves to catalog.v1.CatalogService.ListPluginVersions. Note the
-   * rename is not cosmetic — despite the name this returns every non-deleted
-   * definition including unpublished drafts, and the catalog returns only
-   * published ones, which is what an unauthenticated caller must ever see.
-   *
-   * @generated from rpc organization.v1.PluginService.ListPluginDefinitions
-   * @deprecated
-   */
-  listPluginDefinitions: {
-    methodKind: "unary";
-    input: typeof ListPluginDefinitionsRequestSchema;
-    output: typeof ListPluginDefinitionsResponseSchema;
-  },
-  /**
-   * Idempotent upsert of a plugin definition. Server computes the hash from the
-   * manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
-   * same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
-   * replace=true, which soft-deletes the existing row and stores the new one.
-   * Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
-   * Requires an authenticated user.
-   *
-   * @generated from rpc organization.v1.PluginService.PutPluginDefinition
-   */
-  putPluginDefinition: {
-    methodKind: "unary";
-    input: typeof PutPluginDefinitionRequestSchema;
-    output: typeof PutPluginDefinitionResponseSchema;
   },
   /**
    * Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
