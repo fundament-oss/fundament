@@ -66,7 +66,7 @@ just dev-hotreload
   - Adding, moving or deleting a file rebuilds the image and redeploys.
 - Every deploy resets the databases to the test data.
 - `Ctrl-C` stops watching; the deployment keeps running.
-- It runs in mock mode: clusters exist only in the database. For real clusters, see [Local Gardener](./local-gardener.md).
+- It runs in mock mode: clusters exist only in the database. For real clusters, see [Test environment](./test-env.md).
 
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 
@@ -114,6 +114,6 @@ just cluster-delete
 
 ## Next
 
-- [Local Gardener](./local-gardener.md): create real clusters locally
+- [Test environment](./test-env.md): a real Gardener in a local VM, for e2e scenarios and real clusters
 - [Plugins](/docs/developer/plugins): write a plugin, run it locally
 - [Block devices for k3d](./k3d-block-devices.md): storage plugin work

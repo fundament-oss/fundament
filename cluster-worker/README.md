@@ -434,8 +434,7 @@ get no SIGTERM window. Gardener reads these annotations only while it deletes a 
 Whatever those finalizers were protecting outside the cluster — storage, load balancers,
 DNS records — can be left behind. Turn it on only where nothing outside a cluster
 depends on it. The `local-gardener` Skaffold profile turns it on; see
-[Running with a local Gardener](../docs/developer/fundament/local-gardener.md) for turning
-it off locally.
+[the test environment](../docs/developer/fundament/test-env.md) for turning it off there.
 
 ## Container defaults
 
@@ -571,6 +570,6 @@ Never "fix" this by deleting the CRD: that cascades to every tenant's
 
 ## Running it locally
 
-Real mode needs a local Gardener next to the platform: see
-[Running with a local Gardener](../docs/developer/fundament/local-gardener.md).
-`just cluster-worker` lists the recipes.
+Real mode needs a local Gardener next to the platform. It runs in a VM: see
+[the test environment](../docs/developer/fundament/test-env.md). `just test-env` lists
+the recipes.
