@@ -49,7 +49,8 @@ func seedPluginDefinition(t *testing.T, env *testEnv, pluginID uuid.UUID, versio
 }
 
 // TestListPlugins_SurfacesLatestDefinition verifies ListPlugins reports the
-// latest published version+hash (empty when none), which terraform pins on install.
+// latest published version+hash (empty when none), which terraform pins on
+// install. Drafts never surface.
 func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	t.Parallel()
 
@@ -93,18 +94,36 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	assert.Empty(t, before.GetPluginVersion())
 	assert.Empty(t, before.GetDefinitionHash())
 
-	put := func(version string, manifest []byte) string {
-		return seedPluginDefinition(t, env, pluginID, version, manifest)
+	// Approval is the only path that stamps published; mirror it directly.
+	publish := func(version string) {
+		t.Helper()
+		_, err := env.adminPool.Exec(t.Context(),
+			"UPDATE appstore.plugin_definitions SET status = 'approved', published = now() WHERE plugin_id = $1 AND plugin_version = $2",
+			pluginID, version,
+		)
+		require.NoError(t, err)
 	}
 
-	// Publish v1, then v2 — the latest by created is v2.
-	put("v1", testManifest)
+	v1Hash := seedPluginDefinition(t, env, pluginID, "v1", testManifest)
 	v2Manifest := bytes.ReplaceAll(testManifest, []byte("version: v1"), []byte("version: v2"))
-	v2Hash := put("v2", v2Manifest)
+	v2Hash := seedPluginDefinition(t, env, pluginID, "v2", v2Manifest)
 
-	after := findSummary(t)
-	assert.Equal(t, "v2", after.GetPluginVersion())
-	assert.Equal(t, v2Hash, after.GetDefinitionHash())
+	// Both uploads are unreviewed drafts → still nothing to pin.
+	drafts := findSummary(t)
+	assert.Empty(t, drafts.GetPluginVersion())
+	assert.Empty(t, drafts.GetDefinitionHash())
+
+	// Only v1 published → v1, even though v2 was uploaded later.
+	publish("v1")
+	afterV1 := findSummary(t)
+	assert.Equal(t, "v1", afterV1.GetPluginVersion())
+	assert.Equal(t, v1Hash, afterV1.GetDefinitionHash())
+
+	// v2 published → the newest publication wins.
+	publish("v2")
+	afterV2 := findSummary(t)
+	assert.Equal(t, "v2", afterV2.GetPluginVersion())
+	assert.Equal(t, v2Hash, afterV2.GetDefinitionHash())
 }
 
 func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
