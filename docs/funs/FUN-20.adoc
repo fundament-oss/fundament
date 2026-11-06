@@ -152,7 +152,7 @@ Only the parts that are decisions rather than mechanics.
 
 == Superseding organization-api's PluginService
 
-`organization-api`'s `PluginService.PutPluginDefinition` wrote `appstore.plugin_definitions` when this FUN was written, and `registry.v1.CreatePluginVersion` writes the same table with different semantics: `Put` had a `replace` flag and no review state, while the registry lands everything in `DRAFT` and expects review to move it. Two writers to one table with different rules is not a steady state, so `PutPluginDefinition` is removed and the registry is the only writer.
+`organization-api`'s `PluginService.PutPluginDefinition` wrote `appstore.plugin_definitions` when this FUN was written, and `registry.v1.CreatePluginVersion` writes the same table with different semantics: `Put` had a `replace` flag and no review state, while the registry lands everything in `DRAFT` and expects review to move it. Two ways to insert a version with different rules is not a steady state, so `PutPluginDefinition` is removed and the registry is the only path that inserts versions; review in `marketplace-admin-api` still updates their status.
 
 `registry.v1.PublicationService` is the publishing surface, so the whole of `PluginService` is deprecated once these stacks merge, moving in follow-ups:
 
