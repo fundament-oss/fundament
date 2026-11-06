@@ -80,7 +80,7 @@ The address is released when the Service is deleted. That includes the indirect 
 - deleting the Gateway it was created for;
 - deleting the cluster.
 
-A released address goes back into the shared range and can be handed to anyone. Creating the Service again gives you a new address, which is almost never the old one. So when a DNS record points at a Service, change that Service in place rather than deleting and recreating it. A [lost cluster](./clusters.md#lost-clusters) that is created again also gets new addresses.
+A released address goes back into the shared range and can be handed to anyone. Creating the Service again gives you the old address or another one; neither is guaranteed. So when a DNS record points at a Service, change that Service in place rather than deleting and recreating it. A [lost cluster](./clusters.md#lost-clusters) that is created again can also get other addresses.
 
 ### Keeping an address across deletes
 
