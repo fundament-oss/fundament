@@ -128,4 +128,4 @@ Addresses inside the cluster are IPv4 only, as decided in [ADR 0024](/adr/0024-i
 
 ## Outbound traffic
 
-The public address of a Service is for incoming connections only. Connections that your pods open to the internet leave through the firewall of the cluster and arrive from the address of that firewall, whichever Service the pod belongs to. That address is not reserved either: it can change when the platform replaces the firewall. Keep that in mind when another party wants to put your address on an allow list.
+The public address of a Service is for incoming connections only. Connections that your pods open to the internet leave through the firewall of the cluster and arrive from the address of that firewall, whichever Service the pod belongs to. That address is not reserved either: it can change when the platform replaces the firewall. Some installations translate it once more on the way out, to an address that all their clusters share. Ask the operator of your installation which address others will see before it goes on an allow list.
