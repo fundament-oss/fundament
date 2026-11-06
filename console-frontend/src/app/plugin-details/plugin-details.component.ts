@@ -87,6 +87,8 @@ interface PluginDetailView {
   tags: string[];
   documentationLinks: DocumentationLink[];
   repositoryUrl: string;
+  logo: string;
+  logoDark: string;
 }
 
 // Extended cluster type for UI state. `phase` is null when the plugin is not
@@ -250,6 +252,8 @@ export default class PluginDetailsComponent implements OnInit {
         tags: detail.tags,
         documentationLinks: detail.documentationLinks,
         repositoryUrl: detail.repositoryUrl,
+        logo: detail.logo,
+        logoDark: detail.logoDark,
       };
 
       this.plugin.set(plugin);

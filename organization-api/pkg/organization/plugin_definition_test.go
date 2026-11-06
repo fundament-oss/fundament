@@ -340,7 +340,7 @@ func TestPutPluginDefinition_RejectsOversizedManifest(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
-	// One byte over the 1 MiB handler cap, comfortably under the 2 MiB transport
+	// One byte over the 1 MiB handler cap, comfortably under the 3 MiB transport
 	// read limit so the handler (not the transport) rejects it.
 	oversized := make([]byte, (1<<20)+1)
 

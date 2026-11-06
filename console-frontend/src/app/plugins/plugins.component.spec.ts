@@ -276,6 +276,8 @@ describe('PluginsComponent retry install', () => {
     displayName: 'Ceph Rook',
     descriptionShort: '',
     image: '',
+    logo: '',
+    logoDark: '',
     organizationName: 'acme',
     publisherDisplayName: 'Acme',
     categories: [],

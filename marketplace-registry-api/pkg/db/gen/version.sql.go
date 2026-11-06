@@ -49,7 +49,8 @@ func (q *Queries) CategoryList(ctx context.Context) ([]CategoryListRow, error) {
 
 const pluginVersionCreate = `-- name: PluginVersionCreate :one
 INSERT INTO appstore.plugin_definitions (
-	plugin_id, plugin_version, manifest, hash, image, release_notes, status
+	plugin_id, plugin_version, manifest, hash, image, release_notes, status,
+	logo, logo_dark, menu_icons
 ) VALUES (
 	$1::uuid,
 	$2::text,
@@ -57,7 +58,10 @@ INSERT INTO appstore.plugin_definitions (
 	$4::text,
 	$5::text,
 	$6::text,
-	'draft'
+	'draft',
+	$7::text,
+	$8::text,
+	$9::jsonb
 )
 RETURNING id, created
 `
@@ -69,6 +73,9 @@ type PluginVersionCreateParams struct {
 	Hash          string
 	Image         string
 	ReleaseNotes  string
+	Logo          string
+	LogoDark      string
+	MenuIcons     []byte
 }
 
 type PluginVersionCreateRow struct {
@@ -86,6 +93,9 @@ func (q *Queries) PluginVersionCreate(ctx context.Context, arg PluginVersionCrea
 		arg.Hash,
 		arg.Image,
 		arg.ReleaseNotes,
+		arg.Logo,
+		arg.LogoDark,
+		arg.MenuIcons,
 	)
 	var i PluginVersionCreateRow
 	err := row.Scan(&i.ID, &i.Created)

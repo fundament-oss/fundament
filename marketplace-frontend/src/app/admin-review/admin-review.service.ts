@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { REVIEW_CLIENT } from '../../connect/tokens';
 import toIsoDate from '../../connect/timestamp';
+import { isCustomIcon } from '../utils/custom-icon';
 import {
   type SubmissionStatus,
   type RejectionReasonValue,
@@ -26,6 +27,11 @@ export interface PluginSubmission {
   description: string;
   categories: string[];
   icon: string; // base name under /img/plugins/<icon>.svg
+  // data: URIs of the submitted version; empty when it declares none.
+  logo: string;
+  logoDark: string;
+  // Resolved on the detail page only.
+  menuIcons: string[];
   // The version under review. Resolved on the detail page only: the queue lists
   // submissions, and a version lookup per row would be an N+1.
   version?: string;
@@ -99,6 +105,7 @@ export default class AdminReviewService {
     return {
       ...AdminReviewService.toSubmission(submission, plugin.plugin, publishers, categories),
       version: version.version?.version ?? '',
+      menuIcons: (version.version?.menuIcons ?? []).filter(isCustomIcon),
     };
   }
 
@@ -171,6 +178,9 @@ export default class AdminReviewService {
         .map((categoryId) => categories.get(categoryId))
         .filter((name): name is string => name !== undefined),
       icon: plugin?.name ?? '',
+      logo: submission.logo,
+      logoDark: submission.logoDark,
+      menuIcons: [],
       submitterName: publishers.get(submission.organizationId) ?? submission.organizationId,
       submitterUserId: submission.submitterUserId,
       submittedAt: toIsoDate(submission.submitted),

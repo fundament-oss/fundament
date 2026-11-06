@@ -90,7 +90,7 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
 // resource name in the cluster; `displayName` (e.g. "OpenFSC") is what a user sees.
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  'id' | 'name' | 'displayName' | 'descriptionShort' | 'image'
+  'id' | 'name' | 'displayName' | 'descriptionShort' | 'image' | 'logo' | 'logoDark'
 > {
   // Resolved from catalog.v1, which returns ids and leaves the names to
   // ListPublishers and ListCategories rather than repeating them per plugin.
@@ -323,6 +323,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         displayName: '',
         descriptionShort: 'No longer listed in the marketplace.',
         image: '',
+        logo: '',
+        logoDark: '',
         organizationName: install.organizationName,
         publisherDisplayName: install.organizationName,
         categories: [],
@@ -394,6 +396,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           })),
           tags: backendPlugin.tags,
           image: backendPlugin.image,
+          logo: backendPlugin.logo,
+          logoDark: backendPlugin.logoDark,
           presets: assignedPresets,
         };
       });

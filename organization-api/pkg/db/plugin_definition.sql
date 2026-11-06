@@ -1,5 +1,5 @@
 -- name: PluginDefinitionGetActive :one
-SELECT appstore.plugin_definitions.id, appstore.plugin_definitions.plugin_id, appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.created
+SELECT appstore.plugin_definitions.id, appstore.plugin_definitions.plugin_id, appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.created, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
@@ -19,8 +19,8 @@ WHERE appstore.plugin_definitions.plugin_id = $1 AND appstore.plugin_definitions
 ORDER BY appstore.plugin_definitions.created DESC;
 
 -- name: PluginDefinitionInsert :one
-INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash)
-VALUES ($1, $2, $3, $4)
+INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash, logo, logo_dark, menu_icons)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, plugin_id, plugin_version, hash, created;
 
 -- name: PluginDefinitionSoftDelete :execrows

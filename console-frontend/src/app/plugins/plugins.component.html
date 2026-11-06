@@ -160,6 +160,8 @@
               <nldd-container padding="16">
                 <app-plugin-icon
                   [name]="getPluginIconName(plugin.name)"
+                  [logo]="plugin.logo"
+                  [logoDark]="plugin.logoDark"
                   class="block h-10 w-10"
                 />
                 <nldd-spacer size="12"></nldd-spacer>
@@ -348,6 +350,8 @@
         <div class="flex items-start gap-4">
           <app-plugin-icon
             [name]="getPluginIconName(plugin.name)"
+            [logo]="plugin.logo"
+            [logoDark]="plugin.logoDark"
             [label]="plugin.displayName || plugin.name"
             class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2.5 dark:bg-gray-800"
           />

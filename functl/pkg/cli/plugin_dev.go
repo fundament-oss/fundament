@@ -205,7 +205,7 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l *plugindev.
 		return devSession{}, fmt.Errorf("build image: %w", err)
 	}
 
-	manifest, def, err := prepareManifest(l.Definition, image, true)
+	manifest, def, err := prepareManifest(l.Definition, l.PluginDir, image, true)
 	if err != nil {
 		return devSession{}, err
 	}

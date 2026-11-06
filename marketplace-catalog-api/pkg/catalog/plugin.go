@@ -78,6 +78,8 @@ func (s *Server) ListPlugins(
 			LatestVersionId:  uuidOrEmpty(row.LatestVersionID),
 			Published:        timestampOrNil(row.Published),
 			Updated:          timestamptzOrNil(row.Updated),
+			Logo:             row.Logo,
+			LogoDark:         row.LogoDark,
 		}.Build())
 	}
 
@@ -213,6 +215,8 @@ func (s *Server) GetPlugin(
 			Features:           featureBlocks,
 			DocumentationLinks: documentationLinks,
 			Updated:            timestamptzOrNil(row.Updated),
+			Logo:               row.Logo,
+			LogoDark:           row.LogoDark,
 		}.Build(),
 	}.Build(), nil
 }

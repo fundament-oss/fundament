@@ -54,6 +54,8 @@ export interface MarketplacePluginSummary {
   tagline: string; // one-line summary shown on cards
   vendor: string;
   icon: string; // base name under /img/plugins/<icon>.svg
+  logo: string; // data: URI; empty when the plugin has none
+  logoDark: string;
   image: string; // listing artwork; not rendered yet, see plugin-icon fallback
   categoryIds: string[];
   categoryName: string; // first category, resolved for display
@@ -90,6 +92,8 @@ type ListingFields = Pick<
   | 'descriptionShort'
   | 'organizationId'
   | 'image'
+  | 'logo'
+  | 'logoDark'
   | 'categoryIds'
   | 'tags'
   | 'labels'
@@ -201,6 +205,8 @@ export default class MarketplaceService {
       // in ListPublishers should still render.
       vendor: publishers.get(plugin.organizationId) ?? plugin.organizationId,
       icon: plugin.name,
+      logo: plugin.logo,
+      logoDark: plugin.logoDark,
       image: plugin.image,
       categoryIds: plugin.categoryIds,
       categoryName: MarketplaceService.categoryName(plugin.categoryIds, categories),

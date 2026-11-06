@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -60,6 +61,14 @@ func (s *Server) PutPluginDefinition(
 	def, err := pluginruntime.ParseDefinition(manifest)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid manifest: %w", err))
+	}
+	icons, err := pluginruntime.ValidateIcons(&def, req.GetIconFiles())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid icons: %w", err))
+	}
+	menuIcons, err := json.Marshal(icons.MenuIcons)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("encode menu icons: %w", err))
 	}
 	// The version this definition is stored (and later fetched) under must match
 	// the version the manifest declares — otherwise GetPluginDefinition, keyed on
@@ -139,6 +148,7 @@ func (s *Server) PutPluginDefinition(
 
 	inserted, err := qtx.PluginDefinitionInsert(ctx, db.PluginDefinitionInsertParams{
 		PluginID: pluginID, PluginVersion: version, Manifest: manifest, Hash: hash,
+		Logo: icons.Logo, LogoDark: icons.LogoDark, MenuIcons: menuIcons,
 	})
 	if err != nil {
 		// A concurrent publish of a different manifest for the same

@@ -47,7 +47,8 @@ WHERE plugin_definitions.id = sqlc.arg('id')::uuid
 -- Lands in DRAFT. The hash and image are computed by the server from the
 -- manifest bytes, never supplied by the client.
 INSERT INTO appstore.plugin_definitions (
-	plugin_id, plugin_version, manifest, hash, image, release_notes, status
+	plugin_id, plugin_version, manifest, hash, image, release_notes, status,
+	logo, logo_dark, menu_icons
 ) VALUES (
 	sqlc.arg('plugin_id')::uuid,
 	sqlc.arg('plugin_version')::text,
@@ -55,7 +56,10 @@ INSERT INTO appstore.plugin_definitions (
 	sqlc.arg('hash')::text,
 	sqlc.arg('image')::text,
 	sqlc.arg('release_notes')::text,
-	'draft'
+	'draft',
+	sqlc.arg('logo')::text,
+	sqlc.arg('logo_dark')::text,
+	sqlc.arg('menu_icons')::jsonb
 )
 RETURNING id, created;
 
