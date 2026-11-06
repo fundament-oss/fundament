@@ -1,7 +1,7 @@
 ---
 title: OpenTofu provider
 sidebar:
-  order: 11
+  order: 12
 ---
 
 The Fundament provider lets you manage clusters, node pools, projects,

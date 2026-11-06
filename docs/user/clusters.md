@@ -140,6 +140,14 @@ Each cluster's **Plugins** tab shows what is installed and lets cluster admins
 install more from the catalog. Plugins are per cluster: two clusters in the same
 organization can run a different set, at different versions.
 
+## Networking
+
+Each cluster has its own private network and its own firewall. Services get
+their addresses automatically: one that only works inside the cluster by
+default, and a public one for a Service of type `LoadBalancer` or a Gateway.
+See [Service IP addresses](./service-addresses.md) for where those addresses
+come from and how long you keep them.
+
 ## Cluster access
 
 Access to a cluster's Kubernetes API goes through a kubeconfig you download per
