@@ -50,7 +50,7 @@ The platform then does three things:
 2. The nodes of the cluster announce that address to the datacenter network, which from then on routes traffic for it straight to those nodes. There is no separate load balancer machine in between: the network spreads connections over the nodes, and each node forwards them to the pods of the Service.
 3. The firewall in front of the cluster opens the TCP and UDP ports of the Service on that address. Everything else stays closed.
 
-The address shows up in the `EXTERNAL-IP` column, usually within a few seconds. Until then the column says `<pending>`:
+The address shows up in the `EXTERNAL-IP` column, usually within a few seconds, and answers from outside a few seconds after that. Until the address shows up, the column says `<pending>`:
 
 ```
 $ kubectl get service web -n tnt-payments--staging
