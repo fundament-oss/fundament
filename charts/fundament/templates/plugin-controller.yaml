@@ -154,6 +154,7 @@ spec:
       containers:
         - name: plugin-controller
           image: {{ $.Values.images.pluginController }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             - name: NAMESPACE
               valueFrom:

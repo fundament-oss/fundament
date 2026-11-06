@@ -55,6 +55,7 @@ spec:
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.46.1
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - /usr/local/bin/dex
             - serve

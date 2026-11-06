@@ -83,6 +83,13 @@ images:
   marketplaceRegistryFrontend: ghcr.io/fundament-oss/fundament/marketplace-registry-frontend:latest
   marketplaceAdminFrontend: ghcr.io/fundament-oss/fundament/marketplace-admin-frontend:latest
 
+# Pull policy of every container in the chart. Published charts pin
+# images.* by digest, so IfNotPresent cannot run a stale image, and a pod start
+# on a node that has the image does not depend on the registry. A node without
+# it, such as a replacement, still pulls. Set Always where a mutable tag such as
+# :latest must be pulled again.
+imagePullPolicy: IfNotPresent
+
 # Database (CloudNativePG)
 # Destroys data on every deploy. Refused unless resetDatabasesInNamespace names
 # the namespace this release targets, so a values file carried into another
