@@ -166,3 +166,15 @@ Usage: include "fundament.pocUrl" (dict "root" $ "site" "console")
 https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
 {{- end -}}
 {{- end }}
+
+{{/*
+A container's standard resources block; renders nothing when empty.
+
+Usage: {{- include "fundament.resources" $.Values.authnApi.resources | nindent 10 }}
+*/}}
+{{- define "fundament.resources" -}}
+{{- with . }}
+resources:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
