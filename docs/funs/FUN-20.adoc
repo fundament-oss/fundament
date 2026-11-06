@@ -152,7 +152,7 @@ Only the parts that are decisions rather than mechanics.
 
 == Superseding organization-api's PluginService
 
-`organization-api`'s `PluginService.PutPluginDefinition` writes `appstore.plugin_definitions` today, and `registry.v1.CreatePluginVersion` writes the same table with different semantics: `Put` has a `replace` flag and no review state, while the registry lands everything in `DRAFT` and expects review to move it. Two writers to one table with different rules is not a steady state.
+`organization-api`'s `PluginService.PutPluginDefinition` wrote `appstore.plugin_definitions` when this FUN was written, and `registry.v1.CreatePluginVersion` writes the same table with different semantics: `Put` had a `replace` flag and no review state, while the registry lands everything in `DRAFT` and expects review to move it. Two writers to one table with different rules is not a steady state, so `PutPluginDefinition` is removed and the registry is the only writer.
 
 `registry.v1.PublicationService` is the publishing surface, so the whole of `PluginService` is deprecated once these stacks merge, moving in follow-ups:
 
@@ -162,15 +162,19 @@ Only the parts that are decisions rather than mechanics.
 
 |`PutPluginDefinition`
 |`registry.v1` `CreatePluginVersion`
-|`functl plugin publish` (done; it replaced `plugins/cmd/plugin-publish`)
+|`functl plugin publish` (done; it replaced `plugins/cmd/plugin-publish`). RPC removed.
 
 |`GetPluginDefinition`
 |`install.v1`, authenticated with a WorkloadToken (link:/funs/fun-22[FUN-22]; this row originally said `registry.v1`, as an unauthenticated procedure)
-|`plugin-controller/pkg/defclient` (done)
+|`plugin-controller/pkg/defclient` (done). Still called by `console-frontend` `plugin-registry.service`, which needs the parsed definition that `install.v1` does not return.
 
-|`ListPlugins`, `GetPluginDetail`, `ListPluginDefinitions`
-|`registry.v1`
-|`console-frontend` (five call sites)
+|`GetPluginDetail`, `ListPluginDefinitions`
+|`install.v1` `GetPlugin`, `ListPluginVersions` (link:/funs/fun-22[FUN-22]; this row originally said `registry.v1`)
+|`console-frontend` (done). RPCs removed.
+
+|`ListPlugins`
+|`install.v1` `ListPlugins` (link:/funs/fun-22[FUN-22])
+|`console-frontend` cluster details page, and the Terraform provider's latest-version lookup for `plugin_installation`
 |===
 
 Two wrinkles are worth naming before those MRs rather than discovering inside them.
