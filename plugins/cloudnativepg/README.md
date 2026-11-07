@@ -2,7 +2,7 @@
 
 Installs the CloudNativePG operator and lets project members create PostgreSQL databases from the console.
 
-- Helm chart `cloudnative-pg` 0.24.0 (operator v1.26.0) from `https://cloudnative-pg.github.io/charts`, release `fundament-cloudnativepg` in `cnpg-system`, chart default values
+- Helm chart `cloudnative-pg` 0.29.1 (operator v1.30.1) from `https://cloudnative-pg.github.io/charts`, release `fundament-cloudnativepg` in `cnpg-system`, chart default values
 - CRDs: Cluster (`clusters.postgresql.cnpg.io`), ClusterImageCatalog (`clusterimagecatalogs.postgresql.cnpg.io`)
 - ClusterImageCatalog `fundament-postgresql`: CloudNativePG's [standard bookworm catalog](https://github.com/cloudnative-pg/artifacts/blob/main/image-catalogs/catalog-standard-bookworm.yaml), fetched when the image is built. The plugin refuses to start with an entry that is not digest-pinned or not tagged with its own major
 - Console: create and detail pages in `console/`; the list is the console's generated one, labelled Databases. The detail page deletes a database after the user types its name
@@ -22,7 +22,7 @@ Blocking updates protects the resource, not the data. The built-in `admin` role 
 
 ## PostgreSQL versions
 
-A database refers to its major version in the ClusterImageCatalog `fundament-postgresql` (`imageCatalogRef`), not to an exact image. The Dockerfile fetches CloudNativePG's catalog, the current digest-pinned image per major, republished weekly, when the plugin image is built, and the plugin applies it on start and on every reconcile (`cnpg/catalog.go`), with the majors operator 1.26 runs (up to 17).
+A database refers to its major version in the ClusterImageCatalog `fundament-postgresql` (`imageCatalogRef`), not to an exact image. The Dockerfile fetches CloudNativePG's catalog, the current digest-pinned image per major, republished weekly, when the plugin image is built, and the plugin applies it on start and on every reconcile (`cnpg/catalog.go`), with the majors operator 1.30 runs (14 to 18).
 
 So every plugin upgrade moves every database to the current minor of its major. CNPG restarts a database when its catalog entry changes, within about half a minute of the upgrade. The plugin only raises catalog entries: a plugin rollback keeps the newer images, and keeps majors that a newer plugin added.
 
