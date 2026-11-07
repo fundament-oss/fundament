@@ -84,6 +84,10 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 
 Create PostgreSQL databases for your projects from the console. The plugin installs the CloudNativePG operator, which runs and looks after each database.
 
+## Installed versions
+
+- CloudNativePG operator 1.30.1 (Helm chart 0.29.1)
+
 ## Key Features
 
 - **Self-service**: Project admins create a database by choosing a name, namespace, size, PostgreSQL version and StorageClass
@@ -283,6 +287,10 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
     ('019b4000-3000-7000-8000-000000000010', '019b4000-0000-7000-8000-000000000000', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
 
 The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
+
+## Installed versions
+
+- Envoy Gateway v1.9.3
 
 ## Key Features
 
