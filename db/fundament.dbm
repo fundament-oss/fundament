@@ -1833,6 +1833,18 @@ END;]]> </definition>
 		<type name="text" length="0"/>
 		<comment> <![CDATA[Denormalized from the manifest at write time so lists never parse YAML; the pinned manifest stays the source of truth.]]> </comment>
 	</column>
+	<column name="logo" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Logo as a data: URI, written at publish.]]> </comment>
+	</column>
+	<column name="logo_dark" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Dark-mode logo as a data: URI, written at publish.]]> </comment>
+	</column>
+	<column name="menu_icons" not-null="true" default-value="'{}'">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[Map of sha256: digest to data: URI for menu icons, written at publish.]]> </comment>
+	</column>
 	<column name="status" not-null="true" default-value="'draft'">
 		<type name="text" length="0"/>
 	</column>

@@ -2,8 +2,10 @@ package organization
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5"
@@ -39,20 +41,47 @@ func (s *Server) GetPluginDefinition(
 	return organizationv1.GetPluginDefinitionResponse_builder{
 		Manifest:   row.Manifest,
 		Hash:       row.Hash,
-		Definition: pluginDefinitionToProto(&parsed),
+		Definition: pluginDefinitionToProto(&parsed, row.Logo, decodeMenuIcons(row.MenuIcons)),
 	}.Build(), nil
 }
 
-func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv1.PluginDefinition {
+// decodeMenuIcons parses the stored digest-to-data-URI map; an unreadable value
+// yields an empty map so the definition is still served.
+func decodeMenuIcons(raw []byte) map[string]string {
+	var icons map[string]string
+	if err := json.Unmarshal(raw, &icons); err != nil {
+		return map[string]string{}
+	}
+	return icons
+}
+
+// resolveIcon maps a digest to its data URI and passes built-in names through.
+// Anything else (unresolved or malformed digest, URL, path, data: URI) becomes "".
+func resolveIcon(value string, uris map[string]string) string {
+	switch {
+	case pluginruntime.IsIconDigest(value):
+		return uris[value]
+	case strings.HasPrefix(value, "sha256:"), strings.HasPrefix(value, "data:"), pluginruntime.IsIconFileRef(value):
+		return ""
+	default:
+		return value
+	}
+}
+
+// pluginDefinitionToProto converts a parsed definition. Icon digests become the
+// stored data URIs; one without a stored file becomes "" so the UI falls back.
+func pluginDefinitionToProto(def *pluginruntime.PluginDefinition, logo string, menuIcons map[string]string) *organizationv1.PluginDefinition {
 	rbac := make([]*organizationv1.PluginPolicyRule, 0, len(def.Spec.Permissions.RBAC))
 	for _, r := range def.Spec.Permissions.RBAC {
 		rbac = append(rbac, organizationv1.PluginPolicyRule_builder{
 			ApiGroups: r.APIGroups, Resources: r.Resources, Verbs: r.Verbs,
 		}.Build())
 	}
+	icon := resolveIcon(def.Metadata.Icon, map[string]string{def.Metadata.Icon: logo})
 	mapMenu := func(entries []pluginruntime.MenuEntry) []*organizationv1.PluginMenuEntry {
 		out := make([]*organizationv1.PluginMenuEntry, 0, len(entries))
 		for _, e := range entries {
+			e.Icon = resolveIcon(e.Icon, menuIcons)
 			out = append(out, organizationv1.PluginMenuEntry_builder{
 				Crd: e.CRD, List: e.List, Detail: e.Detail, Icon: e.Icon, Label: e.Label,
 				SingularLabel: e.SingularLabel,
@@ -98,7 +127,7 @@ func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv
 		Metadata: organizationv1.PluginDefinitionMetadata_builder{
 			Name: def.Metadata.Name, DisplayName: def.Metadata.DisplayName, Version: def.Metadata.Version,
 			Description: def.Metadata.Description, Author: def.Metadata.Author, License: def.Metadata.License,
-			Icon: def.Metadata.Icon, Tags: def.Metadata.Tags,
+			Icon: icon, Tags: def.Metadata.Tags,
 			Urls: organizationv1.PluginURLs_builder{
 				Homepage: def.Metadata.URLs.Homepage, Repository: def.Metadata.URLs.Repository, Documentation: def.Metadata.URLs.Documentation,
 			}.Build(),

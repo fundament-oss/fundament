@@ -26,7 +26,9 @@ SELECT
 	submissions.closed,
 	submissions.reviewer_user_id,
 	submissions.rejection_reason,
-	submissions.feedback
+	submissions.feedback,
+	plugin_definitions.logo,
+	plugin_definitions.logo_dark
 FROM appstore.submissions
 JOIN appstore.plugin_definitions ON plugin_definitions.id = submissions.plugin_definition_id
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
@@ -48,7 +50,9 @@ SELECT
 	submissions.closed,
 	submissions.reviewer_user_id,
 	submissions.rejection_reason,
-	submissions.feedback
+	submissions.feedback,
+	plugin_definitions.logo,
+	plugin_definitions.logo_dark
 FROM appstore.submissions
 JOIN appstore.plugin_definitions ON plugin_definitions.id = submissions.plugin_definition_id
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id

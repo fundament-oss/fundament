@@ -64,6 +64,11 @@ message PluginSummary {
   // When the listing's metadata last changed (appstore.plugins.updated), not
   // when a version was published.
   google.protobuf.Timestamp updated = 120;
+  // Logo of the newest published version: a data: URI (SVG or PNG), or empty when the
+  // plugin has none. logo_dark is the dark-theme variant, empty when absent.
+  // Both are inlined in every ListPlugins entry, adding up to about 44 KB per plugin.
+  string logo = 130;
+  string logo_dark = 140;
 }
 
 // Full listing as it appears on a detail page.
@@ -97,6 +102,9 @@ message PluginDetails {
   repeated marketplace.v1.DocumentationLink documentation_links = 200;
   // See PluginSummary.updated.
   google.protobuf.Timestamp updated = 210;
+  // See PluginSummary.logo.
+  string logo = 220;
+  string logo_dark = 230;
 }
 
 // A published version of a listing. Carries the id that

@@ -151,6 +151,7 @@ type PluginMetadata struct {
 	Author      string     `yaml:"author"`
 	License     string     `yaml:"license"`
 	Icon        string     `yaml:"icon"`
+	IconDark    string     `yaml:"iconDark"`
 	URLs        PluginURLs `yaml:"urls"`
 	Tags        []string   `yaml:"tags"`
 }
