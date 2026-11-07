@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: external-dns
   displayName: External DNS
-  version: v1.16.1
+  version: v1.23.0
   description: Automatic DNS record management for Kubernetes resources using ExternalDNS.
   author: Fundament
   license: Apache-2.0
@@ -42,7 +42,7 @@ spec:
           - watch
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install external-dns --create-namespace --wait`.
-      # These rules cover Helm's release storage and what chart 1.16.1 creates: the
+      # These rules cover Helm's release storage and what chart 1.23.0 creates: the
       # DNSEndpoint CRD, the controller Deployment, its ServiceAccount, Service and RBAC.
       - apiGroups: [""]
         resources: ["secrets", "serviceaccounts", "services"]
