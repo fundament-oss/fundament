@@ -245,6 +245,13 @@ func (r *DiskPoolReconciler) recomputeCephClusterNodes(ctx context.Context) erro
 	return err
 }
 
+// continueUnhealthyField is the CephCluster switch that lets Rook update an OSD
+// that Ceph does not report ok-to-stop. It also lets Rook restart MDS and RGW
+// daemons that fail their ok-to-stop and ok-to-continue checks, and carry on
+// with a reconcile after a failed mgr update. Rook's mon checks and its refusal
+// to upgrade Ceph while it reports HEALTH_ERR stay in force.
+const continueUnhealthyField = "continueUpgradeAfterChecksEvenIfNotHealthy"
+
 // reconcileCephClusterNodes loads the singleton CephCluster and sets
 // spec.storage.nodes to the given union of all live DiskPools' disks. It
 // reports whether the CephCluster exists: when it does not, nothing was
@@ -263,15 +270,28 @@ func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context, unio
 		return false, fmt.Errorf("get CephCluster: %w", err)
 	}
 
+	// With three or more OSDs, Rook restarts an OSD for an update only once
+	// Ceph reports it ok-to-stop. On a single node every pool keeps one replica
+	// (see ComputeReplication), so no OSD holding data ever is, and every
+	// reconcile after the first stalls in "Configuring Ceph OSDs": Rook checks
+	// even when all OSDs share a host. With more nodes the checks stay on:
+	// they keep an update from restarting a daemon while its data is degraded.
+	continueUnhealthy := DistinctNodeCount(union) == 1
+
 	// Skip the identical write, for the same reason writeStatus does.
-	if current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes"); err == nil &&
-		found && equality.Semantic.DeepEqual(current, nodesIface) {
+	current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes")
+	currentContinue, _, _ := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
+	if err == nil && found && equality.Semantic.DeepEqual(current, nodesIface) && currentContinue == continueUnhealthy {
 		return true, nil
 	}
 
-	// Set only spec.storage.nodes; do not touch other fields.
+	// Set only spec.storage.nodes and the switch that follows from them; do
+	// not touch other fields.
 	if err := unstructured.SetNestedSlice(cc.Object, nodesIface, "spec", "storage", "nodes"); err != nil {
 		return true, fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
+	}
+	if err := unstructured.SetNestedField(cc.Object, continueUnhealthy, "spec", continueUnhealthyField); err != nil {
+		return true, fmt.Errorf("set CephCluster spec.%s: %w", continueUnhealthyField, err)
 	}
 
 	if err := r.Client.Update(ctx, cc); err != nil {

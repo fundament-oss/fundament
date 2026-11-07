@@ -1,6 +1,10 @@
 package main
 
-import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+import (
+	"maps"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
 
 const (
 	cephAPIVersion = "ceph.rook.io/v1"
@@ -33,10 +37,35 @@ func RookValues(cfg *Config) map[string]string {
 		// their namespaces.
 		"rbacAggregate.enableOBCs": "true",
 	}
+	maps.Copy(values, csiImageValues)
 	if cfg.DevLoopDevices {
 		values["allowLoopDevices"] = "true"
 	}
 	return values
+}
+
+// csiImageValues pins the ceph-csi image the CSI drivers run, which Rook
+// leaves to ceph-csi-operator's default: v3.18.2 over the operator's v3.18.1.
+// Rook builds the image as <repository>:<tag>, so the tag carries the digest.
+var csiImageValues = map[string]string{
+	"csi.cephcsi.repository": "quay.io/cephcsi/cephcsi",
+	"csi.cephcsi.tag":        "v3.18.2@sha256:55eac6e7afc3e48c545bb4f4686ddd068a9db9528726e1aed2babd85de861544",
+}
+
+// CSIDriversValues returns the Helm --set values for the ceph-csi-drivers
+// chart: Rook's recommended values, with the operator namespace in the driver
+// names and the OperatorConfig namespace, as Rook's StorageClasses expect.
+func CSIDriversValues(cfg *Config) map[string]string {
+	return map[string]string{
+		"operatorConfig.namespace":                                             cfg.RookNamespace,
+		"operatorConfig.driverSpecDefaults.imageSet.name":                      "rook-csi-operator-image-set-configmap",
+		"operatorConfig.driverSpecDefaults.nodePlugin.priorityClassName":       "system-node-critical",
+		"operatorConfig.driverSpecDefaults.controllerPlugin.priorityClassName": "system-cluster-critical",
+		"drivers.rbd.name":       RBDProvisioner(cfg.RookNamespace),
+		"drivers.cephfs.name":    CephFSProvisioner(cfg.RookNamespace),
+		"drivers.nfs.enabled":    "false",
+		"drivers.nvmeof.enabled": "false",
+	}
 }
 
 // BootstrapCephCluster returns the baseline CephCluster. storage.nodes is left
@@ -58,7 +87,7 @@ func BootstrapCephCluster(namespace string, cfg *Config) *unstructured.Unstructu
 					"image": cfg.CephImage,
 					// Rook checks the release, not the patch level, so the
 					// default v19.x image is supported and this stays false.
-					// Only a release outside Rook's table (v20+) needs it.
+					// Only a release outside Rook's table needs it.
 					"allowUnsupported": cfg.AllowUnsupportedCeph,
 				},
 				"mon": map[string]any{
@@ -71,6 +100,23 @@ func BootstrapCephCluster(namespace string, cfg *Config) *unstructured.Unstructu
 				},
 				"dashboard": map[string]any{
 					"enabled": false,
+				},
+				// Ceph v19.2.6+ makes AES256K keys, which kernel RBD and
+				// CephFS clients read only from Linux 7.0: with them, ceph-csi
+				// cannot map or mount a volume on older nodes.
+				"security": map[string]any{
+					"cephx": map[string]any{
+						"csi": map[string]any{"keyType": "aes"},
+					},
+				},
+				// Ceph warns about those aes keys for good; muted, so a
+				// HEALTH_WARN still means something.
+				"healthCheck": map[string]any{
+					"muteHealthWarning": map[string]any{
+						"AUTH_INSECURE_CLIENT_KEY_TYPE": map[string]any{"policy": "mute"},
+						"AUTH_INSECURE_KEYS_ALLOWED":    map[string]any{"policy": "mute"},
+						"AUTH_INSECURE_KEYS_CREATABLE":  map[string]any{"policy": "mute"},
+					},
 				},
 				"storage": map[string]any{
 					// Must stay false: a privileged node container sees the

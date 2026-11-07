@@ -308,6 +308,12 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
 
 The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes and turns their spare raw disks into block, shared file and object storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference, or an ObjectStorage to provision S3-compatible buckets through ObjectBucketClaims.
 
+## Installed versions
+
+- Rook v1.21.1
+- Ceph v19.2.7
+- Ceph CSI v3.18.2
+
 ## Key Features
 
 - **Automatic disk discovery**: nodes are scanned for raw block devices, which appear in the console as Disks
