@@ -21,7 +21,7 @@ solvers:
           - name: <gateway>
             namespace: <gateway namespace>
             kind: Gateway
-            sectionName: <HTTP listener on port 80>
+            sectionName: <name of the HTTP listener on port 80>
 ```
 
 In a ClusterIssuer, such a solver lets everyone who can create a Certificate pass the challenge for any hostname that Gateway serves. On a shared cluster, put it in a namespaced Issuer instead.
