@@ -1,9 +1,9 @@
-// Package catalogseed reads the marketplace listings in
+// Package catalogseedtest is for tests only. It reads the marketplace listings in
 // db/seed/0101-appstore-catalog.sql, so a plugin's tests can check that the
 // versions its listing names are the ones its code installs.
 // It finds the seed from its own source path, so it does not work under
 // go test -trimpath.
-package catalogseed
+package catalogseedtest
 
 import (
 	"os"
