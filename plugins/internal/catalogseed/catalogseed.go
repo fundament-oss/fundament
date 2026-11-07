@@ -25,7 +25,7 @@ func InstalledVersions(t testing.TB, name string) []string {
 	require.NoError(t, err)
 
 	rowStart := regexp.MustCompile(`\n {4}\('[0-9a-f-]+', '[0-9a-f-]+', '([a-z0-9-]+)', `)
-	var row []byte
+	var rows [][]byte
 	starts := rowStart.FindAllSubmatchIndex(seed, -1)
 	for i, m := range starts {
 		if string(seed[m[2]:m[3]]) != name {
@@ -35,9 +35,10 @@ func InstalledVersions(t testing.TB, name string) []string {
 		if i+1 < len(starts) {
 			end = starts[i+1][0]
 		}
-		row = seed[m[0]:end]
+		rows = append(rows, seed[m[0]:end])
 	}
-	require.NotNil(t, row, "no listing named %s", name)
+	require.Len(t, rows, 1, "listings named %s", name)
+	row := rows[0]
 
 	section := regexp.MustCompile(`\n## Installed versions\n\n((?:- [^\n]*\n)+)`).FindSubmatch(row)
 	require.NotNil(t, section, "no Installed versions section in the %s listing", name)

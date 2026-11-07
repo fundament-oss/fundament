@@ -35,3 +35,8 @@ After steps 1–3 of [Testing plugins locally](../../../docs/developer/plugins/t
 
 - The sandbox has one node: a Gateway gets an address only while no other LoadBalancer Service holds its port. gateway-api-istio's `istio-ingressgateway` holds 80 and 443.
 - Uninstall refuses while any Gateway or Route exists, including gateway-api-istio's `fundament-gateway`.
+- Uninstall keeps the CRDs, and Helm never updates CRDs that already exist. After a reinstall with a newer Envoy Gateway, refresh them by hand:
+
+  ```sh
+  helm show crds oci://docker.io/envoyproxy/gateway-helm --version <new version> | kubectl apply --server-side --force-conflicts -f -
+  ```
