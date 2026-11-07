@@ -97,6 +97,11 @@ spec:
     cephx:
       csi:
         keyType: aes
+  healthCheck:
+    muteHealthWarning:
+      AUTH_INSECURE_CLIENT_KEY_TYPE: {policy: mute}
+      AUTH_INSECURE_KEYS_ALLOWED: {policy: mute}
+      AUTH_INSECURE_KEYS_CREATABLE: {policy: mute}
   crashCollector:
     disable: true
   skipUpgradeChecks: true
