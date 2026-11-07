@@ -568,6 +568,32 @@ func TestReconcileLetsRookUpdateOSDsOnlyOnASingleNode(t *testing.T) {
 	assert.True(t, continueUnhealthy(t, c), "back to one node")
 }
 
+// A continue switch of the wrong type must not pass for an identical spec.
+func TestReconcileReplacesAContinueSwitchOfTheWrongType(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a-1", "node-a", "/dev/sdb", 100, true),
+		testDisk("b-1", "node-b", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a-1", "b-1"),
+	)
+	r := newReconciler(c)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	key := types.NamespacedName{Namespace: testNamespace, Name: cephClusterName}
+	cc := rookStub("CephCluster")
+	require.NoError(t, c.Get(context.Background(), key, cc))
+	require.NoError(t, unstructured.SetNestedField(cc.Object, "false", "spec", continueUnhealthyField))
+	require.NoError(t, c.Update(context.Background(), cc))
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	require.NoError(t, c.Get(context.Background(), key, cc))
+	v, found, err := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
+	require.NoError(t, err)
+	assert.True(t, found)
+	assert.False(t, v)
+}
+
 // Owns() and Watches() resolve a watched type's GVK through apiutil at builder
 // time, which is the one thing about an unstructured stub that can fail — and
 // it would fail at manager start, not here, so it is worth pinning for every

@@ -278,10 +278,12 @@ func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context, unio
 	// they keep an update from restarting a daemon while its data is degraded.
 	continueUnhealthy := DistinctNodeCount(union) == 1
 
-	// Skip the identical write, for the same reason writeStatus does.
+	// Skip the identical write, for the same reason writeStatus does. A field
+	// of the wrong type is not skipped: the write below replaces it.
 	current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes")
-	currentContinue, _, _ := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
-	if err == nil && found && equality.Semantic.DeepEqual(current, nodesIface) && currentContinue == continueUnhealthy {
+	currentContinue, _, continueErr := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
+	if err == nil && found && equality.Semantic.DeepEqual(current, nodesIface) &&
+		continueErr == nil && currentContinue == continueUnhealthy {
 		return true, nil
 	}
 
