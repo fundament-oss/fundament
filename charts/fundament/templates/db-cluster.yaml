@@ -9,6 +9,7 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db" "component" "database") | nindent 4 }}
 spec:
   instances: {{ $.Values.db.instances }}
+  enablePDB: {{ $.Values.db.enablePDB }}
   imageName: {{ $.Values.db.image }}
   enableSuperuserAccess: true
   {{- if $.Values.db.postgresql }}
