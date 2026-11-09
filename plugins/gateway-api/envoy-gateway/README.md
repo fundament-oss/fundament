@@ -3,13 +3,13 @@
 Installs Envoy Gateway and the Gateway API CRDs, and serves create forms for Gateway API and Envoy Gateway resources.
 
 - Helm chart `oci://docker.io/envoyproxy/gateway-helm`, release `eg`
-- CRDs: Gateway API (bundle v1.5.1, experimental channel) and Envoy Gateway policies, from the chart
+- CRDs: Gateway API (bundle v1.6.1, experimental channel) and Envoy Gateway policies, from the chart
 - GatewayClass `eg`
 - Console: Vite app in `console-ui/`, built into the image by the Dockerfile
 
 | Config (`FUNP_`) | Default |
 |---|---|
-| `ENVOY_GATEWAY_VERSION` | `v1.8.3` |
+| `ENVOY_GATEWAY_VERSION` | `v1.9.3` |
 | `GATEWAY_NAMESPACE` | `envoy-gateway-system` |
 | `GATEWAY_CLASS_NAME` | `eg` |
 
@@ -35,3 +35,8 @@ After steps 1–3 of [Testing plugins locally](../../../docs/developer/plugins/t
 
 - The sandbox has one node: a Gateway gets an address only while no other LoadBalancer Service holds its port. gateway-api-istio's `istio-ingressgateway` holds 80 and 443.
 - Uninstall refuses while any Gateway or Route exists, including gateway-api-istio's `fundament-gateway`.
+- Uninstall keeps the CRDs, and Helm never updates CRDs that already exist. After a reinstall with a newer Envoy Gateway, refresh them by hand:
+
+  ```sh
+  helm show crds oci://docker.io/envoyproxy/gateway-helm --version <new version> | kubectl apply --server-side --force-conflicts -f -
+  ```

@@ -26,8 +26,11 @@ import (
 // minor: on a plugin upgrade that ships a newer catalog.
 const CatalogName = "fundament-postgresql"
 
-// MaxMajor is the newest PostgreSQL major operator 1.26 runs; 18 needs 1.27.
-const MaxMajor = 17
+// MinMajor and MaxMajor bound the PostgreSQL majors operator 1.30 runs.
+const (
+	MinMajor = 14
+	MaxMajor = 18
+)
 
 // CatalogGVK is the kind of CatalogName.
 var CatalogGVK = schema.GroupVersionKind{Group: "postgresql.cnpg.io", Version: "v1", Kind: "ClusterImageCatalog"}
@@ -43,7 +46,7 @@ type CatalogImage struct {
 var pinnedDigest = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
 
 // ParseCatalog reads CloudNativePG's published ClusterImageCatalog (the image
-// carries the one fetched at build time) and keeps the majors operator 1.26
+// carries the one fetched at build time) and keeps the majors operator 1.30
 // runs. Every entry it keeps must be digest-pinned and tagged with its own
 // major, since the plugin applies them cluster-wide: a catalog that is not
 // makes the image defective rather than reach the databases.
@@ -56,7 +59,7 @@ func ParseCatalog(data []byte) ([]CatalogImage, error) {
 	if err := yaml.Unmarshal(data, &catalog); err != nil {
 		return nil, fmt.Errorf("parse image catalog: %w", err)
 	}
-	images := slices.DeleteFunc(catalog.Spec.Images, func(i CatalogImage) bool { return i.Major > MaxMajor })
+	images := slices.DeleteFunc(catalog.Spec.Images, func(i CatalogImage) bool { return i.Major < MinMajor || i.Major > MaxMajor })
 	if !slices.ContainsFunc(images, func(i CatalogImage) bool { return i.Major == MaxMajor }) {
 		return nil, fmt.Errorf("image catalog has no PostgreSQL %d", MaxMajor)
 	}
