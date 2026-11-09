@@ -435,6 +435,7 @@ export default class PluginRegistryService {
               value: { organizationName: ref.organizationName, pluginName: ref.pluginName },
             },
             version: ref.pluginVersion,
+            includeDefinition: true,
           }),
         );
         // The catalog could not parse the manifest: keep the old entry and retry,

@@ -350,8 +350,9 @@ func TestInstallGetPluginDefinitionReturnsParsedDefinition(t *testing.T) {
 	})
 
 	resp, err := srv.Service.GetPluginDefinition(asOrganization(seededOrganizationID), catalogv1.GetPluginDefinitionRequest_builder{
-		Name:    catalogv1.PluginRef_builder{OrganizationName: seededOrganizationName, PluginName: "install-parsed-draft"}.Build(),
-		Version: "1.0.0",
+		Name:              catalogv1.PluginRef_builder{OrganizationName: seededOrganizationName, PluginName: "install-parsed-draft"}.Build(),
+		Version:           "1.0.0",
+		IncludeDefinition: true,
 	}.Build())
 	require.NoError(t, err)
 

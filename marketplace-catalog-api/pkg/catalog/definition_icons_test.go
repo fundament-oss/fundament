@@ -47,7 +47,7 @@ func definitionWithIcons(t *testing.T, name string, manifest []byte, logo, menuI
 	require.NoError(t, err)
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0", IncludeDefinition: true}.Build())
 	require.NoError(t, err)
 	require.NotNil(t, resp.GetDefinition())
 	return resp.GetDefinition()

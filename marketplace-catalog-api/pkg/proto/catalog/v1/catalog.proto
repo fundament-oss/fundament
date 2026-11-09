@@ -180,6 +180,9 @@ message GetPluginDefinitionRequest {
     min_len: 1
     max_len: 64
   }];
+  // Also return the parsed definition, with icons resolved. Off for callers
+  // that only need the manifest and hash, such as plugin-controller.
+  bool include_definition = 40;
 }
 
 // A listing named the way it is published: plugin names are unique per
@@ -237,7 +240,7 @@ message GetPluginDefinitionResponse {
   // (install proceeds) from "schema unknown" (the console must not
   // instant-install past required config it cannot see).
   bool config_schema_unavailable = 40;
-  // The parsed manifest. Unset when this binary cannot parse it; manifest and
-  // definition_hash are still returned.
+  // The parsed manifest, when include_definition was set. Unset when this
+  // binary cannot parse it; manifest and definition_hash are still returned.
   marketplace.v1.PluginDefinition definition = 50;
 }

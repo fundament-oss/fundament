@@ -136,6 +136,7 @@ describe('PluginRegistryService', () => {
       expect.objectContaining({
         lookup: { case: 'name', value: { organizationName: 'acme', pluginName: 'cert-manager' } },
         version: 'v1.0.0',
+        includeDefinition: true,
       }),
     );
   });

@@ -695,7 +695,7 @@ func TestGetPluginDefinitionReturnsParsedDefinition(t *testing.T) {
 	})
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0", IncludeDefinition: true}.Build())
 	require.NoError(t, err)
 
 	def := resp.GetDefinition()
@@ -715,11 +715,27 @@ func TestGetPluginDefinitionParsesDefinitionWithNewerSdkFields(t *testing.T) {
 	})
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0", IncludeDefinition: true}.Build())
 	require.NoError(t, err)
 
 	require.NotNil(t, resp.GetDefinition())
 	assert.Equal(t, "seeded", resp.GetDefinition().GetMetadata().GetName())
+}
+
+// plugin-controller reads the manifest on every reconcile and has no use for
+// the parsed definition, so it is opt-in.
+func TestGetPluginDefinitionOmitsDefinitionUnlessRequested(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-not-requested", Visibility: "public", Published: true, Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, []byte(testManifest), resp.GetManifest())
+	assert.Nil(t, resp.GetDefinition())
 }
 
 func TestGetPluginDefinitionOmitsDefinitionForUnparseableManifest(t *testing.T) {
@@ -727,7 +743,7 @@ func TestGetPluginDefinitionOmitsDefinitionForUnparseableManifest(t *testing.T) 
 	id := seedPlugin(t, env, seedOptions{Name: "definition-unparseable", Visibility: "public", Published: true})
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0", IncludeDefinition: true}.Build())
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, resp.GetDefinitionHash())

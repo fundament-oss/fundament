@@ -1575,11 +1575,12 @@ func (b0 ListPresetsResponse_builder) Build() *ListPresetsResponse {
 }
 
 type GetPluginDefinitionRequest struct {
-	state              protoimpl.MessageState              `protogen:"opaque.v1"`
-	xxx_hidden_Lookup  isGetPluginDefinitionRequest_Lookup `protobuf_oneof:"lookup"`
-	xxx_hidden_Version string                              `protobuf:"bytes,20,opt,name=version"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                        protoimpl.MessageState              `protogen:"opaque.v1"`
+	xxx_hidden_Lookup            isGetPluginDefinitionRequest_Lookup `protobuf_oneof:"lookup"`
+	xxx_hidden_Version           string                              `protobuf:"bytes,20,opt,name=version"`
+	xxx_hidden_IncludeDefinition bool                                `protobuf:"varint,40,opt,name=include_definition,json=includeDefinition"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *GetPluginDefinitionRequest) Reset() {
@@ -1632,6 +1633,13 @@ func (x *GetPluginDefinitionRequest) GetVersion() string {
 	return ""
 }
 
+func (x *GetPluginDefinitionRequest) GetIncludeDefinition() bool {
+	if x != nil {
+		return x.xxx_hidden_IncludeDefinition
+	}
+	return false
+}
+
 func (x *GetPluginDefinitionRequest) SetPluginId(v string) {
 	x.xxx_hidden_Lookup = &getPluginDefinitionRequest_PluginId{v}
 }
@@ -1646,6 +1654,10 @@ func (x *GetPluginDefinitionRequest) SetName(v *PluginRef) {
 
 func (x *GetPluginDefinitionRequest) SetVersion(v string) {
 	x.xxx_hidden_Version = v
+}
+
+func (x *GetPluginDefinitionRequest) SetIncludeDefinition(v bool) {
+	x.xxx_hidden_IncludeDefinition = v
 }
 
 func (x *GetPluginDefinitionRequest) HasLookup() bool {
@@ -1717,6 +1729,9 @@ type GetPluginDefinitionRequest_builder struct {
 	Name     *PluginRef
 	// -- end of xxx_hidden_Lookup
 	Version string
+	// Also return the parsed definition, with icons resolved. Off for callers
+	// that only need the manifest and hash, such as plugin-controller.
+	IncludeDefinition bool
 }
 
 func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest {
@@ -1730,6 +1745,7 @@ func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest
 		x.xxx_hidden_Lookup = &getPluginDefinitionRequest_Name{b.Name}
 	}
 	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_IncludeDefinition = b.IncludeDefinition
 	return m0
 }
 
@@ -2118,8 +2134,8 @@ type GetPluginDefinitionResponse_builder struct {
 	// (install proceeds) from "schema unknown" (the console must not
 	// instant-install past required config it cannot see).
 	ConfigSchemaUnavailable bool
-	// The parsed manifest. Unset when this binary cannot parse it; manifest and
-	// definition_hash are still returned.
+	// The parsed manifest, when include_definition was set. Unset when this
+	// binary cannot parse it; manifest and definition_hash are still returned.
 	Definition *v1.PluginDefinition
 }
 
@@ -2227,12 +2243,13 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x12ListPresetsRequest\"G\n" +
 	"\x13ListPresetsResponse\x120\n" +
 	"\apresets\x18\n" +
-	" \x03(\v2\x16.marketplace.v1.PresetR\apresets\"\xa8\x01\n" +
+	" \x03(\v2\x16.marketplace.v1.PresetR\apresets\"\xd7\x01\n" +
 	"\x1aGetPluginDefinitionRequest\x12'\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\bpluginId\x12+\n" +
 	"\x04name\x18\x1e \x01(\v2\x15.catalog.v1.PluginRefH\x00R\x04name\x12#\n" +
-	"\aversion\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aversionB\x0f\n" +
+	"\aversion\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aversion\x12-\n" +
+	"\x12include_definition\x18( \x01(\bR\x11includeDefinitionB\x0f\n" +
 	"\x06lookup\x12\x05\xbaH\x02\b\x01\"o\n" +
 	"\tPluginRef\x126\n" +
 	"\x11organization_name\x18\n" +
