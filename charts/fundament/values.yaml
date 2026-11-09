@@ -441,6 +441,14 @@ pluginController:
   # registries do not. Disabling does not uninstall machinery already on shoots
   # (see cluster-worker/README.md).
   provisionShoots: false
+  # What the plugin-controller on a shoot uses instead of images.pluginController,
+  # externalUrls.marketplaceCatalogApi and externalUrls.authn, for shoots that
+  # cannot reach those. The test-env VM sets them: its shoots pull from Gardener's
+  # local registry and reach the catalog and authn-api as NodePorts.
+  shoot:
+    image: ""
+    catalogApiUrl: ""
+    authnApiUrl: ""
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.
