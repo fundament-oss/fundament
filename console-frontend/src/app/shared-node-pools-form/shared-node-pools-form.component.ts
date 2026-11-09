@@ -108,11 +108,13 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.catalogOptions = options && options.length > 0 ? options : null;
     if (this.catalogOptions) {
       const opts = this.catalogOptions;
-      // Re-anchor controls whose value is not an offered machine type. A pool
-      // that was created in another region can carry one this region lacks.
+      // Re-anchor new pools whose value is not an offered machine type. A pool
+      // that exists keeps its own, offered here or not: saving another type
+      // replaces the pool, so a save that only changes some other pool would
+      // swap this one out.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
-        if (!opts.some((o) => o.value === mt?.value)) {
+        if (!this.loadedPools.has(control) && !opts.some((o) => o.value === mt?.value)) {
           mt?.setValue(this.preferredMachineType());
         }
       });
@@ -135,7 +137,11 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       this.nodePools.controls.forEach((control, index) => {
         if (this.originals.has(control.get('name')?.value)) return;
         const mt = control.get('machineType');
-        if (mt?.pristine && poolRoom(index, this.poolDrafts(), this.originals, quotas).limit <= 0) {
+        if (
+          mt?.pristine &&
+          !this.loadedPools.has(control) &&
+          poolRoom(index, this.poolDrafts(), this.originals, quotas).limit <= 0
+        ) {
           mt.setValue(this.preferredMachineType(), { emitEvent: false });
         }
         const max = control.get('autoscaleMax');
@@ -168,7 +174,24 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    *  quota's "in use". Empty in the create wizard. */
   private originals: ReadonlyMap<string, PoolDraft> = new Map();
 
+  /** The pool groups loaded from `initialData`, renamed or not. Their machine
+   *  type is fixed, as the user docs say: saving another one would not convert
+   *  the pool but replace it, rolling its nodes to the new type one by one. */
+  private loadedPools = new WeakSet<AbstractControl>();
+
+  /** Whether the pool at `index` exists already, so its machine type is fixed. */
+  isExistingPool(index: number): boolean {
+    return this.loadedPools.has(this.nodePools.at(index));
+  }
+
+  /** The catalog label for a machine type, or its bare name when the region
+   *  does not offer it (a pool from before the catalog can carry one). */
+  machineTypeLabel(value: string): string {
+    return this.machineTypes.find((mt) => mt.value === value)?.label ?? value;
+  }
+
   selectMachineType(index: number, value: string): void {
+    if (this.isExistingPool(index)) return;
     const control = this.nodePools.at(index).get('machineType');
     control?.setValue(value);
     control?.markAsDirty();
@@ -322,6 +345,13 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   getMachineTypeQuotaError(index: number): string {
     const control = this.nodePools.at(index).get('machineType');
     if (!control?.hasError('noQuota')) return '';
+    if (this.isExistingPool(index)) {
+      // The quota counts a pool by its name: renamed, it is a new pool.
+      const name = this.nodePools.at(index).get('name')?.value;
+      return this.originals.has(name)
+        ? `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`
+        : `The organization has no quota for ${control.value} nodes, and a renamed pool counts as a new one. Keep its name, or ask a platform operator to set a quota.`;
+    }
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
 
@@ -361,7 +391,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       const group = this.createNodePoolFormGroup(pool);
       // A draft's values were chosen already: the quotas arriving later must
       // not move them the way they move a pool nobody touched yet.
-      if (!existing) {
+      if (existing) {
+        this.loadedPools.add(group);
+      } else {
         Object.values(group.controls).forEach((control) => control.markAsDirty());
       }
       this.nodePools.push(group);
