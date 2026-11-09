@@ -78,6 +78,9 @@ export default class PluginInstallWatchService {
   /** The outcome last announced per installation, and when. */
   private announced = new Map<string, { phase: string; at: number }>();
 
+  /** The installations a retry is replacing right now. */
+  private retrying = new Set<string>();
+
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   /** Bumped by every watch(), so a read can tell it started before one. */
@@ -111,6 +114,21 @@ export default class PluginInstallWatchService {
     this.schedule();
   }
 
+  /** Runs a retry, and follows the install it starts once it was accepted. A
+   *  retry deletes the failed installation and waits for it to go, which takes
+   *  up to 30s. Until it is done a read finds the old one, Failed and then gone,
+   *  which says nothing about how the retry went, so none is reported. */
+  async followRetry(target: InstallWatchTarget, retry: () => Promise<void>): Promise<void> {
+    const key = keyOf(target);
+    this.retrying.add(key);
+    try {
+      await retry();
+      this.watch(target, 'install');
+    } finally {
+      this.retrying.delete(key);
+    }
+  }
+
   /** Reports a change a screen read: the phase it had, and the phase it has
    *  now, or null once it is gone, with the readToken() taken before the read
    *  and the installation's status message. Announces it unless that was done
@@ -123,6 +141,7 @@ export default class PluginInstallWatchService {
     message = '',
   ): void {
     const key = keyOf(target);
+    if (this.retrying.has(key)) return;
     const watch = this.watches.get(key);
     if (watch) {
       if (watch.generation > readToken) return;

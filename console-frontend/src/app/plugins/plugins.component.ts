@@ -1022,16 +1022,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Pending');
 
     try {
-      await this.pluginInstallationService.retryInstall(
-        clusterId,
-        plugin.organizationName,
-        plugin.name,
-        retry.version,
-        retry.hash,
-      );
-      this.installWatch.watch(
+      await this.installWatch.followRetry(
         this.watchTarget(clusterId, plugin.organizationName, plugin.name),
-        'install',
+        () =>
+          this.pluginInstallationService.retryInstall(
+            clusterId,
+            plugin.organizationName,
+            plugin.name,
+            retry.version,
+            retry.hash,
+          ),
       );
       this.startInstallPollingIfNeeded();
     } catch (err) {

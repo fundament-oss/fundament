@@ -919,6 +919,22 @@ func TestStatusPoller_Unreachable(t *testing.T) {
 	}
 }
 
+// A plugin still out of reach past the startup window has a pod that runs, or the
+// workload inspection would have found the cause: the dial error is all there is.
+func TestStatusPoller_UnreachablePastStartupWindow(t *testing.T) {
+	reader := fake.NewClientBuilder().WithScheme(newTestScheme()).Build()
+	poller := newStatusPoller(reader).WithClient(unreachableHTTPClient())
+	cr := testCR()
+	setProgressingCondition(cr, false, time.Now().Add(-progressWindow-time.Minute))
+
+	got, reachable := poller.poll(context.Background(), cr)
+
+	assert.False(t, reachable)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Phase)
+	assert.Contains(t, got.Message, waitingForPluginMessage+": ")
+	assert.Greater(t, len(got.Message), len(waitingForPluginMessage+": "))
+}
+
 func TestMapPhase(t *testing.T) {
 	phase, err := mapPhase("running")
 	assert.NoError(t, err)

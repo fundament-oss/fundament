@@ -223,6 +223,45 @@ describe('PluginInstallWatchService', () => {
     );
   });
 
+  it('says nothing about the old installation while a retry replaces it', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValue(withPhase('Running'));
+    let accept = () => {};
+    const accepted = new Promise<void>((resolve) => {
+      accept = resolve;
+    });
+
+    const retry = watcher.followRetry(target, () => accepted);
+    watcher.observe(target, 'Pending', 'Failed', watcher.readToken(), 'parse manifest: bad yaml');
+    watcher.observe(target, 'Failed', null, watcher.readToken());
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(notifications.error).not.toHaveBeenCalled();
+    expect(notifications.success).not.toHaveBeenCalled();
+    expect(getInstallation).not.toHaveBeenCalled();
+
+    accept();
+    await retry;
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager installed on cluster production',
+    );
+  });
+
+  it('follows nothing after a retry that was refused, and hears what screens read again', async () => {
+    const { watcher, getInstallation, notifications } = build();
+
+    await expect(
+      watcher.followRetry(target, () => Promise.reject(new Error('aborted'))),
+    ).rejects.toThrow('aborted');
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(getInstallation).not.toHaveBeenCalled();
+
+    watcher.observe(target, 'Failed', 'Running', watcher.readToken());
+    expect(notifications.success).toHaveBeenCalledTimes(1);
+  });
+
   it('announces what a screen reads for an installation nobody is waiting on', () => {
     const { watcher, notifications } = build();
 

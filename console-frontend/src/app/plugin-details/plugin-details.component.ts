@@ -516,14 +516,15 @@ export default class PluginDetailsComponent implements OnInit {
     this.setPhase(clusterId, 'Pending');
 
     try {
-      await this.pluginInstallationService.retryInstall(
-        clusterId,
-        plugin.organizationName,
-        plugin.name,
-        retry.version,
-        retry.hash,
+      await this.installWatch.followRetry(this.watchTarget(plugin, clusterId), () =>
+        this.pluginInstallationService.retryInstall(
+          clusterId,
+          plugin.organizationName,
+          plugin.name,
+          retry.version,
+          retry.hash,
+        ),
       );
-      this.installWatch.watch(this.watchTarget(plugin, clusterId), 'install');
       this.startInstallPollingIfNeeded();
     } catch (err) {
       // An aborted retry stopped before anything was deleted — roll the row

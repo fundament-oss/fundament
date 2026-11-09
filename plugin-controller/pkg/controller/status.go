@@ -80,12 +80,18 @@ func (s *statusPoller) unreachableStatus(ctx context.Context, cr *pluginsv1.Plug
 	// (connection refused, no such host) says nothing about what is wrong. The
 	// console shows this message during every install, so it says what is
 	// happening instead. The workload inspection below still replaces it with
-	// the real cause when the pod cannot start.
+	// the real cause when the pod cannot start. A pod that runs while the plugin
+	// stays out of reach (wrong port, DNS, NetworkPolicy) gives the inspection
+	// nothing to find, so past the startup window the dial error is the only
+	// clue there is, and it is reported after all.
 	phase := pluginsv1.PluginPhaseDeploying
 	message := waitingForPluginMessage
-	if hasSettled(cr) {
+	switch {
+	case hasSettled(cr):
 		phase = pluginsv1.PluginPhaseDegraded
 		message = fmt.Sprintf("plugin not reachable: %v", rpcErr)
+	case isStartupOverdue(cr, time.Now()):
+		message = fmt.Sprintf("%s: %v", waitingForPluginMessage, rpcErr)
 	}
 	status := pluginsv1.PluginInstallationStatus{
 		Phase:              phase,
@@ -121,6 +127,16 @@ func hasSettled(cr *pluginsv1.PluginInstallation) bool {
 	default:
 		return false
 	}
+}
+
+// isStartupOverdue reports whether the current spec has been on its way up for
+// longer than progressWindow.
+func isStartupOverdue(cr *pluginsv1.PluginInstallation, now time.Time) bool {
+	progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing)
+	return progressing != nil &&
+		progressing.Status == metav1.ConditionTrue &&
+		progressing.ObservedGeneration == cr.Generation &&
+		now.Sub(progressing.LastTransitionTime.Time) > progressWindow
 }
 
 func mapPhase(phase string) (pluginsv1.PluginPhase, error) {
