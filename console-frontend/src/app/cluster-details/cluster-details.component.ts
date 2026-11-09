@@ -38,7 +38,9 @@ import { ListProjectsRequestSchema, type Project } from '../../generated/v1/proj
 import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  pluginResourceName,
+} from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem, PluginInstallIssue } from '../plugin-resources/types';
 import {
   hasInvalidConfig,
@@ -442,9 +444,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
 
-  /** What is wrong with each installed plugin, by plugin name: on its way up
-   *  or down, Degraded, Failed. A plugin that runs as it should has none. */
-  pluginIssues = signal<ReadonlyMap<string, PluginInstallIssue>>(new Map());
+  /** What is wrong with each installed plugin, by installation name: on its
+   *  way up or down, Degraded, Failed. A plugin that runs as it should has
+   *  none. Keyed by organization as well as plugin name: two organizations can
+   *  publish a plugin under the same name. */
+  private pluginIssues = signal<ReadonlyMap<string, PluginInstallIssue>>(new Map());
 
   /** The catalog as last read, so a status re-read does not fetch it again. */
   private catalogPlugins: PluginSummary[] = [];
@@ -885,14 +889,28 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** What is wrong with an installed plugin; null when it runs as it should. */
+  pluginIssue(plugin: PluginSummary): PluginInstallIssue | null {
+    return (
+      this.pluginIssues().get(pluginResourceName(plugin.organizationName, plugin.name)) ?? null
+    );
+  }
+
   private applyInstallations(installations: PluginInstallationItem[]): void {
     const issues = new Map<string, PluginInstallIssue>();
+    const installed = new Set<string>();
     installations.forEach((item) => {
+      const { organizationName, pluginName } = item.spec.definitionRef;
+      const name = pluginResourceName(organizationName, pluginName);
+      installed.add(name);
       const issue = installIssue(healthOf(item));
-      if (issue) issues.set(item.spec.definitionRef.pluginName, issue);
+      if (issue) issues.set(name, issue);
     });
-    const installedNames = new Set(installations.map((item) => item.spec.definitionRef.pluginName));
-    this.installedPlugins.set(this.catalogPlugins.filter((p) => installedNames.has(p.name)));
+    this.installedPlugins.set(
+      this.catalogPlugins.filter((p) =>
+        installed.has(pluginResourceName(p.organizationName, p.name)),
+      ),
+    );
     this.pluginIssues.set(issues);
     this.installPoller.pace(
       installations.map((item) => ({

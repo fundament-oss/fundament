@@ -396,6 +396,7 @@ export default class PluginDetailsComponent implements OnInit {
     const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
     const clusters = this.clusters();
     const changes = this.localChanges;
+    const readToken = this.installWatch.readToken();
     let results: (PluginInstallationItem[] | null)[];
     try {
       results = await Promise.all(
@@ -435,7 +436,7 @@ export default class PluginDetailsComponent implements OnInit {
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
-      this.installWatch.observe(this.watchTarget(plugin, n.id), prevPhase, n.phase);
+      this.installWatch.observe(this.watchTarget(plugin, n.id), prevPhase, n.phase, readToken);
     });
 
     this.clusters.set(next);
@@ -453,23 +454,22 @@ export default class PluginDetailsComponent implements OnInit {
 
     targets.forEach((id) => this.setPhase(id, 'Pending'));
 
+    // Each install is watched as soon as its cluster accepted it: a cluster
+    // that is slow to answer must not hold up following the others.
     const results = await Promise.allSettled(
       targets.map((id) =>
-        this.pluginInstallationService.installPlugin(
-          id,
-          plugin.organizationName,
-          plugin.name,
-          selection.version,
-          selection.hash,
-          selection.config,
-        ),
+        this.pluginInstallationService
+          .installPlugin(
+            id,
+            plugin.organizationName,
+            plugin.name,
+            selection.version,
+            selection.hash,
+            selection.config,
+          )
+          .then(() => this.installWatch.watch(this.watchTarget(plugin, id), 'install')),
       ),
     );
-
-    targets.forEach((id, i) => {
-      if (results[i].status === 'fulfilled')
-        this.installWatch.watch(this.watchTarget(plugin, id), 'install');
-    });
 
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {

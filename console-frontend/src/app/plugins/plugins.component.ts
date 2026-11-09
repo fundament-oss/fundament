@@ -521,6 +521,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Poll installation status and surface transitions (installed / failed / removed).
   private async refreshInstalls() {
     const changes = this.localChanges;
+    const readToken = this.installWatch.readToken();
     let byCluster: { clusterId: string; installs: InstallWithCluster[] | null }[];
     try {
       byCluster = await this.fetchInstallsByCluster();
@@ -554,6 +555,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         this.watchTarget(next.clusterId, next.organizationName, next.pluginName),
         prev.phase,
         next.phase,
+        readToken,
       );
     });
 
@@ -579,6 +581,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         this.watchTarget(prev.clusterId, prev.organizationName, prev.pluginName),
         prev.phase,
         null,
+        readToken,
       );
     });
 
@@ -929,27 +932,27 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       })),
     ]);
 
+    // Each install is watched as soon as its cluster accepted it: a cluster
+    // that is slow to answer must not hold up following the others.
     const results = await Promise.allSettled(
       targets.map((clusterId) =>
-        this.pluginInstallationService.installPlugin(
-          clusterId,
-          plugin.organizationName,
-          plugin.name,
-          selection.version,
-          selection.hash,
-          selection.config,
-        ),
+        this.pluginInstallationService
+          .installPlugin(
+            clusterId,
+            plugin.organizationName,
+            plugin.name,
+            selection.version,
+            selection.hash,
+            selection.config,
+          )
+          .then(() =>
+            this.installWatch.watch(
+              this.watchTarget(clusterId, plugin.organizationName, plugin.name),
+              'install',
+            ),
+          ),
       ),
     );
-
-    targets.forEach((clusterId, i) => {
-      if (results[i].status === 'fulfilled') {
-        this.installWatch.watch(
-          this.watchTarget(clusterId, plugin.organizationName, plugin.name),
-          'install',
-        );
-      }
-    });
 
     // Roll back optimistic entries whose install request failed outright.
     const failed = targets.filter((_, i) => results[i].status === 'rejected');

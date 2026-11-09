@@ -92,15 +92,57 @@ describe('PluginInstallWatchService', () => {
     );
   });
 
-  it('says nothing when an install it follows is removed by someone else', async () => {
+  it('announces an install that came up degraded as an error', async () => {
     const { watcher, getInstallation, notifications } = build();
-    getInstallation.mockResolvedValue(null);
+    getInstallation.mockResolvedValueOnce(withPhase('Deploying'));
+    getInstallation.mockResolvedValueOnce(withPhase('Degraded'));
 
     watcher.watch(target, 'install');
     await vi.advanceTimersByTimeAsync(POLL_MS * 2);
 
+    expect(notifications.error).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager is degraded on cluster production',
+    );
+  });
+
+  it('waits for an install that is not listed yet', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValueOnce(null);
+    getInstallation.mockResolvedValueOnce(withPhase('Running'));
+
+    watcher.watch(target, 'install');
+    await vi.advanceTimersByTimeAsync(POLL_MS * 2);
+
+    expect(notifications.success).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing when an install it follows is removed by someone else', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValueOnce(withPhase('Deploying'));
+    getInstallation.mockResolvedValue(null);
+
+    watcher.watch(target, 'install');
+    await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+
     expect(notifications.success).not.toHaveBeenCalled();
-    expect(getInstallation).toHaveBeenCalledTimes(1);
+    expect(getInstallation).toHaveBeenCalledTimes(2);
+  });
+
+  // Until the controller gets to the deletion, the installation still reports
+  // the phase it had.
+  it('keeps following an uninstall that still reads as running', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValueOnce(withPhase('Running'));
+    getInstallation.mockResolvedValueOnce(null);
+
+    watcher.watch(target, 'uninstall');
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    watcher.observe(target, 'Terminating', 'Running', watcher.readToken());
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager removed from cluster production',
+    );
   });
 
   it('keeps reading through a failed read', async () => {
@@ -121,7 +163,7 @@ describe('PluginInstallWatchService', () => {
 
     watcher.watch(target, 'install');
     await vi.advanceTimersByTimeAsync(POLL_MS);
-    watcher.observe(target, 'Pending', 'Running');
+    watcher.observe(target, 'Pending', 'Running', watcher.readToken());
 
     expect(notifications.success).toHaveBeenCalledTimes(1);
   });
@@ -130,7 +172,7 @@ describe('PluginInstallWatchService', () => {
     const { watcher, getInstallation, notifications } = build();
 
     watcher.watch(target, 'install');
-    watcher.observe(target, 'Pending', 'Running');
+    watcher.observe(target, 'Pending', 'Running', watcher.readToken());
     await vi.advanceTimersByTimeAsync(POLL_MS * 2);
 
     expect(notifications.success).toHaveBeenCalledTimes(1);
@@ -141,17 +183,33 @@ describe('PluginInstallWatchService', () => {
     const { watcher, notifications } = build();
 
     watcher.watch(target, 'install');
-    watcher.observe(target, 'Pending', 'Running');
+    watcher.observe(target, 'Pending', 'Running', watcher.readToken());
     watcher.watch(target, 'install');
-    watcher.observe(target, 'Pending', 'Running');
+    watcher.observe(target, 'Pending', 'Running', watcher.readToken());
 
     expect(notifications.success).toHaveBeenCalledTimes(2);
+  });
+
+  // A screen's read that was out when the user asked for something else.
+  it('ignores what a screen read before the work it follows was asked for', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValue(null);
+
+    const staleToken = watcher.readToken();
+    watcher.watch(target, 'uninstall');
+    watcher.observe(target, 'Pending', 'Running', staleToken);
+    expect(notifications.success).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager removed from cluster production',
+    );
   });
 
   it('announces what a screen reads for an installation nobody is waiting on', () => {
     const { watcher, notifications } = build();
 
-    watcher.observe(target, 'Running', 'Failed');
+    watcher.observe(target, 'Running', 'Failed', watcher.readToken());
 
     expect(notifications.error).toHaveBeenCalledWith(
       'Plugin Cert Manager failed on cluster production',

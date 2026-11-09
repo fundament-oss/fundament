@@ -28,6 +28,11 @@ interface Watch extends InstallWatchTarget {
   direction: InstallWatchDirection;
   /** The phase last read, by this service or by a screen. */
   phase: string;
+  /** Whether the installation was read at all yet. Until then, not finding it
+   *  means it is not listed yet, not that it went away. */
+  seen: boolean;
+  /** The readToken() from when the work was asked for. */
+  generation: number;
   startedAt: number;
 }
 
@@ -74,6 +79,17 @@ export default class PluginInstallWatchService {
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Bumped by every watch(), so a read can tell it started before one. */
+  private generation = 0;
+
+  /** For a screen to take just before it reads installations, and to pass to
+   *  observe() with what it read. A read that started before the user last
+   *  asked for a change describes the installation as it was, and must not
+   *  end or rewind the watch on that change. */
+  readToken(): number {
+    return this.generation;
+  }
+
   /** Starts following an installation the user just asked to change. Call it
    *  once the request was accepted: a rejected one changes nothing to wait
    *  for. */
@@ -82,24 +98,42 @@ export default class PluginInstallWatchService {
     // A new piece of work: how the previous one on this installation ended
     // must not stop this one's outcome from being announced.
     this.announced.delete(key);
+    this.generation += 1;
     this.watches.set(key, {
       ...target,
       direction,
       phase: direction === 'install' ? 'Pending' : 'Terminating',
+      seen: false,
+      generation: this.generation,
       startedAt: Date.now(),
     });
     this.schedule();
   }
 
   /** Reports a change a screen read: the phase it had, and the phase it has
-   *  now, or null once it is gone. Announces it unless that was done
-   *  already. */
-  observe(target: InstallWatchTarget, previous: string, next: string | null): void {
+   *  now, or null once it is gone, with the readToken() taken before the read.
+   *  Announces it unless that was done already. */
+  observe(
+    target: InstallWatchTarget,
+    previous: string,
+    next: string | null,
+    readToken: number,
+  ): void {
     const key = keyOf(target);
     const watch = this.watches.get(key);
     if (watch) {
-      if (next === null || !isInstallInProgress(next)) this.watches.delete(key);
-      else watch.phase = next;
+      if (watch.generation > readToken) return;
+      if (watch.direction === 'uninstall') {
+        // Only its end counts. Until the controller gets to the deletion the
+        // installation still reports the phase it had, which must not read as
+        // an install that came up.
+        if (next !== null) return;
+        this.watches.delete(key);
+      } else if (next === null || !isInstallInProgress(next)) {
+        this.watches.delete(key);
+      } else {
+        this.watches.set(key, { ...watch, phase: next, seen: true });
+      }
     }
     this.announce(key, target, previous, next);
   }
@@ -136,14 +170,22 @@ export default class PluginInstallWatchService {
         if (this.watches.get(key) !== watch) return;
 
         if (item === null) {
-          this.watches.delete(key);
-          // Gone halfway through an install means someone else removed it;
-          // only the end of an uninstall is this watch's outcome.
-          if (watch.direction === 'uninstall') this.announce(key, watch, watch.phase, null);
+          if (watch.direction === 'uninstall') {
+            this.watches.delete(key);
+            this.announce(key, watch, watch.phase, null);
+          } else if (watch.seen) {
+            // Gone halfway through an install: someone else removed it, which
+            // is not this watch's outcome to announce.
+            this.watches.delete(key);
+          }
+          // Not listed yet: keep waiting for it.
           return;
         }
+        // Only the end of an uninstall counts; see observe().
+        if (watch.direction === 'uninstall') return;
+
         const next = installPhase(item.status?.phase);
-        if (isInstallInProgress(next)) this.watches.set(key, { ...watch, phase: next });
+        if (isInstallInProgress(next)) this.watches.set(key, { ...watch, phase: next, seen: true });
         else this.watches.delete(key);
         this.announce(key, watch, watch.phase, next);
       }),
