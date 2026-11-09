@@ -5,14 +5,16 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     SELECT appstore.plugin_definitions.plugin_version
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
-    ORDER BY appstore.plugin_definitions.created DESC
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS latest_version,
   COALESCE((
     SELECT appstore.plugin_definitions.hash
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
-    ORDER BY appstore.plugin_definitions.created DESC
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS latest_hash,
   COALESCE((

@@ -213,4 +213,4 @@ This deletes the kind cluster, the registry and DNS containers Gardener runs nex
 
 ## Too small a machine
 
-`deploy-remote/README.md` describes running the same setup on a rented server.
+`test-env/README.md` describes running the same setup on a rented server.
