@@ -16,12 +16,18 @@ export class NodePoolsPage {
   }
 
   async goto(organizationName: string, clusterId: string) {
+    // The bounds come from the quotas, which load next to the pools and the
+    // catalog: until they are in, the form does not know them yet.
+    const quotas = this.page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/GetOrganizationQuotas') && response.ok(),
+      { timeout: 15000 },
+    );
     await this.page.goto(
       `/organizations/${organizationName}/clusters/${clusterId}/nodes`,
     );
-    // The bounds come from the quotas, which load next to the pools and the
-    // catalog: until the hint is there, the form does not know them yet.
-    await expect(this.autoscaleMaxHint(0)).toContainText('this pool', {
+    await quotas;
+    await expect(this.page.locator('#autoscaleMax-0')).toBeVisible({
       timeout: 15000,
     });
   }
@@ -68,12 +74,6 @@ export class NodePoolsPage {
     const input = this.page.locator(`#autoscaleMax-${index}`).locator('input');
     await input.fill(String(value));
     await input.press('Tab');
-  }
-
-  autoscaleMaxHint(index: number): Locator {
-    return this.pool(index)
-      .locator('nldd-form-field[label="Autoscale maximum"]')
-      .locator('nldd-form-field-help-text');
   }
 
   autoscaleMaxError(index: number): Locator {

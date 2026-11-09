@@ -19,6 +19,10 @@ interface QuotaState {
   organization: Client<typeof OrganizationService>;
   organizationName: string;
   clusterId: string;
+  /** A second cluster, for pools that must not touch the one the sheet has
+   *  open: saving sends what the sheet read, and a change there is refused as
+   *  a stale read before the quota is looked at. */
+  otherClusterId?: string;
   machineType: string;
   /** The pool the scenario adds in the form, which the API may refuse. */
   newPoolName?: string;
@@ -42,6 +46,17 @@ async function roomLeft(
   );
   const quota = node?.quota ?? 0;
   return { quota, room: quota - (node?.inUse ?? 0) };
+}
+
+async function createCluster(
+  clusters: Client<typeof ClusterService>,
+): Promise<string> {
+  const { clusterId } = await clusters.createCluster({
+    name: `e2e-quota-${suffix()}`,
+    region: REGION,
+    kubernetesVersion: KUBERNETES_VERSION,
+  });
+  return clusterId;
 }
 
 Given(
@@ -70,11 +85,7 @@ Given(
     });
     // None is seeded in this region, so the scenario brings its own and takes
     // it down afterwards. Pools are rows in the database here: no Gardener.
-    const { clusterId } = await clusters.createCluster({
-      name: `e2e-quota-${suffix()}`,
-      region,
-      kubernetesVersion: KUBERNETES_VERSION,
-    });
+    const clusterId = await createCluster(clusters);
     this.testData.nodePoolQuota = {
       clusters,
       organization,
@@ -140,10 +151,12 @@ When(
   'another node pool takes {int} {string} node in the meantime',
   async function (this: ICustomWorld, max: number, machineType: string) {
     // Another user, after this form loaded: the form's bound is a hint, and
-    // only the API sees this.
+    // only the API sees this. In another cluster, as the quota is the
+    // organization's: a pool in this one would make the save a stale read.
     const s = state(this);
+    s.otherClusterId = await createCluster(s.clusters);
     await s.clusters.createNodePool({
-      clusterId: s.clusterId,
+      clusterId: s.otherClusterId,
       name: `meanwhile-${suffix()}`,
       machineType,
       autoscaleMin: 1,
@@ -165,16 +178,6 @@ When(
 When('I save the node pools', async function (this: ICustomWorld) {
   await state(this).nodePools!.saveButton.click();
 });
-
-Then(
-  'the new node pool says how much room is left',
-  async function (this: ICustomWorld) {
-    const room = this.testData.room as number;
-    await expect(state(this).nodePools!.autoscaleMaxHint(1)).toContainText(
-      `Up to ${room} for this pool`,
-    );
-  },
-);
 
 Then(
   'the form refuses the maximum before saving',
@@ -235,12 +238,19 @@ Then(
 After({ tags: '@node-pool-quota' }, async function (this: ICustomWorld) {
   const s = this.testData.nodePoolQuota as QuotaState | undefined;
   if (!s) return;
+  const clusterIds = [s.clusterId, s.otherClusterId].filter(
+    (id): id is string => !!id,
+  );
   // Ignore cleanup errors: the scenario's own result is what counts. But a pool
   // that fails to go must not keep the cluster from going too.
+  await Promise.allSettled(
+    clusterIds.map((id) => deleteClusterAndPools(s, id)),
+  );
+});
+
+async function deleteClusterAndPools(s: QuotaState, clusterId: string) {
   try {
-    const { nodePools } = await s.clusters.listNodePools({
-      clusterId: s.clusterId,
-    });
+    const { nodePools } = await s.clusters.listNodePools({ clusterId });
     await Promise.allSettled(
       nodePools.map((pool) =>
         s.clusters.deleteNodePool({ nodePoolId: pool.id }),
@@ -250,8 +260,8 @@ After({ tags: '@node-pool-quota' }, async function (this: ICustomWorld) {
     // The cluster's deletion below takes its pools along, in time.
   }
   try {
-    await s.clusters.deleteCluster({ clusterId: s.clusterId });
+    await s.clusters.deleteCluster({ clusterId });
   } catch {
     // Nothing left to try.
   }
-});
+}

@@ -118,12 +118,12 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.quotas = quotas;
     if (quotas) {
       // A new pool nobody picked a machine type or maximum for yet moves off a
-      // type it could not have, and down to the room that type has left, so
-      // the form does not open on a refusal.
+      // type with no room left for it, and down to the room its type has left,
+      // so the form does not open on a refusal.
       this.nodePools.controls.forEach((control, index) => {
         if (this.originals.has(control.get('name')?.value)) return;
         const mt = control.get('machineType');
-        if (mt?.pristine && !quotas.get(mt.value)?.quota) {
+        if (mt?.pristine && poolRoom(index, this.poolDrafts(), this.originals, quotas).limit <= 0) {
           mt.setValue(this.preferredMachineType(), { emitEvent: false });
         }
         const max = control.get('autoscaleMax');
@@ -288,6 +288,23 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return !!this.quotas && !this.quotas.get(machineType)?.quota;
   }
 
+  /** What the list says on a machine type for the pool at `index`: that the
+   *  organization has no quota for it, or that the quota has no room left for
+   *  this pool. Null while the quotas are not in, or when the type fits. */
+  machineTypeNote(index: number, machineType: string): string | null {
+    const { quotas } = this;
+    if (!quotas) return null;
+    if (this.hasNoQuota(machineType)) return 'No quota in this organization';
+    const pools = this.poolDrafts();
+    // An existing pool can always stay what it is on its own machine type.
+    const original = this.originals.get(pools[index]?.name);
+    if (original?.machineType === machineType) return null;
+    const others = pools.filter((_, i) => i !== index);
+    return roomForNewPool(machineType, others, this.originals, quotas) <= 0
+      ? 'No room left in this organization'
+      : null;
+  }
+
   /** Said at the machine type as soon as it is picked: with no quota, nothing
    *  else in the pool can make it fit. */
   getMachineTypeQuotaError(index: number): string {
@@ -296,26 +313,23 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
 
-  /** The room under the maximum, as a hint that is there before saving. */
-  getAutoscaleMaxHint(index: number): string {
-    const room = this.roomFor(this.nodePools.at(index));
-    if (!room || room.quota === 0) return '';
-    const max = Number(this.nodePools.at(index).get('autoscaleMax')?.value);
-    if (!room.grows && max > room.limit) {
-      return `The organization is over its ${room.machineType} quota of ${room.quota} nodes, so this pool can shrink but not grow.`;
-    }
-    if (room.limit <= 0) {
-      return `The organization's other ${room.machineType} node pools take all ${room.quota} nodes of its quota.`;
-    }
-    return `Up to ${room.limit} for this pool: the organization's ${room.machineType} quota is ${room.quota} nodes, and its other node pools take ${room.quota - room.limit}.`;
-  }
-
   getAutoscaleMaxError(index: number): string {
     const control = this.nodePools.at(index).get('autoscaleMax');
     if (control?.hasError('required')) return 'The autoscale maximum is required.';
     if (control?.hasError('min')) return 'The autoscale maximum must be at least 1.';
     if (control?.hasError('quota')) {
-      const room = this.roomFor(this.nodePools.at(index));
+      const pool = this.nodePools.at(index);
+      const room = this.roomFor(pool);
+      // An existing pool is checked only when it grows, so what it has now is
+      // allowed even when the room is below it: say that, not "at most".
+      const original = this.originals.get(pool.get('name')?.value);
+      if (
+        room &&
+        original?.machineType === room.machineType &&
+        original.autoscaleMax > room.limit
+      ) {
+        return `This pool can stay at ${original.autoscaleMax} or shrink, but not grow: there is no room left in the organization's ${room.machineType} quota.`;
+      }
       return room && room.limit > 0
         ? `At most ${room.limit}, or the organization goes over its ${room.machineType} quota.`
         : `There is no room left in the organization's ${room?.machineType ?? ''} quota.`;
