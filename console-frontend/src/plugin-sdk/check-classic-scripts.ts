@@ -8,15 +8,18 @@
  * gets registered and plugin forms silently lose their fields. @nldd/design-system
  * reads import.meta.env, which is why its build sets --define 'import.meta.env={}'.
  *
- * Function parses its body as script code. node:vm's Script is no substitute:
- * under Bun it accepts import.meta.
+ * Function parses its body as a function, not a module, so it rejects module-only
+ * syntax like import.meta. It is not a full <script> parse: it allows a top-level
+ * return, for one. node:vm's Script is no substitute: under Bun it accepts import.meta.
  */
-import { readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const outdir = resolve(import.meta.dir, '../../public/plugin-ui');
 
-['plugin-sdk.js', 'nldd-design-system.js'].forEach((file) => {
+const bundles = readdirSync(outdir).filter((file) => file.endsWith('.js'));
+
+bundles.forEach((file) => {
   try {
     Function(readFileSync(resolve(outdir, file), 'utf8'));
   } catch (error) {
@@ -24,4 +27,4 @@ const outdir = resolve(import.meta.dir, '../../public/plugin-ui');
   }
 });
 
-console.log('Plugin-UI bundles parse as classic scripts');
+console.log(`Checked ${bundles.join(', ')}: all parse as classic scripts`);
