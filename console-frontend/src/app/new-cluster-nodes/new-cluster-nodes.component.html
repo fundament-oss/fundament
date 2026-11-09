@@ -6,7 +6,9 @@
 </nldd-title>
 <nldd-spacer size="16"></nldd-spacer>
 <app-shared-node-pools-form
+  [draftData]="draftNodePools"
   [machineTypeOptions]="machineTypeOptions()"
+  [nodeQuotas]="nodeQuotas()"
   (formSubmit)="onFormSubmit($event)"
 >
   <nldd-button

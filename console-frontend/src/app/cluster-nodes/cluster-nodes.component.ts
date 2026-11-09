@@ -27,6 +27,7 @@ import {
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
+import { NodeQuotas, NodeQuotaService } from '../node-quota.service';
 import { fetchClusterName } from '../utils/cluster-status';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
@@ -91,6 +92,8 @@ export default class ClusterNodesComponent implements OnInit {
 
   private regionCatalog = inject(RegionCatalogService);
 
+  private nodeQuota = inject(NodeQuotaService);
+
   private clusterId = '';
 
   private existingNodePools: NodePool[] = [];
@@ -108,6 +111,10 @@ export default class ClusterNodesComponent implements OnInit {
   // Region-scoped machine types when the cluster's region is in the catalog;
   // null keeps the form on its built-in fallback machine-type list.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
+
+  // The organization's node quotas in the cluster's region; null until they
+  // are in, or when they cannot be read, and then only the API checks them.
+  nodeQuotas = signal<NodeQuotas | null>(null);
 
   constructor() {
     this.titleService.setTitle('Node pools');
@@ -133,10 +140,19 @@ export default class ClusterNodesComponent implements OnInit {
       if (!regionName) {
         return;
       }
-      const region = await this.regionCatalog.getRegionByName(regionName);
-      if (region) {
-        this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
-      }
+      await Promise.all([
+        this.regionCatalog.getRegionByName(regionName).then((region) => {
+          if (region) {
+            this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+          }
+        }),
+        this.nodeQuota.forRegion(regionName).then(
+          (quotas) => this.nodeQuotas.set(quotas),
+          () => {
+            // Quotas unavailable: the form bounds nothing and the API decides.
+          },
+        ),
+      ]);
     } catch {
       // Catalog unavailable: the form falls back to its built-in list.
     }
