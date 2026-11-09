@@ -4,11 +4,12 @@ import { createHmac, randomUUID } from 'node:crypto';
 import { ICustomWorld } from '../support/world.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { type ExchangeWorkloadTokenResponse } from '../support/api/token-service.ts';
+import { fixtureClusterId, realGardener } from '../support/fixtures.ts';
+import { withShootAdmin } from '../support/shoot.ts';
 
-// Seed and mock fixtures. Must stay in sync with
-// db/testdata/001_0101-content.sql (acme-cluster, acme-corp) and authn-api's
-// mock shoot verifier defaults (MOCK_SHOOT_SECRET, LOCAL_CLUSTER_ID).
-const SEEDED_CLUSTER_ID = '019b4000-2000-7000-8000-000000000001';
+// The seeded acme-corp, owner of the cluster the mock verifier accepts. Must
+// stay in sync with db/testdata/001_0101-content.sql and authn-api's mock
+// shoot verifier defaults (MOCK_SHOOT_SECRET, LOCAL_ORGANIZATION_ID).
 const SEEDED_ORGANIZATION_ID = '019b4000-0000-7000-8000-000000000001';
 // Matches authn-api's MOCK_SHOOT_SECRET (default in its main.go); a deployment
 // that sets authnApi.mockShootSecret exports the same value to the suite.
@@ -34,14 +35,16 @@ function base64url(input: Buffer | string): string {
   return Buffer.from(input).toString('base64url');
 }
 
-// mockProjectedToken mints what a shoot's kube-apiserver would project into
-// the plugin-controller pod, minus the cluster: an HS256 JWT the mock
-// verifier accepts. Real deployments verify by TokenReview instead.
-function mockProjectedToken(opts: {
+interface ProjectedTokenOptions {
   subject?: string;
   audience?: string;
   expiresInSeconds?: number;
-}): string {
+}
+
+// mockProjectedToken mints what a shoot's kube-apiserver would project into
+// the plugin-controller pod, minus the cluster: an HS256 JWT the mock
+// verifier accepts. Real deployments verify by TokenReview instead.
+function mockProjectedToken(opts: ProjectedTokenOptions): string {
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = base64url(
@@ -58,6 +61,23 @@ function mockProjectedToken(opts: {
     .update(`${header}.${payload}`)
     .digest('base64url');
   return `${header}.${payload}.${signature}`;
+}
+
+// projectedToken is a ServiceAccount token of the e2e cluster: requested from
+// the shoot against a real Gardener, a mock stand-in otherwise.
+async function projectedToken(world: ICustomWorld, opts: ProjectedTokenOptions = {}): Promise<string> {
+  if (!realGardener()) {
+    return mockProjectedToken(opts);
+  }
+  const [, , namespace, serviceAccount] = (opts.subject ?? PLUGIN_CONTROLLER_SUBJECT).split(':');
+  const clusterId = await fixtureClusterId(world);
+  return withShootAdmin(clusterId, async (kubectl) =>
+    kubectl([
+      'create', 'token', serviceAccount, '-n', namespace,
+      '--audience', opts.audience ?? CREDENTIAL_AUDIENCE,
+      '--duration', `${opts.expiresInSeconds ?? 3600}s`,
+    ]).trim(),
+  );
 }
 
 function decodeWorkloadClaims(token: string): WorkloadClaims {
@@ -92,66 +112,66 @@ async function exchange(
 // --- When steps ---
 
 When(
-  'I exchange a mock projected token for the seeded cluster',
+  'I exchange a projected token for the e2e cluster',
   async function (this: ICustomWorld) {
-    await exchange(this, mockProjectedToken({}), SEEDED_CLUSTER_ID);
+    await exchange(this, await projectedToken(this), await fixtureClusterId(this));
   },
 );
 
 When(
-  'I exchange a mock projected token that expires in {int} seconds',
+  'I exchange a projected token that expires in {int} seconds',
   async function (this: ICustomWorld, seconds: number) {
     await exchange(
       this,
-      mockProjectedToken({ expiresInSeconds: seconds }),
-      SEEDED_CLUSTER_ID,
+      await projectedToken(this, { expiresInSeconds: seconds }),
+      await fixtureClusterId(this),
     );
   },
 );
 
 When(
-  'I exchange a mock projected token with audience {string}',
+  'I exchange a projected token with audience {string}',
   async function (this: ICustomWorld, audience: string) {
-    await exchange(this, mockProjectedToken({ audience }), SEEDED_CLUSTER_ID);
+    await exchange(this, await projectedToken(this, { audience }), await fixtureClusterId(this));
   },
 );
 
 When(
-  'I exchange a mock projected token for subject {string}',
+  'I exchange a projected token for subject {string}',
   async function (this: ICustomWorld, subject: string) {
-    await exchange(this, mockProjectedToken({ subject }), SEEDED_CLUSTER_ID);
+    await exchange(this, await projectedToken(this, { subject }), await fixtureClusterId(this));
   },
 );
 
 When(
-  'I exchange a mock projected token for an unknown cluster',
+  'I exchange a projected token for an unknown cluster',
   async function (this: ICustomWorld) {
     await exchange(
       this,
-      mockProjectedToken({}),
+      await projectedToken(this),
       '00000000-0000-0000-0000-0000000000ff',
     );
   },
 );
 
 When(
-  'I exchange a mock projected token for cluster id {string}',
+  'I exchange a projected token for cluster id {string}',
   async function (this: ICustomWorld, clusterId: string) {
-    await exchange(this, mockProjectedToken({}), clusterId);
+    await exchange(this, await projectedToken(this), clusterId);
   },
 );
 
 When(
   'I exchange my user token as a workload credential',
   async function (this: ICustomWorld) {
-    await exchange(this, this.authToken!, SEEDED_CLUSTER_ID);
+    await exchange(this, this.authToken!, await fixtureClusterId(this));
   },
 );
 
 When(
   'I exchange the workload token as a workload credential',
   async function (this: ICustomWorld) {
-    await exchange(this, exchangeResponse!.accessToken, SEEDED_CLUSTER_ID);
+    await exchange(this, exchangeResponse!.accessToken, await fixtureClusterId(this));
   },
 );
 
@@ -168,7 +188,7 @@ When(
             'Content-Type': 'application/json',
             'Connect-Protocol-Version': '1',
           },
-          body: JSON.stringify({ clusterId: SEEDED_CLUSTER_ID }),
+          body: JSON.stringify({ clusterId: await fixtureClusterId(this) }),
         },
       );
 
@@ -265,20 +285,22 @@ Then(
 );
 
 Then(
-  'the workload token subject should be the seeded cluster',
+  'the workload token subject should be the e2e cluster',
   async function (this: ICustomWorld) {
     const claims = decodeWorkloadClaims(exchangeResponse!.accessToken);
-    expect(claims.sub).toBe(SEEDED_CLUSTER_ID);
+    expect(claims.sub).toBe(await fixtureClusterId(this));
     expect(claims.iss).toBe('fundament-authn-api');
     expect(claims.jti).toBeDefined();
   },
 );
 
 Then(
-  "the workload token organization should be the seeded cluster's owner",
+  "the workload token organization should be the e2e cluster's owner",
   async function (this: ICustomWorld) {
     const claims = decodeWorkloadClaims(exchangeResponse!.accessToken);
-    expect(claims.organization_id).toBe(SEEDED_ORGANIZATION_ID);
+    // The baseline cluster belongs to the organization of the user the
+    // feature authenticates as.
+    expect(claims.organization_id).toBe(realGardener() ? this.organizationId : SEEDED_ORGANIZATION_ID);
   },
 );
 

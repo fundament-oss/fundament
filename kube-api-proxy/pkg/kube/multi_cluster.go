@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
 )
 
 // adminKubeconfigRefreshRatio is the fraction of TTL at which to proactively
@@ -78,6 +79,23 @@ func WithTokenRejected(ctx context.Context, rejected func()) context.Context {
 		}
 	}
 	return context.WithValue(ctx, tokenRejectedContextKey{}, rejected)
+}
+
+// tokenRetryContextKey carries what to do instead of passing on the cluster's
+// 401 (see WithTokenRetry).
+type tokenRetryContextKey struct{}
+
+// errTokenRejected hands a 401 from ModifyResponse to the ErrorHandler, which
+// calls the request's retry before anything is written.
+var errTokenRejected = errors.New("the cluster rejected the SA token")
+
+// WithTokenRetry makes the proxy call retry instead of passing on the
+// cluster's 401, after the rejected token was dropped (WithTokenRejected).
+// Nothing has been written to w yet: retry answers with a new token, or with
+// why there is none, such as a ServiceAccount deleted with the user's last
+// role on the cluster.
+func WithTokenRetry(ctx context.Context, retry func(http.ResponseWriter)) context.Context {
+	return context.WithValue(ctx, tokenRetryContextKey{}, retry)
 }
 
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -180,6 +198,14 @@ func tokenRejected(ctx context.Context) {
 	}
 }
 
+// isProxySubresource reports whether r goes to a workload through the
+// apiserver (pods, services or nodes /proxy): a 401 there is the workload's
+// answer, not the cluster rejecting the token.
+func isProxySubresource(r *http.Request) bool {
+	attrs, err := kubereq.Parse(r)
+	return err == nil && attrs.Subresource == "proxy"
+}
+
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Transport: transport,
@@ -199,12 +225,19 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 			req.Header.Set("Authorization", "Bearer "+saToken)
 		},
 		ModifyResponse: func(resp *http.Response) error {
-			if resp.StatusCode == http.StatusUnauthorized {
+			if resp.StatusCode == http.StatusUnauthorized && !isProxySubresource(resp.Request) {
 				tokenRejected(resp.Request.Context())
+				if _, ok := resp.Request.Context().Value(tokenRetryContextKey{}).(func(http.ResponseWriter)); ok {
+					return errTokenRejected
+				}
 			}
 			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
+			if retry, ok := req.Context().Value(tokenRetryContextKey{}).(func(http.ResponseWriter)); ok && errors.Is(err, errTokenRejected) {
+				retry(w)
+				return
+			}
 			logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)
 			WriteStatus(w, http.StatusServiceUnavailable, metav1.StatusReasonServiceUnavailable, "the cluster's API server could not be reached")
 		},

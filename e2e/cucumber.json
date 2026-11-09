@@ -11,9 +11,8 @@
       "snippetInterface": "async-await"
     }
   },
-  "real-gardener": {
+  "full": {
     "import": ["steps/**/*.ts", "support/**/*.ts"],
-    "tags": "@real-gardener",
     "format": [
       "progress-bar",
       "json:reports/cucumber-report.json",

@@ -14,9 +14,14 @@ plugins/gateway-api/envoy-gateway/console-ui/node_modules/
 # exclude the local build output from the context (Docker rebuilds it).
 plugins/gateway-api/envoy-gateway/console/
 
-# Local Gardener (gardener-up) lives under .dev/ and leaves root-owned files
-# (e.g. backupbuckets) that fail the build-context scan of images built from
-# the repo root, such as plugin-proxy.
+# test-env run bundles: logs and reports fetched from the VM.
+test-env/bundles/
+# test-env provider credentials.
+test-env/host/providers/*.env
+
+# .dev/ holds root-owned files of a local Gardener on some machines (e.g.
+# backupbuckets), which fail the build-context scan of images built from the
+# repo root, such as plugin-proxy.
 .dev/
 
 .git

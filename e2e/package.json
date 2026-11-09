@@ -7,11 +7,11 @@
     "test": "NODE_OPTIONS='--import tsx' cucumber-js",
     "test:headed": "HEADED=true NODE_OPTIONS='--import tsx' cucumber-js",
     "test:debug": "PWDEBUG=1 NODE_OPTIONS='--import tsx' cucumber-js",
-    "test:tags": "NODE_OPTIONS='--import tsx' cucumber-js --tags",
+    "test:tags": "NODE_OPTIONS='--import tsx' cucumber-js -p full --tags",
     "test:api": "NODE_OPTIONS='--import tsx' cucumber-js --tags @api",
     "test:apikey": "NODE_OPTIONS='--import tsx' cucumber-js --tags @apikey",
     "test:token": "NODE_OPTIONS='--import tsx' cucumber-js --tags @token",
-    "test:real-gardener": "NODE_OPTIONS='--import tsx' cucumber-js -p real-gardener",
+    "test:full": "NODE_OPTIONS='--import tsx' cucumber-js -p full",
     "report": "open reports/cucumber-report.html"
   },
   "dependencies": {

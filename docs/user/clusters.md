@@ -237,7 +237,10 @@ Consequences worth knowing:
   regardless of your permissions.
 - ServiceAccounts and bindings are synced in the background after a membership
   change, so immediately after being granted access a request can return 503
-  with "service account sync pending", or 403. Retry shortly.
+  with "your access to this cluster is still being set up", or 403. Retry
+  shortly. After losing your last role on the cluster, requests can still
+  succeed for a few seconds, and return that 503 for up to half a minute,
+  before they are refused.
 - Listing namespaced resources across all namespaces
   (`kubectl get pods --all-namespaces`) is refused for project members. Work
   per namespace instead.

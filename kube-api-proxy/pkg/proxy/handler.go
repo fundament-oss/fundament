@@ -88,17 +88,14 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 
 	// --- Get SA token (real mode only) ---
 
+	userCtx := ctx
 	if s.tokenCache != nil {
-		saToken, err := s.tokenCache.GetToken(ctx, claims.UserID(), clusterID.String())
+		var err error
+		ctx, err = s.userTokenContext(ctx, claims.UserID(), clusterID)
 		if err != nil {
-			s.logger.ErrorContext(ctx, "failed to get SA token", "error", err)
-			kube.WriteStepError(w, kube.StepUserCredentials, err)
+			s.writeUserTokenError(w, r.WithContext(ctx), claims.UserID(), clusterID, err)
 			return
 		}
-		ctx = WithSAToken(ctx, saToken)
-		ctx = kube.WithTokenRejected(ctx, func() {
-			s.tokenCache.ForgetToken(claims.UserID(), clusterID.String(), saToken)
-		})
 	}
 
 	// --- Namespace listing (GUI tools) ---
@@ -116,6 +113,11 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 
 	// Store cluster ID in context for the multi-cluster proxy.
 	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
+	if s.tokenCache != nil {
+		ctx = kube.WithTokenRetry(ctx, func(w http.ResponseWriter) {
+			s.retryUserRequest(w, r.WithContext(userCtx), claims.UserID(), clusterID)
+		})
+	}
 	r = r.WithContext(ctx)
 
 	s.kubeHandler.ServeHTTP(w, r)
