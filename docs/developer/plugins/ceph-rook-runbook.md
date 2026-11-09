@@ -326,7 +326,7 @@ VM's situation with `docker run --rm --privileged alpine sh -c 'modprobe ceph &&
 `CEPH_IMAGE` already defaults to the build `rook-smoke.sh` validates, so leave it unless
 you are testing a different one. `ALLOW_UNSUPPORTED_CEPH` defaults to `false` and should
 stay there: it turns off Rook's check that it knows how to drive the Ceph release it is
-given, and Rook v1.16 supports the default image's Squid (v19) line. Set it only when
+given, and Rook v1.21 supports the default image's Squid (v19) line. Set it only when
 pairing the plugin with a Ceph build outside that table.
 
 :::caution[`DEV_LOOP_DEVICES` is a safety control, not a convenience]
@@ -482,6 +482,19 @@ Ask Ceph for real free space (`ceph df` in the toolbox). A `BlockStorage`/`FileS
 that finds no `DiskPool` contributing disks reports `Degraded` with `"no DiskPool
 contributes disks"` in `status.message`, and creates no `StorageClass`.
 
+The plugin owns the CephCluster's `continueUpgradeAfterChecksEvenIfNotHealthy`: it is
+`true` while all contributed disks sit on one node, where pools keep one replica and
+Ceph never reports an OSD ok-to-stop, and `false` otherwise. A value set by hand is
+reverted at once: a CephCluster spec change, like a Disk or DiskPool event, reconciles
+the pools. Two consequences:
+
+- A consumer with `replicas: 1` on two or more nodes still stalls the CephCluster in
+  `Configuring Ceph OSDs` after its first reconcile. To let that reconcile through, set
+  `skipUpgradeChecks: true` on the CephCluster by hand (the plugin leaves it alone) and
+  remove it once the CephCluster is `Ready`.
+- On one node, a Ceph version upgrade may restart the MDS daemons back to back: a short
+  CephFS outage.
+
 `selectedDiskCount` is how many of the `DiskPool`'s `spec.disks` resolved, **not** how
 many OSDs are running. Check the OSDs separately:
 
@@ -578,7 +591,7 @@ kubectl --context k3d-fundament-plugin logs pod/ceph-rook-verify
 
 ```bash
 kubectl --context k3d-fundament-plugin describe pvc ceph-rook-verify | tail -20
-kubectl --context k3d-fundament-plugin -n rook-ceph logs -l app=csi-rbdplugin-provisioner --tail=50
+kubectl --context k3d-fundament-plugin -n rook-ceph logs -l app=rook-ceph.rbd.csi.ceph.com-ctrlplugin -c csi-provisioner --tail=50
 ```
 
 Now CephFS, whose whole point is `ReadWriteMany` — so the test is two pods sharing one
@@ -630,7 +643,7 @@ access. If both pods sit in `ContainerCreating` and the CSI log shows `modprobe 
 and reinstall:
 
 ```bash
-kubectl --context k3d-fundament-plugin -n rook-ceph logs -l app=csi-cephfsplugin -c csi-cephfsplugin --tail=30
+kubectl --context k3d-fundament-plugin -n rook-ceph logs -l app=rook-ceph.cephfs.csi.ceph.com-nodeplugin -c csi-cephfsplugin --tail=30
 ```
 
 Finally object storage, which is consumed through an `ObjectBucketClaim` rather than a
@@ -808,6 +821,20 @@ volumes. 8d's "deleting a pool does not cascade" holds only for DiskPools create
 the split. Delete the volumes (or accept losing them) before deleting a pre-split
 StoragePool.
 :::
+
+### 8b-3 · Installing over another Rook version
+
+The plugin installs only its pinned Rook, and refuses to install over another version:
+Rook upgrades one minor version at a time. It reads the version from the `rook-ceph`
+release or, with no release, from the `rook-version` label on the CephCluster's daemons,
+and reports Degraded naming it.
+
+Moving an existing cluster to the plugin's version is a manual upgrade, minor by minor,
+along Rook's upgrade guides. It is a security task, not housekeeping: a cluster on Rook
+v1.16 with Ceph v19.2.3 stays exposed to CVE-2025-30156 until it runs Rook v1.20.6 or
+later and Ceph v19.2.6 or later, and its daemon keys are rotated
+(`security.cephx.daemon.keyRotationPolicy: KeyGeneration`, `keyGeneration: 2` on the
+CephCluster).
 
 ### 8c · `claimedBy` updates immediately
 

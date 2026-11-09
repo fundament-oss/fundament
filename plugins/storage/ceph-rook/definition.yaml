@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.4.0
+  version: v0.5.0
   description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
@@ -297,7 +297,7 @@ spec:
     - name: CEPH_IMAGE
       displayName: Ceph image
       type: string
-      default: "quay.io/ceph/ceph:v19.2.3"
+      default: "quay.io/ceph/ceph:v19.2.7"
       advanced: true
       description: Ceph container image. v19+ is required on arm64 (v18 segfaults on Apple Silicon).
     - name: ROOK_NAMESPACE

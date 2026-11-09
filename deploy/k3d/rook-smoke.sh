@@ -9,11 +9,14 @@ set -euo pipefail
 CLUSTER="${CLUSTER:-fundament-plugin}"
 KUBE_CONTEXT="${KUBE_CONTEXT:-k3d-${CLUSTER}}"
 NS="${NS:-rook-ceph}"
-ROOK_VERSION="${ROOK_VERSION:-v1.16.0}"
+ROOK_VERSION="${ROOK_VERSION:-v1.21.1}"
+# The ceph-csi-operator version the rook-ceph chart bundles.
+CSI_DRIVERS_VERSION="${CSI_DRIVERS_VERSION:-1.1.0}"
+CEPHCSI_TAG="${CEPHCSI_TAG:-v3.18.2@sha256:55eac6e7afc3e48c545bb4f4686ddd068a9db9528726e1aed2babd85de861544}"
 # reef (v18.x) arm64 images segfault immediately (`ceph-osd --version` exits 139).
-# Squid (v19) is the oldest line that runs on Apple Silicon, and Rook v1.16
+# Squid (v19) is the oldest line that runs on Apple Silicon, and Rook v1.21
 # supports it, so allowUnsupported is not needed for this pairing.
-CEPH_IMAGE="${CEPH_IMAGE:-quay.io/ceph/ceph:v19.2.3}"
+CEPH_IMAGE="${CEPH_IMAGE:-quay.io/ceph/ceph:v19.2.7}"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 KUBECTL=(kubectl --context "$KUBE_CONTEXT")
@@ -43,6 +46,23 @@ up() {
         --namespace "$NS" --create-namespace \
         --set allowLoopDevices=true \
         --set enableDiscoveryDaemon=true \
+        --set csi.cephcsi.repository=quay.io/cephcsi/cephcsi \
+        --set "csi.cephcsi.tag=$CEPHCSI_TAG" \
+        --wait --timeout 10m
+
+    # Rook installs ceph-csi-operator; the drivers are declared by this chart.
+    log "installing the Ceph CSI drivers $CSI_DRIVERS_VERSION"
+    helm --kube-context "$KUBE_CONTEXT" upgrade --install ceph-csi-drivers ceph-csi-drivers \
+        --repo https://ceph.github.io/ceph-csi-operator --version "$CSI_DRIVERS_VERSION" \
+        --namespace "$NS" \
+        --set operatorConfig.namespace="$NS" \
+        --set operatorConfig.driverSpecDefaults.imageSet.name=rook-csi-operator-image-set-configmap \
+        --set operatorConfig.driverSpecDefaults.nodePlugin.priorityClassName=system-node-critical \
+        --set operatorConfig.driverSpecDefaults.controllerPlugin.priorityClassName=system-cluster-critical \
+        --set drivers.rbd.name="${NS}.rbd.csi.ceph.com" \
+        --set drivers.cephfs.name="${NS}.cephfs.csi.ceph.com" \
+        --set drivers.nfs.enabled=false \
+        --set drivers.nvmeof.enabled=false \
         --wait --timeout 10m
 
     # Full paths, matching what the plugin's BuildStorageNodes emits.
@@ -72,6 +92,16 @@ spec:
     allowMultiplePerNode: true
   dashboard:
     enabled: false
+  # Kernel clients read the default AES256K keys only from Linux 7.0.
+  security:
+    cephx:
+      csi:
+        keyType: aes
+  healthCheck:
+    muteHealthWarning:
+      AUTH_INSECURE_CLIENT_KEY_TYPE: {policy: mute}
+      AUTH_INSECURE_KEYS_ALLOWED: {policy: mute}
+      AUTH_INSECURE_KEYS_CREATABLE: {policy: mute}
   crashCollector:
     disable: true
   skipUpgradeChecks: true
@@ -200,6 +230,11 @@ parameters:
 allowVolumeExpansion: true
 reclaimPolicy: Delete
 YAML
+
+    # A CephFS claim made before the filesystem exists fails as infeasible,
+    # which ceph-csi's provisioner does not retry for a long time.
+    log "waiting for the myfs filesystem"
+    "${KUBECTL[@]}" -n "$NS" wait --for=jsonpath='{.status.phase}'=Ready cephfilesystem/myfs --timeout=5m
 
     "${KUBECTL[@]}" -n "$NS" apply -f \
         "https://raw.githubusercontent.com/rook/rook/${ROOK_VERSION}/deploy/examples/toolbox.yaml" \
@@ -444,7 +479,7 @@ delete_cluster_leftovers() {
     # still holding a finalizer here would wedge the CRD instead.
     local crds
     crds=$("${KUBECTL[@]}" get crd -o name 2>/dev/null |
-        grep -E 'ceph\.rook\.io|ceph\.fundament\.io|objectbucket\.io' || true)
+        grep -E 'ceph\.rook\.io|ceph\.fundament\.io|objectbucket\.io|csi\.ceph\.io' || true)
     [ -n "$crds" ] && "${KUBECTL[@]}" delete $crds --ignore-not-found --timeout=2m || true
 
     # Rook's cluster RBAC and CSI driver registrations; helm uninstall covers
@@ -452,7 +487,7 @@ delete_cluster_leftovers() {
     # namespace deletion takes down first.
     local rbac
     rbac=$("${KUBECTL[@]}" get clusterrole,clusterrolebinding -o name 2>/dev/null |
-        grep -E '/(rook-ceph|cephfs-csi|rbd-csi|cephfs-external|rbd-external|objectstorage-provisioner)' || true)
+        grep -E '/(rook-ceph|ceph-csi|cephfs-csi|rbd-csi|cephfs-external|rbd-external|objectstorage-provisioner)' || true)
     [ -n "$rbac" ] && "${KUBECTL[@]}" delete $rbac --ignore-not-found || true
     local drivers
     drivers=$("${KUBECTL[@]}" get csidrivers -o name 2>/dev/null | grep 'csi\.ceph\.com' || true)
@@ -499,10 +534,19 @@ down() {
         warn "delete timed out (no OSD ever came up?), clearing the finalizer"
         unfinalize cephcluster/rook-ceph
     fi
+    helm --kube-context "$KUBE_CONTEXT" -n "$NS" uninstall ceph-csi-drivers 2>/dev/null || true
     helm --kube-context "$KUBE_CONTEXT" -n "$NS" uninstall rook-ceph 2>/dev/null || true
 
     unfinalize configmap/rook-ceph-mon-endpoints
     unfinalize secret/rook-ceph-mon
+    # ceph-csi-operator finalizes the connection objects Rook made for the
+    # cluster, and it left with the rook-ceph release.
+    local kind r
+    for kind in clientprofiles.csi.ceph.io cephconnections.csi.ceph.io; do
+        "${KUBECTL[@]}" -n "$NS" get "$kind" -o name 2>/dev/null | while read -r r; do
+            unfinalize "$r"
+        done || true
+    done
     "${KUBECTL[@]}" delete ns "$NS" --ignore-not-found --timeout=3m || true
 
     log "removing plugin/Rook cluster-scoped leftovers (CRDs, RBAC, CSI drivers)"
