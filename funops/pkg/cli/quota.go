@@ -14,7 +14,7 @@ import (
 // OrganizationQuotaCmd groups the quota commands. A quota caps what an
 // organization may build: how many clusters it may have, and how many nodes of
 // a machine type it may have in a region, summed over the autoscale maxima of
-// its node pools. A new organization starts at one cluster and the node
+// its node pools. A new organization starts at one cluster and any node
 // quotas `organization create --node-quota` gave it; anything beyond that
 // waits until an operator sets quotas here. Lowering a quota below what is in use stops the next cluster or pool
 // and leaves the existing ones alone.
