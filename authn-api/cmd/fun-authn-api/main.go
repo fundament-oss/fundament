@@ -256,7 +256,7 @@ func run() error {
 		if err := db.Pool.Ping(ctx); err != nil {
 			errs = append(errs, "database: "+err.Error())
 		}
-		if err := authzStore.Healthy(ctx); err != nil {
+		if err := authzStore.Ready(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
 		}
 

@@ -273,7 +273,7 @@ func registerHealth(mux *http.ServeMux, store *openfgaauthz.Store, logger *slog.
 
 		// The can_view gate runs in every mode, so an unresolved store means
 		// this pod cannot authorize any request.
-		if err := store.Healthy(ctx); err != nil {
+		if err := store.Ready(ctx); err != nil {
 			logger.Error("readiness: openfga unavailable", "err", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("not ready"))
