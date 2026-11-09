@@ -114,9 +114,9 @@ describe('installTransitionNotice', () => {
     );
   });
 
-  it('says an install that came up degraded did not work', () => {
+  it('warns about an install that came up degraded', () => {
     expect(installTransitionNotice('Deploying', 'Degraded', 'Ceph', 'c1')).toEqual({
-      kind: 'error',
+      kind: 'warning',
       text: 'Plugin Ceph is degraded on cluster c1',
     });
   });

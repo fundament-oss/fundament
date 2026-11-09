@@ -214,7 +214,18 @@ export default class PluginInstallWatchService {
       if (now - entry.at >= ANNOUNCED_MS) this.announced.delete(entryKey);
     });
     this.announced.set(key, { phase, at: now });
-    if (notice.kind === 'success') this.notifications.success(notice.text);
-    else this.notifications.error(notice.text);
+    switch (notice.kind) {
+      case 'success':
+        this.notifications.success(notice.text);
+        break;
+      case 'warning':
+        this.notifications.warning(notice.text);
+        break;
+      case 'error':
+        this.notifications.error(notice.text);
+        break;
+      default:
+        throw new Error(`unexpected notice kind: ${notice.kind satisfies never}`);
+    }
   }
 }

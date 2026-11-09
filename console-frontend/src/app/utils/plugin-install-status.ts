@@ -144,7 +144,7 @@ export function installPollDelay(
 }
 
 export interface InstallTransitionNotice {
-  kind: 'success' | 'error';
+  kind: 'success' | 'warning' | 'error';
   text: string;
 }
 
@@ -164,10 +164,11 @@ export function installTransitionNotice(
   if (!isInstallRunning(previous) && isInstallRunning(next)) {
     return { kind: 'success', text: `Plugin ${plugin} installed on cluster ${cluster}` };
   }
-  // An install that came up broken, typically a pod that cannot start. Said as
-  // loudly as a failure: whoever started it is waiting for the outcome.
+  // An install that came up broken, typically a pod that cannot start. Whoever
+  // started it is waiting for the outcome, so it is said; as a warning, in the
+  // orange of its Degraded tag, since the plugin is there and may recover.
   if (isInstallInProgress(previous) && !isInstallTerminating(previous) && next === 'Degraded') {
-    return { kind: 'error', text: `Plugin ${plugin} is degraded on cluster ${cluster}` };
+    return { kind: 'warning', text: `Plugin ${plugin} is degraded on cluster ${cluster}` };
   }
   if (!isInstallFailed(previous) && isInstallFailed(next)) {
     // From Running or Degraded it was installed, and stopped working since.

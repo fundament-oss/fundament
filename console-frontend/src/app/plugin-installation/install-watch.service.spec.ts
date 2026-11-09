@@ -34,7 +34,7 @@ const POLL_MS = 5000;
 
 function build() {
   const getInstallation = vi.fn<PluginInstallationService['getInstallation']>();
-  const notifications = { success: vi.fn(), error: vi.fn() };
+  const notifications = { success: vi.fn(), warning: vi.fn(), error: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: PluginInstallationService, useValue: { getInstallation } },
@@ -92,7 +92,7 @@ describe('PluginInstallWatchService', () => {
     );
   });
 
-  it('announces an install that came up degraded as an error', async () => {
+  it('warns about an install that came up degraded', async () => {
     const { watcher, getInstallation, notifications } = build();
     getInstallation.mockResolvedValueOnce(withPhase('Deploying'));
     getInstallation.mockResolvedValueOnce(withPhase('Degraded'));
@@ -100,9 +100,10 @@ describe('PluginInstallWatchService', () => {
     watcher.watch(target, 'install');
     await vi.advanceTimersByTimeAsync(POLL_MS * 2);
 
-    expect(notifications.error).toHaveBeenCalledExactlyOnceWith(
+    expect(notifications.warning).toHaveBeenCalledExactlyOnceWith(
       'Plugin Cert Manager is degraded on cluster production',
     );
+    expect(notifications.error).not.toHaveBeenCalled();
   });
 
   it('waits for an install that is not listed yet', async () => {
