@@ -30,6 +30,11 @@ environmentBanner:
 
 db:
   enabled: true
+  # The digikluster test catalog pins a trixie image by digest, and platform
+  # Renovate updates it.
+  imageCatalogRef:
+    name: postgresql-standard-trixie-test
+    major: 18
   instances: 1
   enablePDB: false
   storageSize: 5Gi

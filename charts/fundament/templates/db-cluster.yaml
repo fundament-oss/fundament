@@ -14,7 +14,15 @@ spec:
   {{- else }}
   enablePDB: {{ gt (int $.Values.db.instances) 1 }}
   {{- end }}
+  {{- with $.Values.db.imageCatalogRef }}
+  imageCatalogRef:
+    apiGroup: postgresql.cnpg.io
+    kind: {{ .kind | default "ClusterImageCatalog" }}
+    name: {{ required "db.imageCatalogRef.name is required" .name }}
+    major: {{ required "db.imageCatalogRef.major is required" .major }}
+  {{- else }}
   imageName: {{ $.Values.db.image }}
+  {{- end }}
   enableSuperuserAccess: true
   {{- if $.Values.db.postgresql }}
   postgresql:
