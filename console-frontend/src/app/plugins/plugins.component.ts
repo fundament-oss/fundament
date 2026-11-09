@@ -556,6 +556,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         prev.phase,
         next.phase,
         readToken,
+        next.message,
       );
     });
 

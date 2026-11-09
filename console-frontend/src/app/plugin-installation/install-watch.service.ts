@@ -7,6 +7,7 @@ import {
   installRemovedNotice,
   installTransitionNotice,
   isInstallInProgress,
+  reportedStatusMessage,
 } from '../utils/plugin-install-status';
 import PluginInstallationService, { pluginResourceName } from './plugin-installation.service';
 
@@ -111,13 +112,15 @@ export default class PluginInstallWatchService {
   }
 
   /** Reports a change a screen read: the phase it had, and the phase it has
-   *  now, or null once it is gone, with the readToken() taken before the read.
-   *  Announces it unless that was done already. */
+   *  now, or null once it is gone, with the readToken() taken before the read
+   *  and the installation's status message. Announces it unless that was done
+   *  already. */
   observe(
     target: InstallWatchTarget,
     previous: string,
     next: string | null,
     readToken: number,
+    message = '',
   ): void {
     const key = keyOf(target);
     const watch = this.watches.get(key);
@@ -135,7 +138,7 @@ export default class PluginInstallWatchService {
         this.watches.set(key, { ...watch, phase: next, seen: true });
       }
     }
-    this.announce(key, target, previous, next);
+    this.announce(key, target, previous, next, message);
   }
 
   private schedule(): void {
@@ -187,7 +190,7 @@ export default class PluginInstallWatchService {
         const next = installPhase(item.status?.phase);
         if (isInstallInProgress(next)) this.watches.set(key, { ...watch, phase: next, seen: true });
         else this.watches.delete(key);
-        this.announce(key, watch, watch.phase, next);
+        this.announce(key, watch, watch.phase, next, item.status?.message ?? '');
       }),
     );
   }
@@ -197,6 +200,7 @@ export default class PluginInstallWatchService {
     target: InstallWatchTarget,
     previous: string,
     next: string | null,
+    message = '',
   ): void {
     if (previous === next) return;
     const now = Date.now();
@@ -214,15 +218,18 @@ export default class PluginInstallWatchService {
       if (now - entry.at >= ANNOUNCED_MS) this.announced.delete(entryKey);
     });
     this.announced.set(key, { phase, at: now });
+    // Why it went wrong, as the installation put it. Not for a success: what a
+    // plugin says while running is no part of the news that it runs.
+    const reason = reportedStatusMessage(message);
     switch (notice.kind) {
       case 'success':
         this.notifications.success(notice.text);
         break;
       case 'warning':
-        this.notifications.warning(notice.text);
+        this.notifications.warning(notice.text, reason);
         break;
       case 'error':
-        this.notifications.error(notice.text);
+        this.notifications.error(notice.text, reason);
         break;
       default:
         throw new Error(`unexpected notice kind: ${notice.kind satisfies never}`);

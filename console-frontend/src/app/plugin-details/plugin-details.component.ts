@@ -436,7 +436,13 @@ export default class PluginDetailsComponent implements OnInit {
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
-      this.installWatch.observe(this.watchTarget(plugin, n.id), prevPhase, n.phase, readToken);
+      this.installWatch.observe(
+        this.watchTarget(plugin, n.id),
+        prevPhase,
+        n.phase,
+        readToken,
+        n.message,
+      );
     });
 
     this.clusters.set(next);

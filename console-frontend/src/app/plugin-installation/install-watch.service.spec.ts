@@ -14,7 +14,7 @@ const target: InstallWatchTarget = {
   pluginLabel: 'Cert Manager',
 };
 
-function withPhase(phase: string): PluginInstallationItem {
+function withPhase(phase: string, message?: string): PluginInstallationItem {
   return {
     metadata: { name: 'acme--cert-manager', uid: 'uid-1' },
     spec: {
@@ -25,7 +25,7 @@ function withPhase(phase: string): PluginInstallationItem {
         definitionHash: 'sha256:abc',
       },
     },
-    status: { phase, ready: phase === 'Running' },
+    status: { phase, ready: phase === 'Running', message },
   };
 }
 
@@ -67,15 +67,28 @@ describe('PluginInstallWatchService', () => {
     expect(getInstallation).toHaveBeenCalledTimes(2);
   });
 
+  it('leaves what a running plugin says out of the installed notification', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValue(withPhase('Running', 'all controllers ready'));
+
+    watcher.watch(target, 'install');
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager installed on cluster production',
+    );
+  });
+
   it('announces a failed install as an error', async () => {
     const { watcher, getInstallation, notifications } = build();
-    getInstallation.mockResolvedValue(withPhase('Failed'));
+    getInstallation.mockResolvedValue(withPhase('Failed', 'validate config: replicas too low'));
 
     watcher.watch(target, 'install');
     await vi.advanceTimersByTimeAsync(POLL_MS);
 
     expect(notifications.error).toHaveBeenCalledWith(
       'Failed to install plugin Cert Manager on cluster production',
+      'The installation reports: “validate config: replicas too low”',
     );
   });
 
@@ -95,13 +108,16 @@ describe('PluginInstallWatchService', () => {
   it('warns about an install that came up degraded', async () => {
     const { watcher, getInstallation, notifications } = build();
     getInstallation.mockResolvedValueOnce(withPhase('Deploying'));
-    getInstallation.mockResolvedValueOnce(withPhase('Degraded'));
+    getInstallation.mockResolvedValueOnce(
+      withPhase('Degraded', 'container cert-manager: ImagePullBackOff: manifest unknown'),
+    );
 
     watcher.watch(target, 'install');
     await vi.advanceTimersByTimeAsync(POLL_MS * 2);
 
     expect(notifications.warning).toHaveBeenCalledExactlyOnceWith(
       'Plugin Cert Manager is degraded on cluster production',
+      'The installation reports: “container cert-manager: ImagePullBackOff: manifest unknown”',
     );
     expect(notifications.error).not.toHaveBeenCalled();
   });
@@ -210,10 +226,11 @@ describe('PluginInstallWatchService', () => {
   it('announces what a screen reads for an installation nobody is waiting on', () => {
     const { watcher, notifications } = build();
 
-    watcher.observe(target, 'Running', 'Failed', watcher.readToken());
+    watcher.observe(target, 'Running', 'Failed', watcher.readToken(), 'parse manifest: bad yaml');
 
     expect(notifications.error).toHaveBeenCalledWith(
       'Plugin Cert Manager failed on cluster production',
+      'The installation reports: “parse manifest: bad yaml”',
     );
   });
 });
