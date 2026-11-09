@@ -91,13 +91,13 @@ func (e *iconsEnv) get(t *testing.T) *organizationv1.GetPluginDefinitionResponse
 }
 
 // insertRaw writes a definition row directly, without icon validation.
-func (e *iconsEnv) insertRaw(t *testing.T, version string, manifest []byte, logo string, published bool) {
+func (e *iconsEnv) insertRaw(t *testing.T, manifest []byte) {
 	t.Helper()
 
 	_, err := e.env.adminPool.Exec(t.Context(),
-		`INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash, logo, published)
-		 VALUES ($1, $2, $3, $4, $5, CASE WHEN $6 THEN now() END)`,
-		e.pluginID, version, manifest, pluginruntime.HashManifest(manifest)+version, logo, published)
+		`INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash)
+		 VALUES ($1, 'v1', $2, $3)`,
+		e.pluginID, manifest, pluginruntime.HashManifest(manifest))
 	require.NoError(t, err)
 }
 
@@ -135,7 +135,7 @@ func TestGetPluginDefinition_UnresolvedDigest(t *testing.T) {
 
 	e := newIconsEnv(t)
 	digest := pluginruntime.IconDigest(iconSVG("circle"))
-	e.insertRaw(t, "v1", iconsManifest("", digest), "", false)
+	e.insertRaw(t, iconsManifest("", digest))
 
 	resp := e.get(t)
 	require.Len(t, resp.GetDefinition().GetMenu().GetOrganization(), 1)
@@ -153,7 +153,7 @@ func TestGetPluginDefinition_OddStoredValue(t *testing.T) {
 			e := newIconsEnv(t)
 			manifest := string(iconsManifest("'"+value+"'", "'"+value+"'")) +
 				"      - crd: gadgets.example.io\n        list: true\n        icon: globe\n"
-			e.insertRaw(t, "v1", []byte(manifest), "", false)
+			e.insertRaw(t, []byte(manifest))
 
 			resp := e.get(t)
 			assert.Empty(t, resp.GetDefinition().GetMetadata().GetIcon())
@@ -163,57 +163,4 @@ func TestGetPluginDefinition_OddStoredValue(t *testing.T) {
 			assert.Equal(t, "globe", entries[1].GetIcon())
 		})
 	}
-}
-
-func listedLogo(t *testing.T, e *iconsEnv) (string, bool) {
-	t.Helper()
-
-	resp, err := e.client.ListPlugins(e.ctx(), organizationv1.ListPluginsRequest_builder{}.Build()) //nolint:staticcheck // covers the deprecated RPC until it is removed
-	require.NoError(t, err)
-	for _, p := range resp.GetPlugins() {
-		if p.GetName() == iconsPluginName {
-			return p.GetLogo(), true
-		}
-	}
-	return "", false
-}
-
-func TestListPlugins_LogoFromLatestPublished(t *testing.T) {
-	t.Parallel()
-
-	e := newIconsEnv(t)
-	manifest := iconsManifest("", "")
-	e.insertRaw(t, "v1", manifest, "data:logo-a", true)
-	e.insertRaw(t, "v2", manifest, "data:logo-b", false)
-
-	logo, found := listedLogo(t, e)
-	require.True(t, found)
-	assert.Equal(t, "data:logo-a", logo)
-}
-
-func TestListPlugins_IgnoresDeletedPublished(t *testing.T) {
-	t.Parallel()
-
-	e := newIconsEnv(t)
-	manifest := iconsManifest("", "")
-	e.insertRaw(t, "v1", manifest, "data:logo-a", true)
-	e.insertRaw(t, "v2", manifest, "data:logo-deleted", true)
-	_, err := e.env.adminPool.Exec(t.Context(),
-		"UPDATE appstore.plugin_definitions SET deleted = now() WHERE plugin_id = $1 AND plugin_version = 'v2'", e.pluginID)
-	require.NoError(t, err)
-
-	logo, found := listedLogo(t, e)
-	require.True(t, found)
-	assert.Equal(t, "data:logo-a", logo)
-}
-
-func TestListPlugins_NoPublishedVersion(t *testing.T) {
-	t.Parallel()
-
-	e := newIconsEnv(t)
-	e.insertRaw(t, "v1", iconsManifest("", ""), "data:logo-draft", false)
-
-	logo, found := listedLogo(t, e)
-	require.True(t, found)
-	assert.Empty(t, logo)
 }

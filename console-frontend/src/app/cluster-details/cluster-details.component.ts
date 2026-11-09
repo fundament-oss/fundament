@@ -22,7 +22,7 @@ import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal
 import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
 import { NotificationService } from '../notification.service';
-import { CLUSTER, METRICS, PLUGIN, PROJECT } from '../../connect/tokens';
+import { CLUSTER, INSTALL, METRICS, PROJECT } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -36,7 +36,7 @@ import {
 import { ListProjectsRequestSchema, type Project } from '../../generated/v1/project_pb';
 import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
-import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/catalog/v1/catalog_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import {
@@ -325,7 +325,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private organizationDataService = inject(OrganizationDataService);
 
-  private pluginClient = inject(PLUGIN);
+  private installClient = inject(INSTALL);
 
   private notificationService = inject(NotificationService);
 
@@ -834,7 +834,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.isLoadingPlugins.set(true);
 
       const [pluginsResponse, installations] = await Promise.all([
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        firstValueFrom(this.installClient.listPlugins(create(ListPluginsRequestSchema, {}))),
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 

@@ -72,9 +72,6 @@ message PluginSummary {
   // Publishing organization's name. With `name` it forms the installation's
   // metadata.name: "<organization_name>--<name>".
   string organization_name = 90;
-  // Latest published logo as a data: URI; empty when none.
-  string logo = 100;
-  string logo_dark = 110;
 }
 
 // List plugins request

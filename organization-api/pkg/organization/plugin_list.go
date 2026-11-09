@@ -107,7 +107,5 @@ func pluginSummaryFromRow(
 		PluginVersion:    row.LatestVersion,
 		DefinitionHash:   row.LatestHash,
 		OrganizationName: row.OrganizationName,
-		Logo:             row.Logo,
-		LogoDark:         row.LogoDark,
 	}.Build()
 }

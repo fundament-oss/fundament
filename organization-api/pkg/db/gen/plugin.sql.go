@@ -61,21 +61,7 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
     ORDER BY appstore.plugin_definitions.created DESC
     LIMIT 1
-  ), '')::text AS latest_hash,
-  COALESCE((
-    SELECT appstore.plugin_definitions.logo
-    FROM appstore.plugin_definitions
-    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL AND appstore.plugin_definitions.published IS NOT NULL
-    ORDER BY appstore.plugin_definitions.published DESC
-    LIMIT 1
-  ), '')::text AS logo,
-  COALESCE((
-    SELECT appstore.plugin_definitions.logo_dark
-    FROM appstore.plugin_definitions
-    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL AND appstore.plugin_definitions.published IS NOT NULL
-    ORDER BY appstore.plugin_definitions.published DESC
-    LIMIT 1
-  ), '')::text AS logo_dark
+  ), '')::text AS latest_hash
 FROM appstore.plugins
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.deleted IS NULL
@@ -92,8 +78,6 @@ type PluginListRow struct {
 	OrganizationName string
 	LatestVersion    string
 	LatestHash       string
-	Logo             string
-	LogoDark         string
 }
 
 func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
@@ -115,8 +99,6 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 			&i.OrganizationName,
 			&i.LatestVersion,
 			&i.LatestHash,
-			&i.Logo,
-			&i.LogoDark,
 		); err != nil {
 			return nil, err
 		}
