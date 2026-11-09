@@ -4,7 +4,7 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PluginRegistryService from './plugin-registry.service';
 import { ConfigService } from '../config.service';
-import { PLUGIN } from '../../connect/tokens';
+import { INSTALL } from '../../connect/tokens';
 import type { PluginInstallationItem } from './types';
 
 function installation(
@@ -96,7 +96,7 @@ describe('PluginRegistryService', () => {
           provide: ConfigService,
           useValue: { getConfig } as unknown as ConfigService,
         },
-        { provide: PLUGIN, useValue: { getPluginDefinition } },
+        { provide: INSTALL, useValue: { getPluginDefinition } },
       ],
     });
   });
@@ -124,6 +124,20 @@ describe('PluginRegistryService', () => {
     });
     // A phase change is not a new installation: the definition is not refetched.
     expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches the definition from install.v1 by organization and plugin name', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    await registry.loadPlugins('cl-1');
+
+    expect(getPluginDefinition).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lookup: { case: 'name', value: { organizationName: 'acme', pluginName: 'cert-manager' } },
+        version: 'v1.0.0',
+      }),
+    );
   });
 
   it('treats an installation the controller has not picked up yet as on its way', async () => {

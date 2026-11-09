@@ -33,6 +33,11 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	if kubeProxyURL == "" {
 		t.Skip("FUNDAMENT_KUBE_API_PROXY_URL must be set for plugin installation acceptance tests")
 	}
+	// The test installs unpinned, which resolves the version through install.v1.
+	installURL := os.Getenv("FUNDAMENT_MARKETPLACE_INSTALL_URL")
+	if installURL == "" {
+		t.Skip("FUNDAMENT_MARKETPLACE_INSTALL_URL must be set for plugin installation acceptance tests")
+	}
 
 	suffix := acctest.RandString(6)
 	clusterName := "tf-acc-plugin-" + suffix
@@ -45,7 +50,7 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL),
+				Config: testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL, installURL),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(resourceName, "organization_name", pluginOrganizationName),
@@ -65,12 +70,13 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	})
 }
 
-func testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL string) string {
+func testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL, installURL string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint            = %[4]q
   organization_id     = %[5]q
   kube_api_proxy_url  = %[6]q
+  marketplace_install_url = %[7]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
@@ -91,5 +97,5 @@ resource "fundament_plugin_installation" "test" {
   organization_name = %[2]q
   plugin_name       = %[3]q
 }
-`, clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL)
+`, clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL, installURL)
 }

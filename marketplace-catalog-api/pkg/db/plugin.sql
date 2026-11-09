@@ -246,7 +246,7 @@ LIMIT 1;
 -- PluginLatestPublishedDefinition: plugin_definitions' policy cannot reach the
 -- plugin's visibility or deleted without recursing, so the join is what keeps a
 -- RESTRICTED or taken-down listing from handing out its manifest.
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
@@ -261,7 +261,7 @@ WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
 -- this same query as the install role, whose definitions policy admits the
 -- caller's own unpublished versions; the storefront role's does not, and
 -- published is not repeated here so the two can share the query.
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id

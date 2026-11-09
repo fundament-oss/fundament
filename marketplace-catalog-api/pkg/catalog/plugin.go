@@ -301,10 +301,16 @@ func (s *Server) GetPluginDefinition(
 		configSchemaUnavailable = true
 	}
 
+	definition, err := definitionFromManifest(row.Manifest, row.Logo, row.MenuIcons)
+	if err != nil {
+		s.logger.WarnContext(ctx, "unparseable plugin definition", "error", err)
+	}
+
 	return catalogv1.GetPluginDefinitionResponse_builder{
 		Manifest:                row.Manifest,
 		DefinitionHash:          row.Hash,
 		ConfigSchema:            configSchema,
 		ConfigSchemaUnavailable: configSchemaUnavailable,
+		Definition:              definition,
 	}.Build(), nil
 }

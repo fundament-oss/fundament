@@ -43,11 +43,6 @@ import {
 } from '../../generated/v1/project_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
-import {
-  PluginService,
-  ListPluginsResponseSchema,
-  ListPresetsResponseSchema,
-} from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
 import {
   OverviewService,
@@ -469,19 +464,6 @@ export default function createDemoTransport(): Transport {
       listInvitations: async () => {
         await delay(80);
         return create(ListInvitationsResponseSchema, { invitations: [] });
-      },
-    });
-
-    // What organization.v1 still answers: cluster-details has not moved to the
-    // catalog.
-    router.service(PluginService, {
-      listPlugins: async () => {
-        await delay();
-        return create(ListPluginsResponseSchema, { plugins: fx.plugins });
-      },
-      listPresets: async () => {
-        await delay(80);
-        return create(ListPresetsResponseSchema, { presets: fx.presets });
       },
     });
 

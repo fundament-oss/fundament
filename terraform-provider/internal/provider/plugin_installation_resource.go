@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	catalogv1 "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
@@ -275,7 +276,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	defer cancel()
 
 	// When the version isn't explicitly pinned (the "unknown" placeholder or
-	// empty), pin the latest published definition resolved from organization-api.
+	// empty), pin the latest published definition resolved from the marketplace.
 	// Version and hash are pinned together as a matched pair.
 	if pluginVersion == "" || pluginVersion == unpinnedPluginVersion {
 		version, hash, err := r.resolveLatestDefinition(ctx, organizationName, pluginName)
@@ -399,27 +400,40 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// resolveLatestDefinition returns the latest published version and definition
-// hash for a catalog plugin published by organizationName, resolved via
-// organization-api ListPlugins (auth headers are added by the client
-// transport). It errors when the (organization, plugin) pair is not in the
-// catalog or has no published definition to pin.
+// resolveLatestDefinition returns the newest published version and its
+// definition hash for a plugin, resolved through the marketplace install API.
 func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, organizationName, pluginName string) (string, string, error) {
-	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build()) //nolint:staticcheck // catalog.v1 ListPlugins lives in marketplace-api and omits RESTRICTED listings; migrating is not a drop-in swap
+	if r.client.InstallService == nil {
+		return "", "", errors.New("marketplace_install_url (or FUNDAMENT_MARKETPLACE_INSTALL_URL) must be set to install a plugin without a pinned plugin_version")
+	}
+	plugins, err := r.client.InstallService.ListPlugins(ctx, catalogv1.ListPluginsRequest_builder{}.Build())
 	if err != nil {
 		return "", "", fmt.Errorf("list plugins: %w", err)
 	}
-	for _, p := range listResp.GetPlugins() {
-		if p.GetName() != pluginName || p.GetOrganizationName() != organizationName {
+	publishers, err := r.client.InstallService.ListPublishers(ctx, catalogv1.ListPublishersRequest_builder{}.Build())
+	if err != nil {
+		return "", "", fmt.Errorf("list publishers: %w", err)
+	}
+	publisherNames := make(map[string]string, len(publishers.GetPublishers()))
+	for _, p := range publishers.GetPublishers() {
+		publisherNames[p.GetId()] = p.GetName()
+	}
+	for _, p := range plugins.GetPlugins() {
+		if p.GetName() != pluginName || publisherNames[p.GetOrganizationId()] != organizationName {
 			continue
 		}
-		version, hash := p.GetPluginVersion(), p.GetDefinitionHash()
-		if version == "" || hash == "" {
+		versions, err := r.client.InstallService.ListPluginVersions(ctx, catalogv1.ListPluginVersionsRequest_builder{PluginId: p.GetId()}.Build())
+		if err != nil {
+			return "", "", fmt.Errorf("list plugin versions: %w", err)
+		}
+		// Newest published first.
+		if len(versions.GetVersions()) == 0 {
 			return "", "", fmt.Errorf("plugin %q from organization %q has no published definition to install", pluginName, organizationName)
 		}
-		return version, hash, nil
+		latest := versions.GetVersions()[0]
+		return latest.GetVersion(), latest.GetDefinitionHash(), nil
 	}
-	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog", pluginName, organizationName)
+	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog, or it has no published version; to install a draft, pin plugin_version and definition_hash", pluginName, organizationName)
 }
 
 func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource

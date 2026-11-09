@@ -2002,6 +2002,7 @@ type GetPluginDefinitionResponse struct {
 	xxx_hidden_DefinitionHash          string                 `protobuf:"bytes,20,opt,name=definition_hash,json=definitionHash"`
 	xxx_hidden_ConfigSchema            *[]*ConfigSchemaEntry  `protobuf:"bytes,30,rep,name=config_schema,json=configSchema"`
 	xxx_hidden_ConfigSchemaUnavailable bool                   `protobuf:"varint,40,opt,name=config_schema_unavailable,json=configSchemaUnavailable"`
+	xxx_hidden_Definition              *v1.PluginDefinition   `protobuf:"bytes,50,opt,name=definition"`
 	unknownFields                      protoimpl.UnknownFields
 	sizeCache                          protoimpl.SizeCache
 }
@@ -2061,6 +2062,13 @@ func (x *GetPluginDefinitionResponse) GetConfigSchemaUnavailable() bool {
 	return false
 }
 
+func (x *GetPluginDefinitionResponse) GetDefinition() *v1.PluginDefinition {
+	if x != nil {
+		return x.xxx_hidden_Definition
+	}
+	return nil
+}
+
 func (x *GetPluginDefinitionResponse) SetManifest(v []byte) {
 	if v == nil {
 		v = []byte{}
@@ -2080,6 +2088,21 @@ func (x *GetPluginDefinitionResponse) SetConfigSchemaUnavailable(v bool) {
 	x.xxx_hidden_ConfigSchemaUnavailable = v
 }
 
+func (x *GetPluginDefinitionResponse) SetDefinition(v *v1.PluginDefinition) {
+	x.xxx_hidden_Definition = v
+}
+
+func (x *GetPluginDefinitionResponse) HasDefinition() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Definition != nil
+}
+
+func (x *GetPluginDefinitionResponse) ClearDefinition() {
+	x.xxx_hidden_Definition = nil
+}
+
 type GetPluginDefinitionResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -2095,6 +2118,9 @@ type GetPluginDefinitionResponse_builder struct {
 	// (install proceeds) from "schema unknown" (the console must not
 	// instant-install past required config it cannot see).
 	ConfigSchemaUnavailable bool
+	// The parsed manifest. Unset when this binary cannot parse it; manifest and
+	// definition_hash are still returned.
+	Definition *v1.PluginDefinition
 }
 
 func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionResponse {
@@ -2105,6 +2131,7 @@ func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionRespon
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	x.xxx_hidden_ConfigSchema = &b.ConfigSchema
 	x.xxx_hidden_ConfigSchemaUnavailable = b.ConfigSchemaUnavailable
+	x.xxx_hidden_Definition = b.Definition
 	return m0
 }
 
@@ -2221,13 +2248,16 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\brequired\x182 \x01(\bR\brequired\x12\x16\n" +
 	"\x06values\x18< \x03(\tR\x06values\x12\x1a\n" +
 	"\badvanced\x18F \x01(\bR\badvanced\x12!\n" +
-	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xe2\x01\n" +
+	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xa4\x02\n" +
 	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
 	"\bmanifest\x18\n" +
 	" \x01(\fR\bmanifest\x12'\n" +
 	"\x0fdefinition_hash\x18\x14 \x01(\tR\x0edefinitionHash\x12B\n" +
 	"\rconfig_schema\x18\x1e \x03(\v2\x1d.catalog.v1.ConfigSchemaEntryR\fconfigSchema\x12:\n" +
-	"\x19config_schema_unavailable\x18( \x01(\bR\x17configSchemaUnavailable*\x82\x01\n" +
+	"\x19config_schema_unavailable\x18( \x01(\bR\x17configSchemaUnavailable\x12@\n" +
+	"\n" +
+	"definition\x182 \x01(\v2 .marketplace.v1.PluginDefinitionR\n" +
+	"definition*\x82\x01\n" +
 	"\n" +
 	"ConfigType\x12\x1b\n" +
 	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
@@ -2276,6 +2306,7 @@ var file_catalog_v1_catalog_proto_goTypes = []any{
 	(*v1.Category)(nil),                 // 26: marketplace.v1.Category
 	(*v1.Publisher)(nil),                // 27: marketplace.v1.Publisher
 	(*v1.Preset)(nil),                   // 28: marketplace.v1.Preset
+	(*v1.PluginDefinition)(nil),         // 29: marketplace.v1.PluginDefinition
 }
 var file_catalog_v1_catalog_proto_depIdxs = []int32{
 	20, // 0: catalog.v1.PluginSummary.labels:type_name -> marketplace.v1.PluginLabel
@@ -2298,25 +2329,26 @@ var file_catalog_v1_catalog_proto_depIdxs = []int32{
 	17, // 17: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
 	0,  // 18: catalog.v1.ConfigSchemaEntry.type:type_name -> catalog.v1.ConfigType
 	18, // 19: catalog.v1.GetPluginDefinitionResponse.config_schema:type_name -> catalog.v1.ConfigSchemaEntry
-	4,  // 20: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
-	6,  // 21: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
-	8,  // 22: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
-	10, // 23: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
-	12, // 24: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
-	14, // 25: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
-	16, // 26: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
-	5,  // 27: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
-	7,  // 28: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
-	9,  // 29: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
-	11, // 30: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
-	13, // 31: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
-	15, // 32: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
-	19, // 33: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
-	27, // [27:34] is the sub-list for method output_type
-	20, // [20:27] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	29, // 20: catalog.v1.GetPluginDefinitionResponse.definition:type_name -> marketplace.v1.PluginDefinition
+	4,  // 21: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
+	6,  // 22: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
+	8,  // 23: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
+	10, // 24: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
+	12, // 25: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
+	14, // 26: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
+	16, // 27: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
+	5,  // 28: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
+	7,  // 29: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
+	9,  // 30: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
+	11, // 31: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
+	13, // 32: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
+	15, // 33: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
+	19, // 34: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
+	28, // [28:35] is the sub-list for method output_type
+	21, // [21:28] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_catalog_v1_catalog_proto_init() }

@@ -237,4 +237,7 @@ message GetPluginDefinitionResponse {
   // (install proceeds) from "schema unknown" (the console must not
   // instant-install past required config it cannot see).
   bool config_schema_unavailable = 40;
+  // The parsed manifest. Unset when this binary cannot parse it; manifest and
+  // definition_hash are still returned.
+  marketplace.v1.PluginDefinition definition = 50;
 }

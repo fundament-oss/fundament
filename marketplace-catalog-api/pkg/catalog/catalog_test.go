@@ -687,3 +687,49 @@ func TestListPresetsOmitsHiddenPluginsFromMembership(t *testing.T) {
 	assert.Equal(t, []string{visibleID.String()}, pluginIDs,
 		"a preset must not name a RESTRICTED or unpublished plugin")
 }
+
+func TestGetPluginDefinitionReturnsParsedDefinition(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-parsed", Visibility: "public", Published: true, Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	def := resp.GetDefinition()
+	require.NotNil(t, def)
+	assert.Equal(t, "seeded", def.GetMetadata().GetName())
+	assert.Equal(t, "Seeded", def.GetMetadata().GetDisplayName())
+	assert.Equal(t, "ghcr.io/fundament-oss/seeded@sha256:0c9f988f29c3bbb63c61e798b8a0a2c7921e332193214d01c16f5ced4684a531", def.GetImage())
+}
+
+// A newer plugin-sdk field must not hide the definition: the console builds a
+// plugin's menu from it.
+func TestGetPluginDefinitionParsesDefinitionWithNewerSdkFields(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-parsed-newer-sdk", Visibility: "public", Published: true,
+		Manifest: []byte(testManifestWithConfigSchema + "  fieldFromANewerSdk: true\n"),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	require.NotNil(t, resp.GetDefinition())
+	assert.Equal(t, "seeded", resp.GetDefinition().GetMetadata().GetName())
+}
+
+func TestGetPluginDefinitionOmitsDefinitionForUnparseableManifest(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{Name: "definition-unparseable", Visibility: "public", Published: true})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp.GetDefinitionHash())
+	assert.Nil(t, resp.GetDefinition())
+}

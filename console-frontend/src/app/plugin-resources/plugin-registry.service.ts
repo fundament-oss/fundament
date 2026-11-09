@@ -9,8 +9,8 @@ import type {
   PluginInstallationItem,
   PluginInstallationListResponse,
 } from './types';
-import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/v1/plugin_pb';
-import { PLUGIN } from '../../connect/tokens';
+import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/marketplace/v1/common_pb';
+import { INSTALL } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
 import {
@@ -235,7 +235,7 @@ export default class PluginRegistryService {
 
   private configService = inject(ConfigService);
 
-  private pluginClient = inject(PLUGIN);
+  private installClient = inject(INSTALL);
 
   /** Loads the cluster's plugins, or waits on the load under way for it.
    *  `fresh` reads again now instead of at the next poll, for a project just
@@ -429,10 +429,12 @@ export default class PluginRegistryService {
         const res = await firstValueFrom(
           // A definition is keyed on (organization, plugin, version): the
           // publisher is required, not optional context.
-          this.pluginClient.getPluginDefinition({
-            organizationName: ref.organizationName,
-            pluginName: ref.pluginName,
-            pluginVersion: ref.pluginVersion,
+          this.installClient.getPluginDefinition({
+            lookup: {
+              case: 'name',
+              value: { organizationName: ref.organizationName, pluginName: ref.pluginName },
+            },
+            version: ref.pluginVersion,
           }),
         );
         return {

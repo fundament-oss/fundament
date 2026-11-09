@@ -41,7 +41,7 @@ Plugin pages run on the plugin-proxy origin and never see the Console user's coo
 
 1. The console lists the cluster's installations: `GET <kube-api-proxy>/clusters/<cluster-id>/apis/plugins.fundament.io/v1/plugininstallations`.
 2. It keeps installations with `status.phase` `Running` and `status.ready`.
-3. For each, it fetches the definition from organization-api: `organization.v1.PluginService/GetPluginDefinition` with organization, plugin and version.
+3. For each, it fetches the definition from marketplace-catalog-api: `install.v1.InstallService/GetPluginDefinition` by organization name, plugin name and version, and reads the parsed `definition` from the response.
 4. `menu` entries appear in the sidebar under the plugin's display name.
 
 The definition advertises:

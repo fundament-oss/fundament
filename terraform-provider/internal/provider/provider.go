@@ -30,6 +30,8 @@ type FundamentProviderModel struct {
 	AuthnEndpoint   types.String `tfsdk:"authn_endpoint"`
 	OrganizationID  types.String `tfsdk:"organization_id"`
 	KubeAPIProxyURL types.String `tfsdk:"kube_api_proxy_url"`
+
+	MarketplaceInstallURL types.String `tfsdk:"marketplace_install_url"`
 }
 
 // FundamentEnvConfig describes the environment variable configuration.
@@ -39,6 +41,8 @@ type FundamentEnvConfig struct {
 	AuthnEndpoint   string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
 	OrganizationID  string `env:"FUNDAMENT_ORGANIZATION_ID"`
 	KubeAPIProxyURL string `env:"FUNDAMENT_KUBE_API_PROXY_URL"`
+
+	MarketplaceInstallURL string `env:"FUNDAMENT_MARKETPLACE_INSTALL_URL"`
 }
 
 // New returns a function that creates a new FundamentProvider.
@@ -92,6 +96,13 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 			},
 			"kube_api_proxy_url": schema.StringAttribute{
 				Description: "The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.",
+				Optional:    true,
+				Validators: []validator.String{
+					httpURLValidator{},
+				},
+			},
+			"marketplace_install_url": schema.StringAttribute{
+				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version and definition_hash. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
@@ -197,7 +208,12 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		kubeAPIProxyURL = envConfig.KubeAPIProxyURL
 	}
 
-	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL)
+	marketplaceInstallURL := config.MarketplaceInstallURL.ValueString()
+	if marketplaceInstallURL == "" {
+		marketplaceInstallURL = envConfig.MarketplaceInstallURL
+	}
+
+	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL, marketplaceInstallURL)
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 
