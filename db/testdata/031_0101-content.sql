@@ -13,7 +13,7 @@ INSERT INTO catalog.regions (id, name, cloud_profile, cloud_profile_region) VALU
     ('019b4000-5000-7000-8000-000000000001', 'local', 'local', 'local');
 
 -- Must be versions the `local` CloudProfile of the Gardener pinned in
--- cluster-worker/mod.just supports; Gardener rejects a shoot with any other.
+-- test-env/mod.just supports; Gardener rejects a shoot with any other.
 INSERT INTO catalog.kubernetes_versions (id, version) VALUES
     ('019b4000-5100-7000-8000-000000000001', '1.34.3'),
     ('019b4000-5100-7000-8000-000000000002', '1.33.0');

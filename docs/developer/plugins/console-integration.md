@@ -301,10 +301,10 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 ```bash
 just dev-hotreload              # mock mode
 just plugin-sandbox-kubeconfig  # sandbox mode, see Local development
-just cluster-worker dev          # real mode against a local Gardener
+just test-env up                # real mode against a local Gardener, in a VM
 ```
 
-Real mode needs Gardener running first: [Local Gardener](../fundament/local-gardener.md).
+Real mode runs in the test-env VM, without hot reload: `just test-env redeploy` deploys a change there. See [Test environment](../fundament/test-env.md).
 
 ## Plugin author's quick guide
 

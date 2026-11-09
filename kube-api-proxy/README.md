@@ -63,8 +63,9 @@ Two-level cache minimizes latency and Gardener API calls:
 The proxy runs behind the local Envoy Gateway in k3d (`deploy/k3d/gateway/`). HTTPS is required for kubectl exec credential plugins (client-go refuses exec over HTTP). Local dev uses port 8443, which k3d maps to the gateway's port 443.
 
 ```bash
-# With real Gardener, see docs/developer/fundament/local-gardener.md
-just cluster-worker dev
+# With a real Gardener, in the test-env VM: docs/developer/fundament/test-env.md
+just test-env up
+just test-env redeploy   # after a change; there is no hot reload in the VM
 
 # Mock mode (default, for frontend development)
 just dev
