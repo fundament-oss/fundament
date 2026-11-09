@@ -1,0 +1,86 @@
+<!-- The page owns the scroll region: a pane clips what does not fit, so a menu
+     longer than the pane would be cut off without one. Named, because a page
+     beside others is a region and only a name makes it a landmark. -->
+<nldd-page [attr.accessible-label]="kindLabel()">
+  <nldd-simple-section>
+    <app-context-breadcrumb
+      [pickerOpen]="pickerOpen()"
+      (openPicker)="openPicker.emit()"
+    />
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-list
+      type="navigation"
+      dividers="on-touch"
+      [attr.aria-label]="kindLabel()"
+    >
+      @for (item of items(); track item.path) {
+        <nldd-list-item
+          [attr.href]="pageNav.path(item.path)"
+          [attr.current]="isCurrent(item.path, item.exact) ? '' : null"
+          (click)="pageNav.navigate($event, item.path)"
+        >
+          <nldd-icon-cell
+            [attr.icon]="item.icon"
+            size="20"
+          ></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
+          @if (item.count !== null) {
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="item.count"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
+          }
+          <!-- Only when it is unreachable: a dot that is always on says
+               nothing, and the count column next to it is information rather
+               than alarm. -->
+          @if (item.metrics && metricsHealth.state() === 'down') {
+            <nldd-cell width="fit-content">
+              <nldd-tooltip text="Metrics connection lost">
+                <nldd-badge
+                  color="warning"
+                  accessible-label="Metrics connection lost"
+                ></nldd-badge>
+              </nldd-tooltip>
+            </nldd-cell>
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
+          }
+        </nldd-list-item>
+      }
+    </nldd-list>
+    <!-- A plugin's screens under the plugin's own name, as a heading rather than
+         as a row: it names where the items below come from, and it is not
+         somewhere you can go. -->
+    @for (entry of pluginGroups(); track entry.group.installationName) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>{{ entry.group.label }}</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        [attr.aria-label]="entry.group.label"
+      >
+        @for (resource of entry.group.items; track resource.crdPlural) {
+          <nldd-list-item
+            [attr.href]="pageNav.path(entry.base + '/' + resource.crdPlural)"
+            [attr.current]="isCurrent(entry.base + '/' + resource.crdPlural, false) ? '' : null"
+            (click)="pageNav.navigate($event, entry.base + '/' + resource.crdPlural)"
+          >
+            <nldd-icon-cell
+              [attr.icon]="resource.icon || 'circle-dashed'"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="resource.label"></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    }
+  </nldd-simple-section>
+</nldd-page>

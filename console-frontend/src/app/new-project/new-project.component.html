@@ -57,51 +57,62 @@
             hyphens.
           </nldd-form-field-help-text>
         </nldd-form-field>
-        <nldd-form-field
-          label="Cluster"
-          supporting-label="Select the cluster this project will belong to"
-        >
-          @if (isLoadingClusters()) {
-            <nldd-activity-indicator
-              show-text
-              text="Loading clusters..."
-            ></nldd-activity-indicator>
-          } @else if (clusters().length === 0) {
+        @if (fixedCluster(); as cluster) {
+          <!-- Opened from inside a cluster: that is where the project goes. -->
+          <nldd-form-field label="Cluster">
             <nldd-rich-text>
-              <p>
-                No clusters available.
-                <nldd-link
-                  [attr.href]="pageNav.path('/clusters/new')"
-                  text="Add a cluster first"
-                ></nldd-link
-                >.
-              </p>
+              <p>{{ cluster.name }} ({{ cluster.region }})</p>
             </nldd-rich-text>
-          } @else {
-            <nldd-toggle-button-group
-              type="radio"
-              name="clusterId"
-              accessible-label="Cluster"
-              [attr.invalid]="projectForm.get('clusterId')?.invalid && formSubmitted() ? '' : null"
-              unmet="new-project-cluster-error"
-              (change)="onClusterChange($event)"
-            >
-              @for (cluster of clusters(); track cluster.id) {
-                <nldd-toggle-button
-                  type="radio"
-                  [value]="cluster.id"
-                  [text]="cluster.name + ' (' + cluster.region + ')'"
-                  [selected]="projectForm.get('clusterId')?.value === cluster.id"
-                ></nldd-toggle-button>
-              }
-            </nldd-toggle-button-group>
-            <nldd-validation-list>
-              <nldd-validation-item id="new-project-cluster-error">{{
-                getClusterError()
-              }}</nldd-validation-item>
-            </nldd-validation-list>
-          }
-        </nldd-form-field>
+          </nldd-form-field>
+        } @else {
+          <nldd-form-field
+            label="Cluster"
+            supporting-label="Select the cluster this project will belong to"
+          >
+            @if (isLoadingClusters()) {
+              <nldd-activity-indicator
+                show-text
+                text="Loading clusters..."
+              ></nldd-activity-indicator>
+            } @else if (clusters().length === 0) {
+              <nldd-rich-text>
+                <p>
+                  No clusters available.
+                  <nldd-link
+                    [attr.href]="pageNav.path('/clusters/new')"
+                    text="Add a cluster first"
+                  ></nldd-link
+                  >.
+                </p>
+              </nldd-rich-text>
+            } @else {
+              <nldd-toggle-button-group
+                type="radio"
+                name="clusterId"
+                accessible-label="Cluster"
+                [attr.invalid]="
+                  projectForm.get('clusterId')?.invalid && formSubmitted() ? '' : null
+                "
+                unmet="new-project-cluster-error"
+                (change)="onClusterChange($event)"
+              >
+                @for (cluster of clusters(); track cluster.id) {
+                  <nldd-toggle-button
+                    type="radio"
+                    [value]="cluster.id"
+                    [text]="cluster.name + ' (' + cluster.region + ')'"
+                    [selected]="projectForm.get('clusterId')?.value === cluster.id"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+              <nldd-validation-list>
+                <nldd-validation-item id="new-project-cluster-error">{{
+                  getClusterError()
+                }}</nldd-validation-item>
+              </nldd-validation-list>
+            }
+          </nldd-form-field>
+        }
         <!-- No cancel button: the title bar's dismiss already covers leaving. -->
         <nldd-form-actions>
           <nldd-button

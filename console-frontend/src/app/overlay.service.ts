@@ -17,6 +17,14 @@ export class OverlayService {
 
   readonly newProject = signal(false);
 
+  /** The cluster a new project goes on by default: the one you are in when you
+   *  start it from there. Null leaves the choice to the form. */
+  readonly newProjectCluster = signal<string | null>(null);
+
+  /** The hierarchy picker the breadcrumb opens: every cluster and project in
+   *  the organization, to move into any of them at once. */
+  readonly contextPicker = signal(false);
+
   /** The create flows from the toolbar. They belong to no page, so opening one
    *  from there must not send you to a page first: the sheet floats over
    *  whatever you were reading. Their addresses still exist, and a guard sends
@@ -43,6 +51,8 @@ export class OverlayService {
     this.profile.set(false);
     this.apiKeys.set(false);
     this.newProject.set(false);
+    this.newProjectCluster.set(null);
+    this.contextPicker.set(false);
     this.newCluster.set(false);
     this.inviteMember.set(false);
     this.newNamespace.set(null);

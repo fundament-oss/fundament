@@ -240,7 +240,7 @@ export default class ClusterNodesComponent implements OnInit {
       this.notificationService.success(nodePoolChangeText(created, updated, deleted));
 
       // Navigate back to cluster overview on success
-      this.pageNav.goTo(`/clusters/${this.clusterId}`);
+      this.pageNav.goTo(`/clusters/${this.clusterId}/general`);
     } catch (error) {
       // Only a refusal meant for the reader is shown; anything else carries
       // backend detail.
@@ -262,6 +262,6 @@ export default class ClusterNodesComponent implements OnInit {
   }
 
   onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
+    this.pageNav.goTo(`/clusters/${this.clusterId}/general`);
   }
 }

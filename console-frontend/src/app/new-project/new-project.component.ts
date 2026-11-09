@@ -6,6 +6,7 @@ import {
   EventEmitter,
   inject,
   signal,
+  computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -59,6 +60,31 @@ export default class NewProjectComponent implements OnInit {
   /** Owned by the shell: the sheet opens over the page you were on, and that
    *  page stays mounted behind it. */
   @Input() show = false;
+
+  /** The cluster the sheet was opened from, when it was opened inside a
+   *  cluster or project. The project goes there, and there is nothing to
+   *  choose: the cluster shows as a fact, not a field. Without one, the user
+   *  picks, starting on the first cluster. */
+  @Input() set preferredClusterId(id: string | null) {
+    this.preferredCluster.set(id);
+    this.applyPreferredCluster();
+  }
+
+  private preferredCluster = signal<string | null>(null);
+
+  /** The cluster the project is bound to, once the clusters have loaded and
+   *  the one asked for is among them. */
+  protected fixedCluster = computed(() => {
+    const id = this.preferredCluster();
+    return id ? (this.clusters().find((cluster) => cluster.id === id) ?? null) : null;
+  });
+
+  private applyPreferredCluster(): void {
+    const cluster = this.fixedCluster();
+    if (cluster) {
+      this.projectForm.patchValue({ clusterId: cluster.id });
+    }
+  }
 
   @Output() closed = new EventEmitter<void>();
 
@@ -117,6 +143,7 @@ export default class NewProjectComponent implements OnInit {
       if (response.clusters.length > 0) {
         this.projectForm.patchValue({ clusterId: response.clusters[0].id });
       }
+      this.applyPreferredCluster();
     } catch (error) {
       this.notificationService.error(
         error instanceof Error

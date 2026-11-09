@@ -112,9 +112,9 @@ const routes: Routes = [
     canActivate: [authGuard, organizationFromAddress],
     children: [
       {
-        // Nothing in the main pane: the app opens on a choice, not on a list it
-        // picked for you. A componentless route so the URL still matches while
-        // the outlet stays empty.
+        // The organization itself. A wide screen moves on to its overview (see
+        // App); a narrow one shows the menu here. A componentless route so the
+        // URL still matches while the outlet stays empty.
         path: '',
         children: [],
       },
@@ -193,9 +193,9 @@ const routes: Routes = [
         children: [],
       },
       {
-        // Nothing in the main pane: the secondary sidebar is the project, and
-        // you pick what to open from there. A componentless route so the URL
-        // still matches while the outlet stays empty.
+        // The project itself: its menu. A wide screen moves on to its overview
+        // (see App). A componentless route so the URL still matches while the
+        // outlet stays empty.
         path: 'projects/:id',
         children: [],
       },
@@ -205,10 +205,29 @@ const routes: Routes = [
           import('./project-detail/project-detail.component').then((m) => m.default),
       },
       {
+        // The cluster itself, the way `projects/:id` is the project: its menu,
+        // and on a wide screen its overview beside it (see App).
         path: 'clusters/:id',
+        pathMatch: 'full',
+        children: [],
+      },
+      {
+        path: 'clusters/:id/projects',
+        loadComponent: () =>
+          import('./cluster-projects/cluster-projects.component').then((m) => m.default),
+      },
+      // The detail page was the cluster's own address before the cluster had a
+      // menu of its own; links to its editors still land on them.
+      ...['nodes', 'namespaces', 'plugins'].map((editor) => ({
+        path: `clusters/:id/${editor}`,
+        redirectTo: `clusters/:id/general/${editor}`,
+        pathMatch: 'full' as const,
+      })),
+      {
+        path: 'clusters/:id/general',
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
-        // Both editors open as a sheet over the detail page, so they are children
+        // The editors open as a sheet over the detail page, so they are children
         // of it: the page behind the sheet stays mounted and keeps its scroll.
         children: [
           {

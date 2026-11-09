@@ -254,7 +254,7 @@ export default class ClusterNamespacesComponent implements OnInit {
   }
 
   onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
+    this.pageNav.goTo(`/clusters/${this.clusterId}/general`);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

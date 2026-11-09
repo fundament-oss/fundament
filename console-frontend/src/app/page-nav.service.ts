@@ -1,8 +1,7 @@
-import { Injectable, computed, inject, signal, type WritableSignal } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
-import { filter } from 'rxjs/operators';
-import { inOrganization, withinOrganization } from './address';
-import { OrganizationDataService } from './organization-data.service';
+import { Injectable, computed, inject, type WritableSignal } from '@angular/core';
+import { Router } from '@angular/router';
+import { inOrganization } from './address';
+import NavContextService from './nav-context.service';
 import OrganizationContextService from './organization-context.service';
 import opensElsewhere from './opens-elsewhere';
 
@@ -18,42 +17,13 @@ import opensElsewhere from './opens-elsewhere';
 export default class PageNavService {
   private router = inject(Router);
 
-  private organizationData = inject(OrganizationDataService);
-
   private organizationContext = inject(OrganizationContextService);
 
-  private currentUrl = signal(this.router.url);
+  private navContext = inject(NavContextService);
 
-  constructor() {
-    this.router.events
-      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
-      .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects));
-  }
-
-  /** Label of the back button: the sidebar's own heading, so the button names
-   *  the place it returns to. */
-  backText = computed(() => {
-    const within = withinOrganization(this.currentUrl());
-    const projectId = within.match(/^\/projects\/([^/?#]+)/)?.[1];
-    const pluginClusterId = within.match(/^\/clusters\/([^/?#]+)\/plugin-resources\//)?.[1];
-
-    if (pluginClusterId) {
-      return this.organizationData.getClusterById(pluginClusterId)?.cluster.name ?? 'Cluster';
-    }
-
-    if (projectId) {
-      const project = this.organizationData.getProjectById(projectId);
-      if (project) return project.project.alias || project.project.name;
-    }
-
-    const orgId = this.organizationContext.currentOrganizationId();
-    if (orgId) {
-      const org = this.organizationData.getOrganizationById(orgId);
-      if (org) return org.alias || org.name;
-    }
-
-    return 'Menu';
-  });
+  /** Label of the back button: the menu it returns to is the place you are in,
+   *  so the button names that place. */
+  backText = computed(() => this.navContext.current().name);
 
   /**
    * An address inside the organization you are reading, from one written

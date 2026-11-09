@@ -191,7 +191,7 @@ export default class ClusterPluginsComponent implements OnInit {
         return;
       }
 
-      this.pageNav.goTo(`/clusters/${this.clusterId}`);
+      this.pageNav.goTo(`/clusters/${this.clusterId}/general`);
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
     } finally {
@@ -200,7 +200,7 @@ export default class ClusterPluginsComponent implements OnInit {
   }
 
   onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
+    this.pageNav.goTo(`/clusters/${this.clusterId}/general`);
   }
 
   // True when the pinned definition declares required config keys. The shared

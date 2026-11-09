@@ -1,0 +1,99 @@
+<!-- Same outer layout as the cluster's other pages: the pane owns the back
+     button, and it leads to the cluster's menu. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Projects"
+    [attr.back-text]="pageNav.backText()"
+    (back)="pageNav.goTo('/clusters/' + id())"
+    collapse-anchor="cluster-projects-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="cluster-projects-title"
+      size="2"
+    >
+      <h1>Projects</h1>
+    </nldd-title>
+    <nldd-rich-text>
+      <p>The projects on {{ cluster()?.name || 'this cluster' }}. Open one to work in it.</p>
+    </nldd-rich-text>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- Only once there is a list to act on: with none, the empty state below
+         makes the same offer. -->
+    @if (projects().length > 0) {
+      <nldd-toolbar label="Project actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            [attr.href]="pageNav.path('/projects/new')"
+            (click)="newProject($event)"
+            text="New project…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="New project…"
+            [attr.href]="pageNav.path('/projects/new')"
+            (select)="newProject($event)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+    }
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading projects..."
+      ></nldd-activity-indicator>
+    } @else if (projects().length === 0) {
+      <nldd-inline-dialog
+        icon="folder"
+        icon-color="secondary"
+        text="No projects on this cluster yet"
+        supporting-text="A project groups the namespaces a team works in, and who has access to them."
+      >
+        <nldd-button
+          slot="actions"
+          [attr.href]="pageNav.path('/projects/new')"
+          (click)="newProject($event)"
+          text="New project…"
+          start-icon="plus-small"
+          variant="primary"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    } @else {
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Projects"
+      >
+        @for (project of projects(); track project.id) {
+          <!-- The whole row goes into the project: a real link, so it can be
+               shared and opened in a new tab, and the chevron says so. -->
+          <nldd-list-item
+            [attr.href]="pageNav.path(project.path)"
+            (click)="pageNav.navigate($event, project.path)"
+          >
+            <nldd-icon-cell
+              icon="folder"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="full"
+              [attr.text]="project.name"
+              [attr.supporting-text]="project.summary"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell
+              icon="chevron-right"
+              size="20"
+              color="secondary"
+            ></nldd-icon-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    }
+  </nldd-simple-section>
+</nldd-page>
