@@ -155,7 +155,10 @@ When(
 When(
   'I lower the maximum of the existing node pool to {int}',
   async function (this: ICustomWorld, max: number) {
-    await state(this).nodePools!.setAutoscaleMax(0, max);
+    // By name: the pool that takes the rest of the quota is newer, so it is
+    // listed first.
+    const page = state(this).nodePools!;
+    await page.setAutoscaleMax(await page.indexOf(EXISTING_POOL), max);
   },
 );
 

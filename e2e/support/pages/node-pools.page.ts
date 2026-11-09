@@ -33,6 +33,20 @@ export class NodePoolsPage {
     });
   }
 
+  /** The index of the pool named `name`. The form lists the pools the way the
+   *  API does, newest first, so a pool's place depends on what else the
+   *  cluster has. */
+  async indexOf(name: string): Promise<number> {
+    const names = await this.page
+      .locator('[id^="nodePoolName-"] input')
+      .evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      );
+    const index = names.indexOf(name);
+    expect(index, `node pool ${name} in ${names.join(', ')}`).not.toBe(-1);
+    return index;
+  }
+
   async chooseMachineType(index: number, machineType: string) {
     // The row's label starts with the name and goes on with the specs.
     await this.pool(index)
