@@ -117,7 +117,7 @@ function mapDefinition(
 }
 
 interface InstalledPlugin {
-  def: ProtoPluginDefinition | undefined;
+  def: ProtoPluginDefinition;
   installationId: string;
   installationName: string;
   installationVersion: string;
@@ -437,6 +437,9 @@ export default class PluginRegistryService {
             version: ref.pluginVersion,
           }),
         );
+        // The catalog could not parse the manifest: keep the old entry and retry,
+        // as for a failed fetch.
+        if (res.definition === undefined) throw new Error('definition unavailable');
         return {
           def: res.definition,
           installationId: item.metadata.uid,
@@ -463,7 +466,6 @@ export default class PluginRegistryService {
         );
         return kept ? [kept] : [];
       }
-      if (r.value.def === undefined) return [];
       return [
         mapDefinition(r.value.def, {
           installationId: r.value.installationId,

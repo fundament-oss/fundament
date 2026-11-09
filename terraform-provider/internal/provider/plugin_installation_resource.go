@@ -430,7 +430,15 @@ func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context
 		if len(versions.GetVersions()) == 0 {
 			return "", "", fmt.Errorf("plugin %q from organization %q has no published definition to install", pluginName, organizationName)
 		}
+		// Versions published at the same moment have no fixed order, so the
+		// listing's latest_version_id decides.
 		latest := versions.GetVersions()[0]
+		for _, v := range versions.GetVersions() {
+			if v.GetId() == p.GetLatestVersionId() {
+				latest = v
+				break
+			}
+		}
 		return latest.GetVersion(), latest.GetDefinitionHash(), nil
 	}
 	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog, or it has no published version; to install a draft, pin plugin_version and definition_hash", pluginName, organizationName)

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -203,14 +204,16 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	kubeAPIProxyURL := config.KubeAPIProxyURL.ValueString()
-	if kubeAPIProxyURL == "" {
-		kubeAPIProxyURL = envConfig.KubeAPIProxyURL
+	kubeAPIProxyURL, err := resolveOptionalURL(config.KubeAPIProxyURL.ValueString(), envConfig.KubeAPIProxyURL, "FUNDAMENT_KUBE_API_PROXY_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
 	}
 
-	marketplaceInstallURL := config.MarketplaceInstallURL.ValueString()
-	if marketplaceInstallURL == "" {
-		marketplaceInstallURL = envConfig.MarketplaceInstallURL
+	marketplaceInstallURL, err := resolveOptionalURL(config.MarketplaceInstallURL.ValueString(), envConfig.MarketplaceInstallURL, "FUNDAMENT_MARKETPLACE_INSTALL_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
 	}
 
 	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL, marketplaceInstallURL)
@@ -261,4 +264,16 @@ func deriveAuthnEndpoint(organizationEndpoint string) string {
 	// Replace "organization" with "authn" in the host
 	u.Host = strings.Replace(u.Host, "organization", "authn", 1)
 	return u.String()
+}
+
+// resolveOptionalURL returns the configured URL, else the one from envName. Only
+// the env value is checked here: the schema validator covers the attribute.
+func resolveOptionalURL(configValue, envValue, envName string) (string, error) {
+	if configValue != "" || envValue == "" {
+		return configValue, nil
+	}
+	if err := checkHTTPURL(envValue); err != nil {
+		return "", fmt.Errorf("%s: %w", envName, err)
+	}
+	return envValue, nil
 }

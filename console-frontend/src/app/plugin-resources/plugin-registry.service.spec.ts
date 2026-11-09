@@ -296,6 +296,20 @@ describe('PluginRegistryService', () => {
     expect(listReads()).toBe(6);
   });
 
+  it('retries a definition the catalog could not parse', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    const parsed = getPluginDefinition.getMockImplementation()!;
+    getPluginDefinition.mockImplementationOnce(() => of({ definition: undefined }));
+
+    await registry.loadPlugins('cl-1');
+    expect(registry.allPlugins()).toEqual([]);
+
+    getPluginDefinition.mockImplementation(parsed);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(registry.allPlugins().map((p) => p.installationName)).toEqual(['acme--cert-manager']);
+  });
+
   it('does not retry a definition the catalog does not have', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Failed')];
