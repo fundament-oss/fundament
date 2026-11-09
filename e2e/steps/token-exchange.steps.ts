@@ -8,11 +8,8 @@ import {
 } from '../support/api/token-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import {
-  currentApiKey,
-  extractOrganizationId,
-  API_TOKEN_PREFIX,
-} from './common.steps.ts';
+import { extractOrganizationId } from '../support/auth.ts';
+import { currentApiKey, API_TOKEN_PREFIX } from './common.steps.ts';
 
 // Track state for token exchange tests
 let savedToken: string | undefined;

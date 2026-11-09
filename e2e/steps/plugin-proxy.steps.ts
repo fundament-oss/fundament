@@ -1,12 +1,15 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
+import {
+  type InstallationFixture,
+  fixtureInstallation,
+  INSTALL_TIMEOUT_MS,
+  realGardener,
+} from '../support/fixtures.ts';
 
-// Mock fixtures the plugin-proxy serves in PLUGIN_PROXY_MODE=mock. Must stay
-// in sync with plugin-proxy/pkg/service/mock.go (MockClusterID,
-// MockInstallationUID) and db/testdata/001_0101-content.sql (acme-cluster).
+// For paths that are rejected before the cluster is looked up.
 const SEEDED_CLUSTER_ID = '019b4000-2000-7000-8000-000000000001';
-const MOCK_INSTALLATION_ID = '00000000-0000-0000-0000-000000000001';
 
 // Per-scenario state for plugin-proxy tests. Reset by the @api Before hook
 // via fresh `lastApiResponse` / `lastApiError`, but the response itself needs
@@ -36,24 +39,42 @@ async function captureResponse(
   s.body = await response.text();
 }
 
-// Expand ${PLUGIN_PROXY_URL} / ${CONSOLE_URL} / ${CLUSTER_ID} so feature strings
-// work in both local dev (fundament.localhost) and PR envs (pr${N}.${DOMAIN}).
+// Expand ${PLUGIN_PROXY_URL} / ${CONSOLE_URL} so feature strings work in both
+// local dev (fundament.localhost) and PR envs (pr${N}.${DOMAIN}), and
+// ${CLUSTER_ID} / ${INSTALLATION} / ${VERSION} / ${INSTALLATION_ID} to the e2e
+// installation once a step has resolved it. Asset paths name the installation,
+// as the console builds them (plugin-console-url.utils.ts).
 function resolveUrls(world: ICustomWorld, text: string): string {
+  const fixture = world.testData.installation as InstallationFixture | undefined;
   return text
     .replace(/\$\{PLUGIN_PROXY_URL\}/g, world.pluginProxyUrl ?? '')
     .replace(/\$\{CONSOLE_URL\}/g, world.consoleUrl ?? '')
-    .replace(/\$\{CLUSTER_ID\}/g, SEEDED_CLUSTER_ID);
+    .replace(/\$\{CLUSTER_ID\}/g, fixture?.clusterId ?? SEEDED_CLUSTER_ID)
+    .replace(/\$\{INSTALLATION\}/g, fixture?.installationName ?? '')
+    .replace(/\$\{VERSION\}/g, fixture?.pluginVersion ?? '')
+    .replace(/\$\{INSTALLATION_ID\}/g, fixture?.installationId ?? '');
 }
 
 // --- Given ---
 
 Given(
-  'I have a plugin token for the seeded installation',
+  'the e2e installation is running',
+  { timeout: INSTALL_TIMEOUT_MS + 60_000 },
   async function (this: ICustomWorld) {
+    this.testData.installation = await fixtureInstallation(this);
+  },
+);
+
+Given(
+  'I have a plugin token for the e2e installation',
+  { timeout: INSTALL_TIMEOUT_MS + 60_000 },
+  async function (this: ICustomWorld) {
+    const fixture = await fixtureInstallation(this);
+    this.testData.installation = fixture;
     const mint = await this.tokenService!.mintPluginToken(
       this.authToken!,
-      SEEDED_CLUSTER_ID,
-      MOCK_INSTALLATION_ID,
+      fixture.clusterId,
+      fixture.installationId,
     );
     state(this).pluginToken = mint.accessToken;
   },
@@ -101,7 +122,7 @@ When(
     if (!tok) {
       throw new Error('plugin token was not minted — Background step missing?');
     }
-    const response = await fetch(`${this.pluginProxyUrl}${path}`, {
+    const response = await fetch(`${this.pluginProxyUrl}${resolveUrls(this, path)}`, {
       redirect: 'manual',
       headers: { Authorization: `Bearer ${tok}` },
     });
@@ -129,10 +150,12 @@ Then(
   },
 );
 
+// The mock plugin-proxy answers every runtime call itself; a real plugin pod
+// answers /livez (plugin-sdk/pluginruntime/health).
 Then(
-  'the response body should equal {string}',
-  function (this: ICustomWorld, want: string) {
-    expect(state(this).body).toBe(want);
+  "the body is the installation runtime's liveness reply",
+  function (this: ICustomWorld) {
+    expect(state(this).body).toBe(realGardener() ? 'ok' : 'mock backend');
   },
 );
 

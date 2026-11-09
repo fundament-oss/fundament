@@ -15,17 +15,18 @@ Feature: Plugin Proxy external listener
   # The internal listener (port 8081, PluginInstallationService RPC) is
   # not exercised here.
   #
-  # The mock plugin-proxy (PLUGIN_PROXY_MODE=mock) pins every asset lookup to
-  # MockClusterID and serves a canned HTML body; the installation proxy returns
-  # a canned 200 "mock backend". The seeded fixtures (cluster + installation)
-  # come from db/testdata/001_0101-content.sql and plugin-proxy/pkg/service/mock.go.
+  # "The e2e installation" is the mock plugin-proxy's fixed installation on the
+  # seeded acme-cluster, where every asset and runtime call gets a canned reply,
+  # or, against a real Gardener, a plugin installed on the baseline cluster,
+  # whose pod serves the calls (support/fixtures.ts).
 
   Background:
     Given I am authenticated as "alice@acme-corp.com"
 
   @api @plugin-proxy @smoke
   Scenario: Asset bundle is served with the FUN-17 strict CSP
-    When I GET the asset "/clusters/${CLUSTER_ID}/plugins/cert-manager/v1.17.2/console/index.html"
+    Given the e2e installation is running
+    When I GET the asset "/clusters/${CLUSTER_ID}/plugins/${INSTALLATION}/${VERSION}/console/certificates-list.html"
     Then the response status should be 200
     And the "Content-Type" header should start with "text/html"
     And the "Cache-Control" header should contain "private"
@@ -55,7 +56,7 @@ Feature: Plugin Proxy external listener
 
   @api @plugin-proxy @negative
   Scenario: Installation-id in the URL must match the token claim
-    Given I have a plugin token for the seeded installation
+    Given I have a plugin token for the e2e installation
     When I send a GET to the installation route "/installations/00000000-0000-0000-0000-000000000099/runtime/api/ping" with the plugin token
     Then the response status should be 403
 
@@ -65,8 +66,8 @@ Feature: Plugin Proxy external listener
   # because Node's fetch normalises `..` per WHATWG before the request is sent.
 
   @api @plugin-proxy @smoke
-  Scenario: Authorized runtime call is forwarded to the mock backend
-    Given I have a plugin token for the seeded installation
-    When I send a GET to the installation route "/installations/00000000-0000-0000-0000-000000000001/runtime/api/ping" with the plugin token
+  Scenario: Authorized runtime call is forwarded to the installation's runtime
+    Given I have a plugin token for the e2e installation
+    When I send a GET to the installation route "/installations/${INSTALLATION_ID}/runtime/livez" with the plugin token
     Then the response status should be 200
-    And the response body should equal "mock backend"
+    And the body is the installation runtime's liveness reply
