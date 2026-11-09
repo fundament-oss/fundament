@@ -46,6 +46,7 @@ spec:
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.platformPublicApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1

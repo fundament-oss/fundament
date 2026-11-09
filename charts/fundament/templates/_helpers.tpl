@@ -186,3 +186,15 @@ Usage: include "fundament.pocUrl" (dict "root" $ "site" "console")
 https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
 {{- end -}}
 {{- end }}
+
+{{/*
+A container's standard resources block, indented to "indent"; renders nothing,
+not even a blank line, when empty.
+
+Usage: {{- include "fundament.resources" (dict "resources" $.Values.authnApi.resources "indent" 10) }}
+*/}}
+{{- define "fundament.resources" -}}
+{{- with .resources }}
+{{- printf "resources:\n%s" (toYaml . | indent 2) | nindent $.indent }}
+{{- end }}
+{{- end }}

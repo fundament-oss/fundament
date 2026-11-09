@@ -64,6 +64,7 @@ spec:
             - name: config
               mountPath: /etc/dex
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.dexDcim.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

@@ -61,6 +61,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.dcimAuthnApi.resources "indent" 10) }}
 ---
 apiVersion: v1
 kind: Service

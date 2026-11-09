@@ -48,6 +48,7 @@ spec:
               value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.dcim }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.platformAdminApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1
