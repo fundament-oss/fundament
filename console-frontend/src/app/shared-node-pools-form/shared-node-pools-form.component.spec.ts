@@ -26,6 +26,24 @@ describe('shared node pools form', () => {
     expect(form.nodePools.length).toBe(1);
     expect(form.nodePools.at(0).get('name')?.value).toBe('workers');
   });
+
+  it('shows the pools filled in earlier when the create wizard comes back to them', () => {
+    const form = build();
+    form.draftData = [
+      { name: 'workers', machineType: 'n1-standard-2', autoscaleMin: 2, autoscaleMax: 4 },
+      { name: 'batch', machineType: 'n1-standard-4', autoscaleMin: 1, autoscaleMax: 2 },
+    ];
+    expect(form.nodePoolsForm.value.nodePools).toEqual([
+      { name: 'workers', machineType: 'n1-standard-2', autoscaleMin: 2, autoscaleMax: 4 },
+      { name: 'batch', machineType: 'n1-standard-4', autoscaleMin: 1, autoscaleMax: 2 },
+    ]);
+  });
+
+  it('keeps its one pool to fill in when there is no draft yet', () => {
+    const form = build();
+    form.draftData = null;
+    expect(form.nodePools.length).toBe(1);
+  });
 });
 
 // The quota is the organization's, over every cluster, so the form takes its
@@ -42,6 +60,18 @@ describe('shared node pools form under a node quota', () => {
     return form;
   };
   const quotas = new Map([['local-medium', { quota: 10, inUse: 6 }]]);
+
+  it('counts a draft pool as new, and leaves its maximum as it was chosen', () => {
+    const form = build();
+    form.draftData = [
+      { name: 'workers', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+    ];
+    form.nodeQuotas = new Map([['local-medium', { quota: 10, inUse: 8 }]]);
+    // Not shrunk to the room as an untouched pool would be, and not counted as
+    // nodes already in use: 3 is over the 2 left, so the form says so.
+    expect(form.nodePools.at(0).get('autoscaleMax')?.value).toBe(3);
+    expect(form.nodePools.at(0).get('autoscaleMax')?.hasError('quota')).toBe(true);
+  });
 
   it('starts a new pool on a machine type that has room', () => {
     const form = build();

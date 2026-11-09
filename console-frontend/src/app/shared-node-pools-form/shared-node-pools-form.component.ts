@@ -85,7 +85,19 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    */
   @Input() set initialData(data: NodePoolData[] | null) {
     if (data) {
-      this.loadInitialData(data);
+      this.loadPools(data, { existing: true });
+    }
+  }
+
+  /**
+   * Pools filled in earlier that do not exist yet, for the create wizard when
+   * you come back to this step: the form shows them as you left them. Unlike
+   * `initialData` they are new pools, so the quota counts them as growth and
+   * not as nodes the organization already has in use.
+   */
+  @Input() set draftData(data: NodePoolData[] | null | undefined) {
+    if (data && data.length > 0) {
+      this.loadPools(data, { existing: false });
     }
   }
 
@@ -337,17 +349,22 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return '';
   }
 
-  private loadInitialData(data: NodePoolData[]) {
+  private loadPools(data: NodePoolData[], { existing }: { existing: boolean }) {
     // Clear existing form array
     while (this.nodePools.length > 0) {
       this.nodePools.removeAt(0);
     }
 
-    this.originals = new Map(data.map((pool) => [pool.name, pool]));
+    this.originals = existing ? new Map(data.map((pool) => [pool.name, pool])) : new Map();
 
-    // Add all initial node pools
     data.forEach((pool) => {
-      this.nodePools.push(this.createNodePoolFormGroup(pool));
+      const group = this.createNodePoolFormGroup(pool);
+      // A draft's values were chosen already: the quotas arriving later must
+      // not move them the way they move a pool nobody touched yet.
+      if (!existing) {
+        Object.values(group.controls).forEach((control) => control.markAsDirty());
+      }
+      this.nodePools.push(group);
     });
   }
 

@@ -35,6 +35,10 @@ export default class NewClusterNodesComponent implements OnInit {
 
   private nodeQuota = inject(NodeQuotaService);
 
+  // The pools saved when this step was continued before, so coming back to it
+  // shows them as they were left instead of a fresh form.
+  readonly draftNodePools = this.stateService.getState().nodePools ?? null;
+
   // Machine types offered by the region chosen in step 1.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
