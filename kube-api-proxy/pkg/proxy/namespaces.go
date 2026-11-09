@@ -68,14 +68,18 @@ type visibilityResolver struct {
 	authz visibilityAuthz
 	cache *ttlcache.Cache[visibilityKey, visibility]
 	group singleflight.Group
+	// roles caches onCluster, as stale as the visibility it builds on.
+	roles *ttlcache.Cache[visibilityKey, bool]
 }
 
 func newVisibilityResolver(az visibilityAuthz) *visibilityResolver {
 	v := &visibilityResolver{
 		authz: az,
 		cache: ttlcache.New(ttlcache.WithTTL[visibilityKey, visibility](visibilityTTL), ttlcache.WithDisableTouchOnHit[visibilityKey, visibility]()),
+		roles: ttlcache.New(ttlcache.WithTTL[visibilityKey, bool](visibilityTTL), ttlcache.WithDisableTouchOnHit[visibilityKey, bool]()),
 	}
 	go v.cache.Start() // evict expired entries
+	go v.roles.Start()
 	return v
 }
 
