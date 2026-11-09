@@ -63,6 +63,10 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
 
+## Installed versions
+
+- cert-manager v1.21.3
+
 ## Key Features
 
 - **Automated Issuance**: Automatically provision TLS certificates from various issuers
@@ -74,7 +78,7 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 
 - Automatic HTTPS for web applications
 - Securing internal service-to-service communication
-- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.17.2'),
+- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.21.3'),
     -- `cloudnativepg`, not `cloudnative-pg`: the Console derives the PluginInstallation's
     -- metadata.name from this column via pluginResourceName(), which slugified the old
     -- prose name "CloudNativePG" to "cloudnativepg". Any cluster already running this
