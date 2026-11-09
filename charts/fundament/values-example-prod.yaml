@@ -3,6 +3,7 @@
 db:
   enabled: true
   instances: 2
+  enablePDB: true
   storageSize: 5Gi
 
 authnApi:
