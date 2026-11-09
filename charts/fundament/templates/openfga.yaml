@@ -60,6 +60,7 @@ spec:
       initContainers:
         - name: wait-for-db
           image: {{ $.Values.db.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - sh
             - -c
@@ -80,9 +81,11 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+          {{- include "fundament.resources" (dict "resources" (dig "waitForDb" "resources" dict $.Values.AsMap) "indent" 10) }}
       containers:
         - name: openfga
           image: {{ $.Values.openfga.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - run
           ports:
@@ -106,18 +109,22 @@ spec:
               value: {{ $.Values.openfga.playground.enabled | quote }}
             - name: OPENFGA_HTTP_ADDR
               value: "0.0.0.0:{{ $.Values.openfga.apiPort | default 8080 }}"
+          # /healthz pings the datastore and checks its schema revision, with a
+          # 2s budget, so it decides readiness only. Liveness on it would turn a
+          # database outage into a restart loop.
           readinessProbe:
             httpGet:
               path: /healthz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
           livenessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+          {{- include "fundament.resources" (dict "resources" $.Values.openfga.resources "indent" 10) }}
 
 ---
 apiVersion: v1

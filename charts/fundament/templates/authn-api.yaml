@@ -30,6 +30,7 @@ spec:
       containers:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080
@@ -133,6 +134,7 @@ spec:
               readOnly: true
             {{- end }}
           {{- end }}
+          {{- include "fundament.resources" (dict "resources" $.Values.authnApi.resources "indent" 10) }}
       {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.authnApi.sandboxKubeconfigSecret }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

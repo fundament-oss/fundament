@@ -4,6 +4,9 @@
 # Run `just` or `just --list` to see every recipe.
 
 image := env("IMAGE", "demo-plugin")
+# Images target x86 cluster nodes whatever the build machine, an Apple Silicon
+# Mac included; e.g. PLATFORM=linux/arm64 for an arm64 cluster.
+platform := env("PLATFORM", "linux/amd64")
 
 _default:
     @just --list
@@ -26,7 +29,7 @@ lint:
 
 # Build the container image, e.g. `just docker v1.0.0`
 docker tag="dev":
-    docker build -t {{ image }}:{{ tag }} .
+    docker buildx build --load --provenance=false --sbom=false --platform {{ platform }} -t {{ image }}:{{ tag }} .
 
 # Remove build output
 clean:

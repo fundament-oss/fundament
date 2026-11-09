@@ -19,7 +19,7 @@ const (
 	releaseName  = "external-dns"
 	chartName    = "external-dns"
 	repoURL      = "https://kubernetes-sigs.github.io/external-dns/"
-	chartVersion = "1.16.1"
+	chartVersion = "1.23.0"
 	namespace    = "external-dns"
 )
 
@@ -86,6 +86,8 @@ func (p *ExternalDNSPlugin) Shutdown(_ context.Context) error {
 func (p *ExternalDNSPlugin) Install(ctx context.Context, _ pluginruntime.Host) error {
 	if err := p.helmClient.InstallFromRepo(ctx, releaseName, chartName, repoURL, chartVersion, map[string]string{
 		"sources": "{crd}",
+		// Required by the chart. upsert-only creates and updates records, never deletes them.
+		"policy": "upsert-only",
 	}); err != nil {
 		return fmt.Errorf("install from repo: %w", err)
 	}

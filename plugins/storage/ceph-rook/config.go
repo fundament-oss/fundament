@@ -26,12 +26,12 @@ type Config struct {
 	// Silicon. Kept in step with deploy/k3d/rook-smoke.sh, which is the script
 	// that proves the environment works — a plugin pinned to a different Ceph
 	// build than the one validated there tests nothing.
-	CephImage string `env:"CEPH_IMAGE" envDefault:"quay.io/ceph/ceph:v19.2.3"`
+	CephImage string `env:"CEPH_IMAGE" envDefault:"quay.io/ceph/ceph:v19.2.7"`
 
 	// AllowUnsupportedCeph waives Rook's check that it knows how to drive the
 	// given Ceph release. Off by default, and the default CephImage does not need
-	// it: Rook v1.16 lists Squid (v19) as supported. Set it only for a release
-	// outside that table (v20+).
+	// it: Rook v1.21 lists Squid (v19) as supported. Set it only for a release
+	// outside that table.
 	AllowUnsupportedCeph bool `env:"ALLOW_UNSUPPORTED_CEPH" envDefault:"false"`
 
 	// Quorum sizing. A single-node cluster needs count 1 and

@@ -35,7 +35,7 @@ const (
 	Namespace = "cnpg-system"
 	Repo      = "https://cloudnative-pg.github.io/charts"
 	Chart     = "cloudnative-pg"
-	Version   = "0.24.0" // ships CloudNativePG operator v1.26.0
+	Version   = "0.29.1" // ships CloudNativePG operator v1.30.1
 )
 
 // pendingGrace is how long a pending or uninstalling release counts as an

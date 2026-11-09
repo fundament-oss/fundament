@@ -60,6 +60,9 @@ message Plugin {
   // Trust and support badges. Fundament assigns them, so CreatePlugin and
   // UpdatePlugin do not accept them; the developer only reads them back.
   repeated marketplace.v1.PluginLabel labels = 220;
+  // Logo of the newest pushed version, as a data URI. Empty when it has none.
+  string logo = 230;
+  string logo_dark = 240;
 }
 
 // A pushed build (appstore.plugin_definitions plus review state).

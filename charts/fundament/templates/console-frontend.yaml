@@ -44,6 +44,7 @@ spec:
       containers:
         - name: console-frontend
           image: {{ $.Values.images.consoleFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
@@ -56,6 +57,9 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          # / is index.html under nginx and under the hot-reload dev server alike.
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /usr/share/nginx/html/assets/config
@@ -68,6 +72,7 @@ spec:
               mountPath: /app/public/assets/config/config.json
               subPath: config.json
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.consoleFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

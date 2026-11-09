@@ -55,6 +55,7 @@ spec:
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.46.1
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - /usr/local/bin/dex
             - serve
@@ -62,10 +63,14 @@ spec:
           ports:
             - name: http
               containerPort: 5556
+          # TCP: Dex's /healthz sits under the issuer's path, which differs per
+          # environment.
+          {{- include "fundament.tcpProbes" (dict "port" "http") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /etc/dex
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.dex.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

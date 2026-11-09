@@ -18,33 +18,8 @@ service PluginService {
   rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse) {
     option deprecated = true;
   }
-  // Get detailed information about a specific plugin.
-  //
-  // Deprecated: superseded by catalog.v1.CatalogService.GetPlugin in
-  // marketplace-api. Note the replacement derives capabilities and permissions
-  // from the pinned manifest rather than from columns.
-  rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse) {
-    option deprecated = true;
-  }
   // List all available presets
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
-  // List the definitions (version + hash) for a plugin, latest first. Used by
-  // the console to offer a version to pin on install.
-  //
-  // Deprecated: moves to catalog.v1.CatalogService.ListPluginVersions. Note the
-  // rename is not cosmetic — despite the name this returns every non-deleted
-  // definition including unpublished drafts, and the catalog returns only
-  // published ones, which is what an unauthenticated caller must ever see.
-  rpc ListPluginDefinitions(ListPluginDefinitionsRequest) returns (ListPluginDefinitionsResponse) {
-    option deprecated = true;
-  }
-  // Idempotent upsert of a plugin definition. Server computes the hash from the
-  // manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
-  // same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
-  // replace=true, which soft-deletes the existing row and stores the new one.
-  // Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
-  // Requires an authenticated user.
-  rpc PutPluginDefinition(PutPluginDefinitionRequest) returns (PutPluginDefinitionResponse);
   // Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
   // resolved via the plugin catalog by name. Returns the verbatim manifest
   // bytes, the sha256 hash, and a parsed PluginDefinition.
@@ -97,6 +72,9 @@ message PluginSummary {
   // Publishing organization's name. With `name` it forms the installation's
   // metadata.name: "<organization_name>--<name>".
   string organization_name = 90;
+  // Latest published logo as a data: URI; empty when none.
+  string logo = 100;
+  string logo_dark = 110;
 }
 
 // List plugins request
@@ -123,67 +101,6 @@ message ListPresetsResponse {
   repeated Preset presets = 10;
 }
 
-// Documentation link for a plugin
-message DocumentationLink {
-  string id = 10;
-  string title = 20;
-  string url_name = 30;
-  string url = 40;
-}
-
-// Author information
-message Author {
-  string name = 10;
-  string url = 20;
-}
-
-// Detailed plugin information
-message PluginDetail {
-  string id = 10;
-  // Stable identifier (e.g. "openfsc"); see PluginSummary.name.
-  string name = 20;
-  // Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
-  string display_name = 25;
-  string description = 30;
-  string description_short = 35;
-  repeated Tag tags = 40;
-  repeated Category categories = 50;
-  Author author = 60;
-  string repository_url = 70;
-  repeated DocumentationLink documentation_links = 80;
-  // Latest published definition; see PluginSummary.plugin_version.
-  string plugin_version = 90;
-  string definition_hash = 100;
-  // Publishing organization's name; see PluginSummary.organization_name.
-  string organization_name = 110;
-}
-
-// Get plugin detail request
-message GetPluginDetailRequest {
-  string plugin_id = 10;
-}
-
-// Get plugin detail response
-message GetPluginDetailResponse {
-  PluginDetail plugin = 10;
-}
-
-message PutPluginDefinitionRequest {
-  string plugin_id = 10;
-  string plugin_version = 20;
-  bytes manifest = 30;
-  // Republish: when an active definition already exists for (plugin_id, version)
-  // with a different hash, soft-delete it and store this one in its place.
-  // Without this, that case is rejected so a pinned definition is never silently
-  // replaced.
-  bool replace = 40;
-}
-message PutPluginDefinitionResponse {
-  string id = 10;
-  string plugin_id = 20;
-  string plugin_version = 30;
-  string hash = 40;
-}
 message GetPluginDefinitionRequest {
   string plugin_name = 10;
   string plugin_version = 20;
@@ -195,19 +112,6 @@ message GetPluginDefinitionResponse {
   bytes manifest = 10;
   string hash = 20;
   PluginDefinition definition = 30;
-}
-
-message ListPluginDefinitionsRequest {
-  string plugin_id = 10;
-}
-message ListPluginDefinitionsResponse {
-  repeated PluginDefinitionVersion definitions = 10;
-}
-// A published definition's pin: the version an install references and the
-// sha256 hash of that manifest.
-message PluginDefinitionVersion {
-  string version = 10;
-  string hash = 20;
 }
 
 message PluginDefinition {

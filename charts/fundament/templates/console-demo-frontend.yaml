@@ -45,14 +45,19 @@ spec:
       containers:
         - name: console-demo-frontend
           image: {{ $.Values.images.consoleDemoFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 80
+          # / is index.html under nginx and under the hot-reload dev server alike.
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /usr/share/nginx/html/assets/config/config.json
               subPath: config.json
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.consoleDemoFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

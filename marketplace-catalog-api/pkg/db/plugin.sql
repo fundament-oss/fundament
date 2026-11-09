@@ -23,6 +23,24 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo_dark
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo_dark,
   appstore.plugins.updated
 FROM appstore.plugins
 WHERE
@@ -101,6 +119,24 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo,
+  COALESCE((
+    SELECT appstore.plugin_definitions.logo_dark
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.deleted IS NULL
+      AND appstore.plugin_definitions.published IS NOT NULL
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
+    LIMIT 1
+  ), '')::text AS logo_dark,
   appstore.plugins.updated
 FROM appstore.plugins
 WHERE appstore.plugins.id = sqlc.arg('id')::uuid

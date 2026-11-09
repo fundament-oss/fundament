@@ -33,6 +33,11 @@ type Server struct {
 	handler       http.Handler
 }
 
+// maxRequestBytes caps a request read off the wire. The largest valid
+// CreatePluginVersion is a 1 MiB manifest plus 528 KiB of icon files, about
+// 2.1 MB once a JSON client base64-encodes them.
+const maxRequestBytes = 3 << 20
+
 func New(logger *slog.Logger, cfg Config, database *psqldb.DB, authzClient *authz.Client) *Server {
 	s := &Server{
 		logger:  logger,
@@ -64,7 +69,7 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB, authzClient *auth
 		loggingInterceptor,
 	)
 
-	mux.Handle(registryv1connect.NewPublicationServiceHandler(s, interceptors))
+	mux.Handle(registryv1connect.NewPublicationServiceHandler(s, interceptors, connect.WithReadMaxBytes(maxRequestBytes)))
 
 	// Unauthenticated, as on every other surface here: the descriptors are
 	// public and grpcurl carries no token.

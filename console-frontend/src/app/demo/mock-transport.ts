@@ -555,8 +555,6 @@ export default function createDemoTransport(): Transport {
             authorName: detail.author?.name ?? '',
             authorUrl: detail.author?.url ?? '',
             repositoryUrl: detail.repositoryUrl,
-            // Same fields, different package: organization.v1's links cannot be
-            // handed to a marketplace.v1 message as-is.
             documentationLinks: detail.documentationLinks.map((l) =>
               create(MarketplaceDocumentationLinkSchema, {
                 id: l.id,

@@ -35,12 +35,16 @@ spec:
       containers:
         - name: dcim-frontend
           image: {{ $.Values.images.dcimFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             - name: CONNECT_SRC
               value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }} {{ $.Values.externalUrls.platformAdminApi }}"
           ports:
             - name: http
               containerPort: 80
+          # / is index.html under nginx and under the hot-reload dev server alike.
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /usr/share/nginx/html/assets/config
@@ -48,6 +52,7 @@ spec:
             - name: config
               mountPath: /app/public/assets/config
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.dcimFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

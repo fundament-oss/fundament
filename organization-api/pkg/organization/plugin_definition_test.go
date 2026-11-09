@@ -13,6 +13,7 @@ import (
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 const testPluginName = "test-plugin-def"
@@ -35,389 +36,21 @@ func seedCatalogPlugin(t *testing.T, env *testEnv, name string, orgID uuid.UUID)
 	return id
 }
 
-func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
+// seedPluginDefinition inserts a plugin definition row and returns its hash.
+func seedPluginDefinition(t *testing.T, env *testEnv, pluginID uuid.UUID, version string, manifest []byte) string {
+	t.Helper()
+	hash := pluginruntime.HashManifest(manifest)
+	_, err := env.adminPool.Exec(t.Context(),
+		"INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash) VALUES ($1, $2, $3, $4)",
+		pluginID, version, manifest, hash,
 	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	putReq1 := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx1, putCallInfo1 := connect.NewClientContext(ctx)
-	putCallInfo1.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo1.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	resp1, err := client.PutPluginDefinition(putCtx1, putReq1)
 	require.NoError(t, err)
-	assert.True(t, strings.HasPrefix(resp1.GetHash(), "sha256:"))
-	assert.Equal(t, pluginID.String(), resp1.GetPluginId())
-
-	// Same bytes → idempotent, same hash.
-	putReq2 := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx2, putCallInfo2 := connect.NewClientContext(ctx)
-	putCallInfo2.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo2.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	resp2, err := client.PutPluginDefinition(putCtx2, putReq2)
-	require.NoError(t, err)
-	assert.Equal(t, resp1.GetHash(), resp2.GetHash())
-
-	// Different bytes, same (plugin_id, version) → FAILED_PRECONDITION.
-	putReq3 := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      append(testManifest, byte('\n')),
-	}.Build()
-	putCtx3, putCallInfo3 := connect.NewClientContext(ctx)
-	putCallInfo3.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo3.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err = client.PutPluginDefinition(putCtx3, putReq3)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+	return hash
 }
 
-// TestPutPluginDefinition_RequiresOrganization verifies the endpoint is
-// org-scoped: an authenticated user without a Fun-Organization header cannot
-// publish a definition.
-func TestPutPluginDefinition_RequiresOrganization(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(context.Background())
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	// No Fun-Organization header.
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-// TestPutPluginDefinition_RejectsVersionMismatch verifies the request's
-// plugin_version must equal the manifest's metadata.version.
-func TestPutPluginDefinition_RejectsVersionMismatch(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-
-	// testManifest declares metadata.version v1; send a different plugin_version.
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v2",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(context.Background())
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-func TestPutPluginDefinition_RejectsImagelessTemplate(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	template := []byte("apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n  name: test-plugin-def\n  version: v1\nspec:\n  permissions:\n    rbac: []\n")
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      template,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(ctx)
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-func TestPutPluginDefinition_UnknownPluginID(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	unknownID := uuid.New()
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      unknownID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(ctx)
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
-}
-
-func TestPutPluginDefinition_InvalidPluginID(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      "not-a-uuid",
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(ctx)
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-// TestPutPluginDefinition_RejectsNameMismatch verifies the manifest's
-// metadata.name must equal the catalog plugin it is published under.
-func TestPutPluginDefinition_RejectsNameMismatch(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	// Catalog plugin has a different name than the manifest's metadata.name.
-	pluginID := seedCatalogPlugin(t, env, "some-other-plugin", orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(context.Background())
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-// TestPutPluginDefinition_RejectsOversizedManifest verifies the manifest byte
-// cap is enforced.
-func TestPutPluginDefinition_RejectsOversizedManifest(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-
-	// One byte over the 1 MiB handler cap, comfortably under the 2 MiB transport
-	// read limit so the handler (not the transport) rejects it.
-	oversized := make([]byte, (1<<20)+1)
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      oversized,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(context.Background())
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-}
-
-// TestPutPluginDefinition_Replace verifies replace=true republishes a new
-// manifest over an existing (plugin_id, version), and Get then serves it.
-func TestPutPluginDefinition_Replace(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	put := func(manifest []byte, replace bool) (*organizationv1.PutPluginDefinitionResponse, error) {
-		req := organizationv1.PutPluginDefinitionRequest_builder{
-			PluginId:      pluginID.String(),
-			PluginVersion: "v1",
-			Manifest:      manifest,
-			Replace:       replace,
-		}.Build()
-		ctx, callInfo := connect.NewClientContext(ctx)
-		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		return client.PutPluginDefinition(ctx, req)
-	}
-
-	resp1, err := put(testManifest, false)
-	require.NoError(t, err)
-
-	// Same version, different bytes (trailing comment), with replace → succeeds
-	// with a new hash.
-	revised := append(append([]byte{}, testManifest...), []byte("# rev2\n")...)
-	resp2, err := put(revised, true)
-	require.NoError(t, err)
-	assert.NotEqual(t, resp1.GetHash(), resp2.GetHash())
-
-	// Get now serves the replacement.
-	getReq := organizationv1.GetPluginDefinitionRequest_builder{
-		OrganizationName: "test-org",
-		PluginName:       testPluginName,
-		PluginVersion:    "v1",
-	}.Build()
-	getResp, err := client.GetPluginDefinition(ctx, getReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
-	require.NoError(t, err)
-	assert.Equal(t, resp2.GetHash(), getResp.GetHash())
-}
-
-// TestListPlugins_SurfacesLatestDefinition verifies ListPlugins and
-// GetPluginDetail report the latest published version+hash (empty when none),
-// which is what console/terraform pin on install.
+// TestListPlugins_SurfacesLatestDefinition verifies ListPlugins reports the
+// latest published version+hash (empty when none), which terraform pins on
+// install. Drafts never surface.
 func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	t.Parallel()
 
@@ -461,105 +94,36 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	assert.Empty(t, before.GetPluginVersion())
 	assert.Empty(t, before.GetDefinitionHash())
 
-	put := func(version string, manifest []byte) string {
+	// Approval is the only path that stamps published; mirror it directly.
+	publish := func(version string) {
 		t.Helper()
-		req := organizationv1.PutPluginDefinitionRequest_builder{
-			PluginId:      pluginID.String(),
-			PluginVersion: version,
-			Manifest:      manifest,
-		}.Build()
-		ctx, callInfo := connect.NewClientContext(ctx)
-		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		resp, err := client.PutPluginDefinition(ctx, req)
+		_, err := env.adminPool.Exec(t.Context(),
+			"UPDATE appstore.plugin_definitions SET status = 'approved', published = now() WHERE plugin_id = $1 AND plugin_version = $2",
+			pluginID, version,
+		)
 		require.NoError(t, err)
-		return resp.GetHash()
 	}
 
-	// Publish v1, then v2 — the latest by created is v2.
-	put("v1", testManifest)
+	v1Hash := seedPluginDefinition(t, env, pluginID, "v1", testManifest)
 	v2Manifest := bytes.ReplaceAll(testManifest, []byte("version: v1"), []byte("version: v2"))
-	v2Hash := put("v2", v2Manifest)
+	v2Hash := seedPluginDefinition(t, env, pluginID, "v2", v2Manifest)
 
-	after := findSummary(t)
-	assert.Equal(t, "v2", after.GetPluginVersion())
-	assert.Equal(t, v2Hash, after.GetDefinitionHash())
+	// Both uploads are unreviewed drafts → still nothing to pin.
+	drafts := findSummary(t)
+	assert.Empty(t, drafts.GetPluginVersion())
+	assert.Empty(t, drafts.GetDefinitionHash())
 
-	// GetPluginDetail reports the same.
-	detailReq := organizationv1.GetPluginDetailRequest_builder{
-		PluginId: pluginID.String(),
-	}.Build()
-	detailCtx, detailCallInfo := connect.NewClientContext(ctx)
-	detailCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	detailCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-	detailResp, err := client.GetPluginDetail(detailCtx, detailReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
-	require.NoError(t, err)
-	assert.Equal(t, "v2", detailResp.GetPlugin().GetPluginVersion())
-	assert.Equal(t, v2Hash, detailResp.GetPlugin().GetDefinitionHash())
-}
+	// Only v1 published → v1, even though v2 was uploaded later.
+	publish("v1")
+	afterV1 := findSummary(t)
+	assert.Equal(t, "v1", afterV1.GetPluginVersion())
+	assert.Equal(t, v1Hash, afterV1.GetDefinitionHash())
 
-// TestListPluginDefinitions_LatestFirst verifies the endpoint returns all
-// published (version, hash) pairs for a plugin, newest first — the set the
-// console offers as install-time version choices.
-func TestListPluginDefinitions_LatestFirst(t *testing.T) {
-	t.Parallel()
-
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(orgID, "test-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "test-user",
-			Email:  "test@example.com",
-			OrgIDs: []uuid.UUID{orgID},
-		}),
-	)
-
-	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-	ctx := context.Background()
-
-	list := func(t *testing.T) []*organizationv1.PluginDefinitionVersion {
-		t.Helper()
-		req := organizationv1.ListPluginDefinitionsRequest_builder{
-			PluginId: pluginID.String(),
-		}.Build()
-		ctx, callInfo := connect.NewClientContext(ctx)
-		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		resp, err := client.ListPluginDefinitions(ctx, req) //nolint:staticcheck // covers the deprecated RPC until it is removed
-		require.NoError(t, err)
-		return resp.GetDefinitions()
-	}
-
-	// No definitions published yet → empty list.
-	assert.Empty(t, list(t))
-
-	put := func(version string, manifest []byte) string {
-		t.Helper()
-		req := organizationv1.PutPluginDefinitionRequest_builder{
-			PluginId: pluginID.String(), PluginVersion: version, Manifest: manifest,
-		}.Build()
-		ctx, callInfo := connect.NewClientContext(ctx)
-		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-		resp, err := client.PutPluginDefinition(ctx, req)
-		require.NoError(t, err)
-		return resp.GetHash()
-	}
-
-	put("v1", testManifest)
-	v2Manifest := bytes.ReplaceAll(testManifest, []byte("version: v1"), []byte("version: v2"))
-	v2Hash := put("v2", v2Manifest)
-
-	defs := list(t)
-	require.Len(t, defs, 2)
-	assert.Equal(t, "v2", defs[0].GetVersion(), "latest published version first")
-	assert.Equal(t, v2Hash, defs[0].GetHash())
-	assert.Equal(t, "v1", defs[1].GetVersion())
+	// v2 published → the newest publication wins.
+	publish("v2")
+	afterV2 := findSummary(t)
+	assert.Equal(t, "v2", afterV2.GetPluginVersion())
+	assert.Equal(t, v2Hash, afterV2.GetDefinitionHash())
 }
 
 func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
@@ -580,22 +144,10 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 
 	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 
-	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	// Arrange: Put a manifest first.
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(ctx)
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.NoError(t, err)
+	seedPluginDefinition(t, env, pluginID, "v1", testManifest)
 
 	// Act: Get the definition (public endpoint, no auth needed).
 	getReq := organizationv1.GetPluginDefinitionRequest_builder{
@@ -629,47 +181,6 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 	_, err := client.GetPluginDefinition(ctx, getReq) //nolint:staticcheck // covers the deprecated RPC until it is removed
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
-}
-
-// TestPutPluginDefinition_NonOwnerDenied verifies a plugin owned by one org
-// cannot have a definition published from another org's context. The test server
-// has no OpenFGA client (nil authz.Client), so checkPermission is a no-op and
-// this exercises the RLS layer alone; in production OpenFGA denies it first.
-func TestPutPluginDefinition_NonOwnerDenied(t *testing.T) {
-	t.Parallel()
-
-	ownerOrgID := uuid.New()
-	otherOrgID := uuid.New()
-	userID := uuid.New()
-
-	env := newTestAPI(t,
-		WithOrganization(ownerOrgID, "owner-org"),
-		WithOrganization(otherOrgID, "other-org"),
-		WithUser(&UserArgs{
-			ID:     userID,
-			Name:   "other-user",
-			Email:  "other@example.com",
-			OrgIDs: []uuid.UUID{otherOrgID},
-		}),
-	)
-
-	// Plugin is owned by ownerOrg; caller acts as otherOrg.
-	pluginID := seedCatalogPlugin(t, env, testPluginName, ownerOrgID)
-	token := env.createAuthnToken(t, userID)
-	client := newPluginServiceClient(env)
-
-	putReq := organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginID.String(),
-		PluginVersion: "v1",
-		Manifest:      testManifest,
-	}.Build()
-	putCtx, putCallInfo := connect.NewClientContext(context.Background())
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
-
-	_, err := client.PutPluginDefinition(putCtx, putReq)
-	require.Error(t, err)
-	assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 }
 
 // TestListPlugins_GlobalVisibility verifies a plugin owned by one org is still
@@ -731,23 +242,11 @@ func TestGetPluginDefinition_ResolvesWithinOrganization(t *testing.T) {
 	)
 
 	pluginAID := seedCatalogPlugin(t, env, "plugin-from-a", orgAID)
-	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	// PutPluginDefinition requires manifest metadata.name to match the catalog
-	// plugin's name, so retarget testManifest at "plugin-from-a".
 	manifestA := bytes.ReplaceAll(testManifest, []byte("name: test-plugin-def"), []byte("name: plugin-from-a"))
-
-	putCtx, putCallInfo := connect.NewClientContext(ctx)
-	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	putCallInfo.RequestHeader().Set("Fun-Organization", orgAID.String())
-	_, err := client.PutPluginDefinition(putCtx, organizationv1.PutPluginDefinitionRequest_builder{
-		PluginId:      pluginAID.String(),
-		PluginVersion: "v1",
-		Manifest:      manifestA,
-	}.Build())
-	require.NoError(t, err)
+	seedPluginDefinition(t, env, pluginAID, "v1", manifestA)
 
 	// The owning organization resolves it.
 	got, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
@@ -795,34 +294,14 @@ func TestGetPluginDefinition_SameNameAcrossOrganizations(t *testing.T) {
 	pluginA := seedCatalogPlugin(t, env, "shared-name", orgAID)
 	pluginB := seedCatalogPlugin(t, env, "shared-name", orgBID)
 
-	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	// PutPluginDefinition requires manifest metadata.name to match the catalog
-	// plugin's name, so both manifests must declare "shared-name"; give B a
-	// distinct byte payload (trailing comment) so the two definitions differ.
+	// Give B a distinct byte payload (trailing comment) so the two definitions differ.
 	manifestA := bytes.ReplaceAll(testManifest, []byte("name: test-plugin-def"), []byte("name: shared-name"))
 	manifestB := append(append([]byte{}, manifestA...), []byte("# org-b\n")...)
-
-	for _, tc := range []struct {
-		orgID    uuid.UUID
-		pluginID uuid.UUID
-		manifest []byte
-	}{
-		{orgAID, pluginA, manifestA},
-		{orgBID, pluginB, manifestB},
-	} {
-		putCtx, putCallInfo := connect.NewClientContext(ctx)
-		putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-		putCallInfo.RequestHeader().Set("Fun-Organization", tc.orgID.String())
-		_, err := client.PutPluginDefinition(putCtx, organizationv1.PutPluginDefinitionRequest_builder{
-			PluginId:      tc.pluginID.String(),
-			PluginVersion: "v1",
-			Manifest:      tc.manifest,
-		}.Build())
-		require.NoError(t, err)
-	}
+	seedPluginDefinition(t, env, pluginA, "v1", manifestA)
+	seedPluginDefinition(t, env, pluginB, "v1", manifestB)
 
 	gotA, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{ //nolint:staticcheck // covers the deprecated RPC until it is removed
 		OrganizationName: "org-alpha", PluginName: "shared-name", PluginVersion: "v1",

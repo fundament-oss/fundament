@@ -81,8 +81,10 @@ func (x RejectionReason) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// A plugin version awaiting or having gone through review. Identity plus
-// decision: everything else is resolved through this service's read RPCs.
+// A plugin version awaiting or having gone through review. Identity, decision
+// and the version's logos: everything else is resolved through this service's
+// read RPCs. The logos are inlined so a review list can show them, which adds
+// up to about 44 KB per row.
 // There is no listing snapshot — a reviewer sees the listing as it stands, so
 // an edit made after submitting is visible to the reviewer.
 type Submission struct {
@@ -98,6 +100,8 @@ type Submission struct {
 	xxx_hidden_ReviewerUserId  string                 `protobuf:"bytes,90,opt,name=reviewer_user_id,json=reviewerUserId"`
 	xxx_hidden_RejectionReason RejectionReason        `protobuf:"varint,100,opt,name=rejection_reason,json=rejectionReason,enum=admin.v1.RejectionReason"`
 	xxx_hidden_Feedback        string                 `protobuf:"bytes,110,opt,name=feedback"`
+	xxx_hidden_Logo            string                 `protobuf:"bytes,120,opt,name=logo"`
+	xxx_hidden_LogoDark        string                 `protobuf:"bytes,130,opt,name=logo_dark,json=logoDark"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -204,6 +208,20 @@ func (x *Submission) GetFeedback() string {
 	return ""
 }
 
+func (x *Submission) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *Submission) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *Submission) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -246,6 +264,14 @@ func (x *Submission) SetRejectionReason(v RejectionReason) {
 
 func (x *Submission) SetFeedback(v string) {
 	x.xxx_hidden_Feedback = v
+}
+
+func (x *Submission) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *Submission) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
 }
 
 func (x *Submission) HasSubmitted() bool {
@@ -293,6 +319,9 @@ type Submission_builder struct {
 	ReviewerUserId  string
 	RejectionReason RejectionReason
 	Feedback        string
+	// Logo of the submitted version, a data: URI; empty when it declares none.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 Submission_builder) Build() *Submission {
@@ -310,6 +339,8 @@ func (b0 Submission_builder) Build() *Submission {
 	x.xxx_hidden_ReviewerUserId = b.ReviewerUserId
 	x.xxx_hidden_RejectionReason = b.RejectionReason
 	x.xxx_hidden_Feedback = b.Feedback
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -571,6 +602,7 @@ type PluginVersion struct {
 	xxx_hidden_Submitted      *timestamppb.Timestamp  `protobuf:"bytes,110,opt,name=submitted"`
 	xxx_hidden_Published      *timestamppb.Timestamp  `protobuf:"bytes,120,opt,name=published"`
 	xxx_hidden_ManifestError  string                  `protobuf:"bytes,130,opt,name=manifest_error,json=manifestError"`
+	xxx_hidden_MenuIcons      []string                `protobuf:"bytes,140,rep,name=menu_icons,json=menuIcons"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -693,6 +725,13 @@ func (x *PluginVersion) GetManifestError() string {
 	return ""
 }
 
+func (x *PluginVersion) GetMenuIcons() []string {
+	if x != nil {
+		return x.xxx_hidden_MenuIcons
+	}
+	return nil
+}
+
 func (x *PluginVersion) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -743,6 +782,10 @@ func (x *PluginVersion) SetPublished(v *timestamppb.Timestamp) {
 
 func (x *PluginVersion) SetManifestError(v string) {
 	x.xxx_hidden_ManifestError = v
+}
+
+func (x *PluginVersion) SetMenuIcons(v []string) {
+	x.xxx_hidden_MenuIcons = v
 }
 
 func (x *PluginVersion) HasCreated() bool {
@@ -801,6 +844,8 @@ type PluginVersion_builder struct {
 	// sections as "asks for nothing"; a version whose review payload cannot be
 	// displayed is a version that cannot be approved responsibly.
 	ManifestError string
+	// Menu icon data: URIs, sorted by digest.
+	MenuIcons []string
 }
 
 func (b0 PluginVersion_builder) Build() *PluginVersion {
@@ -820,6 +865,7 @@ func (b0 PluginVersion_builder) Build() *PluginVersion {
 	x.xxx_hidden_Submitted = b.Submitted
 	x.xxx_hidden_Published = b.Published
 	x.xxx_hidden_ManifestError = b.ManifestError
+	x.xxx_hidden_MenuIcons = b.MenuIcons
 	return m0
 }
 
@@ -827,7 +873,7 @@ var File_admin_v1_common_proto protoreflect.FileDescriptor
 
 const file_admin_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15admin/v1/common.proto\x12\badmin.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xf2\x03\n" +
+	"\x15admin/v1/common.proto\x12\badmin.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xa4\x04\n" +
 	"\n" +
 	"Submission\x12\x0e\n" +
 	"\x02id\x18\n" +
@@ -841,7 +887,9 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\breviewed\x18P \x01(\v2\x1a.google.protobuf.TimestampR\breviewed\x12(\n" +
 	"\x10reviewer_user_id\x18Z \x01(\tR\x0ereviewerUserId\x12D\n" +
 	"\x10rejection_reason\x18d \x01(\x0e2\x19.admin.v1.RejectionReasonR\x0frejectionReason\x12\x1a\n" +
-	"\bfeedback\x18n \x01(\tR\bfeedback\"\xb5\x03\n" +
+	"\bfeedback\x18n \x01(\tR\bfeedback\x12\x12\n" +
+	"\x04logo\x18x \x01(\tR\x04logo\x12\x1c\n" +
+	"\tlogo_dark\x18\x82\x01 \x01(\tR\blogoDark\"\xb5\x03\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -855,7 +903,7 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\x04tags\x18Z \x03(\tR\x04tags\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
 	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x123\n" +
-	"\x06labels\x18x \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xae\x04\n" +
+	"\x06labels\x18x \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xce\x04\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -870,7 +918,9 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x128\n" +
 	"\tsubmitted\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tsubmitted\x128\n" +
 	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12&\n" +
-	"\x0emanifest_error\x18\x82\x01 \x01(\tR\rmanifestError*\x8c\x02\n" +
+	"\x0emanifest_error\x18\x82\x01 \x01(\tR\rmanifestError\x12\x1e\n" +
+	"\n" +
+	"menu_icons\x18\x8c\x01 \x03(\tR\tmenuIcons*\x8c\x02\n" +
 	"\x0fRejectionReason\x12 \n" +
 	"\x1cREJECTION_REASON_UNSPECIFIED\x10\x00\x12(\n" +
 	"$REJECTION_REASON_INCOMPLETE_METADATA\x10\x01\x12\x1e\n" +

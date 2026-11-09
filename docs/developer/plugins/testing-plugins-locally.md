@@ -120,7 +120,8 @@ PLUGIN_REGISTRY=localhost:5112 just plugins publish <path>
 **Plugin in its own project**, from the project directory (names from the scaffolded `my-plugin`):
 
 ```shell
-just docker v0.1.0
+just docker v0.1.0                         # for an amd64 (x86) cluster
+PLATFORM=linux/arm64 just docker v0.1.0    # for an arm64 cluster, such as k3d on Apple Silicon
 docker tag my-plugin-plugin:v0.1.0 localhost:5112/my-plugin:v0.1.0
 docker push localhost:5112/my-plugin:v0.1.0
 functl plugin publish definition.yaml --image=localhost:5112/my-plugin@sha256:<digest from push> --create
@@ -226,7 +227,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: cert-manager
-    pluginVersion: "1.17.2"
+    pluginVersion: "1.21.3"
     definitionHash: "<hash printed by publish>"   # includes the sha256: prefix
 YAML
 
@@ -234,7 +235,7 @@ just plugins status
 just plugins cert-manager test
 ```
 
-- `publish` prints `published plugin=cert-manager version=1.17.2 hash=sha256:…`; the listing exists, so no `--create`.
+- `publish` prints `published plugin=cert-manager version=1.21.3 hash=sha256:…`; the listing exists, so no `--create`.
 - `status` shows `system--cert-manager   cert-manager   system   Running   true`; `test` ends with `test-cert   True   test-cert-tls`.
 - `just plugins logs system--cert-manager` streams the plugin log: `cert-manager is running`.
 - In the console as `alice@acme-corp.com`: **acme-project** → **Cert Manager** → **Certificates** lists `test-cert` in `fundament`, Ready.

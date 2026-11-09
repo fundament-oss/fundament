@@ -29,8 +29,12 @@ just build
 just test
 ```
 
+Image builds need the `docker buildx` plugin (with Homebrew and Colima:
+`brew install docker-buildx`):
+
 ```shell
-just docker
+just docker                         # linux/amd64 image, also on an Apple Silicon Mac
+PLATFORM=linux/arm64 just docker    # for an arm64 cluster
 ```
 
 ## Hot reload

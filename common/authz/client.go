@@ -6,10 +6,16 @@ import (
 	"fmt"
 	"maps"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/openfga/go-sdk/client"
 )
+
+// callBudget bounds each Evaluate, Evaluations and ListObjects call, retries
+// included, so a hung OpenFGA fails a request instead of holding it until the
+// caller gives up. Above OpenFGA's own default request timeout of 3s.
+var callBudget = 5 * time.Second
 
 // Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.
 // See https://openid.github.io/authzen/ for the AuthZEN specification.
@@ -48,6 +54,9 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
 // Returns a Decision indicating whether the subject can perform the action on the resource.
 func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) { //nolint:gocritic // exported signature mirrored by kube-api-proxy interfaces
+	ctx, cancel := context.WithTimeout(ctx, callBudget)
+	defer cancel()
+
 	// Build OpenFGA check context from the AuthZEN request context and any
 	// object/action properties, so that conditions can be evaluated correctly.
 	checkContext := map[string]any{}
@@ -113,6 +122,9 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 // action (an OpenFGA ListObjects call). OpenFGA bounds the result count and
 // duration server-side; callers should keep the candidate set small.
 func (c *Client) ListObjects(ctx context.Context, subject Object, action Action, objectType ObjectType) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, callBudget)
+	defer cancel()
+
 	storeID, err := c.store.ID(ctx)
 	if err != nil {
 		return nil, err
@@ -151,6 +163,10 @@ func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (Evalu
 			return EvaluationsResponse{}, fmt.Errorf("unsupported evaluation semantic: %q", req.Options.Semantic)
 		}
 	}
+
+	// One budget for the batch: each Evaluate shortens its own to what is left.
+	ctx, cancel := context.WithTimeout(ctx, callBudget)
+	defer cancel()
 
 	results := make([]Decision, 0, len(req.Evaluations))
 

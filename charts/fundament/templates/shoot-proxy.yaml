@@ -27,12 +27,15 @@ spec:
       containers:
         - name: socat
           image: alpine/socat:1.8.0.1
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
           ports:
             - containerPort: 443
               name: https
+          {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.shootProxy.resources "indent" 10) }}
 ---
 apiVersion: v1
 kind: Service
@@ -70,12 +73,15 @@ spec:
       containers:
         - name: socat
           image: alpine/socat:1.8.0.1
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}
           ports:
             - containerPort: 443
               name: https
+          {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.shootProxy.resources "indent" 10) }}
 ---
 apiVersion: v1
 kind: Service

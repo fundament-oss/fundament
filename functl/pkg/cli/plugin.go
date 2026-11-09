@@ -291,7 +291,7 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		return fmt.Errorf("read definition: %w", err)
 	}
 
-	published, def, err := prepareManifest(src, c.Image, c.Dev)
+	prepared, def, err := prepareManifest(src, filepath.Dir(c.Definition), c.Image, c.Dev)
 	if err != nil {
 		return err
 	}
@@ -305,7 +305,7 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	version, err := publishVersion(context.Background(), pubClient, published, &def, publishOptions{
+	version, err := publishVersion(context.Background(), pubClient, prepared, &def, publishOptions{
 		PluginID: c.PluginID, Create: c.Create, Replace: c.Replace, Dev: c.Dev,
 	})
 	if err != nil {
@@ -340,34 +340,53 @@ type publishOptions struct {
 	Create, Replace, Dev bool
 }
 
-// prepareManifest injects the image (and for dev the -dev suffix) into the
-// source manifest and validates it, before any network call.
-func prepareManifest(src []byte, image string, dev bool) ([]byte, pluginruntime.PluginDefinition, error) {
-	var err error
+// preparedManifest is a manifest ready to publish and the icon files its
+// digests refer to.
+type preparedManifest struct {
+	Bytes     []byte
+	IconFiles map[string][]byte
+}
+
+// prepareManifest resolves icon files under baseDir, injects the image (and for
+// dev the -dev suffix) into the source manifest and validates it, before any
+// network call.
+func prepareManifest(src []byte, baseDir, image string, dev bool) (preparedManifest, pluginruntime.PluginDefinition, error) {
+	src, iconFiles, iconPaths, err := resolveIconFiles(src, baseDir)
+	if err != nil {
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("resolve icons: %w", err)
+	}
 	if dev {
 		src, err = injectDevVersion(src)
 		if err != nil {
-			return nil, pluginruntime.PluginDefinition{}, fmt.Errorf("inject dev version: %w", err)
+			return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("inject dev version: %w", err)
 		}
 	}
 
 	published, err := injectImage(src, image, "IfNotPresent")
 	if err != nil {
-		return nil, pluginruntime.PluginDefinition{}, fmt.Errorf("inject image: %w", err)
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("inject image: %w", err)
 	}
 
 	// Strict validation, the same parse the server runs — a rejection here is
 	// the same rejection the registry would answer with.
 	def, err := pluginruntime.ParseDefinition(published)
 	if err != nil {
-		return nil, pluginruntime.PluginDefinition{}, fmt.Errorf("invalid published manifest: %w", err)
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("invalid published manifest: %w", err)
 	}
-	return published, def, nil
+	if _, err := pluginruntime.ValidateIcons(&def, iconFiles); err != nil {
+		// Validation only knows digests; name the file the author wrote instead.
+		msg := err.Error()
+		for digest, path := range iconPaths {
+			msg = strings.ReplaceAll(msg, digest, path)
+		}
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("invalid icons: %s", msg)
+	}
+	return preparedManifest{Bytes: published, IconFiles: iconFiles}, def, nil
 }
 
 // publishVersion pushes a manifest from prepareManifest as a plugin version.
 // Dev implies Replace.
-func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, published []byte, def *pluginruntime.PluginDefinition, opts publishOptions) (*registryv1.PluginVersion, error) {
+func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, prepared preparedManifest, def *pluginruntime.PluginDefinition, opts publishOptions) (*registryv1.PluginVersion, error) {
 	var err error
 	pluginID := opts.PluginID
 	if pluginID == "" {
@@ -384,10 +403,11 @@ func publishVersion(ctx context.Context, pubClient registryv1connect.Publication
 	}
 
 	resp, err := pubClient.CreatePluginVersion(ctx, registryv1.CreatePluginVersionRequest_builder{
-		PluginId: pluginID,
-		Version:  def.Metadata.Version,
-		Manifest: published,
-		Replace:  opts.Replace || opts.Dev,
+		PluginId:  pluginID,
+		Version:   def.Metadata.Version,
+		Manifest:  prepared.Bytes,
+		IconFiles: prepared.IconFiles,
+		Replace:   opts.Replace || opts.Dev,
 	}.Build())
 	if err != nil {
 		var connectErr *connect.Error

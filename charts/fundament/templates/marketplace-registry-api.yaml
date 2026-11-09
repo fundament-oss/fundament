@@ -21,6 +21,7 @@ spec:
       containers:
         - name: marketplace-registry-api
           image: {{ $.Values.images.marketplaceRegistryApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080
@@ -52,6 +53,7 @@ spec:
               value: {{ include "fundament.openfga.storeName" $ }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.marketplaceRegistryApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1

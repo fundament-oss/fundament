@@ -21,6 +21,7 @@ spec:
       containers:
         - name: marketplace-admin-api
           image: {{ $.Values.images.marketplaceAdminApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080
@@ -47,6 +48,7 @@ spec:
               value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.marketplaceAdmin }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.marketplaceAdminApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1

@@ -2,8 +2,11 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -113,6 +116,7 @@ func (s *Server) GetPluginVersion(
 			Submitted:      timestamptzOrNil(row.Submitted),
 			Published:      timestamptzOrNil(row.Published),
 			ManifestError:  manifestError,
+			MenuIcons:      menuIconURIs(row.MenuIcons),
 		}.Build(),
 	}.Build(), nil
 }
@@ -290,4 +294,18 @@ func (s *Server) writeError(ctx context.Context, err error, action string) error
 		return connect.NewError(connect.CodePermissionDenied, errors.New("permission denied"))
 	}
 	return connect.NewError(connect.CodeInternal, fmt.Errorf("%s: %w", action, err))
+}
+
+// menuIconURIs flattens the stored digest-to-data-URI map into URIs ordered by
+// digest; an unreadable value yields none so the version still renders.
+func menuIconURIs(raw []byte) []string {
+	var icons map[string]string
+	if err := json.Unmarshal(raw, &icons); err != nil {
+		return nil
+	}
+	uris := make([]string, 0, len(icons))
+	for _, digest := range slices.Sorted(maps.Keys(icons)) {
+		uris = append(uris, icons[digest])
+	}
+	return uris
 }

@@ -21,6 +21,7 @@ spec:
       containers:
         - name: authz-worker
           image: {{ $.Values.images.authzWorker }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: health
               containerPort: 8097
@@ -44,4 +45,5 @@ spec:
               value: {{ include "fundament.openfga.storeName" $ }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.authzWorker.resources "indent" 10) }}
 {{- end }}

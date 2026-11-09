@@ -38,6 +38,7 @@
         <app-shared-node-pools-form
           [initialData]="initialNodePools()"
           [machineTypeOptions]="machineTypeOptions()"
+          [nodeQuotas]="nodeQuotas()"
           (formSubmit)="onFormSubmit($event)"
         >
           <!-- No cancel button: the title bar's dismiss already covers leaving. -->

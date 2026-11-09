@@ -291,6 +291,8 @@ type registryPluginRow struct {
 	Created                  *timestamppb.Timestamp
 	Updated                  *timestamppb.Timestamp
 	LatestPublishedVersionID uuid.UUID
+	Logo                     string
+	LogoDark                 string
 }
 
 func pluginRowFromList(row *db.PluginListRow) *registryPluginRow {
@@ -310,6 +312,8 @@ func pluginRowFromList(row *db.PluginListRow) *registryPluginRow {
 		Created:                  timestamptzOrNil(row.Created),
 		Updated:                  timestamptzOrNil(row.Updated),
 		LatestPublishedVersionID: row.LatestPublishedVersionID,
+		Logo:                     row.Logo,
+		LogoDark:                 row.LogoDark,
 	}
 }
 
@@ -330,6 +334,8 @@ func pluginRowFromGet(row *db.PluginGetByIDRow) *registryPluginRow {
 		Created:                  timestamptzOrNil(row.Created),
 		Updated:                  timestamptzOrNil(row.Updated),
 		LatestPublishedVersionID: row.LatestPublishedVersionID,
+		Logo:                     row.Logo,
+		LogoDark:                 row.LogoDark,
 	}
 }
 
@@ -469,6 +475,8 @@ func pluginFromRow(row *registryPluginRow, children *pluginChildren) *registryv1
 		Created:                  row.Created,
 		Updated:                  row.Updated,
 		Labels:                   children.labels[row.ID],
+		Logo:                     row.Logo,
+		LogoDark:                 row.LogoDark,
 	}.Build()
 }
 

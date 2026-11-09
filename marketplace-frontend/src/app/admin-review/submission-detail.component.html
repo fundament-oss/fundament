@@ -18,6 +18,8 @@
     <div class="flex items-center gap-4">
       <app-plugin-icon
         [name]="submission.icon"
+        [logo]="submission.logo"
+        [logoDark]="submission.logoDark"
         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 dark:bg-gray-800"
       />
       <div>
@@ -35,6 +37,70 @@
       [text]="statusLabel(submission.status)"
     ></nldd-tag>
   </div>
+
+  @if (submission.logo) {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">Logos</h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          How the logo looks in each theme, whichever theme you are using.
+        </p>
+        <div class="flex flex-wrap gap-6">
+          <figure>
+            <div class="rounded-md border border-gray-200 bg-white p-4">
+              <img class="h-16 w-16 object-contain" [src]="submission.logo" alt="Light mode logo" />
+            </div>
+            <figcaption class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Light mode
+            </figcaption>
+          </figure>
+          <figure>
+            <div class="rounded-md border border-gray-700 bg-gray-900 p-4">
+              @if (submission.logoDark) {
+                <img
+                  class="h-16 w-16 object-contain"
+                  [src]="submission.logoDark"
+                  alt="Dark mode logo"
+                />
+              } @else {
+                <img
+                  class="h-16 w-16 bg-gray-100 object-contain"
+                  [src]="submission.logo"
+                  alt="Light mode logo on a light backdrop"
+                />
+              }
+            </div>
+            <figcaption class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Dark mode
+              @if (!submission.logoDark) {
+                · No dark logo
+              }
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </nldd-card>
+  }
+
+  @if (submission.menuIcons.length > 0) {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">Menu icons</h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          Shown in their uploaded colours; the console tints them to match its theme.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          @for (icon of submission.menuIcons; track icon) {
+            <img
+              class="h-8 w-8 rounded-sm bg-white object-contain p-1 dark:bg-gray-100"
+              [src]="icon"
+              alt=""
+            />
+          }
+        </div>
+      </div>
+    </nldd-card>
+  }
 
   <!-- Decision (only while pending) -->
   @if (submission.status === 'pending') {

@@ -47,6 +47,7 @@ spec:
       containers:
         - name: cluster-worker
           image: {{ $.Values.images.clusterWorker }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: health
               containerPort: 8097
@@ -180,6 +181,7 @@ spec:
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.clusterWorker.resources "indent" 10) }}
       {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $sandbox }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

@@ -12,10 +12,10 @@ This OpenTofu provider allows you to interact with the Fundament organization AP
 
 ### Download a prebuilt package
 
-The provider is not (yet) published to a provider registry. Every push to master publishes packages for Linux (amd64, arm64), macOS (Apple Silicon) and Windows (amd64) to the rolling [`terraform-provider-latest`](https://github.com/fundament-oss/fundament/releases/tag/terraform-provider-latest) release, named in the registry layout that OpenTofu and Terraform understand for local plugin mirrors. Drop the zip, unchanged, into the implied plugin directory and `tofu init` picks it up without any CLI configuration:
+The provider is not (yet) published to a provider registry. Every push to master publishes packages for Linux (amd64, arm64), macOS (Apple Silicon, Intel) and Windows (amd64) to the rolling [`terraform-provider-latest`](https://github.com/fundament-oss/fundament/releases/tag/terraform-provider-latest) release, named in the registry layout that OpenTofu and Terraform understand for local plugin mirrors. Drop the zip, unchanged, into the implied plugin directory and `tofu init` picks it up without any CLI configuration:
 
 ```bash
-# Pick your platform: linux_amd64, linux_arm64 or darwin_arm64
+# Pick your platform: linux_amd64, linux_arm64, darwin_arm64 (Apple Silicon) or darwin_amd64 (Intel Mac)
 PLATFORM=linux_amd64
 MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
 mkdir -p "$MIRROR"

@@ -21,6 +21,7 @@ spec:
       initContainers:
         - name: wait-for-db
           image: {{ $.Values.db.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - sh
             - -c
@@ -47,11 +48,13 @@ spec:
                   name: {{ $openfgaSecretName }}
                   key: uri
 
+          {{- include "fundament.resources" (dict "resources" (dig "waitForDb" "resources" dict $.Values.AsMap) "indent" 10) }}
         # The only migration in the release. openfga's /healthz reports not ready
         # until the schema matches the revision its binary expects, so server
         # pods gate themselves on it.
         - name: migrate
           image: {{ $.Values.openfga.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - migrate
           env:
@@ -62,15 +65,18 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+          {{- include "fundament.resources" (dict "resources" (dig "bootstrap" "resources" dict $.Values.openfga) "indent" 10) }}
       containers:
         # Sole creator of the store, and the only writer of the model. The
         # model is embedded in this image, so what it writes and the types the
         # services compile against come from one file.
         - name: bootstrap
           image: {{ $.Values.images.openfgaBootstrap }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ | quote }}
+          {{- include "fundament.resources" (dict "resources" (dig "bootstrap" "resources" dict $.Values.openfga) "indent" 10) }}
 {{- end }}

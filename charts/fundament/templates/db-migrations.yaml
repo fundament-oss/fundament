@@ -19,6 +19,7 @@ spec:
       initContainers:
         - name: wait-for-db
           image: busybox:1.36
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - sh
             - -c
@@ -34,9 +35,11 @@ spec:
                 sleep 2
               done
               echo "tcp ${host}:5432 is accepting connections"
+          {{- include "fundament.resources" (dict "resources" (dig "waitForDb" "resources" dict $.Values.AsMap) "indent" 10) }}
       containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           # Run the schema migrations, then seed the appstore plugin catalog
           # (reference data) in EVERY environment, independently of
           # TREK_INSERT_TEST_DATA. The seed is a set of idempotent upserts, so it
@@ -134,4 +137,5 @@ spec:
                   name: db-fun-openfga
                   key: uri
 {{- end }}
+          {{- include "fundament.resources" (dict "resources" (dig "migrations" "resources" dict $.Values.db) "indent" 10) }}
 {{- end }}

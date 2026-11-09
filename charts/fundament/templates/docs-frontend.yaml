@@ -39,15 +39,20 @@ spec:
       containers:
         - name: docs-frontend
           image: {{ $.Values.images.docsFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 80
+          # / is index.html under nginx and under the hot-reload dev server alike.
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http" "path" "/") | nindent 10 }}
           volumeMounts:
             # subPath: the image ships a default config.js in the same directory.
             - name: config
               mountPath: /usr/share/nginx/html/config/config.js
               subPath: config.js
               readOnly: true
+          {{- include "fundament.resources" (dict "resources" $.Values.docsFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

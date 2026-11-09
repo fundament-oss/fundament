@@ -82,7 +82,7 @@ func TestRookChartVersionIsNotConfigurable(t *testing.T) {
 	t.Setenv("FUNP_ROOK_CHART_VERSION", "v1.99.0")
 	_, err := LoadConfig()
 	require.NoError(t, err, "an unknown FUNP_ var must not break config parsing")
-	assert.Equal(t, "v1.16.0", rookChartVersion)
+	assert.Equal(t, "v1.21.1", rookChartVersion)
 }
 
 // If these drift, the sandbox instructions stop reproducing what the smoke
@@ -92,4 +92,8 @@ func TestDevConfigMatchesSmokeScript(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(smoke), "ROOK_VERSION:-"+rookChartVersion,
 		"rook-smoke.sh must install the same Rook chart version the plugin pins")
+	assert.Contains(t, string(smoke), "CSI_DRIVERS_VERSION:-"+csiDriversChartVersion,
+		"rook-smoke.sh must install the same ceph-csi-drivers chart version the plugin pins")
+	assert.Contains(t, string(smoke), "CEPHCSI_TAG:-"+csiImageValues["csi.cephcsi.tag"],
+		"rook-smoke.sh must run the same ceph-csi image the plugin pins")
 }
