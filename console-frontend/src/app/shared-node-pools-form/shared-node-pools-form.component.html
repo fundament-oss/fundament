@@ -45,8 +45,7 @@
             <nldd-form-field label="Machine type">
               @if (isExistingPool(poolIndex)) {
                 <!-- One row, not the list to choose from: an existing pool keeps
-                     its type, and options it cannot take only invite a click that
-                     saving would ignore. -->
+                     its type, and saving another one would replace the pool. -->
                 <nldd-list
                   appearance="box-base"
                   accessible-label="Machine type"
@@ -55,6 +54,9 @@
                     <nldd-text-cell
                       width="full"
                       [attr.text]="machineTypeLabel(nodePoolControl.get('machineType')?.value)"
+                      [attr.supporting-text]="
+                        machineTypeNote(poolIndex, nodePoolControl.get('machineType')?.value)
+                      "
                     ></nldd-text-cell>
                   </nldd-list-item>
                 </nldd-list>

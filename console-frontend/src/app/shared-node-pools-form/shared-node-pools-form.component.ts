@@ -109,7 +109,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     if (this.catalogOptions) {
       const opts = this.catalogOptions;
       // Re-anchor new pools whose value is not an offered machine type. A pool
-      // that exists keeps its own, offered here or not: saving cannot change it.
+      // that exists keeps its own, offered here or not: saving another type
+      // replaces the pool, so a save that only changes some other pool would
+      // swap this one out.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
         if (!this.loadedPools.has(control) && !opts.some((o) => o.value === mt?.value)) {
@@ -172,9 +174,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    *  quota's "in use". Empty in the create wizard. */
   private originals: ReadonlyMap<string, PoolDraft> = new Map();
 
-  /** The pool groups the form was loaded with, renamed or not. Their machine
-   *  type is fixed: an update changes only the autoscale bounds, so a type
-   *  picked here would be dropped on save without a word. */
+  /** The pool groups loaded from `initialData`, renamed or not. Their machine
+   *  type is fixed, as the user docs say: saving another one would not convert
+   *  the pool but replace it, rolling its nodes to the new type one by one. */
   private loadedPools = new WeakSet<AbstractControl>();
 
   /** Whether the pool at `index` exists already, so its machine type is fixed. */
@@ -344,7 +346,11 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     const control = this.nodePools.at(index).get('machineType');
     if (!control?.hasError('noQuota')) return '';
     if (this.isExistingPool(index)) {
-      return `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`;
+      // The quota counts a pool by its name: renamed, it is a new pool.
+      const name = this.nodePools.at(index).get('name')?.value;
+      return this.originals.has(name)
+        ? `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`
+        : `The organization has no quota for ${control.value} nodes, and a renamed pool counts as a new one. Keep its name, or ask a platform operator to set a quota.`;
     }
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
