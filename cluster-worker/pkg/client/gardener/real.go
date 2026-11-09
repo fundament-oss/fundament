@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -46,7 +47,7 @@ type ProviderConfig struct {
 
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
-	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
+	DefaultMachineType  string // e.g., "local": the machine type every pool gets on the local provider
 
 	// ImmediateClusterDeletion makes a shoot deletion skip Gardener's cleanup
 	// waits: blocking finalizers are stripped on the first pass and pods are
@@ -76,7 +77,7 @@ type ProviderConfig struct {
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
 // Override fields as needed for other providers.
 func NewProviderConfig() ProviderConfig {
-	return ProviderConfig{
+	return ProviderConfig{ //nolint:gosec // G101: credential binding names, not credentials
 		Type:                     "local",
 		CloudProfile:             "local",
 		Region:                   "local",
@@ -112,7 +113,7 @@ type RealClient struct {
 
 // NewReal creates a new RealClient that connects to Gardener.
 // If kubeconfigPath is empty, it uses in-cluster config.
-func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger) (*RealClient, error) {
+func NewReal(kubeconfigPath string, provider *ProviderConfig, logger *slog.Logger) (*RealClient, error) {
 	// Build REST config
 	var clientConfig clientcmd.ClientConfig
 
@@ -154,7 +155,7 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 
 	r := &RealClient{
 		client:   c,
-		provider: provider,
+		provider: *provider,
 		logger:   logger,
 	}
 
@@ -290,21 +291,23 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 }
 
 // DeleteShootByClusterID deletes a Shoot by cluster ID label.
-func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (bool, error) {
 	shoot, err := r.getShootByClusterID(ctx, clusterID)
 	if err != nil {
-		return fmt.Errorf("failed to look up shoot: %w", err)
+		return false, fmt.Errorf("failed to look up shoot: %w", err)
 	}
 
 	if shoot == nil {
 		r.logger.Debug("shoot not found for deletion", "cluster_id", clusterID)
-		return nil
+		return false, nil
 	}
 
-	return r.deleteShoot(ctx, shoot)
+	return true, r.deleteShoot(ctx, shoot)
 }
 
 // ListShoots returns all Shoots managed by this worker (across all namespaces).
+// A shoot whose cluster-id label does not parse is listed too, with
+// InvalidClusterID set, so reconcile can report it.
 func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 
@@ -325,14 +328,20 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 				"shoot", shoot.Name,
 				"namespace", shoot.Namespace,
 				"cluster_id", clusterIDStr)
-			continue
+			clusterID = uuid.Nil
 		}
 
 		shoots = append(shoots, ShootInfo{
-			Name:      shoot.Name,
-			Namespace: shoot.Namespace,
-			ClusterID: clusterID,
-			Labels:    shoot.Labels,
+			Name:              shoot.Name,
+			Namespace:         shoot.Namespace,
+			ClusterID:         clusterID,
+			InvalidClusterID:  err != nil,
+			Labels:            shoot.Labels,
+			Deleting:          shoot.DeletionTimestamp != nil,
+			UID:               string(shoot.UID),
+			KubernetesVersion: shoot.Spec.Kubernetes.Version,
+			Region:            shoot.Spec.Region,
+			Created:           shoot.CreationTimestamp.Time,
 		})
 	}
 
@@ -351,11 +360,17 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 // shootStatusOf derives fundament's status for a Shoot; nil is a Shoot
 // Gardener does not have. It is pure, so the watch's change filter and the
-// status step derive exactly the same thing from the same object.
+// status step derive exactly the same thing from the same object. The worker
+// detail — the EveryNodeReady message and lastErrors, which name the machine
+// deployments that cannot get machines — is attached here, once, so every
+// lifecycle branch carries it.
 func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	status := shootLifecycleOf(shoot)
-	status.APIServerAvailable = shoot != nil && shoot.DeletionTimestamp == nil &&
-		shootConditionTrue(shoot, gardencorev1beta1.ShootAPIServerAvailable)
+	if shoot != nil && shoot.DeletionTimestamp == nil {
+		status.APIServerAvailable = shootConditionTrue(shoot, gardencorev1beta1.ShootAPIServerAvailable)
+		status.EveryNodeReadyMessage = everyNodeReadyMessage(shoot)
+		status.LastErrors = shootLastErrors(shoot)
+	}
 	return status
 }
 
@@ -420,6 +435,35 @@ func shootLifecycleOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 
 	// No last operation, likely still being created
 	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}
+}
+
+// everyNodeReadyMessage returns the EveryNodeReady condition's message while
+// the condition is not satisfied; it names the machine deployments that wait.
+// Progressing counts as satisfied: it means "was True, currently
+// transitioning", and surfacing a reason then would flag routine scale-ups.
+func everyNodeReadyMessage(shoot *gardencorev1beta1.Shoot) string {
+	for i := range shoot.Status.Conditions {
+		c := &shoot.Status.Conditions[i]
+		if c.Type != gardencorev1beta1.ShootEveryNodeReady {
+			continue
+		}
+		if c.Status == gardencorev1beta1.ConditionTrue || c.Status == gardencorev1beta1.ConditionProgressing {
+			return ""
+		}
+		return c.Message
+	}
+	return ""
+}
+
+func shootLastErrors(shoot *gardencorev1beta1.Shoot) []string {
+	if len(shoot.Status.LastErrors) == 0 {
+		return nil
+	}
+	errs := make([]string, len(shoot.Status.LastErrors))
+	for i := range shoot.Status.LastErrors {
+		errs[i] = shoot.Status.LastErrors[i].Description
+	}
+	return errs
 }
 
 // RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
@@ -680,6 +724,7 @@ func shootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
+		gardencorev1beta1.ShootEveryNodeReady,
 	}
 
 	for _, required := range requiredConditions {
@@ -714,9 +759,13 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.Shoot, error) {
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return nil, err
+	}
 	provider := gardencorev1beta1.Provider{
 		Type:    r.provider.Type,
-		Workers: r.buildWorkers(cluster),
+		Workers: workers,
 	}
 	// Provider-specific extension configs, stamped verbatim. Required by metal
 	// (partition/project/firewall + control plane); the local provider sets neither.
@@ -807,43 +856,17 @@ func (r *RealClient) buildNetworking() *gardencorev1beta1.Networking {
 	return n
 }
 
-// Default worker group autoscaler bounds used when a cluster has no node pools.
-const (
-	defaultWorkerMinimum int32 = 1
-	defaultWorkerMaximum int32 = 3
-)
+// ErrNoNodePools is returned for a cluster without node pools: a Shoot is never
+// created or updated without a worker, and fundament lists every pool it runs.
+var ErrNoNodePools = errors.New("cluster has no node pools")
 
 // buildWorkers converts node pools to Gardener worker groups.
-// If the cluster has no node pools, a default worker group is created.
 // All workers share the same machine image from ProviderConfig.
 // TODO: support per-pool machine image once tenant.node_pools gains an image column.
 // TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
-func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
+func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.Worker, error) {
 	if len(cluster.NodePools) == 0 {
-		// Declare separately to avoid taking the address of a local variable that
-		// would be shared if this were a loop (consistent with the loop below).
-		maxSurge := intstr.FromInt32(1)
-		maxUnavailable := intstr.FromInt32(0)
-		imageVersion := r.provider.MachineImageVersion
-		workers := []gardencorev1beta1.Worker{
-			{
-				Name: "default",
-				Machine: gardencorev1beta1.Machine{
-					Type: r.provider.DefaultMachineType,
-					Image: &gardencorev1beta1.ShootMachineImage{
-						Name:    r.provider.MachineImageName,
-						Version: &imageVersion,
-					},
-				},
-				// TODO: make these configurable via env vars once different environments need
-				// different defaults (e.g., GARDENER_DEFAULT_MIN_WORKERS / GARDENER_DEFAULT_MAX_WORKERS).
-				Minimum:        defaultWorkerMinimum,
-				Maximum:        defaultWorkerMaximum,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
-			},
-		}
-		return workers
+		return nil, ErrNoNodePools
 	}
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
@@ -883,12 +906,15 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			workers[i].Zones = []string{np.Zone}
 		}
 	}
-	return workers
+	return workers, nil
 }
 
 // updateShootSpec updates an existing Shoot's spec and labels.
 func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) error {
-	workers := r.buildWorkers(cluster)
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return err
+	}
 
 	if shoot.Labels == nil {
 		shoot.Labels = make(map[string]string)

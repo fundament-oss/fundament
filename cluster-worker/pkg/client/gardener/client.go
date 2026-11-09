@@ -6,9 +6,12 @@ package gardener
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/google/uuid"
+
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
 )
 
 // ShootStatusType represents the reconciliation state of a Shoot.
@@ -21,6 +24,9 @@ const (
 	StatusError       ShootStatusType = "error"
 	StatusDeleting    ShootStatusType = "deleting"
 	StatusDeleted     ShootStatusType = "deleted"
+	// StatusLost is fundament's own: the Shoot of an active cluster
+	// disappeared after fundament had seen it. Gardener never reports it.
+	StatusLost ShootStatusType = "lost"
 )
 
 // OperationType is the Gardener operation a status was derived from
@@ -57,16 +63,31 @@ type ShootStatus struct {
 	// controller reached the shoot's /healthz. During a create this turns True
 	// well before the Shoot is ready, while the worker nodes still join.
 	APIServerAvailable bool
+	// EveryNodeReadyMessage is the EveryNodeReady condition's message while the
+	// condition is not satisfied; it names the machine deployments that wait.
+	EveryNodeReadyMessage string
+	// LastErrors are the Shoot's .status.lastErrors descriptions.
+	LastErrors []string
+}
+
+// equal compares every field. ShootStatus is not comparable as a value
+// (LastErrors is a slice), and DeepEqual keeps the comparison exhaustive for
+// fields added later — the watch's change filter depends on that.
+func (s *ShootStatus) equal(other *ShootStatus) bool {
+	return reflect.DeepEqual(s, other)
 }
 
 // Status message constants for consistent messaging.
 const (
-	MsgShootNotFound  = "Shoot not found in Gardener"
+	MsgShootNotFound = "Shoot not found in Gardener"
+	// MsgShootLost is the message of a lost cluster.
+	MsgShootLost      = "The cluster no longer exists in Gardener; changing the cluster creates it again, empty"
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
 	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
-	// first reports the new cluster healthy.
-	MsgShootAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
+	// first reports the new cluster healthy. Shared: organization-api keys the
+	// STARTING cluster status on this exact text.
+	MsgShootAwaitingHealth = commongardener.MsgShootAwaitingHealth
 	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
 	// change until the gardenlet starts reconciling it.
 	MsgShootUpdatePending = "Waiting for Gardener to start the update"
@@ -91,8 +112,9 @@ type Client interface {
 	// existing Shoot's spec changed, so Gardener will reconcile it.
 	ApplyShoot(ctx context.Context, cluster *ClusterToSync) (specChanged bool, err error)
 
-	// DeleteShootByClusterID deletes a Shoot by cluster ID label.
-	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
+	// DeleteShootByClusterID deletes a Shoot by cluster ID label, and reports
+	// whether there was one.
+	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (found bool, err error)
 
 	// ListShoots returns all Shoots managed by this worker
 	ListShoots(ctx context.Context) ([]ShootInfo, error)
@@ -139,6 +161,18 @@ type ClusterToSync struct {
 type ShootInfo struct {
 	Name      string
 	Namespace string
+	// ClusterID is uuid.Nil when InvalidClusterID is set.
 	ClusterID uuid.UUID
-	Labels    map[string]string
+	// InvalidClusterID marks a shoot whose fundament.io/cluster-id label is
+	// no cluster id. Listed so it can be reported; nothing else acts on it.
+	InvalidClusterID bool
+	Labels           map[string]string
+	// Deleting is set once the Shoot's deletion has started.
+	Deleting bool
+	// UID, KubernetesVersion, Region and Created feed the Gardener inventory
+	// that drift detection compares against the database (FUN-23).
+	UID               string
+	KubernetesVersion string
+	Region            string
+	Created           time.Time
 }

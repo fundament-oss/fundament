@@ -20,7 +20,7 @@ yq = "4.44.3"
 
 # Kubernetes & Deployment
 mkcert = "1.4.4"
-kubectl = "1.31.4"
+kubectl = "1.36.6"
 helm = "3.22.0"
 skaffold = "2.17.0"
 k3d = "5.9.0"
@@ -34,17 +34,17 @@ opentofu = "1.11.3"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.20.0"
 
 # Go
-go = "1.27.2"
+go = "1.27.3"
 "go:sigs.k8s.io/controller-tools/cmd/controller-gen" = "0.20.1"
 "go:github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs" = "0.25.0"
-golangci-lint = "2.13.2"
+golangci-lint = "2.15.0"
 "aqua:sqlc-dev/sqlc" = "1.30.0"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.4.1"
 "go:google.golang.org/open2opaque" = "0.1.7"
 
 # Console Frontend
 node = "24"
-bun = "1.4.0"
+bun = "1.4.3"
 "npm:@bufbuild/protoc-gen-es" = "2.14.0"
 "npm:@usebruno/cli" = "3.0.3"
 

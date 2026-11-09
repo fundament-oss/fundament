@@ -55,11 +55,12 @@ storage-disks *args:
 # --- Deployment commands ---
 
 # Deploy plugin-controller with file watching (auto-rebuild on changes)
-dev *flags:
+controller-dev *flags:
     skaffold dev -f sandbox/skaffold.yaml --default-repo=localhost:{{ registry_port }} --cleanup=false {{ flags }}
 
 # Deploy plugin-controller (one-time)
 deploy:
+    kubectl --context {{ kube_context }} apply -f ../charts/fundament/crds/
     skaffold run -f sandbox/skaffold.yaml --default-repo=localhost:{{ registry_port }}
 
 # Remove the deployment
@@ -169,13 +170,40 @@ publish name *flags:
     cd "$(git rev-parse --show-toplevel)"
     tag=$(git describe --always --dirty)
     repo="${PLUGIN_REGISTRY}/{{ name }}-plugin"
-    # --provenance/--sbom=false: skip buildkit attestations so the push is a plain
-    # single-platform manifest, not an OCI index. The attestation index digest
-    # changes every build and leaves the old (now-untagged) index to be GC'd by the
-    # registry, which strands the digest a PluginInstallation pinned. See FUN-19.
-    docker build --provenance=false --sbom=false -t "${repo}:${tag}" -f "plugins/{{ name }}/Dockerfile" .
+    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" plugins::_image-push "${repo}" "${tag}" "plugins/{{ name }}/Dockerfile")
+    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}
+
+# Build and push an image from the repo root; prints the pushed manifest digest.
+# --provenance/--sbom=false: skip buildkit attestations so the push is a plain
+# single-platform manifest, not an OCI index. The attestation index digest
+# changes every build and leaves the old (now-untagged) index to be GC'd by the
+# registry, which strands the digest a PluginInstallation pinned. See FUN-19.
+_image-push repo tag dockerfile *build_flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(git rev-parse --show-toplevel)"
+    docker build --provenance=false --sbom=false -t "{{ repo }}:{{ tag }}" -f "{{ dockerfile }}" {{ build_flags }} . >&2
     # Parse the manifest digest only from the `digest:` line — other sha256
     # tokens in push output are layer/config digests, not the pushed manifest.
-    digest=$(docker push "${repo}:${tag}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
-    [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
-    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}
+    digest=$(docker push "{{ repo }}:{{ tag }}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
+    [ -n "${digest}" ] || { echo "could not resolve pushed digest" >&2; exit 1; }
+    echo "${digest}"
+
+# Hot-reload a plugin in the sandbox; see docs/developer/plugins/testing-plugins-locally.md.
+# Needs `just plugins deploy` and a functl login. Extra flags pass through (e.g. --no-cleanup).
+# Runs from the invocation dir so relative flag paths (--config) resolve where you typed them.
+[no-cd]
+[positional-arguments]
+dev name *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="$(git rev-parse --show-toplevel)"
+    exec go run "$root/functl/cmd/functl" plugin dev "$root/plugins/$1" "${@:2}"
+
+# Remove a dev-mode PluginInstallation left behind by `dev`
+[positional-arguments]
+dev-down name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(git rev-parse --show-toplevel)"
+    exec go run ./functl/cmd/functl plugin dev-down "plugins/$1"

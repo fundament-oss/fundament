@@ -49,7 +49,8 @@ func (q *Queries) CategoryList(ctx context.Context) ([]CategoryListRow, error) {
 
 const pluginVersionCreate = `-- name: PluginVersionCreate :one
 INSERT INTO appstore.plugin_definitions (
-	plugin_id, plugin_version, manifest, hash, image, release_notes, status
+	plugin_id, plugin_version, manifest, hash, image, release_notes, status,
+	logo, logo_dark, menu_icons
 ) VALUES (
 	$1::uuid,
 	$2::text,
@@ -57,7 +58,10 @@ INSERT INTO appstore.plugin_definitions (
 	$4::text,
 	$5::text,
 	$6::text,
-	'draft'
+	'draft',
+	$7::text,
+	$8::text,
+	$9::jsonb
 )
 RETURNING id, created
 `
@@ -69,6 +73,9 @@ type PluginVersionCreateParams struct {
 	Hash          string
 	Image         string
 	ReleaseNotes  string
+	Logo          string
+	LogoDark      string
+	MenuIcons     []byte
 }
 
 type PluginVersionCreateRow struct {
@@ -86,10 +93,37 @@ func (q *Queries) PluginVersionCreate(ctx context.Context, arg PluginVersionCrea
 		arg.Hash,
 		arg.Image,
 		arg.ReleaseNotes,
+		arg.Logo,
+		arg.LogoDark,
+		arg.MenuIcons,
 	)
 	var i PluginVersionCreateRow
 	err := row.Scan(&i.ID, &i.Created)
 	return i, err
+}
+
+const pluginVersionGetActiveByPluginVersion = `-- name: PluginVersionGetActiveByPluginVersion :one
+SELECT plugin_definitions.status
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
+WHERE plugin_definitions.plugin_id = $1::uuid
+  AND plugin_definitions.plugin_version = $2::text
+  AND plugin_definitions.deleted IS NULL
+  AND plugins.deleted IS NULL
+`
+
+type PluginVersionGetActiveByPluginVersionParams struct {
+	PluginID      uuid.UUID
+	PluginVersion string
+}
+
+// Looked up by the replace path to decide whether republish is allowed: only
+// a draft may be replaced.
+func (q *Queries) PluginVersionGetActiveByPluginVersion(ctx context.Context, arg PluginVersionGetActiveByPluginVersionParams) (dbconst.PluginDefinitionStatus, error) {
+	row := q.db.QueryRow(ctx, pluginVersionGetActiveByPluginVersion, arg.PluginID, arg.PluginVersion)
+	var status dbconst.PluginDefinitionStatus
+	err := row.Scan(&status)
+	return status, err
 }
 
 const pluginVersionGetByID = `-- name: PluginVersionGetByID :one
@@ -243,6 +277,53 @@ func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionS
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const pluginVersionSoftDeleteActiveByPluginVersion = `-- name: PluginVersionSoftDeleteActiveByPluginVersion :execrows
+UPDATE appstore.plugin_definitions SET deleted = now()
+WHERE plugin_id = $1::uuid
+  AND plugin_version = $2::text
+  AND status = 'draft'
+  AND deleted IS NULL
+`
+
+type PluginVersionSoftDeleteActiveByPluginVersionParams struct {
+	PluginID      uuid.UUID
+	PluginVersion string
+}
+
+// Draft-only: a draft submitted between the handler's status check and this
+// transaction must not be soft-deleted out from under the pending review;
+// zero rows tells the handler it is no longer a draft.
+func (q *Queries) PluginVersionSoftDeleteActiveByPluginVersion(ctx context.Context, arg PluginVersionSoftDeleteActiveByPluginVersionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pluginVersionSoftDeleteActiveByPluginVersion, arg.PluginID, arg.PluginVersion)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const pluginVersionWasReplaced = `-- name: PluginVersionWasReplaced :one
+SELECT EXISTS (
+	SELECT 1 FROM appstore.plugin_definitions
+	 WHERE plugin_id = $1::uuid
+	   AND plugin_version = $2::text
+	   AND deleted IS NOT NULL
+)
+`
+
+type PluginVersionWasReplacedParams struct {
+	PluginID      uuid.UUID
+	PluginVersion string
+}
+
+// Guards SubmitPluginVersion: a vacated (plugin_id, plugin_version) slot must
+// be republished as a new version, even if the live row there is a draft.
+func (q *Queries) PluginVersionWasReplaced(ctx context.Context, arg PluginVersionWasReplacedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, pluginVersionWasReplaced, arg.PluginID, arg.PluginVersion)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const pluginVersionsSoftDeleteByPluginID = `-- name: PluginVersionsSoftDeleteByPluginID :exec

@@ -2,6 +2,7 @@
      gets the page padding and column the native forms have. -->
 <nldd-page>
   <nldd-simple-section>
+    <app-plugin-status-banner [installationName]="pluginName()" />
     @if (errorMessage()) {
       <nldd-banner
         variant="critical"
@@ -28,7 +29,7 @@
           slot="actions"
           [attr.href]="pageNav.path(namespacesLink())"
           text="Go to namespaces"
-          variant="primary"
+          appearance="primary"
           (click)="pageNav.navigate($event, namespacesLink())"
         ></nldd-button>
       </nldd-inline-dialog>
@@ -57,7 +58,7 @@
           slot="actions"
           [routerLink]="listLink"
           text="Back to list"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       </nldd-inline-dialog>
     }

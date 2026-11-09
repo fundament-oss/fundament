@@ -25,7 +25,10 @@ const TimeFormat = "2006-01-02T15:04:05Z07:00"
 func PrintJSON(v any) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	return enc.Encode(v)
+	if err := enc.Encode(v); err != nil {
+		return fmt.Errorf("encoding JSON output: %w", err)
+	}
+	return nil
 }
 
 // NewTableWriter creates a new tabwriter for formatted table output.
@@ -34,8 +37,11 @@ func NewTableWriter() *tabwriter.Writer {
 }
 
 // PrintKeyValue prints a key-value pair to the given writer.
-func PrintKeyValue(w io.Writer, key string, value any) {
-	fmt.Fprintf(w, "%s:\t%v\n", key, value)
+func PrintKeyValue(w io.Writer, key string, value any) error {
+	if _, err := fmt.Fprintf(w, "%s:\t%v\n", key, value); err != nil {
+		return fmt.Errorf("writing output: %w", err)
+	}
+	return nil
 }
 
 // createdOutput is the JSON output structure of every create command: the id

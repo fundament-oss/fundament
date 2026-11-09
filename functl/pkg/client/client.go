@@ -126,7 +126,7 @@ func (c *Client) Organizations() organizationv1connect.OrganizationServiceClient
 	return organizationv1connect.NewOrganizationServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.authInterceptor()),
+		connect.WithInterceptors(c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 

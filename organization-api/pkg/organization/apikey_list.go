@@ -42,7 +42,13 @@ func (s *Server) ListAPIKeys(
 		result = append(result, apiKeyFromListRow(&keys[idx]))
 	}
 
+	var maxExpiresIn string
+	if s.config.APIKeyMaxExpiresIn > 0 {
+		maxExpiresIn = formatAPIKeyExpiresIn(s.config.APIKeyMaxExpiresIn)
+	}
+
 	return organizationv1.ListAPIKeysResponse_builder{
-		ApiKeys: result,
+		ApiKeys:      result,
+		MaxExpiresIn: maxExpiresIn,
 	}.Build(), nil
 }

@@ -38,7 +38,7 @@ func ReconcileAccessible(
 	var errs []error
 	for _, cluster := range clusters {
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // documented: returns nil once ctx is done
 		}
 		err := reconcile(ctx, cluster.ID)
 		if err == nil {
@@ -51,5 +51,5 @@ func ReconcileAccessible(
 		logger.ErrorContext(ctx, "failed to reconcile cluster", "cluster_id", cluster.ID, "error", err)
 		errs = append(errs, err)
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...) //nolint:wrapcheck // aggregates the per-cluster errors unchanged
 }

@@ -72,6 +72,39 @@ functl auth login <API_KEY>
 functl org set <organization-id>
 ```
 
+## Fast iteration: hot reload
+
+Iterating on a plugin's own code? `functl plugin dev [dir]` replaces steps 4–6 below: every saved Go or console source file rebuilds and reinstalls the plugin automatically, instead of a one-shot publish/install/verify. `dir` defaults to the current directory and works for standalone plugin projects too.
+
+```shell
+just plugins dev external-dns   # wraps: functl plugin dev plugins/external-dns
+functl plugin dev               # from a standalone plugin project
+```
+
+- `just plugins dev <path>` takes the plugin's path under `plugins/` (nested works: `storage/ceph-rook`) and passes extra flags through. Everything cluster-facing is named after the definition's `metadata.name`: the installation is `<organization>--<name>`.
+- Startup checks (each failure prints what to fix and links here): `docker`, `skaffold` and `kubectl` installed (plus `bun` for Vite plugins), Docker running, kube context `k3d-fundament-plugin` reachable, `plugin-controller` deployed with dev mode and unpinned hashes enabled and the current CRDs (`just plugins deploy`), and functl's organization matching the controller's `FUNDAMENT_ORGANIZATION_ID`.
+- Publishes a throwaway `-dev` draft version (`metadata.version` plus `-dev`), installs a `PluginInstallation` with `spec.dev.image` set, and runs `skaffold dev` with `air` in the pod: every saved `.go` file, `go.mod` or `go.sum` syncs in and recompiles in place. A newly added module is downloaded in the pod on that build.
+- functl's own build files (Dockerfile, skaffold and installation config) live in `os.UserCacheDir()/functl/plugin-dev/<installation>/`, not in the plugin repo. For Vite plugins, `bun install` and the build still write `console-ui/node_modules`, `bun.lock` and `console/` into the repo, as they do when run by hand.
+- Vite console (`console-ui/`): functl runs the initial `bun install && bun run build`, then `vite build --watch`. Save, wait for the rebuild, refresh the browser.
+- A local SDK `replace` in `go.mod` is built into the image; SDK edits are not hot-reloaded, restart `functl plugin dev`.
+- Changes to `definition.yaml` are **not** hot-reloaded either: restart.
+- In this repo only the top-level dirs the plugin imports from at startup (plus `go.mod`/`go.sum`) sync into the pod; functl prints them. A new import from another top-level dir needs a restart.
+- `spec.config` comes from `--set KEY=VALUE` (repeatable) and/or `--config <file>` (a YAML map of `KEY: value`); `--set` wins. Values are checked against the definition's `configSchema` before the build, and every missing required key is listed. Changing them needs a restart.
+
+  ```shell
+  just plugins dev storage/ceph-rook --set MON_COUNT=1 --set MGR_COUNT=1 --set ALLOW_MULTIPLE_PER_NODE=true
+  ```
+- `metadata.name` must not contain `--`; it separates organization and plugin in the installation name.
+- After bumping `metadata.version`, run `functl plugin dev-down` first: `definitionRef.pluginVersion` is immutable, so applying over an existing installation with a different version fails.
+- Ctrl-C deletes the `PluginInstallation` by default. `--no-cleanup` keeps it; `dev-down` removes it later.
+- `dev` and `dev-down` refuse to touch an installation of the same name that is not in dev mode (the dev-mode annotation plus `spec.dev`).
+- `dev-down` waits (up to 2 minutes) until the controller has finished tearing the installation down, and prints that there is nothing to remove if it is already gone. `functl plugin dev` does the same if a previous installation is still terminating.
+
+```shell
+functl plugin dev --no-cleanup
+just plugins dev-down external-dns   # or: functl plugin dev-down [dir]
+```
+
 ## 4. Publish
 
 **Plugin in this repository**:
@@ -87,7 +120,8 @@ PLUGIN_REGISTRY=localhost:5112 just plugins publish <path>
 **Plugin in its own project**, from the project directory (names from the scaffolded `my-plugin`):
 
 ```shell
-just docker v0.1.0
+just docker v0.1.0                         # for an amd64 (x86) cluster
+PLATFORM=linux/arm64 just docker v0.1.0    # for an arm64 cluster, such as k3d on Apple Silicon
 docker tag my-plugin-plugin:v0.1.0 localhost:5112/my-plugin:v0.1.0
 docker push localhost:5112/my-plugin:v0.1.0
 functl plugin publish definition.yaml --image=localhost:5112/my-plugin@sha256:<digest from push> --create

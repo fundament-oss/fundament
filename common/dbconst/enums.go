@@ -32,21 +32,25 @@ const (
 type ClusterEventEventType string
 
 const (
-	ClusterEventEventType_SyncRequested      ClusterEventEventType = "sync_requested"
-	ClusterEventEventType_SyncClaimed        ClusterEventEventType = "sync_claimed"
-	ClusterEventEventType_SyncSucceeded      ClusterEventEventType = "sync_succeeded"
-	ClusterEventEventType_SyncFailed         ClusterEventEventType = "sync_failed"
-	ClusterEventEventType_StatusProgressing  ClusterEventEventType = "status_progressing"
-	ClusterEventEventType_StatusReady        ClusterEventEventType = "status_ready"
-	ClusterEventEventType_StatusError        ClusterEventEventType = "status_error"
-	ClusterEventEventType_StatusDeleted      ClusterEventEventType = "status_deleted"
-	ClusterEventEventType_StatusHealthy      ClusterEventEventType = "status_healthy"
-	ClusterEventEventType_StatusUnhealthy    ClusterEventEventType = "status_unhealthy"
-	ClusterEventEventType_StatusWarning      ClusterEventEventType = "status_warning"
-	ClusterEventEventType_StatusLost         ClusterEventEventType = "status_lost"
-	ClusterEventEventType_StatusApiAvailable ClusterEventEventType = "status_api_available"
-	ClusterEventEventType_UserSyncSucceeded  ClusterEventEventType = "user_sync_succeeded"
-	ClusterEventEventType_UserSyncFailed     ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_SyncRequested              ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed                ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded              ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed                 ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_StatusProgressing          ClusterEventEventType = "status_progressing"
+	ClusterEventEventType_StatusReady                ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError                ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted              ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusHealthy              ClusterEventEventType = "status_healthy"
+	ClusterEventEventType_StatusUnhealthy            ClusterEventEventType = "status_unhealthy"
+	ClusterEventEventType_StatusWarning              ClusterEventEventType = "status_warning"
+	ClusterEventEventType_StatusLost                 ClusterEventEventType = "status_lost"
+	ClusterEventEventType_StatusApiAvailable         ClusterEventEventType = "status_api_available"
+	ClusterEventEventType_UserSyncSucceeded          ClusterEventEventType = "user_sync_succeeded"
+	ClusterEventEventType_UserSyncFailed             ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_NodepoolWaiting            ClusterEventEventType = "nodepool_waiting"
+	ClusterEventEventType_NodepoolError              ClusterEventEventType = "nodepool_error"
+	ClusterEventEventType_NodepoolReady              ClusterEventEventType = "nodepool_ready"
+	ClusterEventEventType_SyncWaitingForPrecondition ClusterEventEventType = "sync_waiting_for_precondition"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
@@ -124,6 +128,17 @@ const (
 	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
+// DriftFindingKind represents valid values for tenant.drift_findings.kind.
+type DriftFindingKind string
+
+const (
+	DriftFindingKind_ShootWithoutCluster       DriftFindingKind = "shoot_without_cluster"
+	DriftFindingKind_ShootOfDeletedCluster     DriftFindingKind = "shoot_of_deleted_cluster"
+	DriftFindingKind_ClusterWithoutShoot       DriftFindingKind = "cluster_without_shoot"
+	DriftFindingKind_KubernetesVersionMismatch DriftFindingKind = "kubernetes_version_mismatch"
+	DriftFindingKind_ShootInvalidClusterId     DriftFindingKind = "shoot_invalid_cluster_id"
+)
+
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
 type LogicalConnectionConnectionType string
 
@@ -158,6 +173,16 @@ const (
 	LogicalDeviceRole_ConsoleServer LogicalDeviceRole = "console_server"
 	LogicalDeviceRole_CableManager  LogicalDeviceRole = "cable_manager"
 	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
+)
+
+// NodePoolStatus represents valid values for tenant.node_pools.status.
+type NodePoolStatus string
+
+const (
+	NodePoolStatus_Progressing NodePoolStatus = "progressing"
+	NodePoolStatus_Waiting     NodePoolStatus = "waiting"
+	NodePoolStatus_Error       NodePoolStatus = "error"
+	NodePoolStatus_Ready       NodePoolStatus = "ready"
 )
 
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
@@ -351,4 +376,12 @@ const (
 	TaskStatus_Todo  TaskStatus = "todo"
 	TaskStatus_Doing TaskStatus = "doing"
 	TaskStatus_Done  TaskStatus = "done"
+)
+
+// WorkerHeartbeatWorker represents valid values for tenant.worker_heartbeats.worker.
+type WorkerHeartbeatWorker string
+
+const (
+	WorkerHeartbeatWorker_Reconcile WorkerHeartbeatWorker = "reconcile"
+	WorkerHeartbeatWorker_Inventory WorkerHeartbeatWorker = "inventory"
 )

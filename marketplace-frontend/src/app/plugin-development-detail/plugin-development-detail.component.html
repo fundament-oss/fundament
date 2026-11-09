@@ -5,12 +5,12 @@
     <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
   </div>
   <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     Back to my plugins
   </a>
 } @else if (plugin(); as plugin) {
   <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     My plugins
   </a>
 
@@ -18,6 +18,8 @@
     <div class="flex items-center gap-4">
       <app-plugin-icon
         [name]="plugin.icon"
+        [logo]="plugin.logo"
+        [logoDark]="plugin.logoDark"
         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 dark:bg-gray-800"
       />
       <div>
@@ -48,19 +50,23 @@
               (click)="submitForReview()"
               text="Submit for review"
               start-icon="send"
-              variant="primary"
+              appearance="primary"
               [disabled]="isSubmitting()"
             ></nldd-button>
           }
           @case ('pending') {
-            <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
+            <nldd-button
+              text="Awaiting review"
+              appearance="primary"
+              [disabled]="true"
+            ></nldd-button>
           }
           @case ('changes_requested') {
             <nldd-button
               (click)="submitForReview()"
               text="Resubmit for review"
               start-icon="send"
-              variant="primary"
+              appearance="primary"
               [disabled]="isSubmitting()"
             ></nldd-button>
           }
@@ -69,7 +75,7 @@
               (click)="submitForReview()"
               text="Submit for review"
               start-icon="send"
-              variant="primary"
+              appearance="primary"
               [disabled]="isSubmitting()"
             ></nldd-button>
           }
@@ -79,7 +85,7 @@
                 <nldd-button
                   text="View in catalog"
                   start-icon="eye"
-                  variant="secondary"
+                  appearance="secondary"
                 ></nldd-button>
               </a>
             } @else {
@@ -87,7 +93,7 @@
                 [routerLink]="['/plugins', plugin.id]"
                 text="View in catalog"
                 start-icon="eye"
-                variant="secondary"
+                appearance="secondary"
               ></nldd-button>
             }
           }
@@ -97,7 +103,7 @@
             (click)="openSideload()"
             text="Sideload plugin"
             start-icon="cloud-arrow-up"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
         }
         @if (plugin.status === 'pending') {
@@ -105,7 +111,7 @@
             (click)="withdraw()"
             text="Withdraw"
             start-icon="trash"
-            variant="destructive"
+            appearance="destructive"
             [disabled]="isSubmitting()"
           ></nldd-button>
         }
@@ -264,7 +270,7 @@
         <nldd-icon-button
           icon="dismiss"
           text="Close"
-          variant="neutral-transparent"
+          appearance="neutral-transparent"
           size="sm"
           (click)="closeSideload()"
         ></nldd-icon-button>
@@ -329,14 +335,14 @@
           (click)="closeSideload()"
           type="button"
           text="Cancel"
-          variant="secondary"
+          appearance="secondary"
         ></nldd-button>
         <nldd-button
           (click)="submitSideload()"
           type="button"
           text="Sideload plugin"
           start-icon="cloud-arrow-up"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
       </div>
     </nldd-page>

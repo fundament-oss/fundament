@@ -268,7 +268,9 @@ func (x *CreateAPIKeyRequest) SetExpiresIn(v string) {
 type CreateAPIKeyRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Name      string
+	Name string
+	// Time until expiry, empty = never. The server also refuses zero and
+	// anything above the operator's maximum.
 	ExpiresIn string
 }
 
@@ -413,10 +415,11 @@ func (b0 ListAPIKeysRequest_builder) Build() *ListAPIKeysRequest {
 
 // List API keys response
 type ListAPIKeysResponse struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ApiKeys *[]*APIKey             `protobuf:"bytes,10,rep,name=api_keys,json=apiKeys"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiKeys      *[]*APIKey             `protobuf:"bytes,10,rep,name=api_keys,json=apiKeys"`
+	xxx_hidden_MaxExpiresIn string                 `protobuf:"bytes,20,opt,name=max_expires_in,json=maxExpiresIn"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ListAPIKeysResponse) Reset() {
@@ -453,14 +456,28 @@ func (x *ListAPIKeysResponse) GetApiKeys() []*APIKey {
 	return nil
 }
 
+func (x *ListAPIKeysResponse) GetMaxExpiresIn() string {
+	if x != nil {
+		return x.xxx_hidden_MaxExpiresIn
+	}
+	return ""
+}
+
 func (x *ListAPIKeysResponse) SetApiKeys(v []*APIKey) {
 	x.xxx_hidden_ApiKeys = &v
+}
+
+func (x *ListAPIKeysResponse) SetMaxExpiresIn(v string) {
+	x.xxx_hidden_MaxExpiresIn = v
 }
 
 type ListAPIKeysResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	ApiKeys []*APIKey
+	// Longest lifetime a new key may have, such as "8760h"; empty = no maximum,
+	// and a key may then never expire.
+	MaxExpiresIn string
 }
 
 func (b0 ListAPIKeysResponse_builder) Build() *ListAPIKeysResponse {
@@ -468,6 +485,7 @@ func (b0 ListAPIKeysResponse_builder) Build() *ListAPIKeysResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_ApiKeys = &b.ApiKeys
+	x.xxx_hidden_MaxExpiresIn = b.MaxExpiresIn
 	return m0
 }
 
@@ -815,22 +833,24 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\aexpires\x18( \x01(\v2\x1a.google.protobuf.TimestampR\aexpires\x127\n" +
 	"\tlast_used\x182 \x01(\v2\x1a.google.protobuf.TimestampR\blastUsed\x124\n" +
 	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
-	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"T\n" +
+	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"\xf4\x01\n" +
 	"\x13CreateAPIKeyRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\x1d\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\xbc\x01\n" +
 	"\n" +
-	"expires_in\x18\x14 \x01(\tR\texpiresIn\"_\n" +
+	"expires_in\x18\x14 \x01(\tB\x9c\x01\xbaH\x98\x01\xba\x01\x94\x01\n" +
+	"\bduration\x12)must be a duration such as 300s, 5m or 1h\x1a]this == '' || this.matches('^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$')R\texpiresIn\"_\n" +
 	"\x14CreateAPIKeyResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x14\n" +
 	"\x05token\x18\x14 \x01(\tR\x05token\x12!\n" +
 	"\ftoken_prefix\x18\x1e \x01(\tR\vtokenPrefix\"\x14\n" +
-	"\x12ListAPIKeysRequest\"I\n" +
+	"\x12ListAPIKeysRequest\"o\n" +
 	"\x13ListAPIKeysResponse\x122\n" +
 	"\bapi_keys\x18\n" +
-	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\":\n" +
+	" \x03(\v2\x17.organization.v1.APIKeyR\aapiKeys\x12$\n" +
+	"\x0emax_expires_in\x18\x14 \x01(\tR\fmaxExpiresIn\":\n" +
 	"\x10GetAPIKeyRequest\x12&\n" +
 	"\n" +
 	"api_key_id\x18\n" +

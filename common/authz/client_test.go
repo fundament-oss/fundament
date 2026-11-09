@@ -95,7 +95,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Subject.Type != ObjectTypeUser {
 			t.Errorf("Subject.Type = %v, want %v", merged.Subject.Type, ObjectTypeUser)
@@ -121,7 +121,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Subject.Type != ObjectTypeOrganization {
 			t.Errorf("Subject.Type = %v, want %v", merged.Subject.Type, ObjectTypeOrganization)
@@ -144,7 +144,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Context["default_key"] != "default_value" {
 			t.Errorf("Context[default_key] = %v, want default_value", merged.Context["default_key"])

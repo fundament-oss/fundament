@@ -2,7 +2,7 @@
   <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading submission...</div>
 } @else if (errorMessage(); as error) {
   <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     Back to review queue
   </a>
   <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
@@ -10,7 +10,7 @@
   </div>
 } @else if (submission(); as submission) {
   <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
     Review queue
   </a>
 
@@ -18,6 +18,8 @@
     <div class="flex items-center gap-4">
       <app-plugin-icon
         [name]="submission.icon"
+        [logo]="submission.logo"
+        [logoDark]="submission.logoDark"
         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 dark:bg-gray-800"
       />
       <div>
@@ -36,6 +38,70 @@
     ></nldd-tag>
   </div>
 
+  @if (submission.logo) {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">Logos</h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          How the logo looks in each theme, whichever theme you are using.
+        </p>
+        <div class="flex flex-wrap gap-6">
+          <figure>
+            <div class="rounded-md border border-gray-200 bg-white p-4">
+              <img class="h-16 w-16 object-contain" [src]="submission.logo" alt="Light mode logo" />
+            </div>
+            <figcaption class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Light mode
+            </figcaption>
+          </figure>
+          <figure>
+            <div class="rounded-md border border-gray-700 bg-gray-900 p-4">
+              @if (submission.logoDark) {
+                <img
+                  class="h-16 w-16 object-contain"
+                  [src]="submission.logoDark"
+                  alt="Dark mode logo"
+                />
+              } @else {
+                <img
+                  class="h-16 w-16 bg-gray-100 object-contain"
+                  [src]="submission.logo"
+                  alt="Light mode logo on a light backdrop"
+                />
+              }
+            </div>
+            <figcaption class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Dark mode
+              @if (!submission.logoDark) {
+                · No dark logo
+              }
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </nldd-card>
+  }
+
+  @if (submission.menuIcons.length > 0) {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">Menu icons</h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          Shown in their uploaded colours; the console tints them to match its theme.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          @for (icon of submission.menuIcons; track icon) {
+            <img
+              class="h-8 w-8 rounded-sm bg-white object-contain p-1 dark:bg-gray-100"
+              [src]="icon"
+              alt=""
+            />
+          }
+        </div>
+      </div>
+    </nldd-card>
+  }
+
   <!-- Decision (only while pending) -->
   @if (submission.status === 'pending') {
     <nldd-card class="mb-6 block">
@@ -50,19 +116,19 @@
             (click)="approve()"
             text="Approve"
             start-icon="check-mark"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
           <nldd-button
             (click)="openRequestChanges()"
             text="Request changes"
             start-icon="arrow-left"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
           <nldd-button
             (click)="openReject()"
             text="Reject"
             start-icon="dismiss"
-            variant="destructive"
+            appearance="destructive"
           ></nldd-button>
         </div>
       </div>
@@ -205,7 +271,7 @@
         <nldd-icon-button
           icon="dismiss"
           text="Close"
-          variant="neutral-transparent"
+          appearance="neutral-transparent"
           size="sm"
           (click)="closeDecision()"
         ></nldd-icon-button>
@@ -272,14 +338,14 @@
           (click)="closeDecision()"
           type="button"
           text="Cancel"
-          variant="secondary"
+          appearance="secondary"
         ></nldd-button>
         <nldd-button
           (click)="submitDecision()"
           type="button"
           [attr.text]="decisionMode() === 'changes' ? 'Request changes' : 'Reject submission'"
           [attr.start-icon]="decisionMode() === 'changes' ? 'arrow-left' : 'dismiss'"
-          [attr.variant]="decisionMode() === 'changes' ? 'primary' : 'destructive'"
+          [attr.appearance]="decisionMode() === 'changes' ? 'primary' : 'destructive'"
           [disabled]="!canSubmitDecision() || isSubmitting()"
         ></nldd-button>
       </div>

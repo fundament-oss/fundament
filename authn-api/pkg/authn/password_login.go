@@ -14,6 +14,11 @@ const maxLoginBodyBytes = 64 << 10
 
 // HandlePasswordLogin handles direct password-based authentication.
 func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.config.PasswordLoginEnabled {
+		s.writeErrorJSON(w, http.StatusNotFound, "Password login is not enabled")
+		return
+	}
+
 	var req authnhttp.PasswordLoginRequest
 	if err := json.UnmarshalRead(http.MaxBytesReader(w, r.Body, maxLoginBodyBytes), &req); err != nil {
 		s.writeErrorJSON(w, http.StatusBadRequest, "Invalid request body")
@@ -51,7 +56,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "password")
 	if err != nil {
 		s.logger.Error("process oidc login", "error", err)
-		s.writeErrorJSON(w, http.StatusInternalServerError, err.Error())
+		s.writeErrorJSON(w, loginErrorStatus(err), err.Error())
 		return
 	}
 

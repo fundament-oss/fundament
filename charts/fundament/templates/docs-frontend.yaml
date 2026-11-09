@@ -39,6 +39,7 @@ spec:
       containers:
         - name: docs-frontend
           image: {{ $.Values.images.docsFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 80

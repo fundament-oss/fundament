@@ -47,7 +47,7 @@ Plugin pages run on the plugin-proxy origin and never see the Console user's coo
 The definition advertises:
 
 - `menu`: which CRDs appear at organization and project level.
-- `customComponents`: a `Kind` → `{ list?, detail?, create? }` map of files under `console/`. Kinds without an entry get the generated UI.
+- `customComponents`: a `Kind` → `{ list?, detail?, create?, edit? }` map of files under `console/`. Kinds without an entry get the generated UI. `edit` only ever opens in a [sheet](#sheets).
 - `permissions.rbac`: the plugin's ServiceAccount RBAC, which also limits the plugin's page calls.
 - `allowedResources`: the resources the plugin's pages read.
 - `crds`: the CRDs the plugin manages.
@@ -100,6 +100,33 @@ The iframe is created with `sandbox="allow-scripts allow-same-origin allow-forms
 - The same-origin policy between sites still blocks access to the console's document, and the user's HttpOnly cookie stays unreachable.
 - `allow-forms` serves create pages whose submits stay in the frame. `allow-top-navigation` and `allow-popups` are not granted.
 
+### Sheets
+
+A create or edit form, or a detail that belongs over the page rather than in
+place of it, opens in a sheet the console draws: its backdrop covers the whole
+window, as every console sheet does. A sheet a page draws inside its own frame
+dims and covers only the frame, and is only as tall as the frame is.
+
+- `fundament.openSheet({ view: 'create' })` asks for one. The console builds the
+  URL from the same installation's `customComponents[kind][view]`, `kind`
+  defaulting to the page's own, and refuses a page the definition does not
+  declare. A request never carries a URL.
+- The page in the sheet is a plugin page like any other: the same sandbox, the
+  same plugin-proxy origin, the same installation's token.
+- The console writes the sheet's title (`New <kind>`, `Edit <name>`, `<name>`)
+  and says which plugin it comes from. The plugin does not choose it.
+- `edit` and `detail` need a `resource`. `params` is at most 16 string values,
+  handed to the sheet page's init as is.
+- One sheet at a time: a request while one is open is ignored. A request from
+  the sheet's own page replaces it.
+- The page in the sheet leaves with `fundament.closeSheet({ changed: true })`
+  after saving, or `plugin:navigate` to show a resource it made, which closes
+  the sheet and opens that resource's detail. The page under the sheet gets
+  `fundament:resources-changed` in both cases, and when the sheet is replaced,
+  and reads again: register with `fundament.onResourcesChanged()`.
+- A `create` page also works on its create route, where `closeSheet()` goes back
+  to the list.
+
 ## The postMessage protocol
 
 The SDK sends and handles most messages itself.
@@ -114,6 +141,8 @@ The SDK sends and handles most messages itself.
 | `plugin:navigate` | Open another resource | `{ name, namespace? }` | No: call from your code |
 | `plugin:create` | Open the create route | | No |
 | `plugin:navigate-back` | Back to the list | | No |
+| `plugin:open-sheet` | Open one of the plugin's pages in a sheet | `{ kind?, view, resource?, params? }` | Through `fundament.openSheet()` |
+| `plugin:close-sheet` | From a sheet: done | `{ changed? }` | Through `fundament.closeSheet()` |
 
 ### Host → plugin
 
@@ -123,6 +152,7 @@ The SDK sends and handles most messages itself.
 | `fundament:theme-changed` | User toggles the Console theme | `{ theme: 'light' \| 'dark' }` |
 | `fundament:token-refreshed` | The console minted a new PluginToken | `{ token, tokenExpiresAt }` |
 | `fundament:auth-failed` | Minting keeps failing | `{ reason: 'mint_failed' \| 'unauthorized' \| 'revoked' }` |
+| `fundament:resources-changed` | A sheet over the page saved something, or was replaced by another | none |
 
 ### Init payload fields
 
@@ -132,10 +162,12 @@ The SDK sends and handles most messages itself.
 | `theme` | `'light'` or `'dark'`; the SDK sets it as a class on `<body>` |
 | `pluginName` | The installed plugin's name |
 | `crdKind` | The CRD kind being rendered |
-| `view` | `'list'`, `'detail'` or `'create'` |
-| `resource` | Detail views: `{ name, namespace? }` |
-| `namespaces` | Create views in a project: the project's namespaces, by their name on the cluster (`tnt-<project>--<name>`). Pass these to the Kubernetes API as is |
-| `namespaceDisplayNames` | Create views in a project: maps each entry of `namespaces` to the name the console shows for it, to use as the label |
+| `view` | `'list'`, `'detail'`, `'create'` or `'edit'` |
+| `presentation` | `'page'` on a route, `'sheet'` in a sheet |
+| `resource` | Detail and edit views: `{ name, namespace? }` |
+| `params` | Pages in a sheet: the `params` the opening page passed to `openSheet()` |
+| `namespaces` | List, create and detail views in a project, and sheets over them: the project's namespaces, by their name on the cluster (`tnt-<project>--<name>`). Pass these to the Kubernetes API as is |
+| `namespaceDisplayNames` | Wherever `namespaces` is set: maps each entry of `namespaces` to the name the console shows for it, to use as the label |
 | `kubeApiProxyUrl`, `clusterId` | Base for Kubernetes calls |
 | `token`, `tokenExpiresAt` | The PluginToken |
 
@@ -168,6 +200,9 @@ interface FundamentSdk {
     delete<T>(args: { group; version; resource; name; namespace? }): Promise<T>;
   };
   onThemeChange(cb: (theme: 'light' | 'dark') => void): () => void;
+  openSheet(request: { kind?; view: 'create' | 'edit' | 'detail'; resource?; params? }): void;
+  closeSheet(options?: { changed?: boolean }): void;
+  onResourcesChanged(cb: () => void): () => void;
 }
 ```
 

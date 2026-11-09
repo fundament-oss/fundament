@@ -28,12 +28,12 @@
            taller than a line of text. -->
       <nldd-text>{{ selectionSummary() }}</nldd-text>
       <nldd-spacer size="4"></nldd-spacer>
-      <nldd-toolbar label="Bulk actions">
+      <nldd-toolbar accessible-label="Bulk actions">
         <!-- First in the row, so its left edge is fixed and the label may say
              what a press will do rather than hold one width. -->
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             [attr.text]="allFilteredSelected() ? 'Deselect all' : 'Select all'"
             (click)="toggleSelectAll(!allFilteredSelected())"
           ></nldd-button>
@@ -51,7 +51,7 @@
             <!-- The menu is slotted into the button that opens it, so it
                  anchors and closes itself: no id to keep in step with an anchor,
                  and no handle to reach for when an item is picked. -->
-            <nldd-button variant="secondary" text="Set status" expandable popup-type="menu">
+            <nldd-button appearance="secondary" text="Set status" expandable popup-type="menu">
               <nldd-menu slot="popup" accessible-label="Set status">
                 <ng-container [ngTemplateOutlet]="bulkStatusItems"></ng-container>
               </nldd-menu>
@@ -64,7 +64,7 @@
             </nldd-menu-item>
           </nldd-toolbar-item>
           <nldd-toolbar-item slot="end">
-            <nldd-button variant="secondary" text="Assign" expandable popup-type="menu">
+            <nldd-button appearance="secondary" text="Assign" expandable popup-type="menu">
               <nldd-menu slot="popup" accessible-label="Assign to">
                 <ng-container [ngTemplateOutlet]="bulkAssignItems"></ng-container>
               </nldd-menu>
@@ -77,7 +77,7 @@
           </nldd-toolbar-item>
           <nldd-toolbar-item slot="end">
             <nldd-button
-              variant="destructive"
+              appearance="destructive"
               text="Delete"
               start-icon="trash"
               (click)="openBulkDeleteDialog()"
@@ -103,14 +103,14 @@
       <!-- The page actions in a toolbar rather than beside the title: a toolbar
            takes a second and a third action without the title growing a row of
            controls, and it moves what does not fit into its overflow menu. -->
-      <nldd-toolbar label="Task actions">
+      <nldd-toolbar accessible-label="Task actions">
         <!-- Both gone while you are picking rows: making a task and opening the
              board are ways out of the mode you did not ask for, and the bar
              should hold what the mode is for. -->
         @if (!selectionMode()) {
           <nldd-toolbar-item slot="start">
             <nldd-button
-              variant="primary"
+              appearance="primary"
               text="New task…"
               start-icon="plus-small"
               (click)="openNewTask()"
@@ -130,7 +130,7 @@
         @if (!selectionMode()) {
           <nldd-toolbar-item slot="end">
             <nldd-button
-              variant="secondary"
+              appearance="secondary"
               text="Kanban"
               start-icon="kanban"
               (click)="openKanban()"
@@ -148,7 +148,7 @@
              leaving is what you want from it by then. -->
         <nldd-toolbar-item slot="end">
           <nldd-button
-            [attr.variant]="selectionMode() ? 'primary' : 'secondary'"
+            [attr.appearance]="selectionMode() ? 'primary' : 'secondary'"
             [attr.text]="selectionMode() ? 'Done' : 'Select'"
             (click)="setSelectionMode(!selectionMode())"
           ></nldd-button>
@@ -168,7 +168,7 @@
         >
           <nldd-button
             slot="actions"
-            variant="primary"
+            appearance="primary"
             text="Try again"
             (click)="retryLoad()"
           ></nldd-button>
@@ -337,7 +337,7 @@
             <nldd-tooltip [attr.text]="'Priority: ' + task.priority">
               <nldd-icon
                 aria-hidden="false"
-                [attr.name]="priorityIcon(task.priority)"
+                [attr.icon]="priorityIcon(task.priority)"
                 [attr.aria-label]="'Priority: ' + task.priority"
               ></nldd-icon>
             </nldd-tooltip>
@@ -438,7 +438,7 @@
                         class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 truncate max-w-[60%]"
                       >
                         <nldd-icon
-                          name="apartment-building"
+                          icon="apartment-building"
                           style="width: 11px; height: 11px"
                           aria-hidden="true"
                         ></nldd-icon
@@ -479,7 +479,7 @@
                           [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
                           aria-hidden="true"
                         >
-                          <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                          <nldd-icon icon="person" class="w-3 h-3"></nldd-icon>
                         </span>
                       }
                     </div>
@@ -601,14 +601,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     [text]="selectedTasks().size === 1 ? 'Keep task' : 'Keep tasks'"
     size="sm"
     (click)="closeBulkDeleteDialog()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     [text]="selectedTasks().size === 1 ? 'Delete task' : 'Delete tasks'"
     size="sm"
     (click)="confirmBulkDelete()"

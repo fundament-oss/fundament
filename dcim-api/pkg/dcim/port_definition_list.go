@@ -23,8 +23,8 @@ func (s *Server) ListPortDefinitions(
 	}
 
 	portDefs := make([]*dcimv1.PortDefinition, 0, len(rows))
-	for _, row := range rows {
-		portDefs = append(portDefs, portDefinitionFromListRow(&row))
+	for i := range rows {
+		portDefs = append(portDefs, portDefinitionFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListPortDefinitionsResponse_builder{

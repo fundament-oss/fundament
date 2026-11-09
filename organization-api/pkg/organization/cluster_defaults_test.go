@@ -9,9 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"google.golang.org/protobuf/proto"
+
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
-	"google.golang.org/protobuf/proto"
 )
 
 // defaultsEnv is the setup every defaults test needs: an organization, an
@@ -72,7 +73,7 @@ func (d *defaultsEnv) setClusterDefaults(t *testing.T, defaults *organizationv1.
 	_, err := d.clusters.UpdateClusterDefaults(d.ctx(), organizationv1.UpdateClusterDefaultsRequest_builder{
 		ClusterId: d.clusterID, Defaults: defaults,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func (d *defaultsEnv) setProjectDefaults(t *testing.T, defaults *organizationv1.ContainerDefaults) error {
@@ -80,7 +81,7 @@ func (d *defaultsEnv) setProjectDefaults(t *testing.T, defaults *organizationv1.
 	_, err := d.projects.UpdateProjectDefaults(d.ctx(), organizationv1.UpdateProjectDefaultsRequest_builder{
 		ProjectId: d.projectID, Defaults: defaults,
 	}.Build())
-	return err
+	return err //nolint:wrapcheck // tests assert on the raw connect error
 }
 
 func (d *defaultsEnv) clusterDefaults(t *testing.T) *organizationv1.GetClusterDefaultsResponse {

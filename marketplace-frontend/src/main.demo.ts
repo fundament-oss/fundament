@@ -5,6 +5,7 @@
 // The walkthrough embeds this bundle in a same-origin iframe and stays in the
 // parent frame, so unlike the console's demo entrypoint there is no overlay to
 // mount here — only the bridge the deck uses to move the app between slides.
+import './design-system-translations';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { ApplicationRef } from '@angular/core';
 import { Router } from '@angular/router';

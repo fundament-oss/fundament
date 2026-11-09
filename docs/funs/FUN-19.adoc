@@ -24,17 +24,23 @@ Originally the controller (and the Console) fetched the definition from the plug
 
 A plugin's definition is *published* to organization-api and stored in `appstore.plugin_definitions`, keyed by `(plugin_id, plugin_version)`. The row holds the raw manifest bytes verbatim, plus a content hash. Records are soft-deleted, never removed.
 
+Publishing has since moved to `registry.v1` `CreatePluginVersion` (link:/funs/fun-20[FUN-20]), which writes the same table with review state; organization-api's `PutPluginDefinition` is removed.
+
 == Consent and the definition hash
 
 The stored hash is the anchor for the FUN-17 consent record. A `PluginInstallation` pins `spec.definitionRef.definitionHash` — the hash of the exact manifest bytes the admin consented to. At reconcile time the controller fetches the definition by `(pluginName, pluginVersion)`, recomputes the hash over the returned bytes, and refuses to materialise the plugin's RBAC unless the recomputed hash matches the pin. This is fail-closed: an unpinned install (empty or the `sha256:unknown` placeholder) is only allowed when the controller is explicitly run with `PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true`, a local-dev escape hatch that must never be set in production.
 
 Because the manifest now lives host-side, the permissions a plugin runs under are derived from a document the *platform* stores and the admin pinned — not from something the plugin serves about itself at reconcile time.
 
+== Icons
+
+A plugin's logo, dark logo and menu icon files are stored beside the manifest. `functl` replaces each icon path in the manifest with the file's SHA-256 digest before publishing, and the server rejects a file whose bytes don't match its digest, so the manifest hash pins the icon bytes as it pins the image.
+
 == The definition fetch is a cross-cluster call
 
 The plugin-controller runs in the plugin (sandbox) cluster, while organization-api runs in the management cluster. Moving the definition into organization-api therefore turns what used to be an intra-cluster fetch (controller → plugin pod, same cluster) into a *cross-cluster* one (controller → management-cluster organization-api). Two consequences follow:
 
-* `GetPluginDefinition` was a *public* endpoint when this FUN was written: the controller had no user session to present, so the fetch carried no token. Superseded by link:/funs/fun-22[FUN-22]: the controller has a cluster identity to present, and the fetch is authenticated and tenanted through `install.v1`. (Deeper admin-only gating of *publishing* is tracked as a follow-up once a role concept exists; `PutPluginDefinition` stays organization-scoped in the meantime.)
+* `GetPluginDefinition` was a *public* endpoint when this FUN was written: the controller had no user session to present, so the fetch carried no token. Superseded by link:/funs/fun-22[FUN-22]: the controller has a cluster identity to present, and the fetch is authenticated and tenanted through `install.v1`. Publishing is gated by `can_edit` on the plugin in `registry.v1` (link:/funs/fun-20[FUN-20]).
 * organization-api must be *reachable from the plugin cluster*. The controller's `ORGANIZATION_API_URL` must therefore be organization-api's externally-routable URL (the same endpoint the Console uses), not the in-cluster `organization-api:8080` Service name — that name does not resolve from the plugin cluster's DNS. This stands after link:/funs/fun-22[FUN-22] and now also covers authn-api's external URL (`FUNDAMENT_AUTHN_API_URL`), where the controller exchanges its projected ServiceAccount token.
 
 == Consequences

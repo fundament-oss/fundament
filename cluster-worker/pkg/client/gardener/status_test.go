@@ -58,7 +58,63 @@ func healthyConditions() []gardencorev1beta1.Condition {
 		condition(gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue),
 		condition(gardencorev1beta1.ShootControlPlaneHealthy, gardencorev1beta1.ConditionTrue),
 		condition(gardencorev1beta1.ShootSystemComponentsHealthy, gardencorev1beta1.ConditionTrue),
+		condition(gardencorev1beta1.ShootEveryNodeReady, gardencorev1beta1.ConditionTrue),
 	}
+}
+
+// TestShootStatusWorkerDetail covers the fields the per-pool classification
+// reads: the EveryNodeReady message and the Shoot's lastErrors.
+func TestShootStatusWorkerDetail(t *testing.T) {
+	t.Parallel()
+
+	enrMsg := `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting for machines`
+	clusterID := uuid.New()
+
+	t.Run("progressing reconcile carries condition detail", func(t *testing.T) {
+		t.Parallel()
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationStateProcessing, "Waiting until worker resource status is updated"),
+			condition(gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootControlPlaneHealthy, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootSystemComponentsHealthy, gardencorev1beta1.ConditionTrue),
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionFalse, Message: enrMsg},
+		)
+		shoot.Status.LastErrors = []gardencorev1beta1.LastError{{Description: "no machine available"}}
+
+		status := shootStatusOf(shoot)
+		assert.Equal(t, StatusProgressing, status.Status)
+		assert.False(t, status.Healthy, "EveryNodeReady False must count as unhealthy")
+		assert.Equal(t, enrMsg, status.EveryNodeReadyMessage)
+		assert.Equal(t, []string{"no machine available"}, status.LastErrors)
+	})
+
+	t.Run("progressing condition does not surface a reason", func(t *testing.T) {
+		t.Parallel()
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationStateProcessing, "scaling"),
+			condition(gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootControlPlaneHealthy, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootSystemComponentsHealthy, gardencorev1beta1.ConditionTrue),
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionProgressing, Message: "scaling up"},
+		)
+
+		status := shootStatusOf(shoot)
+		assert.Empty(t, status.EveryNodeReadyMessage, "a Progressing condition is a transition, not a failure")
+	})
+
+	t.Run("ready and healthy carries no worker detail", func(t *testing.T) {
+		t.Parallel()
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateSucceeded, "done"),
+			healthyConditions()...,
+		)
+
+		status := shootStatusOf(shoot)
+		assert.Equal(t, StatusReady, status.Status)
+		assert.True(t, status.Healthy)
+		assert.Empty(t, status.EveryNodeReadyMessage)
+		assert.Empty(t, status.LastErrors)
+	})
 }
 
 func TestRealClientGetShootStatus(t *testing.T) {

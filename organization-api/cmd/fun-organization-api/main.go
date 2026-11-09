@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/circuitbreaker"
@@ -51,6 +50,8 @@ type config struct {
 	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
+	// Unset lets API keys live forever; set, every key must expire within it.
+	APIKeyMaxExpiresIn time.Duration `env:"API_KEY_MAX_EXPIRES_IN"`
 	// Served on /version so callers outside the cluster can tell which release
 	// is answering; the previous one keeps serving until Flux reconciles.
 	DeploymentVersion string `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
@@ -112,16 +113,18 @@ func run() error {
 	mockClient := prom.NewMockClient(func(ctx context.Context) ([]prom.ClusterInfo, error) {
 		rows, err := q.ClusterList(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("list clusters: %w", err)
 		}
 		clusters := make([]prom.ClusterInfo, 0, len(rows))
-		for _, row := range rows {
+		for i := range rows {
+			row := &rows[i]
 			pools, err := q.NodePoolListByClusterID(ctx, dbgen.NodePoolListByClusterIDParams{ClusterID: row.ID})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("list node pools: %w", err)
 			}
 			nodePools := make([]prom.NodePoolInfo, 0, len(pools))
-			for _, p := range pools {
+			for j := range pools {
+				p := &pools[j]
 				nodePools = append(nodePools, prom.NodePoolInfo{
 					Name:         p.Name,
 					MachineType:  p.MachineType,
@@ -139,7 +142,7 @@ func run() error {
 		return clusters, nil
 	})
 
-	opts := []organization.Option{}
+	opts := make([]organization.Option, 0, 1)
 
 	idempotencyStore := idempotency.NewStore(db.Pool, idempotency.Config{}, logger)
 	go idempotencyStore.StartCleanup(ctx)
@@ -151,7 +154,7 @@ func run() error {
 	cbfn := func(ctx context.Context) (bool, error) {
 		lag, err := q.AuthzOutboxLagSeconds(ctx)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("query authz outbox lag: %w", err)
 		}
 		return lag > cfg.CircuitBreakerThreshold.Seconds(), nil
 	}
@@ -184,6 +187,7 @@ func run() error {
 		PrometheusCAFile:        cfg.PrometheusCAFile,
 		KubeAPIProxyURL:         cfg.KubeAPIProxyURL,
 		GardenerClient:          gardenerClient,
+		APIKeyMaxExpiresIn:      cfg.APIKeyMaxExpiresIn,
 	}
 
 	server, err := organization.New(logger, orgcfg, db, authzClient, idempotencyStore, opts...)
@@ -228,9 +232,14 @@ func run() error {
 	})
 	outerMux.Handle("/", server.Handler())
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(outerMux, &http2.Server{}),
+		Handler:           outerMux,
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

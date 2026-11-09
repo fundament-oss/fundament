@@ -17,6 +17,11 @@ export interface ProjectNamespaces {
 const LABEL_NAMESPACE_ID = 'fundament.io/namespace-id';
 const LABEL_PROJECT_ID = 'fundament.io/project-id';
 
+// How long one cluster gets to list its namespaces. A plugin's screen waits on
+// this lookup, across every cluster in the project, so one that is slow or
+// unreachable must not hold up the rest: past this, its derived names stand in.
+const CLUSTER_LOOKUP_TIMEOUT_MS = 5000;
+
 interface NamespaceListResponse {
   items?: { metadata?: { name?: string; labels?: Record<string, string> } }[];
 }
@@ -58,13 +63,16 @@ export default class ProjectNamespacesService {
   }
 
   /** Maps namespace id to its name on the cluster; empty when the cluster
-   *  cannot be listed. */
+   *  cannot be listed in time. */
   private async clusterNames(clusterId: string, projectId: string): Promise<Map<string, string>> {
     const { kubeApiProxyUrl } = this.config.getConfig();
     const selector = encodeURIComponent(`${LABEL_PROJECT_ID}=${projectId}`);
     const url = `${kubeApiProxyUrl}/clusters/${encodeURIComponent(clusterId)}/api/v1/namespaces?labelSelector=${selector}`;
     try {
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url, {
+        credentials: 'include',
+        signal: AbortSignal.timeout(CLUSTER_LOOKUP_TIMEOUT_MS),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body: NamespaceListResponse = await res.json();
       const names = new Map<string, string>();

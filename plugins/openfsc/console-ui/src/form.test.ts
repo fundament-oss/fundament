@@ -57,7 +57,7 @@ function renderForm(): HTMLFormElement {
       <nldd-checkbox-field name="autoSignGrants" value="serviceConnection"></nldd-checkbox-field>
       <nldd-checkbox-field name="autoSignGrants" value="servicePublication"></nldd-checkbox-field>
 
-      <nldd-text-field id="pg-instances" type="number" min="1"></nldd-text-field>
+      <nldd-text-field id="pg-instances" keyboard="numeric" data-min="1"></nldd-text-field>
       <nldd-text-field id="pg-storageClass" required></nldd-text-field>
       <nldd-text-field id="pg-storageSize"></nldd-text-field>
       <nldd-text-field id="pg-image"></nldd-text-field>
@@ -211,11 +211,17 @@ describe('validateTextField', () => {
   });
 
   it('enforces integer and min for number fields', () => {
-    expect(validateTextField(field('type="number" min="1"', '1.5'))).toBe(
+    expect(validateTextField(field('keyboard="numeric" data-min="1"', '1.5'))).toBe(
       false,
     );
-    expect(validateTextField(field('type="number" min="1"', '0'))).toBe(false);
-    expect(validateTextField(field('type="number" min="1"', '3'))).toBe(true);
+    expect(validateTextField(field('keyboard="numeric" data-min="1"', '0'))).toBe(false);
+    expect(validateTextField(field('keyboard="numeric" data-min="1"', '3'))).toBe(true);
+  });
+
+  it('rejects a number too large to send as one', () => {
+    expect(validateTextField(field('keyboard="numeric" data-min="1"', '9'.repeat(400)))).toBe(
+      false,
+    );
   });
 
   it('skips fields inside a hidden ancestor', () => {

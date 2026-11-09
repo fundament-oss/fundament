@@ -115,11 +115,17 @@ func printTable(results *checker.Results) error {
 	if len(results.Violations) > 0 {
 		fmt.Printf("VIOLATIONS (%d):\n", len(results.Violations))
 		w := NewTableWriter()
-		fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING")
+		_, err := fmt.Fprintln(w, "MODULE\tVERSION\tPUBLISHED\tAGE\tREMAINING")
+		if err != nil {
+			return fmt.Errorf("writing header: %w", err)
+		}
 		for i := range results.Violations {
 			v := &results.Violations[i]
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				v.Module, v.Version, v.PublishTime.Format(TimeFormat), v.Age, v.Remaining)
+			if err != nil {
+				return fmt.Errorf("writing row: %w", err)
+			}
 		}
 		if err := w.Flush(); err != nil {
 			return fmt.Errorf("flushing output: %w", err)

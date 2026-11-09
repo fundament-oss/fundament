@@ -52,7 +52,7 @@ func projectFromListRow(row *db.ProjectListByClusterIDRow) *organizationv1.Proje
 		Name:           row.Name,
 		Alias:          row.Alias,
 		Created:        timestamppb.New(row.Created.Time),
-		NamespaceCount: int32(row.NamespaceCount),
-		MemberCount:    int32(row.MemberCount),
+		NamespaceCount: int32(row.NamespaceCount), //nolint:gosec // a project's namespace count fits int32
+		MemberCount:    int32(row.MemberCount),    //nolint:gosec // a project's member count fits int32
 	}.Build()
 }

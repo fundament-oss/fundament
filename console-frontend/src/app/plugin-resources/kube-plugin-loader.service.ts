@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ConfigService } from '../config.service';
-import PluginRegistryService from './plugin-registry.service';
+import PluginRegistryService, { crdKeys } from './plugin-registry.service';
 import PluginResourceStoreService from './plugin-resource-store.service';
 import type { ParsedCrd, KubeResource } from './types';
 
@@ -22,8 +22,11 @@ export default class KubePluginLoaderService {
   ): Promise<ParsedCrd | undefined> {
     const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
     await this.registry.loadPlugins(clusterId);
-    await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl);
-    return this.registry.getCrd(pluginName, resourceKind, clusterId);
+    const read = await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl);
+    return (
+      read.find((crd) => crdKeys(crd).includes(resourceKind)) ??
+      this.registry.getCrd(pluginName, resourceKind, clusterId)
+    );
   }
 
   async loadCrdAndResources(
@@ -65,8 +68,9 @@ export default class KubePluginLoaderService {
   }
 
   // Re-lists resources for an already-resolved CRD, skipping the plugin/CRD-schema
-  // fetch that loadCrdAndResources does. Used to refresh a list after a delete,
-  // where the schema is unchanged and only the resource set differs.
+  // fetch that loadCrdAndResources does. Used to refresh a list after a delete
+  // and on every poll, where the schema is unchanged and only the resources
+  // differ.
   async loadResources(
     pluginName: string,
     crd: ParsedCrd,
@@ -77,6 +81,25 @@ export default class KubePluginLoaderService {
       clusterId,
       this.configService.getConfig().kubeApiProxyUrl,
       pluginName,
+    );
+  }
+
+  // Re-reads one resource for an already-resolved CRD, the detail page's
+  // counterpart of loadResources above.
+  async loadResource(
+    pluginName: string,
+    crd: ParsedCrd,
+    clusterId: string,
+    name: string,
+    namespace: string | undefined,
+  ): Promise<KubeResource | undefined> {
+    return this.pluginStore.loadResource(
+      crd,
+      clusterId,
+      this.configService.getConfig().kubeApiProxyUrl,
+      pluginName,
+      name,
+      namespace,
     );
   }
 

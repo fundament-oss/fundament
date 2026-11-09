@@ -95,6 +95,8 @@ type Plugin struct {
 	xxx_hidden_Created                  *timestamppb.Timestamp   `protobuf:"bytes,200,opt,name=created"`
 	xxx_hidden_Updated                  *timestamppb.Timestamp   `protobuf:"bytes,210,opt,name=updated"`
 	xxx_hidden_Labels                   []v1.PluginLabel         `protobuf:"varint,220,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
+	xxx_hidden_Logo                     string                   `protobuf:"bytes,230,opt,name=logo"`
+	xxx_hidden_LogoDark                 string                   `protobuf:"bytes,240,opt,name=logo_dark,json=logoDark"`
 	unknownFields                       protoimpl.UnknownFields
 	sizeCache                           protoimpl.SizeCache
 }
@@ -275,6 +277,20 @@ func (x *Plugin) GetLabels() []v1.PluginLabel {
 	return nil
 }
 
+func (x *Plugin) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *Plugin) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *Plugin) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -359,6 +375,14 @@ func (x *Plugin) SetLabels(v []v1.PluginLabel) {
 	x.xxx_hidden_Labels = v
 }
 
+func (x *Plugin) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *Plugin) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
+}
+
 func (x *Plugin) HasCreated() bool {
 	if x == nil {
 		return false
@@ -422,6 +446,9 @@ type Plugin_builder struct {
 	// Trust and support badges. Fundament assigns them, so CreatePlugin and
 	// UpdatePlugin do not accept them; the developer only reads them back.
 	Labels []v1.PluginLabel
+	// Logo of the newest pushed version, as a data URI. Empty when it has none.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 Plugin_builder) Build() *Plugin {
@@ -449,6 +476,8 @@ func (b0 Plugin_builder) Build() *Plugin {
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Updated = b.Updated
 	x.xxx_hidden_Labels = b.Labels
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -693,7 +722,7 @@ var File_registry_v1_common_proto protoreflect.FileDescriptor
 
 const file_registry_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\x86\a\n" +
+	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xb9\a\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -720,7 +749,9 @@ const file_registry_v1_common_proto_rawDesc = "" +
 	"\x1blatest_published_version_id\x18\xbe\x01 \x01(\tR\x18latestPublishedVersionId\x125\n" +
 	"\acreated\x18\xc8\x01 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x125\n" +
 	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x124\n" +
-	"\x06labels\x18\xdc\x01 \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xc7\x03\n" +
+	"\x06labels\x18\xdc\x01 \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\x12\x13\n" +
+	"\x04logo\x18\xe6\x01 \x01(\tR\x04logo\x12\x1c\n" +
+	"\tlogo_dark\x18\xf0\x01 \x01(\tR\blogoDark\"\xc7\x03\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +

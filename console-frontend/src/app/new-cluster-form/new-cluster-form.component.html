@@ -20,20 +20,19 @@
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
-      <nldd-step-indicator
+      <nldd-step-bar
         accessible-label="Cluster creation progress"
-        [current]="currentStepNumber()"
-        [translations]="stepIndicatorTranslations"
+        [translations]="stepBarTranslations"
       >
         @for (step of steps; track step.name; let i = $index) {
-          <nldd-step-indicator-item
+          <nldd-step-bar-item
             [text]="step.name"
             [status]="stepStatus(i)"
             [button]="canNavigate(i)"
             (click)="goToStep(i)"
-          ></nldd-step-indicator-item>
+          ></nldd-step-bar-item>
         }
-      </nldd-step-indicator>
+      </nldd-step-bar>
       <nldd-spacer size="24"></nldd-spacer>
       @switch (currentStepIndex()) {
         @case (0) {

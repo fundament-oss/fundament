@@ -42,7 +42,7 @@ On macOS, use `base64 -D`. Against the local development stack,
 ## Commands
 
 ```
-funops organization create <name>
+funops organization create <name> --node-quota <region>/<machine-type>=<max> [--node-quota ...]
 funops organization list
 funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
@@ -92,8 +92,10 @@ somebody has signed in to.
 
 ## Set quotas
 
-A new organization may create one cluster and no node pools: its cluster quota
-is one and it has no node quota. Set what it may build:
+A new organization may create one cluster, and node pools within the starting
+node quotas `organization create` requires (`--node-quota local/local-small=3`
+gives it up to three `local-small` nodes in `local`): a cluster runs only once
+it has a node pool, and a pool needs a node quota. Change what it may build:
 
 ```bash
 funops organization quota set-clusters acme-corp 3

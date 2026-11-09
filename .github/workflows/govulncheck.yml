@@ -5,6 +5,10 @@ on:
   schedule: # daily at 10:30 UTC
     - cron: '30 10 * * *'
   workflow_dispatch:
+# Only runs of the same PR share a group; master pushes and scheduled runs never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

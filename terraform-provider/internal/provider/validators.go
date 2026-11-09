@@ -21,7 +21,7 @@ func (v uuidValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v uuidValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v uuidValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) { //nolint:gocritic // signature set by validator.String
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
@@ -46,7 +46,7 @@ func (v apiKeyValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v apiKeyValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v apiKeyValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) { //nolint:gocritic // signature set by validator.String
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
@@ -71,7 +71,7 @@ func (v httpURLValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v httpURLValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v httpURLValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) { //nolint:gocritic // signature set by validator.String
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}

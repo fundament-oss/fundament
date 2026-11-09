@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -33,6 +34,9 @@ func (s *AuthnServer) upsertUser(ctx context.Context, queries *db.Queries, claim
 	})
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintUsersUqEmail {
+			// The email names the account that owns the address; the external
+			// reference names who was refused, which may be an identity with
+			// no row yet.
 			s.logger.Warn("sign-in refused: email address already belongs to another account",
 				"email", claims.Email, "external_ref", claims.Sub)
 			return db.UserUpsertRow{}, errEmailInUse
@@ -57,24 +61,38 @@ func (s *AuthnServer) verifyAndParseIDToken(ctx context.Context, rawIDToken stri
 	idToken, err := s.oidcVerifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		s.logger.Info("ID token verification failed", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("verifying ID token: %w", err)
 	}
 
 	var claims oidcClaims
 	if err := idToken.Claims(&claims); err != nil {
 		s.logger.Error("failed to parse claims", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("parsing ID token claims: %w", err)
 	}
 
 	return &claims, nil
 }
 
+// errEmailNotVerified is returned when someone signs in for the first time
+// with an address the identity provider has not verified. Such an address says
+// nothing about who is signing in. Taken at its word, it would claim the
+// pending invite of whoever was invited at it, or end up on a new account
+// where a later `funops organization member add <email>` hands that account
+// the membership. Going ahead without it would leave an account that can never
+// take the address once it is verified, if an invite holds it. The refusal
+// does not depend on whether there is an invite, so it does not tell anyone
+// which addresses were invited. Dex marks its static password users as
+// verified.
+var errEmailNotVerified = errors.New("verify your email address with your identity provider, then log in again")
+
 // processOIDCLogin handles the common logic for processing an OIDC login,
 // including user lookup/creation and JWT generation.
 // Returns the user, groups, and access token on success.
 func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
+	unverified := claims.Email != "" && !claims.EmailVerified
+
 	// Try by external_ref
-	_, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
+	existing, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
 		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -82,7 +100,20 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 		return nil, "", fmt.Errorf("looking up user: %w", err)
 	}
 	if err == nil {
+		// The account keeps the address it has: that one was verified, or
+		// registered by an operator.
+		if unverified {
+			s.logger.Warn("ignoring unverified email address from identity provider",
+				"login_method", loginMethod, "external_ref", claims.Sub, "email", claims.Email)
+			claims.Email = existing.Email.String
+		}
 		return s.handleExistingUser(ctx, claims, loginMethod)
+	}
+
+	if unverified {
+		s.logger.Warn("sign-in refused: unverified email address",
+			"login_method", loginMethod, "external_ref", claims.Sub, "email", claims.Email)
+		return nil, "", errEmailNotVerified
 	}
 
 	// Try invited user by email
@@ -101,6 +132,15 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 
 	// First login of an unknown user: register them without an organization
 	return s.handleNewUser(ctx, claims, loginMethod)
+}
+
+// loginErrorStatus is the HTTP status for an error from processOIDCLogin: a
+// sign-in refused on purpose is the visitor's to fix, anything else is ours.
+func loginErrorStatus(err error) int {
+	if errors.Is(err, errEmailNotVerified) || errors.Is(err, errEmailInUse) {
+		return http.StatusForbidden
+	}
+	return http.StatusInternalServerError
 }
 
 // handleExistingUser handles login for users with a matching external_ref.

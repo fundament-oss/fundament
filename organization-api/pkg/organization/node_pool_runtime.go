@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -52,6 +53,14 @@ func (r nodePoolRuntime) status() organizationv1.NodePoolStatus {
 	default:
 		return organizationv1.NodePoolStatus_NODE_POOL_STATUS_DEGRADED
 	}
+}
+
+// runtimeForPool looks a pool up in the runtimes map. The map is keyed by the
+// worker.gardener.cloud/pool node label, which carries the generated worker
+// name — never the pool name the user chose — so the translation lives here,
+// next to how the map is built, not at each call site.
+func runtimeForPool(runtimes map[string]nodePoolRuntime, poolName string) nodePoolRuntime {
+	return runtimes[kubename.GenerateWorkerName(poolName)]
 }
 
 // nodePoolRuntimes reads the live state of every pool on a cluster, keyed by

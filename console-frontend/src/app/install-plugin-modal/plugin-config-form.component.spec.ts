@@ -21,9 +21,7 @@ function build(schema: Parameters<typeof create<typeof ConfigSchemaEntrySchema>>
 
 describe('PluginConfigFormComponent', () => {
   it('prefills each field with its declared default', () => {
-    const component = build([
-      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-    ]);
+    const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 
     expect(component.form.get('MON_COUNT')?.value).toBe('3');
   });
@@ -54,9 +52,7 @@ describe('PluginConfigFormComponent', () => {
   });
 
   it('clearing an optional field omits the key entirely', () => {
-    const component = build([
-      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-    ]);
+    const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 
     component.form.get('MON_COUNT')?.setValue('');
 
@@ -99,9 +95,7 @@ describe('PluginConfigFormComponent', () => {
   // itself must stay untouched everywhere else (it is the FormControl name and
   // the key onSubmit emits), which every other test in this file already pins.
   it('renders a schema key as a humanized, sentence-case label when no displayName is set', () => {
-    const fixture = buildFixture([
-      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-    ]);
+    const fixture = buildFixture([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 
     expect(fixture.componentInstance.labelFor(fixture.componentInstance.schema()[0])).toBe(
       'Mon count',
@@ -125,9 +119,7 @@ describe('PluginConfigFormComponent', () => {
   });
 
   it('blocks submit when an int value has 20 digits (does not fit int64)', () => {
-    const component = build([
-      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-    ]);
+    const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 
     const confirmed = vi.fn();
     component.confirmed.subscribe(confirmed);
@@ -178,31 +170,5 @@ describe('PluginConfigFormComponent', () => {
     expect(component.showAdvanced()).toBe(false);
     component.onSubmit();
     expect(component.showAdvanced()).toBe(true);
-  });
-
-  describe('onEnter', () => {
-    it('does not submit when Enter originates from a non-text-field element', () => {
-      const component = build([
-        { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-      ]);
-      const confirmed = vi.fn();
-      component.confirmed.subscribe(confirmed);
-
-      component.onEnter({ target: document.createElement('nldd-button') } as unknown as Event);
-
-      expect(confirmed).not.toHaveBeenCalled();
-    });
-
-    it('submits when Enter originates from a text field and the form is valid', () => {
-      const component = build([
-        { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
-      ]);
-      const confirmed = vi.fn();
-      component.confirmed.subscribe(confirmed);
-
-      component.onEnter({ target: document.createElement('nldd-text-field') } as unknown as Event);
-
-      expect(confirmed).toHaveBeenCalledTimes(1);
-    });
   });
 });

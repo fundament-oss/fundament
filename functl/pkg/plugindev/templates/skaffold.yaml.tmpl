@@ -1,0 +1,48 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: fundament-plugin-dev-{{.Layout.Name}}
+
+build:
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+
+  local:
+    useBuildkit: true
+    push: true
+
+  artifacts:
+    # Bare name: --default-repo qualifies it at build time. A pre-qualified
+    # name here gets re-prefixed by skaffold's default-repo munging.
+    - image: {{.ImageName}}
+      context: {{printf "%q" .Layout.ModuleRoot}}
+      docker:
+        dockerfile: {{printf "%q" .Dockerfile}}
+        buildArgs:
+          PLUGIN_PACKAGE: {{printf "%q" .Layout.Package}}
+        # No attestations: push a plain single-platform manifest, not an OCI
+        # index, which skaffold's cache lookup can't resolve (FUN-19).
+        cliFlags:
+          - "--provenance=false"
+          - "--sbom=false"
+{{- if .Layout.SDKReplace}}
+          - "--build-context"
+          - {{printf "%q" (print "fundament-sdk=" .Layout.SDKReplace)}}
+{{- end}}
+      sync: {}
+
+manifests:
+  rawYaml:
+    - installation.yaml
+
+deploy:
+  kubectl: {}
+  kubeContext: {{.Target.KubeContext}}
+
+# Matches spec.dev.image by base name and rewrites it to the fully-qualified
+# tag@digest skaffold just built and pushed.
+resourceSelector:
+  allow:
+    - groupKind: PluginInstallation.plugins.fundament.io
+      image: [".*"]

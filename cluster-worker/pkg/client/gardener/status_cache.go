@@ -238,7 +238,7 @@ func shootStatusChanged(oldObj, newObj any) bool {
 	if !oldOK || !newOK {
 		return true
 	}
-	return *shootStatusOf(oldShoot) != *shootStatusOf(newShoot)
+	return !shootStatusOf(oldShoot).equal(shootStatusOf(newShoot))
 }
 
 // unwrapTombstone returns the last known object of a delete the watch missed

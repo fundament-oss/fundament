@@ -6,9 +6,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func numericToFloat64(n pgtype.Numeric) float64 {

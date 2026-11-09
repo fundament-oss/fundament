@@ -192,8 +192,8 @@ function showForm(storageClasses) {
 
         <nldd-form-actions>
           <nldd-button-group orientation="horizontal">
-            <nldd-button id="submit-btn" type="submit" variant="primary" text="Create database"></nldd-button>
-            <nldd-button id="cancel-btn" type="button" variant="secondary" text="Cancel"></nldd-button>
+            <nldd-button id="submit-btn" type="submit" appearance="primary" text="Create database"></nldd-button>
+            <nldd-button id="cancel-btn" type="button" appearance="secondary" text="Cancel"></nldd-button>
           </nldd-button-group>
         </nldd-form-actions>
       </form>

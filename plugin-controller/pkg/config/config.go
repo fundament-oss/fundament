@@ -40,6 +40,10 @@ type Config struct {
 	// enable in production — see charts/fundament/templates/plugin-controller.yaml
 	// for the escalation implications.
 	AllowUnpinnedHash bool `env:"PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH" envDefault:"false"`
+
+	// AllowDevMode gates honoring PluginInstallationSpec.Dev: when false, the
+	// field is ignored and the plugin deploys normally. Sandbox-only.
+	AllowDevMode bool `env:"PLUGIN_CONTROLLER_ALLOW_DEV_MODE" envDefault:"false"`
 }
 
 // Validate checks what env parsing cannot. The cluster and organization ids

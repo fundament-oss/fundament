@@ -51,7 +51,7 @@
     <nav class="ml-auto flex items-center gap-2" aria-label="Primary">
       @if (variant === 'catalog') {
         <app-developer-link path="/manage/create">
-          <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
+          <nldd-button text="Build a plugin" appearance="neutral-base"></nldd-button>
         </app-developer-link>
         <!-- The console's session, read back from authn-api (see
              watchSession). Nothing while the answer is out, rather than a
@@ -65,7 +65,7 @@
               expandable
               popup-type="menu"
               single-line
-              variant="neutral-tinted"
+              appearance="neutral-tinted"
               start-icon="person-circle"
               [attr.text]="accountLabel()"
               [attr.accessible-label]="'Account: ' + accountLabel()"
@@ -132,7 +132,7 @@
           }
           @case ('signed-out') {
             <app-developer-link path="/manage">
-              <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
+              <nldd-button text="Sign in" appearance="neutral-tinted"></nldd-button>
             </app-developer-link>
           }
         }
@@ -150,7 +150,7 @@
             expandable
             popup-type="menu"
             single-line
-            variant="neutral-tinted"
+            appearance="neutral-tinted"
             start-icon="apartment-building"
             [attr.text]="active.label"
             [attr.accessible-label]="'Publishing as ' + active.label + ', switch organization'"
@@ -172,7 +172,7 @@
             class="border-dividers flex max-w-64 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
           >
             <nldd-icon
-              name="apartment-building"
+              icon="apartment-building"
               class="text-accent-600 block! h-4 w-4 shrink-0"
             ></nldd-icon>
             <span class="sr-only">Publishing as</span>
@@ -182,7 +182,7 @@
       }
       @if (variant !== 'catalog' && storefrontUrl) {
         <a [href]="storefrontUrl">
-          <nldd-button text="Browse the marketplace" variant="neutral-tinted"></nldd-button>
+          <nldd-button text="Browse the marketplace" appearance="neutral-tinted"></nldd-button>
         </a>
       }
       <!-- A signed-in visitor picks the theme under Appearance in the account
@@ -192,7 +192,7 @@
         <nldd-icon-button
           [icon]="isDarkMode() ? 'sun' : 'moon'"
           [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
-          variant="neutral-transparent"
+          appearance="neutral-transparent"
           size="sm"
           (click)="toggleTheme()"
         ></nldd-icon-button>
@@ -237,13 +237,13 @@
       "
     >
       @if (toastService.toast()?.type === 'success') {
-        <nldd-icon name="check-mark-circle" class="block! h-5 w-5"></nldd-icon>
+        <nldd-icon icon="check-mark-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'error') {
-        <nldd-icon name="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
+        <nldd-icon icon="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
       } @else if (toastService.toast()?.type === 'warning') {
-        <nldd-icon name="exclamation-triangle" class="block! h-5 w-5"></nldd-icon>
+        <nldd-icon icon="exclamation-triangle" class="block! h-5 w-5"></nldd-icon>
       } @else {
-        <nldd-icon name="info-circle" class="block! h-5 w-5"></nldd-icon>
+        <nldd-icon icon="info-circle" class="block! h-5 w-5"></nldd-icon>
       }
     </div>
     <span class="min-w-0 flex-1 wrap-break-word">{{ toastService.toast()?.message }}</span>
@@ -253,7 +253,7 @@
       aria-label="Dismiss notification"
       class="ml-auto cursor-pointer text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-800"
     >
-      <nldd-icon name="dismiss-small" class="block! h-4 w-4"></nldd-icon>
+      <nldd-icon icon="dismiss-small" class="block! h-4 w-4"></nldd-icon>
     </button>
   </div>
 }

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -210,7 +211,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.NoError(t, err)
 
 	nsName := pluginNamespace(cr.Name)
@@ -289,7 +290,7 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.NoError(t, err)
 
 	var role rbacv1.ClusterRole
@@ -341,7 +342,7 @@ func TestReconcileChildren_DeploymentUsesManifestImage(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.NoError(t, err)
 
 	var deploy appsv1.Deployment
@@ -380,7 +381,7 @@ func TestReconcileChildren_DeploymentNotCreatedWhenScopeFails(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:whatever"},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.Error(t, err)
 
 	// Deployment must NOT exist yet — scope failure aborts before Deployment.
@@ -419,7 +420,7 @@ func TestReconcilePluginScope_RejectsHashMismatch(t *testing.T) {
 	// reconcileChildren propagates the hash-mismatch so Reconcile can mark the
 	// installation Failed (and the PluginScopeReady Condition on the CR
 	// reflects the failure).
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "definition hash mismatch")
 
@@ -464,7 +465,7 @@ func TestReconcilePluginScope_RejectsUnpinnedWithoutFlag(t *testing.T) {
 		defClient:           fakeDefClient{err: errors.New("must not be called")},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH")
 }
@@ -493,7 +494,7 @@ func TestReconcilePluginScope_UnpinnedWithFlag(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:not-checked"},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.NoError(t, err)
 
 	var role rbacv1.ClusterRole
@@ -524,7 +525,7 @@ func TestReconcilePluginScope_FetchError(t *testing.T) {
 		defClient:           fakeDefClient{err: errors.New("organization-api unreachable")},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "fetch definition")
 
@@ -567,7 +568,7 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           counting,
 		defCache:            newDefinitionCache(),
@@ -620,7 +621,7 @@ func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -663,7 +664,7 @@ func reconcileWithDefClient(t *testing.T, defClient defclient.Client, pin string
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second},
-		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           defClient,
 		defCache:            newDefinitionCache(),
@@ -729,8 +730,9 @@ func TestReconcile_StartedInstallKeepsRetrying(t *testing.T) {
 	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest}, "sha256:definitely-not-what-the-catalog-serves", runningOnGeneration(1))
 	require.NoError(t, err, "a started install is retried at the poll pace, not the workqueue backoff")
 	assert.Equal(t, 30*time.Second, result.RequeueAfter)
-	// The test poller cannot reach the plugin, so a fresh poll reads Deploying.
-	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase, "health must still be polled")
+	// The test poller cannot reach the plugin, which was up on this spec, so a
+	// fresh poll reads Degraded.
+	assert.Equal(t, pluginsv1.PluginPhaseDegraded, got.Status.Phase, "health must still be polled")
 	assert.False(t, got.Status.Ready)
 	assert.Contains(t, got.Status.Message, "hash mismatch")
 }
@@ -844,7 +846,7 @@ func TestPollInterval(t *testing.T) {
 				continue
 			}
 			cr.Status.Phase = phase
-			setProgressingCondition(cr, now)
+			setProgressingCondition(cr, phase != pluginsv1.PluginPhaseDeploying, now)
 			now = now.Add(time.Minute)
 		}
 		return r.pollInterval(cr, now)
@@ -859,7 +861,7 @@ func TestPollInterval(t *testing.T) {
 	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseDeploying))
 
 	// Neither is one that has been coming up for too long (a crash loop).
-	crashLoop := make([]pluginsv1.PluginPhase, 11)
+	crashLoop := make([]pluginsv1.PluginPhase, 11, 13)
 	for i := range crashLoop {
 		crashLoop[i] = pluginsv1.PluginPhaseDeploying
 	}
@@ -873,6 +875,42 @@ func TestPollInterval(t *testing.T) {
 	// Unset falls back to the steady-state interval rather than a hot loop.
 	r.cfg.ProgressPollInterval = 0
 	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying))
+}
+
+// TestStatusPoller_Unreachable verifies that a plugin that cannot be reached
+// reads as still on its way only until it first came up on the current spec:
+// after that it is broken, and must not show as one still being installed.
+func TestStatusPoller_Unreachable(t *testing.T) {
+	// No pods or deployment: nothing in the workload says it cannot start.
+	reader := fake.NewClientBuilder().WithScheme(newTestScheme()).Build()
+	poller := newStatusPoller(reader).WithClient(unreachableHTTPClient())
+
+	tests := map[string]struct {
+		mutate func(*pluginsv1.PluginInstallation)
+		want   pluginsv1.PluginPhase
+	}{
+		"never polled":          {mutate: func(*pluginsv1.PluginInstallation) {}, want: pluginsv1.PluginPhaseDeploying},
+		"up on this spec":       {mutate: runningOnGeneration(1), want: pluginsv1.PluginPhaseDegraded},
+		"up on a previous spec": {mutate: func(cr *pluginsv1.PluginInstallation) { runningOnGeneration(1)(cr); cr.Generation = 2 }, want: pluginsv1.PluginPhaseDeploying},
+		"still coming up":       {mutate: func(cr *pluginsv1.PluginInstallation) { setProgressingCondition(cr, false, time.Now()) }, want: pluginsv1.PluginPhaseDeploying},
+		"up before Progressing existed": {mutate: func(cr *pluginsv1.PluginInstallation) {
+			cr.Status.Phase = pluginsv1.PluginPhaseRunning
+			cr.Status.ObservedGeneration = cr.Generation
+		}, want: pluginsv1.PluginPhaseDegraded},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cr := testCR()
+			tt.mutate(cr)
+
+			got, reachable := poller.poll(context.Background(), cr)
+			assert.False(t, reachable)
+			assert.Equal(t, tt.want, got.Phase)
+			assert.False(t, got.Ready)
+			assert.Contains(t, got.Message, "plugin not reachable")
+		})
+	}
 }
 
 func TestMapPhase(t *testing.T) {
@@ -1054,8 +1092,8 @@ func startMockPluginServer(t *testing.T, handlers mockPluginHandlers) (connect.H
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(svc)
 	mux.Handle(path, rpcHandler)
 
-	server := &http.Server{Handler: mux}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	go func() { _ = server.Serve(listener) }()
@@ -1072,7 +1110,7 @@ type mockPluginHandler struct {
 
 func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 	if m.handlers.requestUninstall == nil {
-		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req)
+		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req) //nolint:wrapcheck // test double passes through
 	}
 	return m.handlers.requestUninstall(ctx, req)
 }
@@ -1233,7 +1271,7 @@ func TestReconcileChildren_RejectsConfigViolatingSchema(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MON_CONUT")
 
@@ -1296,7 +1334,7 @@ func TestReconcileChildren_AcceptsEmptyConfigWithSchema(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr, "")
 	require.NoError(t, err)
 
 	var found bool
@@ -1328,7 +1366,7 @@ func TestReconcileChildren_ValidConfigStillInjected(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
-	require.NoError(t, r.reconcileChildren(context.Background(), slog.Default(), cr))
+	require.NoError(t, r.reconcileChildren(context.Background(), slog.Default(), cr, ""))
 
 	var deploy appsv1.Deployment
 	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{
@@ -1375,7 +1413,7 @@ func TestReconcile_WaitsForTerminatingNamespace(t *testing.T) {
 		client:              fakeClient,
 		logger:              slog.Default(),
 		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
-		statusPoller:        newStatusPoller(),
+		statusPoller:        newStatusPoller(fakeClient),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 		defCache:            newDefinitionCache(),
@@ -1395,4 +1433,236 @@ func TestReconcile_WaitsForTerminatingNamespace(t *testing.T) {
 	var svc corev1.Service
 	err = fakeClient.Get(context.Background(), types.NamespacedName{Namespace: ns.Name, Name: childResourceName}, &svc)
 	assert.True(t, apierrors.IsNotFound(err), "nothing is built in a terminating namespace")
+}
+
+// devModeTestCR returns a qualified, finalized CR pinned to sampleManifest,
+// ready for a full Reconcile() pass, with the given annotations and
+// spec.dev.Image applied.
+func devModeTestCR(t *testing.T, pin string, annotations map[string]string, devImage string) *pluginsv1.PluginInstallation {
+	t.Helper()
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	cr.Annotations = annotations
+	if devImage != "" {
+		cr.Spec.Dev = &pluginsv1.DevSpec{Image: devImage}
+	}
+	return cr
+}
+
+// reconcileDevModeCR runs one full Reconcile() of cr against sampleManifest
+// and returns the resulting Deployment image and the persisted CR.
+func reconcileDevModeCR(t *testing.T, cr *pluginsv1.PluginInstallation, manifest []byte, pin string, allowDevMode bool) (string, pluginsv1.PluginInstallation) {
+	t.Helper()
+	scheme := newTestScheme()
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: allowDevMode},
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+
+	var deploy appsv1.Deployment
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: childResourceName, Namespace: pluginNamespace(cr.Name),
+	}, &deploy))
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	return deploy.Spec.Template.Spec.Containers[0].Image, got
+}
+
+// TestReconcile_DevModeConditionClearsWhenAnnotationRemoved verifies leaving
+// dev mode removes the DevMode condition instead of leaving a stale True.
+func TestReconcile_DevModeConditionClearsWhenAnnotationRemoved(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+	cr := devModeTestCR(t, pin, map[string]string{pluginsv1.AnnotationDevMode: "true"}, devImage)
+
+	scheme := newTestScheme()
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+		defCache:            newDefinitionCache(),
+	}
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	require.NotNil(t, meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode))
+
+	// Leave dev mode: drop the annotation and dev image, reconcile again.
+	got.Annotations = nil
+	got.Spec.Dev = nil
+	require.NoError(t, fakeClient.Update(context.Background(), &got))
+	_, err = r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	assert.Nil(t, meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode))
+}
+
+// TestReconcile_DevModeDeploysTheCRImage verifies the fully-gated case: flag
+// on, annotation exactly "true", spec.dev.image set -> the CR's image
+// deploys verbatim and DevMode=True/DevModeActive is recorded.
+func TestReconcile_DevModeDeploysTheCRImage(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+	cr := devModeTestCR(t, pin, map[string]string{pluginsv1.AnnotationDevMode: "true"}, devImage)
+
+	image, got := reconcileDevModeCR(t, cr, manifest, pin, true)
+
+	assert.Equal(t, devImage, image)
+	cond := meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode)
+	require.NotNil(t, cond, "DevMode condition must be set")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, "DevModeActive", cond.Reason)
+}
+
+// TestReconcile_DevAnnotationIgnoredWithoutFlag verifies the controller flag
+// off overrides an annotation + spec.dev that would otherwise activate dev
+// mode: the definition's image deploys and DevMode=False/DevModeDisabled is
+// recorded.
+func TestReconcile_DevAnnotationIgnoredWithoutFlag(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+	cr := devModeTestCR(t, pin, map[string]string{pluginsv1.AnnotationDevMode: "true"}, devImage)
+
+	image, got := reconcileDevModeCR(t, cr, manifest, pin, false)
+
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", image)
+	cond := meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode)
+	require.NotNil(t, cond, "DevMode condition must be set")
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, "DevModeDisabled", cond.Reason)
+}
+
+// TestReconcile_DevImageIgnoredWithoutAnnotation verifies the annotation gate:
+// with the flag on and spec.dev.image set, anything other than the annotation
+// value exactly "true" (missing, or case/spelling variants) deploys the
+// definition's image and never sets DevMode=True.
+func TestReconcile_DevImageIgnoredWithoutAnnotation(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+
+	tests := map[string]map[string]string{
+		"no annotation":    nil,
+		"wrong case":       {pluginsv1.AnnotationDevMode: "True"},
+		"not exactly true": {pluginsv1.AnnotationDevMode: "yes"},
+	}
+
+	for name, annotations := range tests {
+		t.Run(name, func(t *testing.T) {
+			cr := devModeTestCR(t, pin, annotations, devImage)
+			image, got := reconcileDevModeCR(t, cr, manifest, pin, true)
+
+			assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", image)
+			cond := meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode)
+			if cond != nil {
+				assert.NotEqual(t, metav1.ConditionTrue, cond.Status, "no DevMode=True condition")
+			}
+		})
+	}
+}
+
+// TestReconcile_DevAnnotationTrueWithoutDevImage verifies the remaining gated
+// case from Step 4: the annotation is "true" and the flag is on, but
+// spec.dev.image is unset -> production image deploys and DevMode=False,
+// reason DevImageMissing, is recorded (distinct from DevModeDisabled).
+func TestReconcile_DevAnnotationTrueWithoutDevImage(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+	cr := devModeTestCR(t, pin, map[string]string{pluginsv1.AnnotationDevMode: "true"}, "")
+
+	image, got := reconcileDevModeCR(t, cr, manifest, pin, true)
+
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", image)
+	cond := meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode)
+	require.NotNil(t, cond, "DevMode condition must be set")
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, "DevImageMissing", cond.Reason)
+}
+
+// TestReconcile_DevModeConditionSetOnEarlyFailure verifies DevMode is computed
+// before reconcileChildren runs: a reconcile that fails before ever reaching
+// the Deployment block (an invalid spec.config here) still records an
+// accurate DevMode condition instead of leaving it unset or stale.
+func TestReconcile_DevModeConditionSetOnEarlyFailure(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifestWithConfigSchema(t)
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	cr.Annotations = map[string]string{pluginsv1.AnnotationDevMode: "true"}
+	cr.Spec.Dev = &pluginsv1.DevSpec{Image: devImage}
+	cr.Spec.Config = map[string]string{"MON_CONUT": "1"} // typo: undeclared key -> ConfigInvalid
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, AllowDevMode: true},
+		statusPoller:        newStatusPoller(fakeClient).WithClient(unreachableHTTPClient()),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err, "a permanent config failure is not retried by the workqueue")
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	require.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+
+	// Fail-closed: the Deployment never gets reconciled.
+	var deploy appsv1.Deployment
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: childResourceName, Namespace: pluginNamespace(cr.Name),
+	}, &deploy)
+	require.True(t, apierrors.IsNotFound(err), "Deployment must not be created for invalid config")
+
+	cond := meta.FindStatusCondition(got.Status.Conditions, ConditionDevMode)
+	require.NotNil(t, cond, "DevMode condition must be set even when reconcile fails before the Deployment block")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, "DevModeActive", cond.Reason)
 }

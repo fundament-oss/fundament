@@ -18,6 +18,10 @@ const (
 	PluginPhaseTerminating PluginPhase = "Terminating"
 )
 
+// AnnotationDevMode, set to exactly "true", opts a PluginInstallation into
+// dev mode. Honored only together with spec.dev and Config.AllowDevMode.
+const AnnotationDevMode = "plugins.fundament.io/dev-mode"
+
 // PluginInstallation represents an installed plugin.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type PluginInstallation struct {
@@ -41,6 +45,17 @@ type PluginInstallationSpec struct {
 	// handle every consumer addresses the installation by.
 	DefinitionRef DefinitionRef     `json:"definitionRef"`
 	Config        map[string]string `json:"config,omitempty"`
+	// Dev, when set, deploys spec.dev.image verbatim with relaxed probes and
+	// filesystem instead of the resolved definition image (sandbox-only; requires
+	// PLUGIN_CONTROLLER_ALLOW_DEV_MODE=true).
+	// +optional
+	Dev *DevSpec `json:"dev,omitempty"`
+}
+
+// DevSpec carries the dev-mode image override for a PluginInstallation.
+// +k8s:deepcopy-gen=true
+type DevSpec struct {
+	Image string `json:"image"`
 }
 
 // DefinitionRef pins an immutable, content-addressed PluginDefinition.

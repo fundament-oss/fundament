@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testClient(provider ProviderConfig) *RealClient {
-	return &RealClient{provider: provider, logger: slog.Default()}
+func testClient(provider *ProviderConfig) *RealClient {
+	return &RealClient{provider: *provider, logger: slog.Default()}
 }
 
 func testCluster() *ClusterToSync {
@@ -21,12 +21,14 @@ func testCluster() *ClusterToSync {
 		Namespace:         "garden-test",
 		Region:            "local",
 		KubernetesVersion: "1.35.6",
+		NodePools:         []NodePool{{Name: "workers", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 3}},
 	}
 }
 
 // The local provider gets the in-code node CIDR and no provider extension config.
 func TestBuildShootSpec_LocalDefaults(t *testing.T) {
-	r := testClient(NewProviderConfig())
+	provider := NewProviderConfig()
+	r := testClient(&provider)
 
 	shoot, err := r.buildShootSpec(testCluster())
 	require.NoError(t, err)
@@ -45,7 +47,7 @@ func TestBuildShootSpec_MetalProvider(t *testing.T) {
 	infra := `{"apiVersion":"metal.provider.extensions.gardener.cloud/v1alpha1","kind":"InfrastructureConfig","partitionID":"fire"}`
 	cp := `{"apiVersion":"metal.provider.extensions.gardener.cloud/v1alpha1","kind":"ControlPlaneConfig"}`
 
-	r := testClient(ProviderConfig{
+	r := testClient(&ProviderConfig{
 		Type:                 "metal",
 		CloudProfile:         "metal",
 		Region:               "local",
@@ -74,7 +76,7 @@ func TestBuildShootSpec_MetalProvider(t *testing.T) {
 
 // An empty cluster region falls back to the provider default.
 func TestBuildShootSpec_RegionFallback(t *testing.T) {
-	r := testClient(ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
+	r := testClient(&ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
 
 	cluster := testCluster()
 	cluster.Region = ""
@@ -88,7 +90,7 @@ func TestBuildShootSpec_RegionFallback(t *testing.T) {
 // uses the region's cloud profile and its region-name INSIDE that profile
 // (which may differ from the user-facing catalog region name).
 func TestBuildShootSpec_CatalogRegion(t *testing.T) {
-	r := testClient(ProviderConfig{Type: "metal", CloudProfile: "env-profile", Region: "env-region"})
+	r := testClient(&ProviderConfig{Type: "metal", CloudProfile: "env-profile", Region: "env-region"})
 
 	cluster := testCluster()
 	cluster.Region = "groenekan-1" // user-facing catalog name
@@ -103,7 +105,7 @@ func TestBuildShootSpec_CatalogRegion(t *testing.T) {
 
 // Without catalog fields the provider env defaults still apply (legacy cluster).
 func TestBuildShootSpec_LegacyClusterUsesProviderDefaults(t *testing.T) {
-	r := testClient(ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
+	r := testClient(&ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
 
 	cluster := testCluster()
 

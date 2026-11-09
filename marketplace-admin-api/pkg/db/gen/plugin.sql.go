@@ -278,6 +278,7 @@ SELECT
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
 	plugin_definitions.manifest,
+	plugin_definitions.menu_icons,
 	plugin_definitions.created,
 	plugin_definitions.published,
 	(SELECT submissions.submitted
@@ -306,6 +307,7 @@ type PluginVersionGetByIDRow struct {
 	Status        dbconst.PluginDefinitionStatus
 	ReleaseNotes  string
 	Manifest      []byte
+	MenuIcons     []byte
 	Created       pgtype.Timestamptz
 	Published     pgtype.Timestamptz
 	Submitted     pgtype.Timestamptz
@@ -327,6 +329,7 @@ func (q *Queries) PluginVersionGetByID(ctx context.Context, arg PluginVersionGet
 		&i.Status,
 		&i.ReleaseNotes,
 		&i.Manifest,
+		&i.MenuIcons,
 		&i.Created,
 		&i.Published,
 		&i.Submitted,

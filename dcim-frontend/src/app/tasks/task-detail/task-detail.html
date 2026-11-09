@@ -93,7 +93,7 @@
         <!-- Properties, and each value is the control that sets it. No second
              screen and no submit: every one of these is a fact that is true the
              moment you set it, so the field you touch is the whole change. -->
-        <nldd-list type="form" variant="box-tinted" accessible-label="Task properties">
+        <nldd-list type="form" appearance="box-tinted" accessible-label="Task properties">
           <nldd-list-item>
             <nldd-text-cell width="full" text="Due date"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -112,7 +112,7 @@
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
               <nldd-button
-                variant="secondary"
+                appearance="secondary"
                 expandable
                 popup-type="menu"
                 [attr.text]="task.priority"
@@ -216,7 +216,7 @@
               <nldd-text>{{ roundSentence(round, task) }}</nldd-text>
               <nldd-spacer size="12"></nldd-spacer>
               <nldd-button
-                variant="secondary"
+                appearance="secondary"
                 text="Open the round"
                 (click)="openTechnicianView()"
               ></nldd-button>
@@ -230,7 +230,7 @@
                would have made it real. -->
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-button
-          variant="destructive"
+          appearance="destructive"
           width="full"
           text="Delete task"
           start-icon="trash"
@@ -245,7 +245,7 @@
           >
             <nldd-button
               slot="actions"
-              variant="primary"
+              appearance="primary"
               text="Try again"
               (click)="retryLoadNotes()"
             ></nldd-button>
@@ -254,7 +254,7 @@
           <!-- The field is the last row of the same box, so a new note appears
                right above where you typed it. Whose note it is stands beside
                it; whose the new one will be is not a question you have. -->
-          <nldd-list variant="box-tinted" accessible-label="Notes">
+          <nldd-list appearance="box-tinted" accessible-label="Notes">
             @for (note of task.notes; track $index) {
               @let author = noteAuthor(note);
               <nldd-list-item>
@@ -287,7 +287,7 @@
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content" vertical-alignment="bottom">
-                <nldd-button variant="secondary" text="Add" (click)="addNote()"></nldd-button>
+                <nldd-button appearance="secondary" text="Add" (click)="addNote()"></nldd-button>
               </nldd-cell>
             </nldd-list-item>
           </nldd-list>
@@ -336,14 +336,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep task"
     size="sm"
     (click)="closeDeleteDialog()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete task"
     size="sm"
     (click)="confirmDeleteTask()"

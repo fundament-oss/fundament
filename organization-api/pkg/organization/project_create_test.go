@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 func Test_Project_Create_Unauthenticated(t *testing.T) {
@@ -171,4 +172,45 @@ func Test_Project_Create_NameLength(t *testing.T) {
 		Name:      "a--b",
 	}.Build())
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+}
+
+// A removed member's permission in OpenFGA outlives the removal for a while,
+// so the creator's organization membership is checked in the database too.
+func Test_Project_Create_RequiresAcceptedOrgMember(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, userID))
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	cluster, err := clusterClient.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = env.adminPool.Exec(t.Context(), `
+		UPDATE tenant.organizations_users
+		SET deleted = now(), status = 'revoked'
+		WHERE organization_id = $1 AND user_id = $2`,
+		orgID, userID,
+	)
+	require.NoError(t, err)
+
+	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+	_, err = client.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: cluster.GetClusterId(),
+		Name:      "test-project",
+	}.Build())
+	assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 }

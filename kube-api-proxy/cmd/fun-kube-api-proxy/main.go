@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
@@ -105,9 +103,14 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(server.Handler(), &http2.Server{}),
+		Handler:           server.Handler(),
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

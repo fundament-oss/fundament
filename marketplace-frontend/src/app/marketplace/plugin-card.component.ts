@@ -19,6 +19,8 @@ import PluginLabelsComponent from './plugin-labels.component';
           <div class="flex items-start gap-3">
             <app-plugin-icon
               [name]="plugin().icon"
+              [logo]="plugin().logo"
+              [logoDark]="plugin().logoDark"
               [label]="plugin().displayName"
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1.5 dark:bg-gray-800"
             />

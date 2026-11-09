@@ -137,6 +137,9 @@ readinessProbe:
     port: {{ .port }}
   initialDelaySeconds: 5
   periodSeconds: 5
+  # Above the handlers' 5s dependency-ping budget; the kubelet default of 1s
+  # would cancel a slow-but-successful ping and pull the pod from endpoints.
+  timeoutSeconds: 6
 {{- if .root.Values.hotreload.enabled }}
   failureThreshold: 60
 {{- end }}

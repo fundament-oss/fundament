@@ -36,7 +36,6 @@
       <nldd-form
         [formGroup]="projectForm"
         (submit)="onSubmit($event)"
-        (keydown.enter)="onSubmit($event)"
       >
         <nldd-form-field label="Project name">
           <nldd-text-field
@@ -109,7 +108,7 @@
             text="Create project"
             [loading]="isSubmitting()"
             width="full"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
         </nldd-form-actions>
       </nldd-form>

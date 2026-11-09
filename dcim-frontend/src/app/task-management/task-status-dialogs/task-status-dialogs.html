@@ -62,9 +62,12 @@
           @if (ui.waitingChoice() === 'other') {
             <!-- No label over it: what you type here is the whole sentence, so a
                  label would be the first half of it standing above the rest. The
-                 placeholder shows the shape instead. -->
+                 placeholder shows the shape instead, and the accessible label
+                 names it for a screen reader, which does not read a placeholder
+                 as a name. -->
             <nldd-form-field>
               <nldd-multi-line-text-field
+                accessible-label="What else it is waiting on"
                 rows="1"
                 placeholder="Waiting on a part, a delivery, a decision"
                 [value]="ui.waitingDraft()"
@@ -94,7 +97,7 @@
             </nldd-form-field>
           }
           <nldd-form-actions>
-            <nldd-button type="submit" variant="primary" width="full" text="Save"></nldd-button>
+            <nldd-button type="submit" appearance="primary" width="full" text="Save"></nldd-button>
           </nldd-form-actions>
         </nldd-form>
       </nldd-simple-section>
@@ -118,19 +121,19 @@
   @if (ui.takeOver()) {
     <nldd-button
       slot="actions"
-      variant="primary"
+      appearance="primary"
       [attr.text]="ui.takeOverKeepAction()"
       (click)="ui.confirmForAssignee()"
     ></nldd-button>
     <nldd-button
       slot="actions"
-      variant="secondary"
+      appearance="secondary"
       text="Take it over"
       (click)="ui.confirmTakeOver()"
     ></nldd-button>
     <nldd-button
       slot="actions"
-      variant="secondary"
+      appearance="secondary"
       text="Cancel"
       (click)="ui.cancelTakeOver()"
     ></nldd-button>

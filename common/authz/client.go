@@ -47,7 +47,7 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
 // Returns a Decision indicating whether the subject can perform the action on the resource.
-func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) {
+func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision, error) { //nolint:gocritic // exported signature mirrored by kube-api-proxy interfaces
 	// Build OpenFGA check context from the AuthZEN request context and any
 	// object/action properties, so that conditions can be evaluated correctly.
 	checkContext := map[string]any{}
@@ -154,9 +154,9 @@ func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (Evalu
 
 	results := make([]Decision, 0, len(req.Evaluations))
 
-	for _, eval := range req.Evaluations {
+	for i := range req.Evaluations {
 		// Apply defaults from top-level request
-		merged := mergeEvaluation(eval, req)
+		merged := mergeEvaluation(&req.Evaluations[i], req)
 
 		decision, err := c.Evaluate(ctx, merged)
 		if err != nil {
@@ -184,8 +184,8 @@ func (c *Client) Evaluations(ctx context.Context, req EvaluationsRequest) (Evalu
 }
 
 // mergeEvaluation applies defaults from the batch request to an individual evaluation.
-func mergeEvaluation(eval EvaluationRequest, req EvaluationsRequest) EvaluationRequest {
-	result := eval
+func mergeEvaluation(eval *EvaluationRequest, req EvaluationsRequest) EvaluationRequest {
+	result := *eval
 
 	// Apply subject default if not specified in evaluation
 	if eval.Subject.Type == "" && req.Subject != nil {

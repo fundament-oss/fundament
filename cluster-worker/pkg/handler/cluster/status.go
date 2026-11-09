@@ -88,6 +88,11 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		return 0, fmt.Errorf("get shoot status: %w", err)
 	}
 
+	// Pool status is derived from the same report, before the cluster-level
+	// early return below: a check that changes nothing for the cluster row can
+	// still carry a new reason for a pool.
+	h.updateNodePoolStatuses(ctx, cluster, shootStatus)
+
 	stored := storedShootState{
 		Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
 		Message:  cluster.ShootStatusMessage.String,
@@ -103,7 +108,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		}
 		stored.LastWarning = lastWarning.String
 	}
-	update := nextShootStatus(stored, shootStatus)
+	update := nextShootStatus(&stored, shootStatus)
 	var retryAfter time.Duration
 	if update.Status == gardener.StatusProgressing || update.Updating {
 		last, err := h.lastProgress(ctx, cluster.ID)
@@ -112,7 +117,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		}
 		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
 	}
-	if update.unchanged(stored) {
+	if update.unchanged(&stored) {
 		// Gardener writes a Shoot after every reconcile task; most of those
 		// leave what fundament records as it is.
 		return retryAfter, nil
@@ -136,7 +141,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		case dbconst.ClusterEventEventType_StatusUnhealthy:
 			h.logger.Warn("ready shoot became unhealthy", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		case dbconst.ClusterEventEventType_StatusLost:
-			h.logger.Warn("shoot disappeared from Gardener", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
+			h.logger.Error("ALERT: shoot disappeared from Gardener, not recreating it", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
 		case dbconst.ClusterEventEventType_StatusWarning:
 			h.logger.Warn("gardener is retrying a failed shoot operation", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		default:
@@ -187,7 +192,7 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 			Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String,
 			APIAvailable: cluster.ShootApiAvailable.Valid,
 		}
-		if deleting.unchanged(stored) {
+		if deleting.unchanged(&stored) {
 			return nil
 		}
 		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {
@@ -250,6 +255,12 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 			Message:   pgtype.Text{String: event.Message, Valid: true},
 		}); err != nil {
 			return false, fmt.Errorf("create %s event: %w", event.Type, err)
+		}
+	}
+
+	if update.Status == gardener.StatusLost {
+		if err := qtx.NodePoolClearStatusByClusterID(ctx, db.NodePoolClearStatusByClusterIDParams{ClusterID: cluster.ID}); err != nil {
+			return false, fmt.Errorf("clear node pool status: %w", err)
 		}
 	}
 

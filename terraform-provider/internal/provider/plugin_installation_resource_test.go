@@ -1,9 +1,13 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
@@ -243,7 +247,7 @@ func TestClassifyPluginPhase(t *testing.T) {
 		{phase: "Running", wantDone: true, wantTerminal: false},
 		{phase: "Failed", wantDone: false, wantTerminal: true},
 		{phase: "Terminating", wantDone: false, wantTerminal: true},
-		{phase: "Degraded", wantDone: false, wantTerminal: true},
+		{phase: "Degraded", wantDone: false, wantTerminal: false},
 		{phase: "Pending", wantDone: false, wantTerminal: false},
 		{phase: "Deploying", wantDone: false, wantTerminal: false},
 		{phase: "", wantDone: false, wantTerminal: false},
@@ -258,6 +262,24 @@ func TestClassifyPluginPhase(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A Degraded plugin may recover, so the wait runs out the deadline rather than
+// failing early, and the timeout then says what was wrong.
+func TestWaitForPluginRunning_DegradedWaitsForDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"status":{"phase":"Degraded","message":"container plugin: ImagePullBackOff: manifest unknown"}}`))
+	}))
+	defer srv.Close()
+
+	r := &PluginInstallationResource{client: &FundamentClient{KubeProxyURL: srv.URL, KubeProxyHTTPClient: srv.Client()}}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := r.waitForPluginRunning(ctx, "cluster-abc", "acme--grafana")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.ErrorContains(t, err, "Degraded")
+	assert.ErrorContains(t, err, "ImagePullBackOff: manifest unknown")
 }
 
 func TestDefinitionHashRegex(t *testing.T) {

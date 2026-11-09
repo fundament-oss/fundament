@@ -47,8 +47,8 @@ func (s *Server) ListTasks(
 	}
 
 	tasks := make([]*dcimv1.Task, 0, len(rows))
-	for _, row := range rows {
-		tasks = append(tasks, taskFromListRow(&row))
+	for i := range rows {
+		tasks = append(tasks, taskFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListTasksResponse_builder{

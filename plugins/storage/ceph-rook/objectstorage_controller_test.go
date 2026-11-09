@@ -109,8 +109,8 @@ func testObjectBucket(name, storageClass string) *unstructured.Unstructured {
 	u.SetAPIVersion("objectbucket.io/v1alpha1")
 	u.SetKind("ObjectBucket")
 	u.SetName(name)
-	require := map[string]any{"storageClassName": storageClass}
-	u.Object["spec"] = require
+	spec := map[string]any{"storageClassName": storageClass}
+	u.Object["spec"] = spec
 	return u
 }
 

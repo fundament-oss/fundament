@@ -23,12 +23,12 @@ import GitHubMark from '../components/GitHubMark.astro';
     <nldd-spacer size="24"></nldd-spacer>
     <nldd-button-group orientation="horizontal">
       <nldd-button
-        variant="inherit-filled"
+        appearance="inherit-filled"
         href="/docs"
         text="Read the documentation"
         start-icon="book"></nldd-button>
       <nldd-button
-        variant="inherit-tinted"
+        appearance="inherit-tinted"
         text="View on GitHub"
         href="https://github.com/fundament-oss/fundament"
         target="_blank"
@@ -49,10 +49,10 @@ import GitHubMark from '../components/GitHubMark.astro';
       Eight capabilities that define Fundament. No managed service required, no proprietary lock-in,
       no compromises on isolation.
     </nldd-text>
-    <nldd-collection item-width="280px">
+    <nldd-collection item-min-width="280px">
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="terminal" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="terminal" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -66,7 +66,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="rectangle-stack" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="rectangle-stack" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -80,7 +80,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="shield-check-mark" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="shield-check-mark" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -94,7 +94,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="cloud" size="40" box custom-color="oklch(0.897 0.044 253.4)"></nldd-icon>
+          <nldd-icon icon="cloud" size="40" box custom-color="oklch(0.897 0.044 253.4)"></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
             <h3>Managed infrastructure</h3>
@@ -107,7 +107,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="check-mark-circle" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="check-mark-circle" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -122,7 +122,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       <nldd-card>
         <nldd-container padding="16">
           <nldd-icon
-            name="chart-x-y-axis-line"
+            icon="chart-x-y-axis-line"
             size="40"
             box
             custom-color="oklch(0.897 0.044 253.4)"></nldd-icon>
@@ -138,7 +138,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="puzzle-piece" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="puzzle-piece" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -152,7 +152,7 @@ import GitHubMark from '../components/GitHubMark.astro';
       </nldd-card>
       <nldd-card>
         <nldd-container padding="16">
-          <nldd-icon name="brackets-ellipsis" size="40" box custom-color="oklch(0.897 0.044 253.4)"
+          <nldd-icon icon="brackets-ellipsis" size="40" box custom-color="oklch(0.897 0.044 253.4)"
           ></nldd-icon>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-title size="5">
@@ -243,10 +243,10 @@ import GitHubMark from '../components/GitHubMark.astro';
     </nldd-rich-text>
     <nldd-spacer size="24"></nldd-spacer>
     <nldd-button-group orientation="horizontal">
-      <nldd-button variant="primary" href="/docs" text="Read the documentation" start-icon="book"
+      <nldd-button appearance="primary" href="/docs" text="Read the documentation" start-icon="book"
       ></nldd-button>
       <nldd-button
-        variant="secondary"
+        appearance="secondary"
         text="View on GitHub"
         href="https://github.com/fundament-oss/fundament"
         target="_blank"

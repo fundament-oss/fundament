@@ -190,7 +190,8 @@ func newTestLister(az visibilityAuthz, tokenErr error, upstream http.Handler) *n
 			}
 			return "proxy-sa-token", nil
 		},
-		upstream: upstream,
+		forgetProxyToken: func(string, string) {},
+		upstream:         upstream,
 	}
 }
 

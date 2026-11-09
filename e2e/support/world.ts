@@ -5,6 +5,7 @@ import {
   type CreateAPIKeyResponse,
 } from './api/apikey-service.ts';
 import { TokenService } from './api/token-service.ts';
+import { ClusterService, type ClusterDetails } from './api/cluster-service.ts';
 
 export interface ICustomWorld extends World {
   browser?: Browser;
@@ -30,6 +31,9 @@ export interface ICustomWorld extends World {
   // Store the last API response for assertions
   lastApiResponse?: unknown;
   lastApiError?: Error;
+  // @real-gardener node pool provisioning state
+  clusterService?: ClusterService;
+  realGardenerCluster?: ClusterDetails;
 }
 
 export class CustomWorld extends World implements ICustomWorld {
@@ -53,6 +57,8 @@ export class CustomWorld extends World implements ICustomWorld {
   savedApiKeyId?: string;
   lastApiResponse?: unknown;
   lastApiError?: Error;
+  clusterService?: ClusterService;
+  realGardenerCluster?: ClusterDetails;
 
   constructor(options: IWorldOptions) {
     super(options);

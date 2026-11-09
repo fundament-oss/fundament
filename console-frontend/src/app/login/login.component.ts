@@ -1,6 +1,7 @@
 import '@nldd/design-system/top-navigation-bar';
 import {
   Component,
+  computed,
   inject,
   OnInit,
   signal,
@@ -13,6 +14,7 @@ import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import { ConfigService } from '../config.service';
+import type { LoginMethodsResponse } from '../../generated/authn-api';
 import { Handoff, resolveHandoff } from './login-handoff';
 import { HOME } from '../address';
 import '@nldd/design-system/password-field';
@@ -21,6 +23,7 @@ import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/container';
+import '@nldd/design-system/divider';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
@@ -40,6 +43,15 @@ import '@nldd/design-system/validation-list';
  */
 const DEFAULT_ROUTE = HOME;
 
+/**
+ * Said under the button of the provider the PoC signs people in with during the
+ * fieldlab. Keyed on the provider's display name, so it goes away with Pleio:
+ * remove it once the fieldlab is over.
+ */
+const FIELDLAB_PROVIDER = 'Pleio';
+
+const FIELDLAB_NOTE = 'Logging in with Pleio is temporary, for the duration of the fieldlab.';
+
 /** What the page says when the visitor came here of their own accord. */
 const DEFAULT_DESCRIPTION =
   'The platform your team manages its Kubernetes clusters and projects with.';
@@ -50,9 +62,22 @@ const DEFAULT_DESCRIPTION =
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  // The host is a flex item of nldd-app-view, so it needs a display and a share
+  // The host is a flex item of nldd-shell, so it needs a display and a share
   // of the height, or the page inside it collapses to its content.
-  styles: ':host { display: block; flex: 1; min-height: 0; }',
+  styles: `
+    :host {
+      display: block;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sso-note {
+      margin: 0;
+      color: var(--semantics-content-secondary-color);
+      font: var(--primitives-font-body-xs-regular-snug);
+      text-align: center;
+    }
+  `,
 })
 export default class LoginComponent implements OnInit {
   private titleService = inject(TitleService);
@@ -83,6 +108,27 @@ export default class LoginComponent implements OnInit {
   error = signal<string | null>(null);
 
   isLoading = signal(false);
+
+  /**
+   * How authn-api signs people in here. Null until it has said: showing the
+   * form first would flash it on a deployment that has none.
+   */
+  readonly methods = signal<LoginMethodsResponse | null>(null);
+
+  /**
+   * The button to the identity provider, when there is one. It comes back to
+   * this page, hand-off and all: with the cookie set by then, `ngOnInit` sends
+   * the visitor on the way the password form would.
+   */
+  readonly ssoLogin = computed(() => {
+    const name = this.methods()?.provider_name;
+    if (!name) return null;
+    return {
+      text: `Log in with ${name}`,
+      url: this.apiService.ssoLoginUrl(window.location.href),
+      note: name === FIELDLAB_PROVIDER ? FIELDLAB_NOTE : null,
+    };
+  });
 
   /**
    * The line under the heading, which says who this login is for. Not a
@@ -151,7 +197,13 @@ export default class LoginComponent implements OnInit {
       // another surface still has to be sent back there rather than dropped on
       // the console's own default page.
       this.leave();
+      return;
     }
+    this.methods.set(await this.apiService.getLoginMethods());
+  }
+
+  onSsoLogin() {
+    this.apiService.expectSessionAfterRedirect();
   }
 
   async onSubmit(event?: Event) {

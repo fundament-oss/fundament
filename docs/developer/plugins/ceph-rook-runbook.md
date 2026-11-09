@@ -206,7 +206,7 @@ just plugins sandbox-catalog
 Now build, push and publish:
 
 :::caution[Publish as `platform-admin@fundament.io`, not your usual dev login]
-`PutPluginDefinition` requires `can_edit` on the plugin, which resolves to **admin of the
+`CreatePluginVersion` requires `can_edit` on the plugin, which resolves to **admin of the
 owning organization**. First-party plugins are owned by the seeded `system` org, and
 `alice@acme-corp.com` and friends are not members of it — publishing as them fails
 authorization.

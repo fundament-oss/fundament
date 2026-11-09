@@ -92,7 +92,9 @@ func TestNewAnonymousFromBytes_DropsClientCert(t *testing.T) {
 		mu.Lock()
 		peerCount = -1
 		mu.Unlock()
-		resp, err := (&http.Client{Transport: c.Transport()}).Get(srv.URL)
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+		require.NoError(t, err)
+		resp, err := (&http.Client{Transport: c.Transport()}).Do(req)
 		require.NoError(t, err)
 		_, _ = io.Copy(io.Discard, resp.Body)
 		require.NoError(t, resp.Body.Close())

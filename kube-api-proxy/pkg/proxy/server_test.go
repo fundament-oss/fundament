@@ -86,7 +86,7 @@ func TestClusterProxy_RejectsPluginToken(t *testing.T) {
 	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, pluginClaims).SignedString(secret)
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/clusters/"+uuid.NewString()+"/api/v1/namespaces", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"/clusters/"+uuid.NewString()+"/api/v1/namespaces", http.NoBody)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+tokenStr)
 

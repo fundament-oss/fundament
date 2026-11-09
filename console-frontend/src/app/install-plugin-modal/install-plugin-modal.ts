@@ -18,8 +18,10 @@ import {
   getInstallStatusDisplay,
   isInstallInProgress,
   isInstallFailed,
+  isInstallUnhealthy,
   isInstallRunning,
   isInstallTerminating,
+  reportedStatusMessage,
 } from '../utils/plugin-install-status';
 
 import '@nldd/design-system/badge';
@@ -55,6 +57,9 @@ interface Cluster {
   // can never recover such a failure — the row hides Retry and the sheet
   // points at uninstall + reinstall instead.
   configInvalid: boolean;
+  // Why the installation is in its phase (status.message); '' when not
+  // installed or when nothing is said.
+  message: string;
 }
 
 // A published definition the user can pin on install: the version they see and
@@ -173,7 +178,10 @@ export default class InstallPluginModalComponent {
    *  above the list. */
   configInvalidClusters = computed(() =>
     this.clusters()
-      .filter((cluster) => cluster.phase !== null && isInstallFailed(cluster.phase) && cluster.configInvalid)
+      .filter(
+        (cluster) =>
+          cluster.phase !== null && isInstallFailed(cluster.phase) && cluster.configInvalid,
+      )
       .map((cluster) => cluster.name),
   );
 
@@ -193,6 +201,14 @@ export default class InstallPluginModalComponent {
   isRunning = isInstallRunning;
 
   isRemoving = isInstallTerminating;
+
+  /** The reason to show under the cluster's name: only for the states the row's
+   *  badge marks as wrong, where the reason is what tells you what to do. */
+  // eslint-disable-next-line class-methods-use-this
+  issueMessage(cluster: Cluster): string {
+    if (cluster.phase === null || !isInstallUnhealthy(cluster.phase)) return '';
+    return reportedStatusMessage(cluster.message);
+  }
 
   showsVersion = showsInstalledVersion;
 
@@ -238,13 +254,21 @@ export default class InstallPluginModalComponent {
     if (generation !== this.requestGeneration) return;
     if (schema.length === 0) {
       // No declared config: instant install, exactly the pre-schema behavior.
-      this.install.emit({ clusterIds: [clusterId], version: option.version, hash: option.hash, config: {} });
+      this.install.emit({
+        clusterIds: [clusterId],
+        version: option.version,
+        hash: option.hash,
+        config: {},
+      });
       return;
     }
     this.pendingInstall.set({ clusterId, option, schema });
   }
 
-  private async fetchConfigSchema(version: string, generation: number): Promise<ConfigSchemaEntry[]> {
+  private async fetchConfigSchema(
+    version: string,
+    generation: number,
+  ): Promise<ConfigSchemaEntry[]> {
     // Computed before the await, alongside the generation: the org/plugin name
     // inputs could change while a fetch for a DIFFERENT plugin is in flight, so
     // the key must be pinned to what was asked, not read again after the await.

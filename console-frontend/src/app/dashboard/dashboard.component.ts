@@ -15,7 +15,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus, shouldPollStatus } from '../utils/cluster-status';
 import sortByName from '../utils/sort-by-name';
 import PageNavService from '../page-nav.service';
 
@@ -90,7 +90,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
     const preloaded = this.organizationDataService.clusterSummaries();
     if (preloaded.length > 0 || this.organizationDataService.organizations().length > 0) {
       this.clusters.set(preloaded);
-      if (preloaded.some((c) => isTransitionalStatus(c.status))) {
+      if (preloaded.some((c) => shouldPollStatus(c.status))) {
         this.pollingTimer = setInterval(() => this.loadClusters(), 5000);
       }
     } else {
@@ -150,7 +150,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
         });
     }
 
-    const needsPolling = clusters.some((c) => isTransitionalStatus(c.status));
+    const needsPolling = clusters.some((c) => shouldPollStatus(c.status));
     if (needsPolling && !this.pollingTimer) {
       this.pollingTimer = setInterval(() => this.loadClusters(), 5000);
     } else if (!needsPolling) {

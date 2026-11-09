@@ -1,6 +1,7 @@
 import {
   Component,
   inject,
+  DestroyRef,
   signal,
   effect,
   viewChild,
@@ -37,15 +38,16 @@ import {
 } from '../../generated/catalog/v1/catalog_pb';
 import { type Category, type Preset } from '../../generated/marketplace/v1/common_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
-import { ClusterStatus } from '../../generated/v1/common_pb';
-import { isTransitionalStatus } from '../utils/cluster-status';
+import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
+  installTransitionNotice,
   isInstallInProgress,
-  isInstallRunning,
+  isInstallTerminating,
 } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
+import createInstallPoller from '../utils/install-poller';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
@@ -88,7 +90,7 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
 // resource name in the cluster; `displayName` (e.g. "OpenFSC") is what a user sees.
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  'id' | 'name' | 'displayName' | 'descriptionShort' | 'image'
+  'id' | 'name' | 'displayName' | 'descriptionShort' | 'image' | 'logo' | 'logoDark'
 > {
   // Resolved from catalog.v1, which returns ids and leaves the names to
   // ListPublishers and ListCategories rather than repeating them per plugin.
@@ -118,6 +120,8 @@ interface ClusterModalRow {
   // True when a Failed phase is config-caused (ConfigValid=False): the modal
   // hides Retry for it, since retry replays the same config.
   configInvalid: boolean;
+  // Why the installation is in its phase; '' when not installed.
+  message: string;
 }
 
 // Extended install type with cluster ID and live status phase. organizationName +
@@ -135,6 +139,8 @@ interface InstallWithCluster {
   // True when a Failed phase is config-caused (ConfigValid=False): the modal
   // hides Retry for it, since retry replays the same config.
   configInvalid: boolean;
+  // Why the installation is in its phase (status.message).
+  message: string;
 }
 
 // Extended category type with count for filtering
@@ -176,7 +182,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
-  private installPollingTimer: ReturnType<typeof setInterval> | null = null;
+  private installPoller = createInstallPoller(inject(DestroyRef), () => this.refreshInstalls());
+
+  // Bumped by every write to the installs but the poll's own (an install,
+  // uninstall or retry, or a full reload), so a poll read that started before
+  // it can tell it is stale and drop it.
+  private localChanges = 0;
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -312,6 +323,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         displayName: '',
         descriptionShort: 'No longer listed in the marketplace.',
         image: '',
+        logo: '',
+        logoDark: '',
         organizationName: install.organizationName,
         publisherDisplayName: install.organizationName,
         categories: [],
@@ -383,6 +396,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           })),
           tags: backendPlugin.tags,
           image: backendPlugin.image,
+          logo: backendPlugin.logo,
+          logoDark: backendPlugin.logoDark,
           presets: assignedPresets,
         };
       });
@@ -396,7 +411,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
       // Poll for cluster readiness so the install modal reflects status changes
       // (e.g. a provisioning cluster becoming RUNNING) without a page refresh.
-      if (this.clusters().some((c) => isTransitionalStatus(c.status))) {
+      if (this.clusters().some((c) => shouldPollStatus(c.status))) {
         this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
       }
 
@@ -411,13 +426,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopPolling();
-    this.stopInstallPolling();
     document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
   }
 
   // Re-read installs from the (reset) backend and drop any stale in-flight polling.
   private reloadInstalls(): void {
-    this.stopInstallPolling();
+    this.installPoller.stop();
     this.loadInstalls().catch(() => {}); // Background refresh; a failed read just leaves the current view.
   }
 
@@ -426,7 +440,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.clusterClient.listClusters({}));
       this.clusters.set(response.clusters);
 
-      const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));
+      const needsPolling = response.clusters.some((c) => shouldPollStatus(c.status));
       if (needsPolling && !this.pollingTimer) {
         this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
       } else if (!needsPolling) {
@@ -468,6 +482,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               ready: item.status?.ready ?? false,
               version: item.spec?.definitionRef?.pluginVersion ?? '',
               configInvalid: hasInvalidConfig(item),
+              message: item.status?.message ?? '',
             })),
           )
           .catch((): InstallWithCluster[] | null => null),
@@ -481,32 +496,37 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // recorded so the empty state does not claim nothing is installed.
   private async loadInstalls(): Promise<void> {
     const byCluster = await this.fetchInstallsByCluster();
+    this.localChanges += 1;
     this.installsReadFailed.set(byCluster.some((cluster) => cluster.installs === null));
     this.installs.set(byCluster.flatMap((cluster) => cluster.installs ?? []));
   }
 
+  /** Starts, re-paces or stops the install poll to suit the installs shown.
+   *  Also while one is Degraded or Failed, at a slower pace: it can recover, or
+   *  get a new reason, without anyone acting on it. */
   private startInstallPollingIfNeeded() {
-    if (this.installPollingTimer) return;
-    if (this.installs().some((install) => isInstallInProgress(install.phase))) {
-      this.installPollingTimer = setInterval(() => this.refreshInstalls(), 5000);
-    }
+    this.installPoller.pace(this.installs());
   }
 
-  private stopInstallPolling() {
-    if (this.installPollingTimer) {
-      clearInterval(this.installPollingTimer);
-      this.installPollingTimer = null;
-    }
+  /** Changes the installs from this page, not from a read of the cluster. */
+  private updateInstalls(fn: (current: InstallWithCluster[]) => InstallWithCluster[]): void {
+    this.localChanges += 1;
+    this.installs.update(fn);
   }
 
   // Poll installation status and surface transitions (installed / failed / removed).
   private async refreshInstalls() {
+    const changes = this.localChanges;
     let byCluster: { clusterId: string; installs: InstallWithCluster[] | null }[];
     try {
       byCluster = await this.fetchInstallsByCluster();
     } catch {
       return; // Ignore errors from background polling.
     }
+    // An install, uninstall or retry since the read started: what it read is
+    // from before, and would put the row back to the phase it had. The handler
+    // re-paced the poll, so the next read is not far off.
+    if (changes !== this.localChanges) return;
 
     const previous = this.installs();
 
@@ -526,15 +546,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           p.pluginName === next.pluginName,
       );
       if (!prev) return;
-      if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
-        this.notificationService.success(
-          `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
-        );
-      } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
-        this.notificationService.error(
-          `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
-        );
-      }
+      const notice = installTransitionNotice(
+        prev.phase,
+        next.phase,
+        this.pluginDisplayName(next.organizationName, next.pluginName),
+        this.clusterName(next.clusterId),
+      );
+      if (notice?.kind === 'success') this.notificationService.success(notice.text);
+      else if (notice?.kind === 'error') this.notificationService.error(notice.text);
     });
 
     // Detect installs that vanished from a cluster we successfully read. A
@@ -567,10 +586,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       ...preserved,
     ];
     this.installs.set(merged);
-
-    if (!merged.some((install) => isInstallInProgress(install.phase))) {
-      this.stopInstallPolling();
-    }
+    this.startInstallPollingIfNeeded();
   }
 
   get categories(): CategoryWithCount[] {
@@ -713,8 +729,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         name: cluster.name,
         phase: install?.phase ?? null,
         version: install?.version ?? '',
-        running: cluster.status === ClusterStatus.RUNNING,
+        running: isClusterReachable(cluster.status),
         configInvalid: install?.configInvalid ?? false,
+        message: install?.message ?? '',
       };
     });
   }
@@ -727,13 +744,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Number of clusters where the plugin is up and running.
-  runningInstallCount(organizationName: string, pluginName: string): number {
+  /** The clusters the plugin is installed on, for "Installed on N": only
+   *  installations that have settled, Running or not, as on the plugin's own
+   *  page. A Degraded or Failed one is installed, and offers Manage; one still
+   *  on its way up or down is not counted until it gets there. */
+  installedClusterCount(organizationName: string, pluginName: string): number {
     return this.installs().filter(
       (install) =>
         install.organizationName === organizationName &&
         install.pluginName === pluginName &&
-        isInstallRunning(install.phase),
+        !isInstallInProgress(install.phase),
     ).length;
   }
 
@@ -791,8 +811,17 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   pluginCategoryLabel = pluginCategoryLabel;
 
   pluginStatusLabel(organizationName: string, pluginName: string): string {
-    const count = this.runningInstallCount(organizationName, pluginName);
-    return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
+    const count = this.installedClusterCount(organizationName, pluginName);
+    if (count > 0) return `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
+    // Nothing settled yet, but an install on its way: the sheet offers Manage
+    // for it, so it must not read as not installed.
+    const installing = this.installs().some(
+      (install) =>
+        install.organizationName === organizationName &&
+        install.pluginName === pluginName &&
+        !isInstallTerminating(install.phase),
+    );
+    return installing ? 'Installing…' : 'Not installed';
   }
 
   // Fetches the plugin's published versions (latest first) for the install
@@ -841,7 +870,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     pluginName: string,
     phase: string,
   ): void {
-    this.installs.update((current) =>
+    this.updateInstalls((current) =>
       current.map((install) =>
         install.clusterId === clusterId &&
         install.organizationName === organizationName &&
@@ -868,7 +897,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (targets.length === 0) return;
 
     // Optimistically mark each target as installing so the rows update at once.
-    this.installs.update((current) => [
+    this.updateInstalls((current) => [
       ...current,
       ...targets.map((clusterId) => ({
         clusterId,
@@ -878,6 +907,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ready: false,
         version: selection.version,
         configInvalid: false,
+        message: '',
       })),
     ]);
 
@@ -897,7 +927,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     // Roll back optimistic entries whose install request failed outright.
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {
-      this.installs.update((current) =>
+      this.updateInstalls((current) =>
         current.filter(
           (install) =>
             !(

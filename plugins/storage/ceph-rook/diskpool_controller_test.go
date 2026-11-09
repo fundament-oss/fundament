@@ -754,7 +754,7 @@ func TestReconcileConflictRequeuesWithoutDegrading(t *testing.T) {
 
 	res, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err, "a conflict is not a reconcile failure")
-	assert.True(t, res.Requeue)
+	assert.True(t, res.Requeue) //nolint:staticcheck // asserts the rate-limited Requeue the controller returns
 	assert.NotEqual(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase,
 		"a routine conflict must not be reported to the operator")
 }

@@ -146,7 +146,7 @@ func clientsetFromKubeconfig(kubeconfig []byte) (*kubernetes.Clientset, error) {
 // groups must carry the SA's virtual groups: SAR evaluates exactly the User +
 // Groups it is handed and does not derive an SA's groups from the username, so
 // a grant bound to one of those groups is invisible without them.
-func (c *Client) SubjectAccessReview(ctx context.Context, clusterID string, user string, groups []string, attrs authorizationv1.ResourceAttributes) (bool, error) {
+func (c *Client) SubjectAccessReview(ctx context.Context, clusterID, user string, groups []string, attrs *authorizationv1.ResourceAttributes) (bool, error) {
 	adminKC, err := c.GetAdminKubeconfig(ctx, clusterID, 0)
 	if err != nil {
 		return false, fmt.Errorf("get admin kubeconfig: %w", err)
@@ -164,12 +164,12 @@ func (c *Client) SubjectAccessReview(ctx context.Context, clusterID string, user
 // behind cs and returns the API server's Allowed decision. The SAR body and
 // virtual-group handling live here so the Gardener path (admin kubeconfig) and
 // the sandbox path (file kubeconfig) stay identical.
-func SubjectAccessReviewWithClientset(ctx context.Context, cs kubernetes.Interface, user string, groups []string, attrs authorizationv1.ResourceAttributes) (bool, error) {
+func SubjectAccessReviewWithClientset(ctx context.Context, cs kubernetes.Interface, user string, groups []string, attrs *authorizationv1.ResourceAttributes) (bool, error) {
 	sar := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			User:               user,
 			Groups:             groups,
-			ResourceAttributes: &attrs,
+			ResourceAttributes: attrs,
 		},
 	}
 

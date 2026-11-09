@@ -21,6 +21,7 @@ spec:
       containers:
         - name: authz-worker
           image: {{ $.Values.images.authzWorker }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: health
               containerPort: 8097

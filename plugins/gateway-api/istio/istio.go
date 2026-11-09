@@ -87,5 +87,5 @@ func (i *istioInstaller) uninstall(ctx context.Context) error {
 }
 
 func (i *istioInstaller) isInstalled(ctx context.Context) (bool, error) {
-	return i.helmClient.IsInstalled(ctx, "istiod")
+	return i.helmClient.IsInstalled(ctx, "istiod") //nolint:wrapcheck // Start wraps it with context
 }

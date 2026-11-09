@@ -60,6 +60,7 @@ spec:
       initContainers:
         - name: wait-for-db
           image: {{ $.Values.db.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           command:
             - sh
             - -c
@@ -83,6 +84,7 @@ spec:
       containers:
         - name: openfga
           image: {{ $.Values.openfga.image }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - run
           ports:

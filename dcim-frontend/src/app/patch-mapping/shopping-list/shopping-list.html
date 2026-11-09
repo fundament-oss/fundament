@@ -68,26 +68,26 @@
            to open, so nothing offers to. -->
       <nldd-collection layout="stack" gap="16">
         @for (group of groups(); track groupKey(group)) {
-          <nldd-list variant="box-tinted" [attr.accessible-label]="cableTypeLabel(group.type)">
+          <nldd-list appearance="box-tinted" [attr.accessible-label]="cableTypeLabel(group.type)">
             <nldd-list-item>
               <!-- The jacket colour of a real cable, so it is the cable's own and
                    not one of the system's. Same mark as in the cable list. -->
               <nldd-cell width="fit-content" min-width="24px">
                 @if (group.color) {
                   <nldd-icon
-                    name="circle-filled"
+                    icon="circle-filled"
                     size="24"
                     [attr.custom-color]="CABLE_COLOR_HEX[group.color]"
                   ></nldd-icon>
                 } @else {
-                  <nldd-icon name="circle-dashed" size="24" color="secondary-content"></nldd-icon>
+                  <nldd-icon icon="circle-dashed" size="24" color="secondary-content"></nldd-icon>
                 }
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-title-cell
                 width="full"
                 [attr.text]="cableTypeLabel(group.type)"
-                [attr.underline]="groupDetail(group)"
+                [attr.supporting-text]="groupDetail(group)"
               ></nldd-title-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
@@ -128,7 +128,7 @@
   @if (totalCount() > 0) {
     <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
       <nldd-button
-        variant="primary"
+        appearance="primary"
         [attr.text]="exportLabel()"
         start-icon="arrow-down-in-bucket"
         width="full"

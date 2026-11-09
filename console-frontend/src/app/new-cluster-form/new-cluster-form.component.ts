@@ -14,7 +14,8 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import type { StepIndicatorStatus } from '@nldd/design-system/step-indicator';
+import type { StepBarStatus } from '@nldd/design-system/step-bar';
+import '@nldd/design-system/step-bar';
 import { NewClusterFormStateService } from './new-cluster-form-state.service';
 import SheetSyncDirective, { rewireFormFields } from '../sheet-sync.directive';
 import NewClusterComponent from '../new-cluster/new-cluster.component';
@@ -70,21 +71,17 @@ export default class NewClusterFormComponent implements OnDestroy {
   }
 
   // The design system ships Dutch defaults; the console is in US English.
-  readonly stepIndicatorTranslations = {
-    'components.step-indicator.accessible-label': 'Progress',
-    'components.step-indicator.status-past-label': 'Completed',
-    'components.step-indicator.status-current-label': 'Current step',
-    'components.step-indicator.status-future-label': 'Not started',
-    'components.step-indicator.compact-text': 'Step {current} of {total}',
+  readonly stepBarTranslations = {
+    'components.step-bar.accessible-label': 'Progress',
+    'components.step-bar.status-past-label': 'Completed',
+    'components.step-bar.status-current-label': 'Current step',
+    'components.step-bar.status-future-label': 'Not started',
+    'components.step-bar.compact-text': 'Step {current} of {total}',
   };
 
   steps: ProgressStep[] = [{ name: 'Basics' }, { name: 'Node pools' }, { name: 'Summary' }];
 
   currentStepIndex = this.stateService.stepIndex;
-
-  // nldd-step-indicator is 1-based; it drives the collapsed "step x of y" line
-  // and is the fallback for items that carry no status of their own.
-  currentStepNumber = computed(() => this.currentStepIndex() + 1);
 
   /** Names the step the back button returns to; empty on step one, where the
    *  title bar shows the flow's own title instead. */
@@ -97,9 +94,10 @@ export default class NewClusterFormComponent implements OnDestroy {
    *  the bar stands in for that heading once you scroll past it. */
   currentStepTitle = computed(() => this.steps[this.currentStepIndex()].name);
 
-  // Set per item rather than left to `current`: the form can be stepped back
-  // into, and a step that is already filled in stays ticked when it does.
-  stepStatus(index: number): StepIndicatorStatus {
+  // Every item gets its own status rather than only the current one: the form
+  // can be stepped back into, and a step that is already filled in stays
+  // ticked when it does.
+  stepStatus(index: number): StepBarStatus {
     if (index === this.currentStepIndex()) return 'current';
     return this.stateService.isStepCompleted(index) ? 'past' : 'future';
   }

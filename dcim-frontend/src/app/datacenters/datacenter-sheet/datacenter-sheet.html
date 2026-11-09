@@ -115,7 +115,7 @@
             [attr.value]="form()?.established ?? 2024"
             min="1990"
             max="2100"
-            full-width
+            width="full"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('established') ? '' : null"
             unmet="error-dc-established"
@@ -131,7 +131,7 @@
             #fFloorSqm
             [attr.value]="form()?.floorSqm ?? 0"
             min="0"
-            full-width
+            width="full"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
             unmet="error-dc-floorsqm"
@@ -145,7 +145,7 @@
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->
         <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+          <nldd-button appearance="primary" width="full" text="Save" (click)="save()"></nldd-button>
         </nldd-form-actions>
       </nldd-form>
     </nldd-simple-section>

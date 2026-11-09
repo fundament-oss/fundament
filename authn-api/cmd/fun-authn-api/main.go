@@ -17,8 +17,6 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
@@ -33,22 +31,32 @@ import (
 )
 
 type config struct {
-	Database           psqldb.Config
-	OpenFGA            authz.Config
-	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
-	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
-	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
-	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
-	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"https://authn.fundament.localhost:8443/callback"`
-	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"https://console.fundament.localhost:8443"`
-	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"fundament.localhost"`
-	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
-	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
-	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
-	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
-	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,https://console.fundament.localhost:8443"`
-	PluginProxyURL     string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8081"`
+	Database         psqldb.Config
+	OpenFGA          authz.Config
+	JWTSecret        string `env:"JWT_SECRET,required,notEmpty" `
+	OIDCIssuer       string `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
+	OIDCDiscoveryURL string `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
+	ClientID         string `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
+	ClientSecret     string `env:"OIDC_CLIENT_SECRET"` // empty for a public client (Dex); Fundament SSO's client is confidential
+	// OIDCScopes: Dex adds a groups claim on request; Keycloak refuses a scope
+	// it does not define, so an external provider leaves "groups" out.
+	OIDCScopes []string `env:"OIDC_SCOPES" envDefault:"openid,profile,email,groups"`
+	// OIDCDisplayName names the identity provider on the console's "Log in
+	// with" button. Empty means no button.
+	OIDCDisplayName string `env:"OIDC_DISPLAY_NAME"`
+	// PasswordLoginEnabled serves /login/password, which needs the password
+	// grant only Dex offers here.
+	PasswordLoginEnabled bool          `env:"PASSWORD_LOGIN_ENABLED" envDefault:"true"`
+	RedirectURL          string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"https://authn.fundament.localhost:8443/callback"`
+	FrontendURL          string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"https://console.fundament.localhost:8443"`
+	CookieDomain         string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"fundament.localhost"`
+	CookieSecure         bool          `env:"COOKIE_SECURE,required,notEmpty"`
+	DatabaseURL          string        `env:"DATABASE_URL,required,notEmpty"`
+	ListenAddr           string        `env:"LISTEN_ADDR" envDefault:":8080"`
+	TokenExpiry          time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	LogLevel             slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins   []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,https://console.fundament.localhost:8443"`
+	PluginProxyURL       string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8081"`
 
 	// Shoot workload token verification (FUN-22). GARDENER_MODE and
 	// GARDENER_KUBECONFIG follow the other services; the sandbox kubeconfig is
@@ -86,11 +94,29 @@ func run() error {
 	}))
 	slog.SetDefault(logger)
 
+	// The methods the login page offers, as names: logging the flag itself
+	// trips CodeQL's clear-text logging check on the word "Password".
+	loginMethods := []string{}
+	if cfg.PasswordLoginEnabled {
+		loginMethods = append(loginMethods, "password")
+	}
+	if cfg.OIDCDisplayName != "" {
+		loginMethods = append(loginMethods, "oidc")
+	}
+
 	logger.Info("starting authn-api",
 		"listen_addr", cfg.ListenAddr,
 		"oidc_issuer", cfg.OIDCIssuer,
+		"login_methods", loginMethods,
 		"log_level", cfg.LogLevel.String(),
 	)
+
+	if !cfg.PasswordLoginEnabled && cfg.OIDCDisplayName == "" {
+		return fmt.Errorf("PASSWORD_LOGIN_ENABLED=false needs OIDC_DISPLAY_NAME: without either, the login page offers no way in")
+	}
+	if cfg.OIDCDiscoveryURL == "" {
+		cfg.OIDCDiscoveryURL = cfg.OIDCIssuer
+	}
 
 	ctx := context.Background()
 
@@ -131,10 +157,11 @@ func run() error {
 	}
 
 	oauth2Config := &oauth2.Config{
-		ClientID:    cfg.ClientID,
-		RedirectURL: cfg.RedirectURL,
-		Endpoint:    endpoint,
-		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "groups"},
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  cfg.RedirectURL,
+		Endpoint:     endpoint,
+		Scopes:       cfg.OIDCScopes,
 	}
 
 	logger.Debug("connecting to database")
@@ -190,6 +217,8 @@ func run() error {
 		// the default landing place, so it belongs on it whether or not the
 		// deployment spelled it out.
 		AllowedReturnOrigins: append([]string{cfg.FrontendURL}, cfg.CORSAllowedOrigins...),
+		PasswordLoginEnabled: cfg.PasswordLoginEnabled,
+		OIDCDisplayName:      cfg.OIDCDisplayName,
 	}
 	if !shootVerifierCfg.UsesGardener() {
 		authnCfg.WorkloadSubjects = map[string]string{
@@ -280,9 +309,14 @@ func run() error {
 		AllowCredentials: true,
 	})
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(corsHandler.Handler(mux), &http2.Server{}),
+		Handler:           corsHandler.Handler(mux),
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

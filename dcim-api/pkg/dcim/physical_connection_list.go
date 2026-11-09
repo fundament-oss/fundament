@@ -25,8 +25,8 @@ func (s *Server) ListConnectionsByPlacement(
 	}
 
 	connections := make([]*dcimv1.PhysicalConnection, 0, len(rows))
-	for _, row := range rows {
-		connections = append(connections, physicalConnectionFromListRow(&row))
+	for i := range rows {
+		connections = append(connections, physicalConnectionFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListConnectionsByPlacementResponse_builder{
@@ -48,8 +48,8 @@ func (s *Server) ListConnectionsBySite(
 	}
 
 	connections := make([]*dcimv1.PhysicalConnection, 0, len(rows))
-	for _, row := range rows {
-		connections = append(connections, physicalConnectionFromListBySiteRow(&row))
+	for i := range rows {
+		connections = append(connections, physicalConnectionFromListBySiteRow(&rows[i]))
 	}
 
 	return dcimv1.ListConnectionsBySiteResponse_builder{

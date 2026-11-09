@@ -4,14 +4,14 @@
 @if (embedded()) {
   <ng-container [ngTemplateOutlet]="body"></ng-container>
 } @else {
-  <nldd-app-view>
+  <nldd-shell>
     <nldd-bar-split-view>
       <!-- Only what is true on every screen: the product and how it looks. No
            way back to a task list, because a technician has no list to go back
            to; the round is where they are. -->
       <nldd-split-view-pane slot="header" sm-order="1" md-order="1" lg-order="1" background="base">
         <nldd-container padding-left="16" padding-right="8" padding-block="8">
-          <nldd-toolbar label="Application">
+          <nldd-toolbar accessible-label="Application">
             <!-- Home is the round, not the section list of an application this
                  technician has no business in. -->
             <nldd-toolbar-title slot="start" text="Fundament" href="/task-management-technician">
@@ -23,7 +23,7 @@
                    person back where the initials belong. -->
               <nldd-icon-button
                 [attr.accessible-label]="userName() || 'Account'"
-                variant="secondary"
+                appearance="secondary"
                 expandable
                 popup-type="menu"
               >
@@ -76,13 +76,13 @@
         </nldd-container>
       </nldd-split-view-pane>
       <nldd-split-view-pane slot="main" sm-order="2" md-order="2" lg-order="2">
-        <nldd-navigation-split-view sidebar-accessible-label="This round">
+        <nldd-navigation-split-view primary-sidebar-accessible-label="This round">
           <!-- The round as a menu: where you are, and what is still to come
                under it. It replaces a dropdown in the bar that listed three
                hardcoded tasks. -->
           <nldd-split-view-pane slot="sidebar" background="base" has-content>
             <!-- The page owns the scroll region: a pane clips what does not fit. -->
-            <nldd-page>
+            <nldd-page accessible-label="My rounds">
               <nldd-simple-section>
                 <nldd-title size="3">
                   <h1>My rounds</h1>
@@ -121,14 +121,15 @@
             </nldd-page>
           </nldd-split-view-pane>
           <nldd-split-view-pane slot="main" has-content>
-            <nldd-page>
+            <!-- The round's own content, so this page is the document's main. -->
+            <nldd-page landmarks="page">
               <ng-container [ngTemplateOutlet]="body"></ng-container>
             </nldd-page>
           </nldd-split-view-pane>
         </nldd-navigation-split-view>
       </nldd-split-view-pane>
     </nldd-bar-split-view>
-  </nldd-app-view>
+  </nldd-shell>
 }
 
 <ng-template #body>
@@ -140,7 +141,7 @@
     <div [class.hidden]="showCompleteScreen()">
       <nldd-title id="round-title" size="2">
         <h1>{{ roundTitle() }}</h1>
-        <span slot="subtitle">{{ roundSubtitle() }}</span>
+        <span slot="supporting-text">{{ roundSubtitle() }}</span>
       </nldd-title>
       <nldd-spacer size="24"></nldd-spacer>
     </div>
@@ -155,7 +156,7 @@
       >
         <nldd-button
           slot="actions"
-          variant="secondary"
+          appearance="secondary"
           text="Try again"
           (click)="retryLoad()"
         ></nldd-button>
@@ -179,13 +180,13 @@
           [attr.aria-current]="phase() === 'gather' ? 'step' : null"
           (click)="canOpenGather() ? goToGather() : null"
         >
-          <nldd-timeline-track-cell
+          <nldd-step-cell
             size="md"
             position="first"
             [attr.status]="gatherStatus()"
             [attr.icon]="gatherCompleted() ? 'check-mark' : null"
             [attr.text]="gatherCompleted() ? null : '1'"
-          ></nldd-timeline-track-cell>
+          ></nldd-step-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-cell width="full">
             <nldd-title size="5">
@@ -211,11 +212,11 @@
           <nldd-list-item>
             <!-- Content, not a step: no dot, and the line runs on as covered or
                still ahead depending on what waits below. -->
-            <nldd-timeline-track-cell
+            <nldd-step-cell
               size="md"
-              variant="none"
+              level="none"
               [attr.status]="gatherContentStatus()"
-            ></nldd-timeline-track-cell>
+            ></nldd-step-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="full">
               <nldd-container horizontal-alignment="left">
@@ -273,14 +274,14 @@
           >
             <!-- A task with its steps open is not the end of the going: the step
                you are on sits below it, so the track carries on. -->
-            <nldd-timeline-track-cell
+            <nldd-step-cell
               size="md"
               [attr.position]="trackPosition('task', taskIdx)"
               [attr.status]="taskStatus(taskIdx)"
               [attr.line]="taskLine(taskIdx)"
               [attr.icon]="isTaskDone(taskIdx) ? 'check-mark' : null"
               [attr.text]="isTaskDone(taskIdx) ? null : taskIdx + 2"
-            ></nldd-timeline-track-cell>
+            ></nldd-step-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="full">
               <nldd-title size="5">
@@ -299,7 +300,7 @@
                     ></nldd-tag>
                   }
                 </h2>
-                <nldd-text slot="subtitle">{{ taskPlace(task) }}</nldd-text>
+                <nldd-text slot="supporting-text">{{ taskPlace(task) }}</nldd-text>
               </nldd-title>
             </nldd-cell>
           </nldd-list-item>
@@ -313,14 +314,14 @@
               <!-- Above the first step, so it reads as step -1 of this task: the
                  stretch is covered once you have entered the task, and still
                  ahead while you are only reading forward into it. -->
-              <nldd-timeline-track-cell
+              <nldd-step-cell
                 size="md"
-                variant="none"
+                level="none"
                 [attr.status]="contentStatus(taskIdx, -1)"
-              ></nldd-timeline-track-cell>
+              ></nldd-step-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="full">
-                <nldd-list variant="box-tinted" accessible-label="Notes on this task">
+                <nldd-list appearance="box-tinted" accessible-label="Notes on this task">
                   @for (note of taskNotes(); track note.id) {
                     <nldd-list-item>
                       <!-- Top-aligned: a note runs to several lines and its author
@@ -354,7 +355,7 @@
                     <nldd-spacer-cell size="12"></nldd-spacer-cell>
                     <nldd-cell width="fit-content" vertical-alignment="bottom">
                       <nldd-button
-                        variant="secondary"
+                        appearance="secondary"
                         text="Add"
                         (click)="saveNote()"
                       ></nldd-button>
@@ -380,12 +381,12 @@
                     : null
                 "
               >
-                <nldd-timeline-track-cell
+                <nldd-step-cell
                   size="md"
-                  variant="minor"
+                  level="minor"
                   [attr.position]="trackPosition('step', taskIdx, si)"
                   [attr.status]="stepStatus(taskIdx, si)"
-                ></nldd-timeline-track-cell>
+                ></nldd-step-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-cell width="full">
                   <nldd-title size="6">
@@ -397,12 +398,12 @@
               @if (isStepActive(taskIdx, si)) {
                 <nldd-list-item>
                   <!-- See the gather row: content carries the line, not a dot. -->
-                  <nldd-timeline-track-cell
+                  <nldd-step-cell
                     size="md"
-                    variant="none"
+                    level="none"
                     [attr.position]="contentPosition(taskIdx, si)"
                     [attr.status]="contentStatus(taskIdx, si)"
-                  ></nldd-timeline-track-cell>
+                  ></nldd-step-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-cell width="full">
                     <nldd-container horizontal-alignment="left">
@@ -451,7 +452,7 @@
         >
           <nldd-button
             slot="actions"
-            variant="neutral-filled"
+            appearance="neutral-tinted"
             text="Back to My Tasks"
             start-icon="arrow-left"
           ></nldd-button>
@@ -470,7 +471,7 @@
       <!-- Show, not continue: continuing is what somebody walking the round
            does, and nobody walks here. Reading is looking, and this button puts
            the next step in front of you and changes nothing else. -->
-      <nldd-button variant="primary" text="Show next step" (click)="pressNext()"></nldd-button>
+      <nldd-button appearance="primary" text="Show next step" (click)="pressNext()"></nldd-button>
     }
   } @else {
     <!-- Disabled while the step write is in flight: pressDone() ignores the
@@ -481,7 +482,7 @@
          not a second thing you choose. No aria-label over it any more, now that
          the visible words say it. -->
     <nldd-button
-      variant="primary"
+      appearance="primary"
       [attr.text]="savingStep() ? 'Saving…' : showCompleteBtn() ? 'Complete round' : 'Mark as done'"
       [attr.disabled]="savingStep() ? '' : null"
       [attr.aria-busy]="savingStep() ? 'true' : null"

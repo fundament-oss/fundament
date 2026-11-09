@@ -23,8 +23,8 @@ func (s *Server) GetAssetEvents(
 	}
 
 	events := make([]*dcimv1.AssetEvent, 0, len(rows))
-	for _, row := range rows {
-		events = append(events, assetEventFromRow(&row))
+	for i := range rows {
+		events = append(events, assetEventFromRow(&rows[i]))
 	}
 
 	return dcimv1.GetAssetEventsResponse_builder{

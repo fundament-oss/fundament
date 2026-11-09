@@ -1,14 +1,13 @@
 // Page factory for the consumer kinds (BlockStorage, FileStorage,
-// ObjectStorage): one implementation of the list and detail flows,
-// parameterized per kind; create and edit open in an <nldd-sheet> from those
-// pages. The kinds differ only in labels/texts and a few kind-specific spec
-// fields, so each page file reduces to a factory call with its kind's config.
+// ObjectStorage): one implementation of the list, detail, create and edit
+// pages, parameterized per kind. Create and edit are pages of their own that
+// the list and detail pages open in a console sheet (fundament.openSheet). The
+// kinds differ only in labels/texts and a few kind-specific spec fields, so
+// each page file reduces to a factory call with its kind's config.
 
 import {
   loadSdk,
-  openSheet,
   errorBox,
-  ensureNldd,
   fetchCephCapacity,
   humanizeQuantity,
   escapeHtml,
@@ -165,14 +164,17 @@ export async function consumerListPage(cfg) {
 
   await loadSdk();
   await fundament.init;
-  // Warm the sheet bundle so the first Create click opens instantly.
-  ensureNldd().catch(() => {});
 
-  document.getElementById('create-btn').addEventListener('click', async () => {
-    const sheet = await openSheet({ label: `Create ${cfg.label}` });
-    if (sheet) renderCreateForm(cfg, sheet.body, sheet.close);
+  document.getElementById('create-btn').addEventListener('click', () => {
+    fundament.openSheet({ view: 'create' });
   });
+  fundament.onResourcesChanged(() => renderRows(tbody, cfg, colspan));
 
+  await renderRows(tbody, cfg, colspan);
+}
+
+// Fills the list's rows; again whenever a sheet over the list saved.
+async function renderRows(tbody, cfg, colspan) {
   try {
     const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: cfg.resource });
 
@@ -208,7 +210,6 @@ export async function consumerListPage(cfg) {
 export async function consumerDetailPage(cfg) {
   await loadSdk();
   const ctx = await fundament.init;
-  ensureNldd().catch(() => {});
 
   const content = document.getElementById('content');
   const heading = document.getElementById('heading');
@@ -248,7 +249,9 @@ export async function consumerDetailPage(cfg) {
       // .onclick, not addEventListener: this button lives outside #content and
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
-      document.getElementById('edit-btn').onclick = () => showEdit(item);
+      document.getElementById('edit-btn').onclick = () => {
+        fundament.openSheet({ view: 'edit', resource: { name } });
+      };
       // Filled in after the fact: users cannot run ceph df, but the
       // CephCluster status carries the raw numbers.
       fetchCephCapacity().then((cap) => {
@@ -266,58 +269,77 @@ export async function consumerDetailPage(cfg) {
     }
   }
 
-  async function showEdit(item) {
-    const sheet = await openSheet({ label: `Edit ${cfg.label}` });
-    if (!sheet) return;
-    const { body, close } = sheet;
-    body.insertAdjacentHTML('beforeend', `
-      <nldd-form>
-        <form novalidate>
-          ${errorBannerHtml('edit-error')}
-
-          ${replicasFieldHtml(item.spec?.replicas)}
-
-          ${intFieldsHtml(cfg, item.spec)}
-
-          ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
-
-          ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
-        </form>
-      </nldd-form>
-    `);
-
-    const form = body.querySelector('form');
-    body.querySelector('#cancel-btn').addEventListener('click', () => close());
-
-    wireSubmit(form, {
-      button: body.querySelector('#save-btn'),
-      errorBanner: body.querySelector('#edit-error'),
-      failPrefix: 'Failed to save',
-      checks: intFieldChecks(cfg, form),
-      action: async () => {
-        // Merge-patch of spec only: status is untouched.
-        await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
-        close();
-        await showDetail();
-      },
-    });
-  }
-
   if (!name) {
     content.textContent = cfg.noneSelected;
     return;
   }
+  // The edit sheet saved: show what it saved.
+  fundament.onResourcesChanged(() => showDetail());
   const item = await showDetail();
   // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
-  // #extra, outside #content, so the edit form's re-renders never touch it.
+  // #extra, outside #content, so showDetail's re-renders never touch it.
   const extra = document.getElementById('extra');
   if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
 }
 
-// renderCreateForm fills a sheet with the kind's create form; the list
-// page opens it.
-function renderCreateForm(cfg, body, close) {
-  body.insertAdjacentHTML('beforeend', `
+// The edit form, which the detail page opens in a sheet (see sheet.js).
+// Saving merge-patches spec only and closes the sheet, and the detail page
+// reads the resource again.
+export async function consumerEditPage(cfg, ctx) {
+  const body = document.getElementById('content');
+  const resource = { ...GROUP_VERSION, resource: cfg.resource };
+  const name = ctx.resource?.name;
+  if (!name) {
+    body.textContent = cfg.noneSelected;
+    return;
+  }
+
+  let item;
+  try {
+    item = await fundament.k8s.get({ ...resource, name });
+  } catch (err) {
+    body.innerHTML = errorBox(err);
+    return;
+  }
+
+  body.innerHTML = `
+    <nldd-form>
+      <form novalidate>
+        ${errorBannerHtml('edit-error')}
+
+        ${replicasFieldHtml(item.spec?.replicas)}
+
+        ${intFieldsHtml(cfg, item.spec)}
+
+        ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
+
+        ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
+  `;
+
+  const form = body.querySelector('form');
+  body.querySelector('#cancel-btn').addEventListener('click', () => fundament.closeSheet());
+
+  wireSubmit(form, {
+    button: body.querySelector('#save-btn'),
+    errorBanner: body.querySelector('#edit-error'),
+    failPrefix: 'Failed to save',
+    checks: intFieldChecks(cfg, form),
+    action: async () => {
+      // Merge-patch of spec only: status is untouched.
+      await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
+      fundament.closeSheet({ changed: true });
+    },
+  });
+}
+
+// The create form, which the list page opens in a sheet (see sheet.js). Also
+// the routed create page: closeSheet goes back to the list there, and
+// navigateToDetail shows the new resource either way.
+export function consumerCreatePage(cfg) {
+  const body = document.getElementById('content');
+  body.innerHTML = `
     <nldd-rich-text>
       <p>${cfg.createIntro}</p>
     </nldd-rich-text>
@@ -346,12 +368,12 @@ function renderCreateForm(cfg, body, close) {
         ${formActionsHtml({ submitId: 'submit-btn', submitText: `Create ${cfg.label}`, cancelId: 'cancel-btn' })}
       </form>
     </nldd-form>
-  `);
+  `;
 
   const form = body.querySelector('form');
   const nameInput = form.querySelector('[name="name"]');
 
-  body.querySelector('#cancel-btn').addEventListener('click', () => close());
+  body.querySelector('#cancel-btn').addEventListener('click', () => fundament.closeSheet());
 
   wireSubmit(form, {
     button: body.querySelector('#submit-btn'),
@@ -372,7 +394,7 @@ function renderCreateForm(cfg, body, close) {
           spec: specFrom(cfg, form),
         },
       );
-      close();
+      // From a sheet the console closes it and shows the new resource.
       navigateToDetail(name);
     },
   });

@@ -5,3 +5,4 @@ export { default as LoadingIndicatorComponent } from './loading-indicator.compon
 export { default as FundamentLogoIconComponent } from './fundament-logo-icon.component';
 export { default as CheckmarkIconComponent } from './checkmark-icon.component';
 export { default as PluginIconComponent } from './plugin-icon.component';
+export { default as PluginMenuIconComponent } from './plugin-menu-icon.component';

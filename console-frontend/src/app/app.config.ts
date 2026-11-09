@@ -14,6 +14,7 @@ import {
   INSTALL_TRANSPORT,
   MARKETPLACE_TRANSPORT,
   ORGANIZATION_TRANSPORT,
+  PLATFORM_TRANSPORT,
 } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
@@ -84,6 +85,20 @@ export const appConfig: ApplicationConfig = {
       useFactory: () => {
         const configService = inject(ConfigService);
         return createConnectTransport({ baseUrl: configService.getConfig().marketplaceApiUrl });
+      },
+    },
+    // Provide the Platform transport for the public overview (FUN-23).
+    // Anonymous like the catalog: no cookie, no Fun-Organization header. GET,
+    // because the RPC has no side effects and the server marks the response
+    // cacheable for a minute.
+    {
+      provide: PLATFORM_TRANSPORT,
+      useFactory: () => {
+        const configService = inject(ConfigService);
+        return createConnectTransport({
+          baseUrl: configService.getConfig().platformApiUrl ?? '',
+          useHttpGet: true,
+        });
       },
     },
     // Provide the Install transport: install.v1 on the marketplace host, but

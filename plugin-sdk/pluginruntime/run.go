@@ -67,7 +67,7 @@ func run(plugin Plugin, opts ...RunOption) error {
 		}
 		h.ReportStatus(PluginStatus{Phase: PhaseUninstalling, Message: "uninstalling"})
 		if err := installer.Uninstall(ctx, h); err != nil {
-			return err
+			return fmt.Errorf("uninstall plugin: %w", err)
 		}
 		sigCancel()
 		return nil

@@ -23,8 +23,8 @@ func (s *Server) ListAssetsByCatalogEntry(
 	}
 
 	assets := make([]*dcimv1.Asset, 0, len(rows))
-	for _, row := range rows {
-		assets = append(assets, assetFromListByCatalogRow(&row))
+	for i := range rows {
+		assets = append(assets, assetFromListByCatalogRow(&rows[i]))
 	}
 
 	return dcimv1.ListAssetsByCatalogEntryResponse_builder{

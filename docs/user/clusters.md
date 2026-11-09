@@ -74,8 +74,14 @@ longer needed, within that range. The **Nodes** tab shows each pool's current
 node count alongside its bounds. There is no manual "set the node count to N"
 operation; set the minimum instead.
 
-A cluster with no node pools at all still gets one default worker pool, sized
-1 to 3 nodes. That pool is not counted against your [quota](#quotas).
+A cluster runs only the node pools you give it. A new cluster starts once its
+first node pool is added; until then it waits, and its status and events say
+so ("Creating cluster: waiting for a node pool"). A cluster's last node pool
+cannot be removed on its own: replace it in one step instead, which the
+console's node pools sheet and the OpenTofu provider do by saving the new set
+of pools (the old pool goes and the new one comes in the same change, so it
+fits within your quota). At least one pool must have a maximum above 0, so a
+cluster always has somewhere to run its nodes.
 
 ### Applying changes
 
@@ -133,6 +139,14 @@ project owns them. See [Namespaces](./namespaces.md).
 Each cluster's **Plugins** tab shows what is installed and lets cluster admins
 install more from the catalog. Plugins are per cluster: two clusters in the same
 organization can run a different set, at different versions.
+
+## Networking
+
+Each cluster has its own private network and its own firewall. Services get
+their addresses automatically: one that only works inside the cluster by
+default, and a public one for a Service of type `LoadBalancer` or a Gateway.
+See [Service IP addresses](./service-addresses.md) for where those addresses
+come from and how long you keep them.
 
 ## Cluster access
 
@@ -255,3 +269,18 @@ model described in
 [ADR 0006](/adr/0006-cluster-lifecycle-management). In line with the platform's
 soft-delete policy, deleting a cluster in the console removes it from your view
 rather than erasing its record.
+
+### Lost clusters
+
+A cluster can disappear from the underlying infrastructure without anyone
+deleting it in the platform, for instance after an operator error or the loss of
+the machines that ran its control plane. Its workloads and data are gone with
+it. If the platform had already seen the cluster in the infrastructure, it then
+shows the cluster as **Lost**, records a "Cluster lost" event, and offers no
+kubeconfig. A cluster that disappears before the platform first saw it stays
+**Provisioning**, without an event to show for it.
+
+A lost cluster is not rebuilt by itself. Any change to the cluster, such as
+resizing a node pool, creates it again under the same name. The new cluster is
+empty: restore its workloads and data from your own sources. If you no longer
+need the cluster, delete it instead.

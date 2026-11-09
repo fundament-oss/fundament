@@ -2,11 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // Ensure ClusterResource satisfies various resource interfaces.
@@ -60,8 +62,12 @@ func (r *ClusterResource) Metadata(ctx context.Context, req resource.MetadataReq
 func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a Kubernetes cluster in Fundament.\n\n" +
-			"A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out " +
+			"A create waits until Gardener has built the cluster and it serves; an update until Gardener has rolled out " +
 			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
+			"The wait does not hold out for health: once the change is applied and no rollout is running, a cluster " +
+			"that reports `starting` (health checks settling) or `unhealthy` (a health condition failing, such as a " +
+			"node pool that cannot get machines) ends the wait too — the apply succeeds with a warning and Gardener " +
+			"keeps working on the cluster. " +
 			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
 			"cluster does not run within the timeout.\n\n" +
 			"When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. " +
@@ -95,7 +101,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
+				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), lost (the cluster no longer exists in Gardener; a change to it creates it again, empty), deleting or stopped.",
 				Computed:    true,
 			},
 		},
@@ -132,7 +138,7 @@ func (r *ClusterResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 // Create creates a new cluster.
-func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan ClusterResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -189,11 +195,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// cluster-worker may already have given the Shoot a default worker pool;
-	// created right away, the pools replace it before Gardener builds workers.
-	// A new cluster has no pools, so there is nothing to list; ListNodePools
-	// could also be refused until the new cluster's permissions are synced.
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), nil, plan.NodePools)...)
+	// The cluster waits for its first pool before it gets a Shoot, so its pools
+	// follow right away, all in one call.
+	resp.Diagnostics.Append(setNodePools(ctx, r.client, plan.ID.ValueString(), plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -205,7 +209,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString())
+	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString(), true)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", plan.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -215,6 +219,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 		resp.Diagnostics.AddError("Cluster Did Not Start", detail)
 		return
+	}
+	if warning := clusterNotSettledWarning(cluster); warning != "" {
+		resp.Diagnostics.AddWarning("Cluster Created But Not Settled", fmt.Sprintf("Cluster %q: %s", plan.Name.ValueString(), warning))
 	}
 
 	plan.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
@@ -228,7 +235,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state ClusterResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -369,7 +376,7 @@ func (r *ClusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 }
 
 // Update updates the cluster configuration.
-func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // signature set by resource.Resource
 	var plan ClusterResourceModel
 	var state ClusterResourceModel
 
@@ -393,14 +400,21 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		"kubernetes_version_new": plan.KubernetesVersion.ValueString(),
 	})
 
+	// The live pools, not the refreshed state: a pool changed elsewhere since
+	// the refresh still counts.
 	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
 		return
 	}
+	currentPools := make([]ClusterNodePoolModel, 0, len(current))
+	for _, pool := range current {
+		currentPools = append(currentPools, pool.Pool)
+	}
+
 	// Check the machine types before anything changes, so a type the region
 	// does not offer fails before an upgrade has gone out.
-	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), planNodePoolChanges(current, plan.NodePools).Create)...)
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), newOrRetyped(currentPools, plan.NodePools))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -412,9 +426,12 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), current, plan.NodePools)...)
-	if resp.Diagnostics.HasError() {
-		return
+	poolsChanged := !sameNodePools(currentPools, plan.NodePools)
+	if poolsChanged {
+		resp.Diagnostics.Append(setNodePools(ctx, r.client, state.ID.ValueString(), plan.NodePools)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultClusterUpdateTimeout)
@@ -424,7 +441,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString())
+	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || poolsChanged
+	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString(), changed)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -432,6 +450,9 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 		resp.Diagnostics.AddError("Cluster Update Did Not Complete", detail)
 		return
+	}
+	if warning := clusterNotSettledWarning(cluster); warning != "" {
+		resp.Diagnostics.AddWarning("Cluster Updated But Not Settled", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), warning))
 	}
 
 	// Update the plan with the server response
@@ -486,7 +507,7 @@ func (r *ClusterResource) updateKubernetesVersion(ctx context.Context, clusterID
 }
 
 // Delete deletes the cluster.
-func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // signature set by resource.Resource
 	var state ClusterResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -530,9 +551,15 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 				"id": state.ID.ValueString(),
 			})
 		case connect.CodeFailedPrecondition:
+			// The API names the projects that keep the cluster, so they are
+			// passed on: they may live outside this configuration.
+			reason := err.Error()
+			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+				reason = connectErr.Message()
+			}
 			resp.Diagnostics.AddError(
 				"Cluster Cannot Be Deleted",
-				fmt.Sprintf("Cluster %q cannot be deleted because it has dependent resources (e.g., namespaces). Delete those resources first.", state.ID.ValueString()),
+				fmt.Sprintf("Cluster %q cannot be deleted: %s.", state.Name.ValueString(), reason),
 			)
 			return
 		default:

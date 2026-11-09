@@ -38,12 +38,11 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
 		queries: db.New(database.Pool),
 		// The reviewer credential is the DCIM token: reviewers are Fundament
 		// staff, who authenticate against the staff IDP (dexDcim via
-		// dcim-authn-api), not the customer-facing console. DCIM tokens carry
-		// no audience, so this cannot use NewValidatorForAudience; the issuer
-		// check alone rejects console user tokens and plugin tokens (FUN-17),
-		// both issued by fundament-authn-api.
-		authValidator: auth.NewValidator(
-			cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger,
+		// dcim-authn-api), not the customer-facing console. Issuer and
+		// audience together reject console user tokens and plugin tokens
+		// (FUN-17), both issued by fundament-authn-api.
+		authValidator: auth.NewValidatorForAudience(
+			cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger,
 		),
 	}
 

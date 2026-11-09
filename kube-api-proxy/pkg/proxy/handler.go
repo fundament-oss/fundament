@@ -96,6 +96,9 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 		ctx = WithSAToken(ctx, saToken)
+		ctx = kube.WithTokenRejected(ctx, func() {
+			s.tokenCache.ForgetToken(claims.UserID(), clusterID.String(), saToken)
+		})
 	}
 
 	// --- Namespace listing (GUI tools) ---

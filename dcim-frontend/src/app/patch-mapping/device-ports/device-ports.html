@@ -19,7 +19,8 @@
     <!-- What the device has. Removing is the one thing you can do to a row, and
          the button stands there rather than appearing on hover: on a touch
          screen there is no hover to appear on. -->
-    <nldd-list variant="box-tinted" accessible-label="Ports" empty-text="No ports on this device">
+    <nldd-list appearance="box-tinted" accessible-label="Ports">
+      <nldd-inline-dialog slot="empty" text="No ports on this device"></nldd-inline-dialog>
       @for (port of ports(); track port.id) {
         <nldd-list-item>
           <nldd-text-cell width="full" [attr.text]="port.name"></nldd-text-cell>
@@ -33,7 +34,7 @@
           <nldd-cell width="fit-content">
             <nldd-icon-button
               icon="trash"
-              variant="secondary"
+              appearance="secondary"
               size="sm"
               [attr.text]="'Remove ' + port.name"
               (click)="askRemove(port)"
@@ -87,7 +88,7 @@
 
           <nldd-form-actions>
             <nldd-button
-              variant="secondary"
+              appearance="secondary"
               text="Add port"
               start-icon="plus-small"
               width="full"
@@ -113,13 +114,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep port"
     (click)="cancelRemove()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Remove port"
     (click)="confirmRemove()"
   ></nldd-button>

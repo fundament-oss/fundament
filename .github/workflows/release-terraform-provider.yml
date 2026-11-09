@@ -39,7 +39,7 @@ jobs:
           #   terraform-provider-fundament_<semver>_<os>_<arch>.zip
           # containing a single terraform-provider-fundament_v<semver>[.exe].
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/arm64 windows/amd64; do
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             GOOS="${target%/*}"
             GOARCH="${target#*/}"
             OUT_DIR="dist/terraform-provider-fundament_${GOOS}_${GOARCH}"
@@ -86,6 +86,7 @@ jobs:
           gh release upload terraform-provider-latest \
             "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_amd64.zip" \
             "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_arm64.zip" \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_darwin_amd64.zip" \
             "dist/terraform-provider-fundament_${PROVIDER_VERSION}_darwin_arm64.zip" \
             "dist/terraform-provider-fundament_${PROVIDER_VERSION}_windows_amd64.zip" \
             "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS" \

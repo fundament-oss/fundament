@@ -116,7 +116,7 @@ func (s *AuthnServer) signPluginToken(
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.ConsoleIssuer,
 			Subject:   userID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(PluginTokenExpiry)),
 		},

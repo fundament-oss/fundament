@@ -265,7 +265,7 @@ func TestTrimShootForStatus(t *testing.T) {
 	assert.Equal(t, clusterID.String(), trimmed.Labels[LabelClusterID])
 	assert.NotNil(t, trimmed.DeletionTimestamp)
 	assert.Equal(t, gardencorev1beta1.LastOperationStateSucceeded, trimmed.Status.LastOperation.State)
-	assert.Len(t, trimmed.Status.Conditions, 3)
+	assert.Len(t, trimmed.Status.Conditions, 4)
 }
 
 func TestShootClusterIDValue(t *testing.T) {
@@ -322,6 +322,32 @@ func TestShootStatusChanged(t *testing.T) {
 			assert.Equal(t, tt.want, shootStatusChanged(oldShoot, newShoot))
 		})
 	}
+}
+
+// A change in the worker detail (the EveryNodeReady reason or lastErrors) is
+// a status change: it is what updates a node pool's stored reason, so the
+// watch must deliver it even when nothing else moved.
+func TestShootStatusChangedOnWorkerDetail(t *testing.T) {
+	t.Parallel()
+
+	clusterID := uuid.New()
+	stuck := func(enrMessage string, lastErrors ...string) *gardencorev1beta1.Shoot {
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationStateProcessing, "waiting for workers"),
+			condition(gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootControlPlaneHealthy, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootSystemComponentsHealthy, gardencorev1beta1.ConditionTrue),
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionFalse, Message: enrMessage},
+		)
+		for _, desc := range lastErrors {
+			shoot.Status.LastErrors = append(shoot.Status.LastErrors, gardencorev1beta1.LastError{Description: desc})
+		}
+		return shoot
+	}
+
+	assert.False(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment a waits")))
+	assert.True(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment b waits")))
+	assert.True(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment a waits", "no machine available")))
 }
 
 func TestProcessingDescriptionChangeIsAStatusChange(t *testing.T) {

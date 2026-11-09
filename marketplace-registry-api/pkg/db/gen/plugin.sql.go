@@ -469,7 +469,19 @@ SELECT
 	    AND plugin_definitions.published IS NOT NULL
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
-	  LIMIT 1) AS latest_published_version_id
+	  LIMIT 1) AS latest_published_version_id,
+	COALESCE((SELECT plugin_definitions.logo
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo,
+	COALESCE((SELECT plugin_definitions.logo_dark
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo_dark
 FROM appstore.plugins
 WHERE id = $1::uuid
   AND deleted IS NULL
@@ -495,6 +507,8 @@ type PluginGetByIDRow struct {
 	Created                  pgtype.Timestamptz
 	Updated                  pgtype.Timestamptz
 	LatestPublishedVersionID uuid.UUID
+	Logo                     string
+	LogoDark                 string
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
@@ -516,6 +530,8 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.Created,
 		&i.Updated,
 		&i.LatestPublishedVersionID,
+		&i.Logo,
+		&i.LogoDark,
 	)
 	return i, err
 }
@@ -580,7 +596,19 @@ SELECT
 	    AND plugin_definitions.published IS NOT NULL
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
-	  LIMIT 1) AS latest_published_version_id
+	  LIMIT 1) AS latest_published_version_id,
+	COALESCE((SELECT plugin_definitions.logo
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo,
+	COALESCE((SELECT plugin_definitions.logo_dark
+	   FROM appstore.plugin_definitions
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.created DESC
+	  LIMIT 1), '')::text AS logo_dark
 FROM appstore.plugins
 WHERE deleted IS NULL
 ORDER BY name ASC
@@ -602,6 +630,8 @@ type PluginListRow struct {
 	Created                  pgtype.Timestamptz
 	Updated                  pgtype.Timestamptz
 	LatestPublishedVersionID uuid.UUID
+	Logo                     string
+	LogoDark                 string
 }
 
 // Queries for registry.v1.PublicationService. Every one of them runs under
@@ -634,6 +664,8 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 			&i.Created,
 			&i.Updated,
 			&i.LatestPublishedVersionID,
+			&i.Logo,
+			&i.LogoDark,
 		); err != nil {
 			return nil, err
 		}

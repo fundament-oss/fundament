@@ -17,14 +17,14 @@
     <nldd-spacer size="12"></nldd-spacer>
     <nldd-rich-text spacing="flat">
       <p>
-        What your organization may build: how many clusters, and how many nodes of each machine
-        type in each region. A node pool counts with its maximum size, whether or not the
-        autoscaler ever reaches it, across all your clusters. A deleted cluster and its pools
-        count until the platform has torn them down.
+        What your organization may build: how many clusters, and how many nodes of each machine type
+        in each region. A node pool counts with its maximum size, whether or not the autoscaler ever
+        reaches it, across all your clusters. A deleted cluster and its pools count until the
+        platform has torn them down.
       </p>
       <p>
-        Quotas are set by the platform operator and only stop something new: a cluster, a node
-        pool, or a pool growing. To request an increase in quotas, contact a Fundament operator.
+        Quotas are set by the platform operator and only stop something new: a cluster, a node pool,
+        or a pool growing. To request an increase in quotas, contact a Fundament operator.
       </p>
     </nldd-rich-text>
     <nldd-spacer size="24"></nldd-spacer>
@@ -52,7 +52,7 @@
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-list
-        variant="box-tinted"
+        appearance="box-tinted"
         accessible-label="Cluster quota"
       >
         <nldd-list-item>
@@ -75,10 +75,9 @@
       @if (noNodeQuota()) {
         <nldd-rich-text spacing="flat">
           <p>
-            No node quota allows a pool at the moment, so no node pool of your own can be
-            added. A cluster without node pools still runs on the platform's default worker
-            pool, which is outside this quota. Contact a Fundament operator to have a quota
-            set for the machine types you need.
+            No node quota allows a pool at the moment, so no node pool can be added, and a cluster
+            starts only with its first node pool. Contact a Fundament operator to have a quota set
+            for the machine types you need.
           </p>
         </nldd-rich-text>
         <nldd-spacer size="16"></nldd-spacer>
@@ -88,7 +87,7 @@
              the name as the text, the region as its supporting line, and the
              numbers on the right where they line up. -->
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Node quotas"
         >
           @for (node of nodes(); track node.region + '/' + node.label) {
