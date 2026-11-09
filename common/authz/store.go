@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/go-sdk/client"
@@ -85,19 +86,25 @@ func (s *Store) Healthy(ctx context.Context) error {
 	return nil
 }
 
+// readyBudget bounds Ready, so a hung OpenFGA leaves the probe handler time for
+// its other checks within the kubelet's timeout.
+var readyBudget = 2 * time.Second
+
 // Ready reports whether a service may receive traffic, for its readiness probe.
 //
-// It fails until the store has been resolved once, and whenever OpenFGA answers
-// that the store does not exist: the deployment is not finished. It does not
-// fail on any other OpenFGA error after that, whether a connection failure or an
-// error response. Each hits every replica alike, so failing would take them all
-// out of their Service at once, and callers would get a 503 from the gateway in
-// place of the error the API returns from the requests that need OpenFGA, which
-// fail closed. Requests that do not need it keep working.
+// It fails until the store has been resolved once: the deployment is not
+// finished. After that it fails on no OpenFGA error, a missing store included.
+// Each hits every replica alike, so failing would take them all out of their
+// Service at once, login and every request that needs no OpenFGA with them,
+// while the requests that need it fail closed anyway. Only the bootstrap Job of
+// a deploy creates a store, so no replica would come back before the next one.
 //
 // It runs Healthy either way: the probe is what notices a replaced store and
 // moves this service to the new one.
 func (s *Store) Ready(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, readyBudget)
+	defer cancel()
+
 	err := s.Healthy(ctx)
 	if err == nil {
 		return nil
@@ -107,11 +114,11 @@ func (s *Store) Ready(ctx context.Context) error {
 	resolved := s.id != ""
 	s.mu.RUnlock()
 
-	if !resolved || errors.Is(err, ErrNoStore) {
+	if !resolved {
 		return err
 	}
 
-	slog.WarnContext(ctx, "OpenFGA is unavailable; staying ready, requests that need it fail", "error", err)
+	slog.WarnContext(ctx, "OpenFGA store unavailable; staying ready, requests that need it fail", "error", err)
 
 	return nil
 }

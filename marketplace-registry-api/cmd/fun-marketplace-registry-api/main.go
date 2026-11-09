@@ -42,7 +42,7 @@ func main() {
 }
 
 // newHealthMux serves the probes. readyz reports the database and whether the
-// OpenFGA store is provisioned (see authz.Store.Ready); livez
+// OpenFGA store was ever resolved (see authz.Store.Ready); livez
 // deliberately reports neither, so a brief outage does not get the container
 // killed and restarted.
 func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB, store *authz.Store) *http.ServeMux {
@@ -52,9 +52,10 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		// One budget for both checks, below the probe's timeoutSeconds.
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
 		if database != nil {
-			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-			defer cancel()
 			if err := database.Pool.Ping(ctx); err != nil {
 				// The probe is public and a pgx error names the host, port,
 				// database and role, so the detail stays in the log.
@@ -65,8 +66,6 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 			}
 		}
 		if store != nil {
-			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-			defer cancel()
 			if err := store.Ready(ctx); err != nil {
 				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
 				w.WriteHeader(http.StatusServiceUnavailable)

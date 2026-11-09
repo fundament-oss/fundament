@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/openfga/go-sdk/client"
 	"github.com/stretchr/testify/assert"
@@ -274,9 +275,8 @@ func TestReadyFailsUntilStoreIsProvisioned(t *testing.T) {
 	require.NoError(t, ref.Ready(t.Context()))
 }
 
-// OpenFGA answered and the store is gone: that is a replaced datastore, not an
-// outage, so readiness has to report it.
-func TestReadyFailsWhenStoreDisappears(t *testing.T) {
+// A lost store hits every replica alike, and only a deploy creates a new one.
+func TestReadyStaysReadyWhenStoreDisappears(t *testing.T) {
 	var gone atomic.Bool
 
 	ref := newRef(t, removableStoreServer(t, &gone).URL)
@@ -284,5 +284,43 @@ func TestReadyFailsWhenStoreDisappears(t *testing.T) {
 
 	gone.Store(true)
 
-	require.ErrorIs(t, ref.Ready(t.Context()), ErrNoStore)
+	require.NoError(t, ref.Ready(t.Context()))
+}
+
+// hangableServer serves one store until hanging is set, then answers nothing
+// until the client gives up, as an OpenFGA that stopped responding.
+func hangableServer(t *testing.T, hanging *atomic.Bool) *httptest.Server {
+	t.Helper()
+
+	var gone atomic.Bool
+
+	healthy := removableStoreServer(t, &gone).Config.Handler
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if hanging.Load() {
+			<-r.Context().Done()
+
+			return
+		}
+
+		healthy.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	return srv
+}
+
+// The probe handler has its own checks and the kubelet's timeout to fit in.
+func TestReadyAnswersWithinBudgetWhenOpenFGAHangs(t *testing.T) {
+	var hanging atomic.Bool
+
+	ref := newRef(t, hangableServer(t, &hanging).URL)
+	require.NoError(t, ref.Ready(t.Context()))
+
+	hanging.Store(true)
+	readyBudget = 200 * time.Millisecond
+	t.Cleanup(func() { readyBudget = 2 * time.Second })
+
+	start := time.Now()
+	require.NoError(t, ref.Ready(t.Context()))
+	assert.Less(t, time.Since(start), time.Second)
 }
