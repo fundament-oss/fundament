@@ -110,6 +110,15 @@ development:
 db:
   enabled: true
   image: ghcr.io/cloudnative-pg/postgresql:18.6
+  # A CNPG image catalog for the database Cluster. When set, the Cluster uses
+  # the catalog image for this major and ignores db.image (the OpenFGA init
+  # containers still use db.image for psql). kind defaults to
+  # ClusterImageCatalog. Changing major makes CNPG do an in-place major
+  # upgrade.
+  # imageCatalogRef:
+  #   kind: ClusterImageCatalog
+  #   name: postgresql-standard-trixie
+  #   major: 18
   instances: 1
   # The CNPG PodDisruptionBudgets. Without a value, the chart sets false for 1
   # instance and true for 2 or more. With 1 instance, the primary cannot move, so
