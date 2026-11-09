@@ -28,8 +28,9 @@ This document is the architecture reference for anyone working on the Console-pl
  └──────┼────────┼─────────────────────────┼─────────────┼──────┘
         │        │                         │             │
         ▼        ▼                         ▼             ▼
- organization-api  kube-api-proxy ◄──────────── k8s.* calls
- (definitions)     (installations)     plugin-proxy (pages, SDK)
+ marketplace-      kube-api-proxy ◄──────────── k8s.* calls
+ catalog-api       (installations)     plugin-proxy (pages, SDK)
+ (definitions)
                         │                      │
                         ▼                      ▼
                      cluster ◄──────────── plugin pod (/console/)

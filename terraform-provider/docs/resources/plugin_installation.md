@@ -14,7 +14,7 @@ Manages a plugin installation on a Fundament cluster via the kube-api-proxy. Cre
 
 ```terraform
 # Needs kube_api_proxy_url in the provider configuration, and marketplace_install_url
-# when plugin_version and definition_hash are left out.
+# when plugin_version is left out.
 data "fundament_cluster" "example" {
   name = "my-cluster"
 }

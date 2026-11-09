@@ -102,7 +102,7 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				},
 			},
 			"marketplace_install_url": schema.StringAttribute{
-				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version and definition_hash. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.",
+				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},

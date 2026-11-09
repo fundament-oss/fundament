@@ -303,7 +303,9 @@ func (s *Server) GetPluginDefinition(
 
 	definition, err := definitionFromManifest(row.Manifest, row.Logo, row.MenuIcons)
 	if err != nil {
-		s.logger.WarnContext(ctx, "unparseable plugin definition", "error", err)
+		s.logger.WarnContext(ctx, "unparseable plugin definition",
+			"plugin_id", req.GetPluginId(), "plugin", req.GetName().GetPluginName(),
+			"version", req.GetVersion(), "error", err)
 	}
 
 	return catalogv1.GetPluginDefinitionResponse_builder{

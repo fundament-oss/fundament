@@ -177,7 +177,7 @@ Only the parts that are decisions rather than mechanics.
 |`console-frontend` cluster details page, and the Terraform provider's latest-version lookup for `plugin_installation`, which now takes `marketplace_install_url` (done). RPCs removed.
 |===
 
-Two wrinkles are worth naming before those MRs rather than discovering inside them.
+Two wrinkles shaped those MRs.
 
 `GetPluginDefinition` is cross-cluster: `plugin-controller` calls it on every reconcile, from the plugin cluster (link:/funs/fun-19[FUN-19]). It was anonymous when this FUN was written; link:/funs/fun-22[FUN-22] settled where it lands: `install.v1`, a fourth surface served from the catalog binary under its own tenant-aware role, authenticated with the WorkloadToken the controller obtains for its cluster. It could not go to `registry.v1`, which would have given the developer-authenticated deployable one endpoint that takes no credential, cutting against the split axis in <<Three APIs>>; nor to `catalog.v1`, because the controller must resolve definitions for restricted listings too. It stays reachable from the plugin cluster and has no status gate — hiding an approved definition from the controller breaks reconciliation; the only versions it hides are other organizations' unpublished ones.
 
