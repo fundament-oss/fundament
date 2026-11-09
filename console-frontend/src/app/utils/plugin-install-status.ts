@@ -164,6 +164,11 @@ export function installTransitionNotice(
   if (!isInstallRunning(previous) && isInstallRunning(next)) {
     return { kind: 'success', text: `Plugin ${plugin} installed on cluster ${cluster}` };
   }
+  // An install that came up broken, typically a pod that cannot start. Said as
+  // loudly as a failure: whoever started it is waiting for the outcome.
+  if (isInstallInProgress(previous) && !isInstallTerminating(previous) && next === 'Degraded') {
+    return { kind: 'error', text: `Plugin ${plugin} is degraded on cluster ${cluster}` };
+  }
   if (!isInstallFailed(previous) && isInstallFailed(next)) {
     // From Running or Degraded it was installed, and stopped working since.
     const wasUp = isInstallRunning(previous) || previous === 'Degraded';
@@ -175,6 +180,11 @@ export function installTransitionNotice(
     };
   }
   return null;
+}
+
+/** The notification for an installation that is gone from its cluster. */
+export function installRemovedNotice(plugin: string, cluster: string): InstallTransitionNotice {
+  return { kind: 'success', text: `Plugin ${plugin} removed from cluster ${cluster}` };
 }
 
 /** True when the controller rejected the installation's config against its

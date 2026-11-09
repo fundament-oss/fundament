@@ -238,7 +238,7 @@ func TestReconcile_PodStillComingUpIsDeploying(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, got := (&workloadTest{objects: objects}).reconcile(t)
 			assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
-			assert.Contains(t, got.Status.Message, "plugin not reachable")
+			assert.Equal(t, waitingForPluginMessage, got.Status.Message)
 		})
 	}
 }
@@ -278,7 +278,7 @@ func TestReconcile_WorkloadInspectionFailureStaysDeploying(t *testing.T) {
 	}}).reconcile(t)
 
 	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
-	assert.Contains(t, got.Status.Message, "plugin not reachable")
+	assert.Contains(t, got.Status.Message, waitingForPluginMessage)
 	assert.Contains(t, got.Status.Message, "pods is forbidden")
 }
 

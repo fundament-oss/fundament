@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   computed,
+  DestroyRef,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -38,6 +39,14 @@ import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metri
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import type { PluginInstallationItem, PluginInstallIssue } from '../plugin-resources/types';
+import {
+  hasInvalidConfig,
+  healthOf,
+  installIssue,
+  installPhase,
+} from '../utils/plugin-install-status';
+import createInstallPoller from '../utils/install-poller';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import {
   getStatusBadgeColor,
@@ -331,6 +340,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pluginInstallationService = inject(PluginInstallationService);
 
+  /** Re-reads the plugins' installation status while one of them can still
+   *  change on its own, so an install started elsewhere shows how it ends. */
+  private installPoller = createInstallPoller(inject(DestroyRef), () =>
+    this.refreshInstalledPlugins(),
+  );
+
   private cdr = inject(ChangeDetectorRef);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
@@ -426,6 +441,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
+
+  /** What is wrong with each installed plugin, by plugin name: on its way up
+   *  or down, Degraded, Failed. A plugin that runs as it should has none. */
+  pluginIssues = signal<ReadonlyMap<string, PluginInstallIssue>>(new Map());
+
+  /** The catalog as last read, so a status re-read does not fetch it again. */
+  private catalogPlugins: PluginSummary[] = [];
 
   isLoadingPlugins = signal<boolean>(true);
 
@@ -838,10 +860,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
-      const installedNames = new Set(
-        installations.map((item) => item.spec.definitionRef.pluginName),
-      );
-      this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
+      this.catalogPlugins = pluginsResponse.plugins;
+      this.applyInstallations(installations);
     } catch (error) {
       this.notificationService.error(
         error instanceof Error
@@ -851,6 +871,35 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoadingPlugins.set(false);
     }
+  }
+
+  /** Re-reads the installations for the poll. A read that fails keeps what
+   *  is shown: it says nothing about whether a plugin went away. */
+  private async refreshInstalledPlugins(): Promise<void> {
+    const clusterId = this.clusterData.basics.id;
+    if (!clusterId) return;
+    try {
+      this.applyInstallations(await this.pluginInstallationService.listInstallations(clusterId));
+    } catch {
+      // The next poll tries again.
+    }
+  }
+
+  private applyInstallations(installations: PluginInstallationItem[]): void {
+    const issues = new Map<string, PluginInstallIssue>();
+    installations.forEach((item) => {
+      const issue = installIssue(healthOf(item));
+      if (issue) issues.set(item.spec.definitionRef.pluginName, issue);
+    });
+    const installedNames = new Set(installations.map((item) => item.spec.definitionRef.pluginName));
+    this.installedPlugins.set(this.catalogPlugins.filter((p) => installedNames.has(p.name)));
+    this.pluginIssues.set(issues);
+    this.installPoller.pace(
+      installations.map((item) => ({
+        phase: installPhase(item.status?.phase),
+        configInvalid: hasInvalidConfig(item),
+      })),
+    );
   }
 
   // Sync status methods

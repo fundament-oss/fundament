@@ -39,7 +39,6 @@ import {
 import {
   hasInvalidConfig,
   installPhase,
-  installTransitionNotice,
   isInstallInProgress,
   isInstallTerminating,
 } from '../utils/plugin-install-status';
@@ -50,6 +49,9 @@ import PluginInstallationService, {
   RetryAbortedError,
   RetryConfigVersionError,
 } from '../plugin-installation/plugin-installation.service';
+import PluginInstallWatchService, {
+  type InstallWatchTarget,
+} from '../plugin-installation/install-watch.service';
 import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 import createInstallPoller from '../utils/install-poller';
 
@@ -171,6 +173,8 @@ export default class PluginDetailsComponent implements OnInit {
   private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
+
+  private installWatch = inject(PluginInstallWatchService);
 
   private idempotency = createIdempotencyRef();
 
@@ -354,6 +358,18 @@ export default class PluginDetailsComponent implements OnInit {
     return this.clusters().find((c) => c.id === clusterId)?.name ?? clusterId;
   }
 
+  /** The plugin on a cluster, as the install watcher names it in a
+   *  notification. */
+  private watchTarget(plugin: PluginDetailView, clusterId: string): InstallWatchTarget {
+    return {
+      clusterId,
+      clusterName: this.clusterName(clusterId),
+      organizationName: plugin.organizationName,
+      pluginName: plugin.name,
+      pluginLabel: displayNameOf(plugin),
+    };
+  }
+
   private setPhase(clusterId: string, phase: string | null): void {
     this.localChanges += 1;
     this.clusters.update((clusters) =>
@@ -419,13 +435,7 @@ export default class PluginDetailsComponent implements OnInit {
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
-      if (n.phase === null) {
-        this.notificationService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
-        return;
-      }
-      const notice = installTransitionNotice(prevPhase, n.phase, displayNameOf(plugin), n.name);
-      if (notice?.kind === 'success') this.notificationService.success(notice.text);
-      else if (notice?.kind === 'error') this.notificationService.error(notice.text);
+      this.installWatch.observe(this.watchTarget(plugin, n.id), prevPhase, n.phase);
     });
 
     this.clusters.set(next);
@@ -456,6 +466,11 @@ export default class PluginDetailsComponent implements OnInit {
       ),
     );
 
+    targets.forEach((id, i) => {
+      if (results[i].status === 'fulfilled')
+        this.installWatch.watch(this.watchTarget(plugin, id), 'install');
+    });
+
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {
       failed.forEach((id) => this.setPhase(id, null));
@@ -477,6 +492,7 @@ export default class PluginDetailsComponent implements OnInit {
         pluginResourceName(plugin.organizationName, plugin.name),
       );
       this.setPhase(clusterId, 'Terminating');
+      this.installWatch.watch(this.watchTarget(plugin, clusterId), 'uninstall');
       this.startInstallPollingIfNeeded();
     } catch {
       this.notificationService.error(
@@ -501,6 +517,7 @@ export default class PluginDetailsComponent implements OnInit {
         retry.version,
         retry.hash,
       );
+      this.installWatch.watch(this.watchTarget(plugin, clusterId), 'install');
       this.startInstallPollingIfNeeded();
     } catch (err) {
       // An aborted retry stopped before anything was deleted — roll the row

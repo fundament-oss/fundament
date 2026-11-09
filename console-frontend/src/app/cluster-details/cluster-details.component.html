@@ -503,7 +503,25 @@
                       <nldd-title size="6">
                         <h4>{{ pluginDisplayName(plugin) }}</h4>
                       </nldd-title>
-                      @if (plugin.descriptionShort) {
+                      <!-- A plugin that is not running as it should says so
+                           here, as in the sidebar: without it a failed install
+                           looks the same as a healthy one. Its reason takes the
+                           description's place, being what matters right now. -->
+                      @if (pluginIssues().get(plugin.name); as issue) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-badge
+                          size="sm"
+                          [attr.color]="issue.badgeColor"
+                          [attr.text]="issue.label"
+                          [attr.pulse]="issue.inProgress ? '' : null"
+                        ></nldd-badge>
+                      }
+                      @if (pluginIssues().get(plugin.name)?.message; as message) {
+                        <nldd-spacer size="4"></nldd-spacer>
+                        <nldd-rich-text>
+                          <p>{{ message }}</p>
+                        </nldd-rich-text>
+                      } @else if (plugin.descriptionShort) {
                         <nldd-spacer size="4"></nldd-spacer>
                         <nldd-rich-text>
                           <p>{{ plugin.descriptionShort }}</p>

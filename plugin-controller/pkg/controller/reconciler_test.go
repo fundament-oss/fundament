@@ -908,7 +908,13 @@ func TestStatusPoller_Unreachable(t *testing.T) {
 			assert.False(t, reachable)
 			assert.Equal(t, tt.want, got.Phase)
 			assert.False(t, got.Ready)
-			assert.Contains(t, got.Message, "plugin not reachable")
+			// The dial error means nothing while the plugin is still starting;
+			// once it has been up, it is why the plugin is down.
+			if tt.want == pluginsv1.PluginPhaseDeploying {
+				assert.Equal(t, waitingForPluginMessage, got.Message)
+			} else {
+				assert.Contains(t, got.Message, "plugin not reachable")
+			}
 		})
 	}
 }
