@@ -10,6 +10,7 @@
   "exclude": [
     "src/**/*.spec.ts",
     "src/plugin-sdk/build-css.ts",
-    "src/plugin-sdk/build-nldd-design-system-css.ts"
+    "src/plugin-sdk/build-nldd-design-system-css.ts",
+    "src/plugin-sdk/check-classic-scripts.ts"
   ]
 }
