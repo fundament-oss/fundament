@@ -106,7 +106,7 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 
 === Definition structure
 
-* **metadata** (top-level): Identifying information (name, displayName, version, description, author, license, icon, urls, tags).
+* **metadata** (top-level): Identifying information (name, displayName, version, description, author, license, icon, iconDark, urls, tags). `icon` is a built-in icon name or, once published, the digest of a logo file; `iconDark` is an optional dark-mode logo file.
 * **spec**: Behavioral configuration of the plugin, containing the fields below.
 * **permissions**: What the plugin needs from the platform.
 ** `capabilities`: Simple string list (e.g. `internet_access`).
@@ -114,7 +114,7 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 * **menu**: How the plugin appears in the Fundament console.
 ** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs).
 ** `project`: Menu entries visible to project members (namespace-scoped CRDs).
-** Each entry has: `crd` (fully-qualified CRD name), `list`, `detail`, `create` (booleans), and `icon`.
+** Each entry has: `crd` (fully-qualified CRD name), `list`, `detail`, `create` (booleans), and `icon` (a built-in icon name or the digest of an SVG menu icon file).
 * **customComponents**: Optional mapping of CRDs to custom UI component names (list/detail).
 * **uiHints**: Per-CRD form layout and status display hints.
 ** `formGroups`: Groups of related fields for create/edit forms.
@@ -242,7 +242,7 @@ When a Plugin is installed in a Cluster, the Console UI displays menu items base
 * **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers).
 * **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests).
 
-Each menu entry can enable list, detail, and create views. Icons are specified per entry.
+Each menu entry can enable list, detail, and create views and can set its own icon; an entry without one shows a placeholder. A plugin without a logo shows a generic icon.
 
 The Plugin Runtime may serve console UI assets at `/console/` (via the `ConsoleProvider` interface), but it does NOT proxy data. Data access goes through the normal Kubernetes API with standard RBAC.
 
@@ -267,9 +267,10 @@ The marketplace is implemented as an `appstore` schema in the organization-api d
 
 The `PluginService` API in `organization-api` provides:
 
-* `ListPlugins()` - Returns plugins with tags and categories.
-* `GetPluginDetail()` - Returns detailed plugin info including documentation links.
+* `ListPlugins()` - Returns plugins with tags and categories. Deprecated in favour of `install.v1` (link:/funs/fun-20[FUN-20], link:/funs/fun-22[FUN-22]).
 * `ListPresets()` - Returns predefined plugin collections.
+
+Plugin detail is served by `install.v1` `GetPlugin` (link:/funs/fun-22[FUN-22]); organization-api's `GetPluginDetail` is removed.
 
 === Installing, viewing, and deleting plugins
 

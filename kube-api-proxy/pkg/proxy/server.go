@@ -81,10 +81,11 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 
 	if tokenCache != nil && authzClient != nil {
 		s.namespaces = &namespaceLister{
-			logger:     logger,
-			visibility: newVisibilityResolver(authzClient),
-			proxyToken: tokenCache.GetProxyToken,
-			upstream:   kubeHandler,
+			logger:           logger,
+			visibility:       newVisibilityResolver(authzClient),
+			proxyToken:       tokenCache.GetProxyToken,
+			forgetProxyToken: tokenCache.ForgetProxyToken,
+			upstream:         kubeHandler,
 		}
 	}
 
@@ -119,7 +120,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		if err := s.store.Healthy(ctx); err != nil {
+		if err := s.store.Ready(ctx); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("openfga: " + err.Error()))
 			return

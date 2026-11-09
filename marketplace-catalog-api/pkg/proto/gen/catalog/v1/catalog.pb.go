@@ -90,6 +90,8 @@ type PluginSummary struct {
 	xxx_hidden_LatestVersionId  string                 `protobuf:"bytes,100,opt,name=latest_version_id,json=latestVersionId"`
 	xxx_hidden_Published        *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=published"`
 	xxx_hidden_Updated          *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated"`
+	xxx_hidden_Logo             string                 `protobuf:"bytes,130,opt,name=logo"`
+	xxx_hidden_LogoDark         string                 `protobuf:"bytes,140,opt,name=logo_dark,json=logoDark"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -203,6 +205,20 @@ func (x *PluginSummary) GetUpdated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PluginSummary) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -249,6 +265,14 @@ func (x *PluginSummary) SetPublished(v *timestamppb.Timestamp) {
 
 func (x *PluginSummary) SetUpdated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Updated = v
+}
+
+func (x *PluginSummary) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *PluginSummary) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
 }
 
 func (x *PluginSummary) HasPublished() bool {
@@ -299,6 +323,11 @@ type PluginSummary_builder struct {
 	// When the listing's metadata last changed (appstore.plugins.updated), not
 	// when a version was published.
 	Updated *timestamppb.Timestamp
+	// Logo of the newest published version: a data: URI (SVG or PNG), or empty when the
+	// plugin has none. logo_dark is the dark-theme variant, empty when absent.
+	// Both are inlined in every ListPlugins entry, adding up to about 44 KB per plugin.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -317,6 +346,8 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_LatestVersionId = b.LatestVersionId
 	x.xxx_hidden_Published = b.Published
 	x.xxx_hidden_Updated = b.Updated
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -344,6 +375,8 @@ type PluginDetails struct {
 	xxx_hidden_Features           *[]*v1.FeatureBlock      `protobuf:"bytes,190,rep,name=features"`
 	xxx_hidden_DocumentationLinks *[]*v1.DocumentationLink `protobuf:"bytes,200,rep,name=documentation_links,json=documentationLinks"`
 	xxx_hidden_Updated            *timestamppb.Timestamp   `protobuf:"bytes,210,opt,name=updated"`
+	xxx_hidden_Logo               string                   `protobuf:"bytes,220,opt,name=logo"`
+	xxx_hidden_LogoDark           string                   `protobuf:"bytes,230,opt,name=logo_dark,json=logoDark"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -526,6 +559,20 @@ func (x *PluginDetails) GetUpdated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PluginDetails) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *PluginDetails) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
 func (x *PluginDetails) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -610,6 +657,14 @@ func (x *PluginDetails) SetUpdated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Updated = v
 }
 
+func (x *PluginDetails) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *PluginDetails) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
+}
+
 func (x *PluginDetails) HasPublished() bool {
 	if x == nil {
 		return false
@@ -664,6 +719,9 @@ type PluginDetails_builder struct {
 	DocumentationLinks []*v1.DocumentationLink
 	// See PluginSummary.updated.
 	Updated *timestamppb.Timestamp
+	// See PluginSummary.logo.
+	Logo     string
+	LogoDark string
 }
 
 func (b0 PluginDetails_builder) Build() *PluginDetails {
@@ -691,6 +749,8 @@ func (b0 PluginDetails_builder) Build() *PluginDetails {
 	x.xxx_hidden_Features = &b.Features
 	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
 	x.xxx_hidden_Updated = b.Updated
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -2053,7 +2113,7 @@ var File_catalog_v1_catalog_proto protoreflect.FileDescriptor
 const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"\x18catalog/v1/catalog.proto\x12\n" +
-	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xca\x03\n" +
+	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xfd\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2067,7 +2127,9 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x06labels\x18Z \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\x12*\n" +
 	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x128\n" +
 	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x124\n" +
-	"\aupdated\x18x \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xec\x06\n" +
+	"\aupdated\x18x \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x12\x13\n" +
+	"\x04logo\x18\x82\x01 \x01(\tR\x04logo\x12\x1c\n" +
+	"\tlogo_dark\x18\x8c\x01 \x01(\tR\blogoDark\"\x9f\a\n" +
 	"\rPluginDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2092,7 +2154,9 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\vpermissions\x18\xb4\x01 \x03(\v2 .marketplace.v1.PluginPermissionR\vpermissions\x129\n" +
 	"\bfeatures\x18\xbe\x01 \x03(\v2\x1c.marketplace.v1.FeatureBlockR\bfeatures\x12S\n" +
 	"\x13documentation_links\x18\xc8\x01 \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\x125\n" +
-	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xc4\x01\n" +
+	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x12\x13\n" +
+	"\x04logo\x18\xdc\x01 \x01(\tR\x04logo\x12\x1c\n" +
+	"\tlogo_dark\x18\xe6\x01 \x01(\tR\blogoDark\"\xc4\x01\n" +
 	"\x10PublishedVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x18\n" +

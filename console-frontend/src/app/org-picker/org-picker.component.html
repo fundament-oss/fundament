@@ -53,7 +53,7 @@
               type="button"
               (click)="onRecheck()"
               text="Check again"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
           } @else {
             <nldd-title size="3">
@@ -69,7 +69,7 @@
             <nldd-spacer size="24"></nldd-spacer>
             @if (acceptedOrganizations().length > 0) {
               <nldd-list
-                variant="box-tinted"
+                appearance="box-tinted"
                 type="navigation"
                 accessible-label="Organizations"
               >
@@ -100,7 +100,7 @@
               </nldd-title>
               <nldd-spacer size="8"></nldd-spacer>
               <nldd-list
-                variant="box-tinted"
+                appearance="box-tinted"
                 accessible-label="Pending invitations"
               >
                 @for (invitation of pendingInvitationList(); track invitation.id) {
@@ -118,7 +118,7 @@
                         (click)="onAccept(invitation)"
                         text="Accept"
                         size="sm"
-                        variant="primary"
+                        appearance="primary"
                       ></nldd-button>
                     </nldd-cell>
                     <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -128,7 +128,7 @@
                         (click)="onDecline(invitation)"
                         text="Decline"
                         size="sm"
-                        variant="destructive"
+                        appearance="destructive"
                       ></nldd-button>
                     </nldd-cell>
                   </nldd-list-item>

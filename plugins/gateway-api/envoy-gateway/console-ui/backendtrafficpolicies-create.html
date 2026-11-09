@@ -73,8 +73,8 @@
                 <nldd-text-field
                   id="rate-requests"
                   name="rate-requests"
-                  type="number"
-                  min="1"
+                  keyboard="numeric"
+                  data-min="1"
                   placeholder="100"
                   unmet="rate-requests-error"
                 ></nldd-text-field>
@@ -104,13 +104,13 @@
               <nldd-button
                 id="submit"
                 type="button"
-                variant="primary"
+                appearance="primary"
                 text="Create BackendTrafficPolicy"
               ></nldd-button>
               <nldd-button
                 id="back"
                 type="button"
-                variant="secondary"
+                appearance="secondary"
                 text="Back"
               ></nldd-button>
             </nldd-button-group>

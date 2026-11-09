@@ -34,10 +34,10 @@
         <h1>{{ viewTitle() }}</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-toolbar label="Inventory actions">
+      <nldd-toolbar accessible-label="Inventory actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Add asset…"
             start-icon="plus-small"
             (click)="openCreateAsset()"
@@ -63,7 +63,7 @@
            Stays when a search or a filter left nothing: hiding it there takes
            away the only control that could undo what emptied the list. -->
       @if (orderedAssets().length > 0 || searchQuery().trim() || statusParam() !== 'all') {
-        <nldd-toolbar label="Asset list">
+        <nldd-toolbar accessible-label="Asset list">
           <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
             <nldd-search-field
               accessible-label="Search assets"
@@ -78,7 +78,7 @@
             <nldd-toolbar-item slot="end">
               <nldd-button
                 id="statusFilterTrigger"
-                variant="secondary"
+                appearance="secondary"
                 start-icon="filter"
                 expandable
                 popup-type="menu"
@@ -121,7 +121,6 @@
           @for (asset of orderedAssets(); track asset.id) {
             <nldd-list-item
               [attr.href]="assetPath(asset.id)"
-              [attr.accessible-label]="'Open ' + asset.model"
               (click)="openAsset($event, asset.id)"
             >
               <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>

@@ -71,7 +71,7 @@ func latestNamespaceOutbox(t *testing.T, db *testDB, namespaceID uuid.UUID) (eve
 func newNamespaceHandler(t *testing.T, db *testDB, mock *shoot.MockShootAccess) *namespacehandler.Handler {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	return namespacehandler.New(db.workerPool, mock, 10, logger)
+	return namespacehandler.New(db.workerPool, mock, logger)
 }
 
 func newMockShoot(t *testing.T) *shoot.MockShootAccess {
@@ -138,31 +138,6 @@ func TestClusterOutbox_SingleFKRejectsClusterPlusNamespace(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "cluster_outbox_ck_single_fk")
-}
-
-// Task 1.15: a namespace-only outbox row must not update clusters.outbox_status.
-func TestNamespaceOutbox_DoesNotUpdateClusterStatus(t *testing.T) {
-	db := createTestDB(t)
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-fanin")
-	projectID := insertProject(t, db, clusterID, "proj-fanin")
-
-	// Drive the cluster's own outbox row to completed so outbox_status is a known value.
-	markOutboxCompleted(t, db, clusterID)
-	var before *string
-	require.NoError(t, db.adminPool.QueryRow(t.Context(),
-		`SELECT outbox_status FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&before))
-	require.NotNil(t, before)
-	require.Equal(t, "completed", *before)
-
-	// Inserting a namespace creates a namespace-only outbox row (status transitions
-	// pending). The fan-in trigger must leave clusters.outbox_status untouched.
-	insertNamespace(t, db, projectID, "team-a")
-
-	var after *string
-	require.NoError(t, db.adminPool.QueryRow(t.Context(),
-		`SELECT outbox_status FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&after))
-	require.NotNil(t, after)
-	require.Equal(t, "completed", *after, "namespace outbox row must not change the cluster's outbox_status")
 }
 
 // Task 4.11: full create -> re-sync -> delete cycle through the handler with a real DB.
@@ -309,4 +284,61 @@ func TestClusterReadyFanout_NoNamespacesIsNoop(t *testing.T) {
 		`SELECT count(*) FROM tenant.cluster_outbox WHERE namespace_id IS NOT NULL`,
 	).Scan(&count))
 	require.Equal(t, 0, count, "no namespace outbox rows should be created when the cluster has no namespaces")
+}
+
+// failNamespaceOutbox marks all outbox rows for a namespace failed for good.
+func failNamespaceOutbox(t *testing.T, db *testDB, nsID uuid.UUID) {
+	t.Helper()
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now(), status_info = 'cannot succeed'
+		 WHERE namespace_id = $1`, nsID)
+	require.NoError(t, err)
+}
+
+// countPendingNamespaceReconcile counts the queued reconcile rows for a namespace.
+func countPendingNamespaceReconcile(t *testing.T, db *testDB, nsID uuid.UUID) int {
+	t.Helper()
+	var count int
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox
+		 WHERE namespace_id = $1 AND event = 'reconcile' AND status IN ('pending','retrying')`,
+		nsID,
+	).Scan(&count))
+	return count
+}
+
+// Reconcile leaves a namespace alone once its latest sync failed for good, as
+// drift repair does a cluster: it would fail again every round.
+func TestNamespaceReconcile_SkipsNamespaceWhoseSyncFailed(t *testing.T) {
+	db := createTestDB(t)
+	h := newNamespaceHandler(t, db, newMockShoot(t))
+	ctx := t.Context()
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-reconcile-failed")
+	setShootStatus(t, db, clusterID, "ready")
+	projectID := insertProject(t, db, clusterID, "proj-reconcile-failed")
+	nsID := insertNamespace(t, db, projectID, "team-a")
+	failNamespaceOutbox(t, db, nsID)
+
+	require.NoError(t, h.Reconcile(ctx))
+
+	require.Equal(t, 0, countPendingNamespaceReconcile(t, db, nsID), "a namespace whose sync failed for good is not queued again")
+}
+
+// A cluster whose API server becomes available queues every namespace again,
+// a failed one included: whatever it waited on may be there now.
+func TestAPIAvailableFanout_RequeuesNamespaceWhoseSyncFailed(t *testing.T) {
+	db := createTestDB(t)
+	h := newNamespaceHandler(t, db, newMockShoot(t))
+	ctx := t.Context()
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-ready-failed")
+	projectID := insertProject(t, db, clusterID, "proj-ready-failed")
+	nsID := insertNamespace(t, db, projectID, "alpha")
+	failNamespaceOutbox(t, db, nsID)
+
+	availableCtx := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_ApiAvailable, Source: dbconst.ClusterOutboxSource_Status}
+	require.NoError(t, h.Sync(ctx, clusterID, availableCtx))
+
+	require.Equal(t, 1, countPendingNamespaceReconcile(t, db, nsID))
 }

@@ -47,7 +47,7 @@ func fakePrometheus(t *testing.T, value float64) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/query", func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"namespace":"default","node":"n1"},"value":[1700000000,"%g"]}]}}`, value)
+		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"namespace":"default","node":"n1"},"value":[1700000000,"%g"]}]}}`, value)
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

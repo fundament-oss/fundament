@@ -54,7 +54,7 @@ type Checker interface {
 // already satisfies this via its SubjectAccessReview method; the interface
 // exists so tests can substitute a fake without a live Gardener.
 type Client interface {
-	SubjectAccessReview(ctx context.Context, clusterID string, user string, groups []string, attrs authorizationv1.ResourceAttributes) (bool, error)
+	SubjectAccessReview(ctx context.Context, clusterID string, user string, groups []string, attrs *authorizationv1.ResourceAttributes) (bool, error)
 }
 
 // Stub is the mock-mode Checker: allow-all. Local dev and unit tests that
@@ -97,7 +97,7 @@ func (r *UserAccess) Check(ctx context.Context, clusterID string, attrs *kubereq
 		Name:        attrs.Name,
 	}
 
-	allowed, err := r.client.SubjectAccessReview(ctx, clusterID, userSAPrefix+userID, userSAGroups, sarAttrs)
+	allowed, err := r.client.SubjectAccessReview(ctx, clusterID, userSAPrefix+userID, userSAGroups, &sarAttrs)
 	if err != nil {
 		return false, fmt.Errorf("SAR for user %s on cluster %s: %w", userID, clusterID, err)
 	}

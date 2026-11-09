@@ -3,7 +3,7 @@
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
-import type { ContainerDefaults } from '../../generated/v1/common_pb';
+import { NodePoolStatus, type ContainerDefaults } from '../../generated/v1/common_pb';
 import {
   OrganizationService,
   ListOrganizationsResponseSchema,
@@ -22,6 +22,8 @@ import {
   ClusterDetailsSchema,
   GetClusterDefaultsResponseSchema,
   UpdateClusterDefaultsResponseSchema,
+  NodePoolSchema,
+  SetNodePoolsResponseSchema,
 } from '../../generated/v1/cluster_pb';
 import {
   NamespaceService,
@@ -47,6 +49,10 @@ import {
   ListPresetsResponseSchema,
 } from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
+import {
+  OverviewService,
+  GetPlatformOverviewResponseSchema,
+} from '../../generated/platform/v1/overview_pb';
 import {
   CatalogService,
   ListPluginsResponseSchema as CatalogListPluginsResponseSchema,
@@ -256,6 +262,35 @@ export default function createDemoTransport(): Transport {
           nodePools: fx.nodePoolsByCluster.get(req.clusterId) ?? [],
         });
       },
+      // Applies the set the way the API does: a pool keeps its id while its
+      // name and machine type stay, everything else is replaced.
+      setNodePools: async (req) => {
+        await delay();
+        const current = fx.nodePoolsByCluster.get(req.clusterId) ?? [];
+        const pools = req.nodePools.map((spec) => {
+          const kept = current.find(
+            (pool) => pool.name === spec.name && pool.machineType === spec.machineType,
+          );
+          return create(NodePoolSchema, {
+            id: kept?.id ?? `np-${req.clusterId}-${spec.name}`,
+            name: spec.name,
+            machineType: spec.machineType,
+            // Live nodes: an existing pool keeps its count within the new bounds.
+            currentNodes: kept
+              ? Math.min(Math.max(kept.currentNodes, spec.autoscaleMin), spec.autoscaleMax)
+              : spec.autoscaleMin,
+            minNodes: spec.autoscaleMin,
+            maxNodes: spec.autoscaleMax,
+            status: kept?.status ?? NodePoolStatus.HEALTHY,
+            statusMessage: kept?.statusMessage,
+            version: kept?.version ?? fx.clusterDetails.get(req.clusterId)?.kubernetesVersion ?? '',
+          });
+        });
+        fx.nodePoolsByCluster.set(req.clusterId, pools);
+        const summary = fx.clusterSummaries.find((c) => c.id === req.clusterId);
+        if (summary) summary.nodePoolCount = pools.length;
+        return create(SetNodePoolsResponseSchema, {});
+      },
       listRegions: async () => {
         await delay();
         return create(ListRegionsResponseSchema, { regions: fx.regions });
@@ -277,7 +312,10 @@ export default function createDemoTransport(): Transport {
         await delay();
         const refused = fx.projects
           .filter((p) => p.clusterId === req.clusterId)
-          .map((p) => ({ p, reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)) }))
+          .map((p) => ({
+            p,
+            reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)),
+          }))
           .find(({ reason }) => reason !== null);
         if (refused) {
           throw new ConnectError(
@@ -434,9 +472,8 @@ export default function createDemoTransport(): Transport {
       },
     });
 
-    // What organization.v1 still answers: the cluster-side views
-    // (cluster-plugins, cluster-details, shared-plugins-form) have not moved to
-    // the catalog, and shared-plugins-form still reads presets from here too.
+    // What organization.v1 still answers: cluster-details has not moved to the
+    // catalog.
     router.service(PluginService, {
       listPlugins: async () => {
         await delay();
@@ -518,8 +555,6 @@ export default function createDemoTransport(): Transport {
             authorName: detail.author?.name ?? '',
             authorUrl: detail.author?.url ?? '',
             repositoryUrl: detail.repositoryUrl,
-            // Same fields, different package: organization.v1's links cannot be
-            // handed to a marketplace.v1 message as-is.
             documentationLinks: detail.documentationLinks.map((l) =>
               create(MarketplaceDocumentationLinkSchema, {
                 id: l.id,
@@ -733,6 +768,25 @@ export default function createDemoTransport(): Transport {
       listAPIKeys: async () => {
         await delay(80);
         return create(ListAPIKeysResponseSchema, { apiKeys: [] });
+      },
+    });
+
+    router.service(OverviewService, {
+      getPlatformOverview: async () => {
+        await delay();
+        const organizations = fx.platformOrganizations;
+        const sum = (pick: (o: (typeof organizations)[number]) => number) =>
+          organizations.reduce((total, o) => total + pick(o), 0);
+        return create(GetPlatformOverviewResponseSchema, {
+          organizations,
+          totals: {
+            organizations: organizations.length,
+            clusters: sum((o) => o.clusters),
+            projects: sum((o) => o.projects),
+            namespaces: sum((o) => o.namespaces),
+          },
+          generatedAt: timestampFromDate(new Date()),
+        });
       },
     });
   });

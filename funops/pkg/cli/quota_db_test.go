@@ -27,15 +27,18 @@ func quotaRows(t *testing.T, ctx *Context, organization string) (db.QuotaCluster
 	return clusters, machines
 }
 
-func TestOrganizationQuota_NewOrganizationStartsAtOneClusterAndNoNodes(t *testing.T) {
+func TestOrganizationQuota_NewOrganizationStartsAtOneClusterAndItsStartingNodeQuota(t *testing.T) {
 	ctx := newTestContext(t)
 
-	require.NoError(t, (&OrganizationCreateCmd{Name: "fresh"}).Run(ctx))
+	require.NoError(t, (&OrganizationCreateCmd{Name: "fresh", NodeQuota: []string{"local/local-small=3"}}).Run(ctx))
 
 	clusters, machines := quotaRows(t, ctx, "fresh")
 	assert.Equal(t, int32(1), clusters.QuotaClusters)
 	assert.Equal(t, int64(0), clusters.ClustersInUse)
-	assert.Empty(t, machines, "no machine quota until an operator sets one")
+	require.Len(t, machines, 1, "only the starting quota")
+	assert.Equal(t, "local", machines[0].Region)
+	assert.Equal(t, "local-small", machines[0].MachineType)
+	assert.Equal(t, int32(3), machines[0].MaxNodes)
 
 	require.NoError(t, (&OrganizationQuotaGetClustersCmd{Organization: "fresh"}).Run(ctx))
 	require.NoError(t, (&OrganizationQuotaListNodesCmd{Organization: "fresh"}).Run(ctx))
@@ -124,7 +127,7 @@ func TestOrganizationQuotaGetClustersAndListNodes_ShowWhatIsInUse(t *testing.T) 
 func TestOrganizationQuotaListNodes_ShowsUseWithoutAQuotaRow(t *testing.T) {
 	ctx := newTestContext(t)
 
-	require.NoError(t, (&OrganizationCreateCmd{Name: "legacy"}).Run(ctx))
+	require.NoError(t, (&OrganizationCreateCmd{Name: "legacy", NodeQuota: []string{"local/local-small=3"}}).Run(ctx))
 	orgID, err := lookupOrganizationID(t.Context(), ctx.Queries, "legacy")
 	require.NoError(t, err)
 
@@ -147,12 +150,17 @@ func TestOrganizationQuotaListNodes_ShowsUseWithoutAQuotaRow(t *testing.T) {
 	}
 
 	_, machines := quotaRows(t, ctx, "legacy")
-	require.Len(t, machines, 1, "only the offering in use, no row for the rest")
-	assert.Equal(t, "eu-west-1", machines[0].Region)
-	assert.Equal(t, "n1-standard-2", machines[0].MachineType)
-	assert.Equal(t, int32(0), machines[0].MaxNodes)
-	assert.Equal(t, int64(4), machines[0].NodesInUse)
-	assert.False(t, machines[0].Updated.Valid, "never set")
+	require.Len(t, machines, 2, "the starting quota and the offering in use, no row for the rest")
+	var inUse *db.MachineQuotaListRow
+	for i := range machines {
+		if machines[i].Region == "eu-west-1" && machines[i].MachineType == "n1-standard-2" {
+			inUse = &machines[i]
+		}
+	}
+	require.NotNil(t, inUse)
+	assert.Equal(t, int32(0), inUse.MaxNodes)
+	assert.Equal(t, int64(4), inUse.NodesInUse)
+	assert.False(t, inUse.Updated.Valid, "never set")
 
 	require.NoError(t, (&OrganizationQuotaListNodesCmd{Organization: "legacy"}).Run(ctx))
 }

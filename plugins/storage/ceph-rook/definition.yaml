@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.3.0
+  version: v0.5.0
   description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
@@ -159,22 +159,38 @@ spec:
     - blockstorages.ceph.fundament.io
     - filestorages.ceph.fundament.io
     - objectstorages.ceph.fundament.io
+  # create and edit open in a console sheet over the list and detail pages,
+  # all on sheet.html, which picks the form from the kind and view it is
+  # opened with. ObjectBucketClaim has no list or detail route: its pages only
+  # ever open in a sheet, from the Buckets section of an ObjectStorage's
+  # detail page.
   customComponents:
     DiskPool:
       list: diskpools-list.html
       detail: diskpools-detail.html
+      create: sheet.html
+      edit: sheet.html
     Disk:
       list: disks-list.html
       detail: disks-detail.html
     BlockStorage:
       list: blockstorages-list.html
       detail: blockstorages-detail.html
+      create: sheet.html
+      edit: sheet.html
     FileStorage:
       list: filestorages-list.html
       detail: filestorages-detail.html
+      create: sheet.html
+      edit: sheet.html
     ObjectStorage:
       list: objectstorages-list.html
       detail: objectstorages-detail.html
+      create: sheet.html
+      edit: sheet.html
+    ObjectBucketClaim:
+      create: sheet.html
+      detail: sheet.html
   uiHints:
     diskpools.ceph.fundament.io:
       statusMapping:
@@ -281,7 +297,7 @@ spec:
     - name: CEPH_IMAGE
       displayName: Ceph image
       type: string
-      default: "quay.io/ceph/ceph:v19.2.3"
+      default: "quay.io/ceph/ceph:v19.2.7"
       advanced: true
       description: Ceph container image. v19+ is required on arm64 (v18 segfaults on Apple Silicon).
     - name: ROOK_NAMESPACE

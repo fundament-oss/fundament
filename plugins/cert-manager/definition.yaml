@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: cert-manager
   displayName: Cert Manager
-  version: v1.17.2
+  version: v1.21.3
   description: Automated TLS certificate management for Kubernetes using cert-manager.
   author: Fundament
   license: Apache-2.0
@@ -49,7 +49,7 @@ spec:
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install cert-manager … --create-namespace
       # --wait` with Helm's default "secret" storage driver. These rules grant
-      # exactly what Helm and the cert-manager v1.17 chart need to create and
+      # exactly what Helm and the cert-manager v1.21 chart need to create and
       # wait on the release. Rules are cluster-wide (PolicyRule carries no
       # namespace); escalate/bind let the installer create cert-manager's own
       # ClusterRoles/RoleBindings without re-declaring every rule they contain.

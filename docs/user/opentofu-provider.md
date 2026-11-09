@@ -1,7 +1,7 @@
 ---
 title: OpenTofu provider
 sidebar:
-  order: 11
+  order: 12
 ---
 
 The Fundament provider lets you manage clusters, node pools, projects,
@@ -23,12 +23,12 @@ configuration. This page covers installing and configuring the provider.
 ## Install
 
 The provider is not published to a registry. Prebuilt packages for Linux
-(amd64, arm64), macOS (Apple Silicon) and Windows (amd64) are published to the
-rolling `terraform-provider-latest` release, named so that OpenTofu finds them
-in its local plugin directory without any CLI configuration:
+(amd64, arm64), macOS (Apple Silicon, Intel) and Windows (amd64) are published
+to the rolling `terraform-provider-latest` release, named so that OpenTofu
+finds them in its local plugin directory without any CLI configuration:
 
 ```bash
-# Pick your platform: linux_amd64, linux_arm64 or darwin_arm64
+# Pick your platform: linux_amd64, linux_arm64, darwin_arm64 (Apple Silicon) or darwin_amd64 (Intel Mac)
 PLATFORM=linux_amd64
 MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
 mkdir -p "$MIRROR"

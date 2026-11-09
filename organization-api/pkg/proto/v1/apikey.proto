@@ -46,7 +46,13 @@ message CreateAPIKeyRequest {
     min_len: 1
     max_len: 255
   }];
-  string expires_in = 20; // Time until expiry, empty = never
+  // Time until expiry, empty = never. The server also refuses zero and
+  // anything above the operator's maximum.
+  string expires_in = 20 [(buf.validate.field).cel = {
+    id: "duration"
+    message: "must be a duration such as 300s, 5m or 1h"
+    expression: "this == '' || this.matches('^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$')"
+  }];
 }
 
 // Create API key response (only time the full token is returned)
@@ -62,6 +68,9 @@ message ListAPIKeysRequest {}
 // List API keys response
 message ListAPIKeysResponse {
   repeated APIKey api_keys = 10;
+  // Longest lifetime a new key may have, such as "8760h"; empty = no maximum,
+  // and a key may then never expire.
+  string max_expires_in = 20;
 }
 
 // Get API key request

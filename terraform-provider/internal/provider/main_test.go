@@ -11,17 +11,23 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	authnv1connect "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	organizationv1connect "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 )
 
 const (
 	testUserEmail    = "alice@acme-corp.com"
 	testUserPassword = "password"
+
+	// testMemberEmail is a seeded, accepted member of the test user's
+	// organization. Only accepted members can join a project, so tests that add
+	// project members use this user rather than inviting a new address.
+	testMemberEmail = "bart@acme-corp.com"
 )
 
 func TestMain(m *testing.M) {
@@ -170,6 +176,9 @@ func createDynamicAPIKey(ctx context.Context, endpoint, orgID, accessToken strin
 
 		createResp, err := apiKeyClient.CreateAPIKey(createCtx, organizationv1.CreateAPIKeyRequest_builder{
 			Name: "terraform-acc-test-" + acctest.RandString(6),
+			// The server requires a lifetime. TestMain deletes the key when
+			// the run ends; this only bounds a key whose cleanup failed.
+			ExpiresIn: "24h",
 		}.Build())
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodePermissionDenied {
@@ -200,11 +209,16 @@ func passwordLogin(authnEndpoint, email, password string) (loginResponse, error)
 		return loginResponse{}, fmt.Errorf("marshal request: %w", err)
 	}
 
-	resp, err := http.Post(authnEndpoint+"/login/password", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, authnEndpoint+"/login/password", bytes.NewReader(body)) //nolint:gosec // test helper, endpoint comes from the test environment
+	if err != nil {
+		return loginResponse{}, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // test helper, endpoint comes from the test environment
 	if err != nil {
 		return loginResponse{}, fmt.Errorf("http post: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return loginResponse{}, fmt.Errorf("unexpected status %d", resp.StatusCode)

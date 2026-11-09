@@ -26,7 +26,7 @@ func NewCookieBuilder(domain string, secure bool, cookieName string) *CookieBuil
 
 // Build creates an auth cookie with the given token and max age.
 func (b *CookieBuilder) Build(token string, maxAge int) *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ //nolint:gosec // Secure comes from config; HttpOnly and SameSite are set
 		Name:     b.cookieName,
 		Value:    token,
 		Path:     "/",
@@ -40,7 +40,7 @@ func (b *CookieBuilder) Build(token string, maxAge int) *http.Cookie {
 
 // BuildClear creates a cookie that clears the auth cookie.
 func (b *CookieBuilder) BuildClear() *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ //nolint:gosec // Secure comes from config; HttpOnly and SameSite are set
 		Name:     b.cookieName,
 		Value:    "",
 		Path:     "/",

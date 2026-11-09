@@ -41,12 +41,12 @@ func main() {
 
 	// Probe 4: does the DEFAULT transport (what production uses) verify TLS?
 	fmt.Println("== probe 4: TLS with default transport ==")
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, nil)
-	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, http.NoBody) //nolint:gosec // probe target is operator-supplied
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)                             //nolint:gosec // probe target is operator-supplied
 	if err != nil {
 		fmt.Printf("FINDING: default transport fails: %v\n(expected: the ingress cert is signed by this shoot's own CA)\n\n", err)
 	} else {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		fmt.Printf("default transport OK (status %d)\n\n", resp.StatusCode)
 	}
 
@@ -127,11 +127,12 @@ func main() {
 		fmt.Printf("  %-10s %.4g (%d series)\n", label, samples[0].Value, len(samples))
 	}
 	series, err := client.QueryRange(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`, now.Add(-time.Hour), now, 5*time.Minute)
-	if err != nil {
+	switch {
+	case err != nil:
 		fmt.Printf("  range 1h    ERROR: %v\n", err)
-	} else if len(series) > 0 {
+	case len(series) > 0:
 		fmt.Printf("  range 1h    %d points\n", len(series[0].Samples))
-	} else {
+	default:
 		fmt.Println("  range 1h    empty")
 	}
 

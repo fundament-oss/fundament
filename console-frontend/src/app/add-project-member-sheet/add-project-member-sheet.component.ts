@@ -196,7 +196,10 @@ export default class AddProjectMemberSheetComponent {
 
     const inProject = new Set((project?.members ?? []).map((member) => member.userId));
     const available = (organizationMembers ?? [])
-      .filter((member) => member.externalRef && !inProject.has(member.userId))
+      .filter(
+        (member) =>
+          member.externalRef && member.status === 'accepted' && !inProject.has(member.userId),
+      )
       .map((member) => ({ id: member.userId, name: member.name }));
     this.availableUsers.set(available);
     this.projectNamespaces.set((namespaces?.namespaces ?? []).map((namespace) => namespace.name));
@@ -230,7 +233,12 @@ export default class AddProjectMemberSheetComponent {
   }
 
   async saveMember(event?: Event) {
+    // No defaultPrevented guard as in the other sheets: [formGroup] cancels the
+    // submit before this runs, and the keydown that requested it is marked
+    // handled too, so the guard would drop both. Both still arrive, though, so
+    // the second one finds the first already out.
     event?.preventDefault();
+    if (this.isAddingMember()) return;
 
     this.addSubmitted.set(true);
     if (!this.selectedUserId()) this.userFieldTouched.set(true);

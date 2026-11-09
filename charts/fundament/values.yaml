@@ -37,6 +37,8 @@ externalUrls:
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
+  platformPublicApi: "" # e.g., https://platform-public-api.example.com (anonymous overview the console's /platform page reads; empty hides the page's numbers)
+  platformAdminApi: "" # e.g., https://platform-admin-api.example.com (staff fleet view in DCIM; restricted host)
   cookieDomain: "" # e.g., example.com
 
 # Marks a test environment (PR previews, the sandbox) as one. Each frontend
@@ -73,10 +75,20 @@ images:
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
   marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
+  # One source (platform-api/), built once per binary (BINARY=...).
+  platformPublicApi: ghcr.io/fundament-oss/fundament/platform-public-api:latest
+  platformAdminApi: ghcr.io/fundament-oss/fundament/platform-admin-api:latest
   # Same source as marketplaceFrontend, built for the other two audiences
   # (BUILD_SCRIPT=build:registry / build:admin), like consoleDemoFrontend.
   marketplaceRegistryFrontend: ghcr.io/fundament-oss/fundament/marketplace-registry-frontend:latest
   marketplaceAdminFrontend: ghcr.io/fundament-oss/fundament/marketplace-admin-frontend:latest
+
+# Pull policy of every container in the chart. Published charts pin
+# images.* by digest, so IfNotPresent cannot run a stale image, and a pod start
+# on a node that has the image does not depend on the registry. A node without
+# it, such as a replacement, still pulls. Set Always where a mutable tag such as
+# :latest must be pulled again.
+imagePullPolicy: IfNotPresent
 
 # Database (CloudNativePG)
 # Destroys data on every deploy. Refused unless resetDatabasesInNamespace names
@@ -90,6 +102,11 @@ db:
   enabled: true
   image: ghcr.io/cloudnative-pg/postgresql:18.6
   instances: 1
+  # The CNPG PodDisruptionBudgets. Without a value, the chart sets false for 1
+  # instance and true for 2 or more. With 1 instance, the primary cannot move, so
+  # a PodDisruptionBudget blocks every node drain. With 2 or more, it stops a
+  # drain from evicting all instances at the same time.
+  # enablePDB: false
   storageSize: 1Gi
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
@@ -115,6 +132,26 @@ authnApi:
   # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets the local
   # plugin sandbox cluster (same Secret plugin-proxy and kube-api-proxy use).
   sandboxKubeconfigSecret: ""
+  # oidc: an external identity provider in place of the chart's Dex, such as
+  # Fundament SSO (Keycloak). Set issuer and turn dex.enabled off. authn-api
+  # then signs everyone in through the provider, behind a "Log in with
+  # <displayName>" button, and the console drops the password form: only Dex
+  # offers the password grant it needs. The provider's client must accept
+  # exactly <externalUrls.authn>/callback as redirect URI.
+  # authn-api stores the provider's `sub` as each user's external_ref, so
+  # switching providers later turns every user into a new identity whose
+  # email is already taken.
+  oidc:
+    issuer: ""            # empty: Dex (dex.issuer)
+    clientId: fundament
+    displayName: ""       # required with an issuer
+    # Comma-separated, and must include openid. Keycloak refuses a scope it
+    # does not define, such as Dex's "groups".
+    scopes: openid,profile,email
+    # A confidential client's secret. Name empty: a public client.
+    clientSecretRef:
+      name: ""
+      key: client-secret
   httproute:
     enabled: false
     parentRefs: []
@@ -138,6 +175,9 @@ organizationApi:
   # resolved from the monitoring secret (requires the Gardener kubeconfig);
   # any other URL queries that single Loki-compatible backend.
   logsURL: mock
+  # Longest lifetime of an API key, as a Go duration; every key must expire
+  # within it. Empty means no maximum, and keys may then never expire.
+  apiKeyMaxExpiresIn: 8760h
   # Optional Secret (key ca.crt) trusted for the seed-ingress TLS on top of each
   # shoot's own CA (read from <shoot>.ca-cluster; the Gardener credential needs
   # get on configmaps). Only needed when the seed serves one wildcard cert for
@@ -179,6 +219,15 @@ clusterWorker:
   enabled: false
   replicas: 1
   logLevel: info
+  # Fleet inventory (FUN-23): how often every ready shoot's nodes, pods and
+  # namespaces are counted, how many shoots at once, and how long one may take.
+  # Runs as its own Deployment, cluster-worker-inventory (one replica), and
+  # only while platformAdminApi.enabled: the fleet view is its only reader.
+  # The fleet view calls a snapshot stale after three intervals.
+  inventory:
+    interval: 15m
+    workers: 4
+    timeout: 30s
   gardenerMode: mock # mock or real
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
@@ -214,9 +263,14 @@ clusterWorker:
   # it clean up are removed. Pods are stopped without a grace period, and volumes and
   # custom resources are removed immediately, so anything they manage outside the
   # cluster (storage, load balancers, DNS records) can be left behind. Applies to
-  # every shoot cluster-worker deletes, including shoots it finds without a cluster.
+  # every shoot cluster-worker deletes, including the shoots of deleted clusters the
+  # reconcile loop finishes deleting.
   # Use only where nothing outside a cluster depends on it.
   gardenerImmediateClusterDeletion: false
+  # Most shoots of deleted clusters one reconcile pass starts to delete; above it
+  # the pass deletes none. 0 turns these deletions off. See "Deleting shoots by
+  # hand" in cluster-worker/README.md for clearing a backlog above the limit.
+  maxReconcileDeletions: 3
 
 # Console Frontend
 consoleFrontend:
@@ -231,7 +285,7 @@ consoleFrontend:
     #  - console.example.com
 
 # Console walkthrough (demo build on in-memory data; no backend required).
-# Not enabled in production — see values-production.yaml.
+# Not enabled in production — see values-example-prod.yaml.
 consoleDemoFrontend:
   enabled: false
   replicas: 1
@@ -313,7 +367,7 @@ authzWorker:
 # OpenFGA (Fine-Grained Authorization)
 openfga:
   enabled: true
-  image: openfga/openfga:v1.22.0
+  image: openfga/openfga:v1.22.1
   replicas: 1
   playground:
     enabled: false
@@ -325,6 +379,8 @@ pluginController:
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
   allowUnpinnedHash: false
+  # Dev mode lets a PluginInstallation deploy a CR-supplied image with relaxed probes/filesystem; sandbox-only.
+  allowDevMode: false
   # catalogApiUrl: base URL the plugin-controller uses to fetch definitions.
   # Defaults to the in-cluster http://marketplace-catalog-api:8080 (the Service in
   # marketplace-catalog-api.yaml), which only works when the controller runs next
@@ -450,6 +506,29 @@ marketplaceRegistryApi:
 
 # Marketplace Admin API (the Fundament review backoffice)
 marketplaceAdminApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Platform Public API: anonymous per-organization counts for the console's
+# /platform page (FUN-23).
+platformPublicApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  cacheTTL: 60s # how long one overview answer is served to every visitor
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Platform Admin API: the staff fleet view in DCIM (FUN-23). Authenticated
+# with the DCIM token, so it picks up the shared jwtSecret.
+platformAdminApi:
   enabled: false
   replicas: 1
   logLevel: info

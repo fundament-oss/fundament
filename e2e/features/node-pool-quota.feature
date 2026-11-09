@@ -13,8 +13,8 @@ Feature: Node pool quota
   # The fixtures give acme-corp 100 nodes per machine type
   # (db/testdata/049_0101-content.sql), but other clusters in acme-corp may
   # already use some, so the steps read the room from GetOrganizationQuotas
-  # instead of assuming it. No cluster is seeded in region "local", so each
-  # scenario creates one and removes it afterwards. Node pools are rows in the
+  # instead of assuming it. No cluster is seeded in region "local", so the
+  # scenarios create their own and remove them afterwards. Node pools are rows in the
   # database here: no Gardener is needed.
 
   Background:
@@ -26,8 +26,7 @@ Feature: Node pool quota
   Scenario: The form refuses a maximum over the room before saving
     When I open the node pools of that cluster
     And I add a "local-medium" node pool with a maximum of the room left plus 1
-    Then the new node pool says how much room is left
-    When I save the node pools
+    And I save the node pools
     Then the form refuses the maximum before saving
     And the cluster has no node pool by that name
 

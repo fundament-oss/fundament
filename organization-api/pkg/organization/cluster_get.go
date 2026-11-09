@@ -32,28 +32,16 @@ func (s *Server) GetClusterByName(
 	}
 
 	// Auth is done after the DB call because we dont know the cluster ID yet.
-	// This does leave us open for enumerate attackes because attackers can distinguise between not found and permission denied.
+	// This does leave us open for enumeration attacks because attackers can distinguish between not found and permission denied.
 	// We could always return cluster not found instead of permission errors.
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
 		return nil, err
 	}
 
-	row := &db.ClusterGetByIDRow{
-		ID:                 cluster.ID,
-		OrganizationID:     cluster.OrganizationID,
-		Name:               cluster.Name,
-		Region:             cluster.Region,
-		KubernetesVersion:  cluster.KubernetesVersion,
-		Created:            cluster.Created,
-		Deleted:            cluster.Deleted,
-		ShootStatus:        cluster.ShootStatus,
-		ShootStatusMessage: cluster.ShootStatusMessage,
-		ShootStatusUpdated: cluster.ShootStatusUpdated,
-		OutboxStatus:       cluster.OutboxStatus,
-		OutboxRetries:      cluster.OutboxRetries,
-		OutboxError:        cluster.OutboxError,
-	}
-	details := clusterDetailsFromRow(row)
+	// The by-name row has the by-ID row's columns; converting it whole keeps
+	// a column from being left behind.
+	row := db.ClusterGetByIDRow(cluster)
+	details := clusterDetailsFromRow(&row)
 
 	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
@@ -179,7 +167,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootUpdating),
+		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootStatusMessage, row.ShootHealth, row.ShootUpdating, row.OutboxStatus, row.ReachedGardener),
 		Created:           timestamppb.New(row.Created.Time),
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,
@@ -188,6 +176,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
+			row.ShootUpdating,
 		),
 	}
 	return builder.Build()

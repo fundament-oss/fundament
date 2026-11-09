@@ -1189,6 +1189,8 @@ type CreatePluginVersionRequest struct {
 	xxx_hidden_Version      string                 `protobuf:"bytes,20,opt,name=version"`
 	xxx_hidden_Manifest     []byte                 `protobuf:"bytes,30,opt,name=manifest"`
 	xxx_hidden_ReleaseNotes string                 `protobuf:"bytes,40,opt,name=release_notes,json=releaseNotes"`
+	xxx_hidden_Replace      bool                   `protobuf:"varint,50,opt,name=replace"`
+	xxx_hidden_IconFiles    map[string][]byte      `protobuf:"bytes,60,rep,name=icon_files,json=iconFiles" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1246,6 +1248,20 @@ func (x *CreatePluginVersionRequest) GetReleaseNotes() string {
 	return ""
 }
 
+func (x *CreatePluginVersionRequest) GetReplace() bool {
+	if x != nil {
+		return x.xxx_hidden_Replace
+	}
+	return false
+}
+
+func (x *CreatePluginVersionRequest) GetIconFiles() map[string][]byte {
+	if x != nil {
+		return x.xxx_hidden_IconFiles
+	}
+	return nil
+}
+
 func (x *CreatePluginVersionRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
@@ -1265,6 +1281,14 @@ func (x *CreatePluginVersionRequest) SetReleaseNotes(v string) {
 	x.xxx_hidden_ReleaseNotes = v
 }
 
+func (x *CreatePluginVersionRequest) SetReplace(v bool) {
+	x.xxx_hidden_Replace = v
+}
+
+func (x *CreatePluginVersionRequest) SetIconFiles(v map[string][]byte) {
+	x.xxx_hidden_IconFiles = v
+}
+
 type CreatePluginVersionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1276,6 +1300,11 @@ type CreatePluginVersionRequest_builder struct {
 	// real definition and bounds the request.
 	Manifest     []byte
 	ReleaseNotes string
+	// Replace re-publishes an existing *draft* version in place (dev loop);
+	// refused for any other status.
+	Replace bool
+	// Icon files the manifest references by digest, keyed by that digest.
+	IconFiles map[string][]byte
 }
 
 func (b0 CreatePluginVersionRequest_builder) Build() *CreatePluginVersionRequest {
@@ -1286,6 +1315,8 @@ func (b0 CreatePluginVersionRequest_builder) Build() *CreatePluginVersionRequest
 	x.xxx_hidden_Version = b.Version
 	x.xxx_hidden_Manifest = b.Manifest
 	x.xxx_hidden_ReleaseNotes = b.ReleaseNotes
+	x.xxx_hidden_Replace = b.Replace
+	x.xxx_hidden_IconFiles = b.IconFiles
 	return m0
 }
 
@@ -1788,14 +1819,20 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fpluginVersionId\"P\n" +
 	"\x18GetPluginVersionResponse\x124\n" +
 	"\aversion\x18\n" +
-	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"\x8b\x03\n" +
+	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"\xc4\x04\n" +
 	"\x1aCreatePluginVersionRequest\x12%\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\x12\xed\x01\n" +
 	"\aversion\x18\x14 \x01(\tB\xd2\x01\xbaH\xce\x01\xba\x01\xc6\x01\n" +
 	"\x06semver\x12|must be a semantic version, optionally prefixed with v; build metadata is not accepted because it is not valid in an OCI tag\x1a>this.matches('^v?[0-9]+\\\\.[0-9]+\\\\.[0-9]+(-[0-9A-Za-z.-]+)?$')r\x02\x18@R\aversion\x12'\n" +
 	"\bmanifest\x18\x1e \x01(\fB\v\xbaH\bz\x06\x10\x01\x18\x80\x80@R\bmanifest\x12-\n" +
-	"\rrelease_notes\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\freleaseNotes\"S\n" +
+	"\rrelease_notes\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\freleaseNotes\x12\x18\n" +
+	"\areplace\x182 \x01(\bR\areplace\x12_\n" +
+	"\n" +
+	"icon_files\x18< \x03(\v26.registry.v1.CreatePluginVersionRequest.IconFilesEntryB\b\xbaH\x05\x9a\x01\x02\x10@R\ticonFiles\x1a<\n" +
+	"\x0eIconFilesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"S\n" +
 	"\x1bCreatePluginVersionResponse\x124\n" +
 	"\aversion\x18\n" +
 	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"R\n" +
@@ -1830,7 +1867,7 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"\x15WithdrawPluginVersion\x12).registry.v1.WithdrawPluginVersionRequest\x1a*.registry.v1.WithdrawPluginVersionResponse\x12Y\n" +
 	"\x0eListCategories\x12\".registry.v1.ListCategoriesRequest\x1a#.registry.v1.ListCategoriesResponseBlZ`github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1;registryv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_registry_v1_publication_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_registry_v1_publication_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_registry_v1_publication_proto_goTypes = []any{
 	(*ListPluginsRequest)(nil),            // 0: registry.v1.ListPluginsRequest
 	(*ListPluginsResponse)(nil),           // 1: registry.v1.ListPluginsResponse
@@ -1854,55 +1891,57 @@ var file_registry_v1_publication_proto_goTypes = []any{
 	(*WithdrawPluginVersionResponse)(nil), // 19: registry.v1.WithdrawPluginVersionResponse
 	(*ListCategoriesRequest)(nil),         // 20: registry.v1.ListCategoriesRequest
 	(*ListCategoriesResponse)(nil),        // 21: registry.v1.ListCategoriesResponse
-	(*Plugin)(nil),                        // 22: registry.v1.Plugin
-	(PluginVisibility)(0),                 // 23: registry.v1.PluginVisibility
-	(*v1.DocumentationLink)(nil),          // 24: marketplace.v1.DocumentationLink
-	(*v1.FeatureBlock)(nil),               // 25: marketplace.v1.FeatureBlock
-	(*PluginVersion)(nil),                 // 26: registry.v1.PluginVersion
-	(*v1.Category)(nil),                   // 27: marketplace.v1.Category
+	nil,                                   // 22: registry.v1.CreatePluginVersionRequest.IconFilesEntry
+	(*Plugin)(nil),                        // 23: registry.v1.Plugin
+	(PluginVisibility)(0),                 // 24: registry.v1.PluginVisibility
+	(*v1.DocumentationLink)(nil),          // 25: marketplace.v1.DocumentationLink
+	(*v1.FeatureBlock)(nil),               // 26: marketplace.v1.FeatureBlock
+	(*PluginVersion)(nil),                 // 27: registry.v1.PluginVersion
+	(*v1.Category)(nil),                   // 28: marketplace.v1.Category
 }
 var file_registry_v1_publication_proto_depIdxs = []int32{
-	22, // 0: registry.v1.ListPluginsResponse.plugins:type_name -> registry.v1.Plugin
-	22, // 1: registry.v1.GetPluginResponse.plugin:type_name -> registry.v1.Plugin
-	23, // 2: registry.v1.CreatePluginRequest.visibility:type_name -> registry.v1.PluginVisibility
-	22, // 3: registry.v1.CreatePluginResponse.plugin:type_name -> registry.v1.Plugin
-	24, // 4: registry.v1.UpdatePluginRequest.documentation_links:type_name -> marketplace.v1.DocumentationLink
-	25, // 5: registry.v1.UpdatePluginRequest.features:type_name -> marketplace.v1.FeatureBlock
-	23, // 6: registry.v1.UpdatePluginRequest.visibility:type_name -> registry.v1.PluginVisibility
-	22, // 7: registry.v1.UpdatePluginResponse.plugin:type_name -> registry.v1.Plugin
-	26, // 8: registry.v1.ListPluginVersionsResponse.versions:type_name -> registry.v1.PluginVersion
-	26, // 9: registry.v1.GetPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
-	26, // 10: registry.v1.CreatePluginVersionResponse.version:type_name -> registry.v1.PluginVersion
-	26, // 11: registry.v1.SubmitPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
-	26, // 12: registry.v1.WithdrawPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
-	27, // 13: registry.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
-	0,  // 14: registry.v1.PublicationService.ListPlugins:input_type -> registry.v1.ListPluginsRequest
-	2,  // 15: registry.v1.PublicationService.GetPlugin:input_type -> registry.v1.GetPluginRequest
-	4,  // 16: registry.v1.PublicationService.CreatePlugin:input_type -> registry.v1.CreatePluginRequest
-	6,  // 17: registry.v1.PublicationService.UpdatePlugin:input_type -> registry.v1.UpdatePluginRequest
-	8,  // 18: registry.v1.PublicationService.DeletePlugin:input_type -> registry.v1.DeletePluginRequest
-	10, // 19: registry.v1.PublicationService.ListPluginVersions:input_type -> registry.v1.ListPluginVersionsRequest
-	12, // 20: registry.v1.PublicationService.GetPluginVersion:input_type -> registry.v1.GetPluginVersionRequest
-	14, // 21: registry.v1.PublicationService.CreatePluginVersion:input_type -> registry.v1.CreatePluginVersionRequest
-	16, // 22: registry.v1.PublicationService.SubmitPluginVersion:input_type -> registry.v1.SubmitPluginVersionRequest
-	18, // 23: registry.v1.PublicationService.WithdrawPluginVersion:input_type -> registry.v1.WithdrawPluginVersionRequest
-	20, // 24: registry.v1.PublicationService.ListCategories:input_type -> registry.v1.ListCategoriesRequest
-	1,  // 25: registry.v1.PublicationService.ListPlugins:output_type -> registry.v1.ListPluginsResponse
-	3,  // 26: registry.v1.PublicationService.GetPlugin:output_type -> registry.v1.GetPluginResponse
-	5,  // 27: registry.v1.PublicationService.CreatePlugin:output_type -> registry.v1.CreatePluginResponse
-	7,  // 28: registry.v1.PublicationService.UpdatePlugin:output_type -> registry.v1.UpdatePluginResponse
-	9,  // 29: registry.v1.PublicationService.DeletePlugin:output_type -> registry.v1.DeletePluginResponse
-	11, // 30: registry.v1.PublicationService.ListPluginVersions:output_type -> registry.v1.ListPluginVersionsResponse
-	13, // 31: registry.v1.PublicationService.GetPluginVersion:output_type -> registry.v1.GetPluginVersionResponse
-	15, // 32: registry.v1.PublicationService.CreatePluginVersion:output_type -> registry.v1.CreatePluginVersionResponse
-	17, // 33: registry.v1.PublicationService.SubmitPluginVersion:output_type -> registry.v1.SubmitPluginVersionResponse
-	19, // 34: registry.v1.PublicationService.WithdrawPluginVersion:output_type -> registry.v1.WithdrawPluginVersionResponse
-	21, // 35: registry.v1.PublicationService.ListCategories:output_type -> registry.v1.ListCategoriesResponse
-	25, // [25:36] is the sub-list for method output_type
-	14, // [14:25] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	23, // 0: registry.v1.ListPluginsResponse.plugins:type_name -> registry.v1.Plugin
+	23, // 1: registry.v1.GetPluginResponse.plugin:type_name -> registry.v1.Plugin
+	24, // 2: registry.v1.CreatePluginRequest.visibility:type_name -> registry.v1.PluginVisibility
+	23, // 3: registry.v1.CreatePluginResponse.plugin:type_name -> registry.v1.Plugin
+	25, // 4: registry.v1.UpdatePluginRequest.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	26, // 5: registry.v1.UpdatePluginRequest.features:type_name -> marketplace.v1.FeatureBlock
+	24, // 6: registry.v1.UpdatePluginRequest.visibility:type_name -> registry.v1.PluginVisibility
+	23, // 7: registry.v1.UpdatePluginResponse.plugin:type_name -> registry.v1.Plugin
+	27, // 8: registry.v1.ListPluginVersionsResponse.versions:type_name -> registry.v1.PluginVersion
+	27, // 9: registry.v1.GetPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
+	22, // 10: registry.v1.CreatePluginVersionRequest.icon_files:type_name -> registry.v1.CreatePluginVersionRequest.IconFilesEntry
+	27, // 11: registry.v1.CreatePluginVersionResponse.version:type_name -> registry.v1.PluginVersion
+	27, // 12: registry.v1.SubmitPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
+	27, // 13: registry.v1.WithdrawPluginVersionResponse.version:type_name -> registry.v1.PluginVersion
+	28, // 14: registry.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
+	0,  // 15: registry.v1.PublicationService.ListPlugins:input_type -> registry.v1.ListPluginsRequest
+	2,  // 16: registry.v1.PublicationService.GetPlugin:input_type -> registry.v1.GetPluginRequest
+	4,  // 17: registry.v1.PublicationService.CreatePlugin:input_type -> registry.v1.CreatePluginRequest
+	6,  // 18: registry.v1.PublicationService.UpdatePlugin:input_type -> registry.v1.UpdatePluginRequest
+	8,  // 19: registry.v1.PublicationService.DeletePlugin:input_type -> registry.v1.DeletePluginRequest
+	10, // 20: registry.v1.PublicationService.ListPluginVersions:input_type -> registry.v1.ListPluginVersionsRequest
+	12, // 21: registry.v1.PublicationService.GetPluginVersion:input_type -> registry.v1.GetPluginVersionRequest
+	14, // 22: registry.v1.PublicationService.CreatePluginVersion:input_type -> registry.v1.CreatePluginVersionRequest
+	16, // 23: registry.v1.PublicationService.SubmitPluginVersion:input_type -> registry.v1.SubmitPluginVersionRequest
+	18, // 24: registry.v1.PublicationService.WithdrawPluginVersion:input_type -> registry.v1.WithdrawPluginVersionRequest
+	20, // 25: registry.v1.PublicationService.ListCategories:input_type -> registry.v1.ListCategoriesRequest
+	1,  // 26: registry.v1.PublicationService.ListPlugins:output_type -> registry.v1.ListPluginsResponse
+	3,  // 27: registry.v1.PublicationService.GetPlugin:output_type -> registry.v1.GetPluginResponse
+	5,  // 28: registry.v1.PublicationService.CreatePlugin:output_type -> registry.v1.CreatePluginResponse
+	7,  // 29: registry.v1.PublicationService.UpdatePlugin:output_type -> registry.v1.UpdatePluginResponse
+	9,  // 30: registry.v1.PublicationService.DeletePlugin:output_type -> registry.v1.DeletePluginResponse
+	11, // 31: registry.v1.PublicationService.ListPluginVersions:output_type -> registry.v1.ListPluginVersionsResponse
+	13, // 32: registry.v1.PublicationService.GetPluginVersion:output_type -> registry.v1.GetPluginVersionResponse
+	15, // 33: registry.v1.PublicationService.CreatePluginVersion:output_type -> registry.v1.CreatePluginVersionResponse
+	17, // 34: registry.v1.PublicationService.SubmitPluginVersion:output_type -> registry.v1.SubmitPluginVersionResponse
+	19, // 35: registry.v1.PublicationService.WithdrawPluginVersion:output_type -> registry.v1.WithdrawPluginVersionResponse
+	21, // 36: registry.v1.PublicationService.ListCategories:output_type -> registry.v1.ListCategoriesResponse
+	26, // [26:37] is the sub-list for method output_type
+	15, // [15:26] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_registry_v1_publication_proto_init() }
@@ -1917,7 +1956,7 @@ func file_registry_v1_publication_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_registry_v1_publication_proto_rawDesc), len(file_registry_v1_publication_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

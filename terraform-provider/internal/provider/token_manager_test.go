@@ -68,7 +68,7 @@ func TestStaticTokenSource_GetToken(t *testing.T) {
 			token:    "",
 			expected: "",
 		},
-		{
+		{ //nolint:gosec // test fixture JWT, not a real credential
 			name:     "returns complex token",
 			token:    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
 			expected: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",

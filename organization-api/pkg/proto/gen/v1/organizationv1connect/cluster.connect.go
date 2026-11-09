@@ -72,6 +72,9 @@ const (
 	// ClusterServiceUpdateNodePoolProcedure is the fully-qualified name of the ClusterService's
 	// UpdateNodePool RPC.
 	ClusterServiceUpdateNodePoolProcedure = "/organization.v1.ClusterService/UpdateNodePool"
+	// ClusterServiceSetNodePoolsProcedure is the fully-qualified name of the ClusterService's
+	// SetNodePools RPC.
+	ClusterServiceSetNodePoolsProcedure = "/organization.v1.ClusterService/SetNodePools"
 	// ClusterServiceDeleteNodePoolProcedure is the fully-qualified name of the ClusterService's
 	// DeleteNodePool RPC.
 	ClusterServiceDeleteNodePoolProcedure = "/organization.v1.ClusterService/DeleteNodePool"
@@ -112,6 +115,12 @@ type ClusterServiceClient interface {
 	CreateNodePool(context.Context, *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error)
 	// Update a node pool
 	UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error)
+	// Set a cluster's complete set of node pools in one step: pools are matched
+	// by name, so a pool keeps its identity across resizes, one whose machine
+	// type changes is replaced, and pools missing from the set are removed. The
+	// change is applied all at once or not at all, so the cluster never passes
+	// through an intermediate set, and quotas are checked against the result.
+	SetNodePools(context.Context, *v1.SetNodePoolsRequest) (*v1.SetNodePoolsResponse, error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error)
 	// GetClusterDefaults retrieves the cluster's per-container resource defaults
@@ -209,6 +218,12 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("UpdateNodePool")),
 			connect.WithClientOptions(opts...),
 		),
+		setNodePools: connect.NewClient[v1.SetNodePoolsRequest, v1.SetNodePoolsResponse](
+			httpClient,
+			baseURL+ClusterServiceSetNodePoolsProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("SetNodePools")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteNodePool: connect.NewClient[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse](
 			httpClient,
 			baseURL+ClusterServiceDeleteNodePoolProcedure,
@@ -245,6 +260,7 @@ type clusterServiceClient struct {
 	getNodePool           *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
 	createNodePool        *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
 	updateNodePool        *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
+	setNodePools          *connect.Client[v1.SetNodePoolsRequest, v1.SetNodePoolsResponse]
 	deleteNodePool        *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
 	getClusterDefaults    *connect.Client[v1.GetClusterDefaultsRequest, v1.GetClusterDefaultsResponse]
 	updateClusterDefaults *connect.Client[v1.UpdateClusterDefaultsRequest, v1.UpdateClusterDefaultsResponse]
@@ -367,6 +383,15 @@ func (c *clusterServiceClient) UpdateNodePool(ctx context.Context, req *v1.Updat
 	return nil, err
 }
 
+// SetNodePools calls organization.v1.ClusterService.SetNodePools.
+func (c *clusterServiceClient) SetNodePools(ctx context.Context, req *v1.SetNodePoolsRequest) (*v1.SetNodePoolsResponse, error) {
+	response, err := c.setNodePools.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // DeleteNodePool calls organization.v1.ClusterService.DeleteNodePool.
 func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error) {
 	response, err := c.deleteNodePool.CallUnary(ctx, connect.NewRequest(req))
@@ -423,6 +448,12 @@ type ClusterServiceHandler interface {
 	CreateNodePool(context.Context, *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error)
 	// Update a node pool
 	UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error)
+	// Set a cluster's complete set of node pools in one step: pools are matched
+	// by name, so a pool keeps its identity across resizes, one whose machine
+	// type changes is replaced, and pools missing from the set are removed. The
+	// change is applied all at once or not at all, so the cluster never passes
+	// through an intermediate set, and quotas are checked against the result.
+	SetNodePools(context.Context, *v1.SetNodePoolsRequest) (*v1.SetNodePoolsResponse, error)
 	// Delete a node pool
 	DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error)
 	// GetClusterDefaults retrieves the cluster's per-container resource defaults
@@ -516,6 +547,12 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		connect.WithSchema(clusterServiceMethods.ByName("UpdateNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clusterServiceSetNodePoolsHandler := connect.NewUnaryHandlerSimple(
+		ClusterServiceSetNodePoolsProcedure,
+		svc.SetNodePools,
+		connect.WithSchema(clusterServiceMethods.ByName("SetNodePools")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clusterServiceDeleteNodePoolHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceDeleteNodePoolProcedure,
 		svc.DeleteNodePool,
@@ -562,6 +599,8 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceCreateNodePoolHandler.ServeHTTP(w, r)
 		case ClusterServiceUpdateNodePoolProcedure:
 			clusterServiceUpdateNodePoolHandler.ServeHTTP(w, r)
+		case ClusterServiceSetNodePoolsProcedure:
+			clusterServiceSetNodePoolsHandler.ServeHTTP(w, r)
 		case ClusterServiceDeleteNodePoolProcedure:
 			clusterServiceDeleteNodePoolHandler.ServeHTTP(w, r)
 		case ClusterServiceGetClusterDefaultsProcedure:
@@ -627,6 +666,10 @@ func (UnimplementedClusterServiceHandler) CreateNodePool(context.Context, *v1.Cr
 
 func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.UpdateNodePool is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) SetNodePools(context.Context, *v1.SetNodePoolsRequest) (*v1.SetNodePoolsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.SetNodePools is not implemented"))
 }
 
 func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error) {

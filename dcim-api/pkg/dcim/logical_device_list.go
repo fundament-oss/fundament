@@ -23,8 +23,8 @@ func (s *Server) ListDevices(
 	}
 
 	devices := make([]*dcimv1.LogicalDevice, 0, len(rows))
-	for _, row := range rows {
-		devices = append(devices, logicalDeviceFromListRow(&row))
+	for i := range rows {
+		devices = append(devices, logicalDeviceFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListDevicesResponse_builder{

@@ -85,7 +85,7 @@ func TestSyncOrgAdminAdded(t *testing.T) {
 	markOutboxCompleted(t, db, clusterID)
 
 	userID := insertUser(t, db, "Org Admin")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 	orgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
 
 	err := h.Sync(t.Context(), orgUserID, handler.SyncContext{
@@ -114,8 +114,8 @@ func TestSyncProjectMemberAdded(t *testing.T) {
 
 	userID := insertUser(t, db, "Project Member")
 	projectAdminID := insertUser(t, db, "Proj Admin PM")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
@@ -134,9 +134,9 @@ func TestSyncProjectMemberAdded(t *testing.T) {
 	require.False(t, mock.HasCRB(clusterID, userID), "CRB should NOT exist for project member")
 }
 
-// --- 10.8: Admin removed, still project member → CRB deleted, SA kept ---
+// --- 10.8: Admin demoted, still project member → CRB deleted, SA kept ---
 
-func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
+func TestSyncAdminDemotedStillProjectMember(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
@@ -151,8 +151,8 @@ func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
 	projectAdminID := insertUser(t, db, "Proj Admin DA")
 
 	// User starts as admin with SA + CRB on shoot.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
@@ -169,20 +169,17 @@ func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
 	require.True(t, mock.HasSA(clusterID, userID))
 	require.True(t, mock.HasCRB(clusterID, userID))
 
-	// Soft-delete admin membership.
+	// Demote to viewer, as the organization-api does: in place. Removing the
+	// membership would take the project memberships with it.
 	_, err = db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.organizations_users SET deleted = now()
-		 WHERE organization_id = $1 AND user_id = $2 AND permission = 'admin' AND deleted IS NULL`,
+		`UPDATE tenant.organizations_users SET permission = 'viewer'
+		 WHERE organization_id = $1 AND user_id = $2 AND deleted IS NULL`,
 		acmeCorpOrgID, userID,
 	)
 	require.NoError(t, err)
 
-	// Re-add as viewer.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-	newOrgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
-
 	// Sync the updated org user row.
-	err = h.Sync(t.Context(), newOrgUserID, handler.SyncContext{
+	err = h.Sync(t.Context(), orgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
 		Event:      dbconst.ClusterOutboxEvent_Updated,
 		Source:     dbconst.ClusterOutboxSource_Trigger,
@@ -208,7 +205,7 @@ func TestSyncOrgUserAllClustersNotReady(t *testing.T) {
 	markOutboxCompleted(t, db, clusterID)
 
 	userID := insertUser(t, db, "Not Ready User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 	orgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
 
 	err := h.Sync(t.Context(), orgUserID, handler.SyncContext{
@@ -233,8 +230,8 @@ func TestSyncProjectMemberClusterNotReady(t *testing.T) {
 
 	userID := insertUser(t, db, "PM Not Ready")
 	projectAdminID := insertUser(t, db, "Proj Admin NR")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
@@ -267,9 +264,9 @@ func TestSyncClusterReady(t *testing.T) {
 	memberID := insertUser(t, db, "Ready Member")
 	projectAdminID := insertUser(t, db, "Proj Admin CR")
 
-	insertOrgUser(t, db, acmeCorpOrgID, adminID, "admin", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, memberID, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, adminID, "admin")
+	insertOrgUser(t, db, acmeCorpOrgID, memberID, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
@@ -303,7 +300,7 @@ func TestTriggerOrgUserInsertCreatesOutboxRow(t *testing.T) {
 
 	db := createTestDB(t)
 	userID := insertUser(t, db, "Trigger Org User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 
 	var count int
 	err := db.adminPool.QueryRow(t.Context(),
@@ -321,7 +318,7 @@ func TestTriggerProjectMemberInsertCreatesOutboxRow(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "trigger-pm")
 	userID := insertUser(t, db, "Trigger PM User")
 	projectAdminID := insertUser(t, db, "Trigger Proj Admin")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
@@ -346,7 +343,7 @@ func TestOutboxRowCanBeLocked(t *testing.T) {
 	queries := dbgen.New(db.workerPool)
 
 	userID := insertUser(t, db, "Entity Detect User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 
 	// Verify OutboxGetAndLock can read and lock rows with different FK columns set.
 	row, err := queries.OutboxGetAndLock(t.Context())
@@ -371,9 +368,9 @@ func TestReconcileMissingSACreated(t *testing.T) {
 	memberID := insertUser(t, db, "Reconcile Member")
 	projectAdminID := insertUser(t, db, "Reconcile ProjAdmin")
 
-	insertOrgUser(t, db, acmeCorpOrgID, adminID, "admin", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, memberID, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, adminID, "admin")
+	insertOrgUser(t, db, acmeCorpOrgID, memberID, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
@@ -442,8 +439,8 @@ func TestReconcileCRBMismatchFixed(t *testing.T) {
 	userID := insertUser(t, db, "CRB Mismatch User")
 	projectAdminID := insertUser(t, db, "CRB Fix ProjAdmin")
 
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "admin")
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
@@ -494,7 +491,7 @@ func TestSyncOrgUserDefersUnreachableClusterWithoutSuccessEvents(t *testing.T) {
 	mock.EnsureNamespaceErrorFor = map[uuid.UUID]error{newID: &net.DNSError{Err: "no such host", Name: "api.new", IsNotFound: true}}
 
 	userID := insertUser(t, db, "Deferred User")
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin")
 	orgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
 	sc := handler.SyncContext{EntityType: handler.EntityOrgUser, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 

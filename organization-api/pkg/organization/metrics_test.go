@@ -93,7 +93,7 @@ func TestMergeSamples_SumsAcrossClusters(t *testing.T) {
 		{{Labels: map[string]string{"namespace": "default"}, Value: 2.0}},
 		{{Labels: map[string]string{"namespace": "kube-system"}, Value: 3.0}},
 	}
-	got := mergeSamples(all, "namespace")
+	got := mergeSamples(all)
 	sums := make(map[string]float64)
 	for _, s := range got {
 		sums[s.Labels["namespace"]] = s.Value
@@ -107,7 +107,7 @@ func TestMergeSamples_SumsAcrossClusters(t *testing.T) {
 }
 
 func TestMergeSamples_Empty(t *testing.T) {
-	got := mergeSamples(nil, "namespace")
+	got := mergeSamples(nil)
 	if len(got) != 0 {
 		t.Errorf("expected empty, got %v", got)
 	}

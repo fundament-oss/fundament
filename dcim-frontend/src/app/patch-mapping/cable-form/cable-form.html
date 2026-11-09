@@ -145,7 +145,7 @@
               </nldd-combo-box>
               <nldd-icon-button
                 icon="edit"
-                variant="secondary"
+                appearance="secondary"
                 text="Edit ports"
                 (click)="openPortManagement(aDeviceId())"
               ></nldd-icon-button>
@@ -168,7 +168,7 @@
              out with an @if, for the reason under the data center field, and
              the form's rhythm skips a hidden child so it leaves no gap. -->
         <nldd-button
-          variant="secondary"
+          appearance="secondary"
           size="sm"
           text="Move to B side"
           start-icon="arrow-down"
@@ -237,7 +237,7 @@
               </nldd-combo-box>
               <nldd-icon-button
                 icon="edit"
-                variant="secondary"
+                appearance="secondary"
                 text="Edit ports"
                 (click)="openPortManagement(bDeviceId())"
               ></nldd-icon-button>
@@ -251,7 +251,7 @@
           </nldd-form-field>
         }
         <nldd-button
-          variant="secondary"
+          appearance="secondary"
           size="sm"
           text="Move to A side"
           start-icon="arrow-up"
@@ -322,7 +322,7 @@
             >
               <!-- An open ring where the others carry a filled one, so the row
                    reads as one scale with nothing at the start. -->
-              <nldd-icon slot="icon" name="circle-dashed"></nldd-icon>
+              <nldd-icon slot="icon" icon="circle-dashed"></nldd-icon>
             </nldd-toggle-button>
             @for (color of CABLE_COLORS; track color) {
               <nldd-toggle-button
@@ -333,7 +333,7 @@
               >
                 <nldd-icon
                   slot="icon"
-                  name="circle-filled"
+                  icon="circle-filled"
                   [attr.custom-color]="CABLE_COLOR_HEX[color]"
                 ></nldd-icon>
               </nldd-toggle-button>
@@ -344,7 +344,7 @@
       <!-- Under the fields rather than docked at the bottom, the same as
              every other form in this app. -->
       <nldd-form-actions>
-        <nldd-button variant="primary" width="full" text="Save" (click)="onSave()"></nldd-button>
+        <nldd-button appearance="primary" width="full" text="Save" (click)="onSave()"></nldd-button>
       </nldd-form-actions>
     </nldd-form>
   </nldd-simple-section>

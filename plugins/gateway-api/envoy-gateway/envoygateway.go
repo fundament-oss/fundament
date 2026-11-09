@@ -56,5 +56,5 @@ func (i *envoyGatewayInstaller) uninstall(ctx context.Context) error {
 }
 
 func (i *envoyGatewayInstaller) isInstalled(ctx context.Context) (bool, error) {
-	return i.helmClient.IsInstalled(ctx, envoyGatewayReleaseName)
+	return i.helmClient.IsInstalled(ctx, envoyGatewayReleaseName) //nolint:wrapcheck // Start wraps it with context
 }

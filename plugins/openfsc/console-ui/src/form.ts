@@ -106,13 +106,22 @@ export function validateTextField(el: NlddTextField): boolean {
     setFieldError(el, el.getAttribute('data-error') || 'Enter a valid value.');
     return false;
   }
-  if (el.getAttribute('type') === 'number') {
-    const num = Number(value);
-    if (!Number.isInteger(num)) {
+  // A whole-number field is an nldd-text-field with the numeric keyboard: the
+  // design system's text field has no type="number", and nldd-number-field
+  // cannot be left empty. Its bounds are ours to check, so they are data-*.
+  if (el.getAttribute('keyboard') === 'numeric') {
+    // Digits only: Number() also takes 0x50, 0b1 and 1e3.
+    if (!/^-?\d+$/.test(value)) {
       setFieldError(el, 'Enter a whole number.');
       return false;
     }
-    const min = el.getAttribute('min');
+    const num = Number(value);
+    // A long enough run of digits is Infinity, which JSON sends as null.
+    if (!Number.isSafeInteger(num)) {
+      setFieldError(el, 'Enter a smaller number.');
+      return false;
+    }
+    const min = el.getAttribute('data-min');
     if (min && num < Number(min)) {
       setFieldError(el, `Enter a value of at least ${min}.`);
       return false;
@@ -288,5 +297,5 @@ export function gatewayRowHtml(kind: GatewayKind, seq: number): string {
     <nldd-form-field label="Certificate secret" class="gw-cert-field" style="flex: 1 1 14rem">
       <nldd-text-field class="gw-cert" placeholder="existing tls Secret name"></nldd-text-field>
     </nldd-form-field>
-    <nldd-button class="gw-remove" type="button" variant="secondary" text="Remove"></nldd-button>`;
+    <nldd-button class="gw-remove" type="button" appearance="secondary" text="Remove"></nldd-button>`;
 }

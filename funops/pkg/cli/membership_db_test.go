@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -151,4 +153,74 @@ func TestUserDelete_RefusesAnAccountSomebodySignedInTo(t *testing.T) {
 	err := (&UserDeleteCmd{User: "alice@acme-corp.com"}).Run(ctx)
 	require.EqualError(t, err, `user "alice@acme-corp.com" has signed in and is not a registration; only registrations nobody has signed in with can be deleted`)
 	assert.Equal(t, 1, liveUsersAt(t, ctx, "alice@acme-corp.com"))
+}
+
+func TestOrganizationMemberRemove_RefusesTheOnlyAdminOfAProject(t *testing.T) {
+	ctx := newTestContext(t)
+
+	// Bart is seeded as the only admin of acme-project.
+	cmd := &OrganizationMemberRemoveCmd{Organization: "acme-corp", User: "bart@acme-corp.com"}
+	require.EqualError(t, cmd.Run(ctx), `user "bart@acme-corp.com" is the only admin of projects in organization "acme-corp"; `+
+		`make someone else admin of them first: "acme-project" on cluster "acme-cluster"`)
+
+	assert.NotNil(t, membershipOf(t, ctx, "acme-corp", testUserBart), "still a member on refusal")
+}
+
+// runWhileOrganizationLocked runs a removal while another transaction holds
+// the organization row the way organization-api's DeleteMember does, and
+// checks that the removal waits for it before revoking anything.
+func runWhileOrganizationLocked(t *testing.T, ctx *Context, organization string, run func() error) error {
+	t.Helper()
+
+	orgID, err := lookupOrganizationID(t.Context(), ctx.Queries, organization)
+	require.NoError(t, err)
+
+	lock, err := ctx.DB.Pool.Begin(t.Context())
+	require.NoError(t, err)
+	defer func() { _ = lock.Rollback(context.Background()) }()
+
+	_, err = lock.Exec(t.Context(), `SELECT 1 FROM tenant.organizations WHERE id = $1 FOR NO KEY UPDATE`, orgID)
+	require.NoError(t, err)
+
+	var lockPID uint32
+	require.NoError(t, lock.QueryRow(t.Context(), `SELECT pg_backend_pid()`).Scan(&lockPID))
+
+	done := make(chan error, 1)
+	go func() { done <- run() }()
+
+	require.Eventually(t, func() bool {
+		var blocked bool
+		err := ctx.DB.Pool.QueryRow(t.Context(), `
+			SELECT EXISTS (
+				SELECT 1
+				FROM pg_stat_activity
+				WHERE $1::integer = ANY(pg_blocking_pids(pg_stat_activity.pid))
+			)`, lockPID).Scan(&blocked)
+		return err == nil && blocked
+	}, 5*time.Second, 10*time.Millisecond, "the removal waits for the organization lock")
+
+	require.NoError(t, lock.Commit(t.Context()))
+
+	return <-done
+}
+
+func TestOrganizationMemberRemove_WaitsForOtherRemovalsInTheOrganization(t *testing.T) {
+	ctx := newTestContext(t)
+	inviteToGlobex(t, ctx, testUserBart, "viewer", "pending")
+
+	cmd := &OrganizationMemberRemoveCmd{Organization: "globex", User: testUserBart.String()}
+	require.NoError(t, runWhileOrganizationLocked(t, ctx, "globex", func() error { return cmd.Run(ctx) }))
+
+	assert.Nil(t, membershipOf(t, ctx, "globex", testUserBart))
+}
+
+func TestUserDelete_WaitsForOtherRemovalsInItsOrganizations(t *testing.T) {
+	ctx := newTestContext(t)
+	add := &OrganizationMemberAddCmd{Organization: "globex", User: "typo@example.com", CreateUser: true}
+	require.NoError(t, add.Run(ctx))
+
+	cmd := &UserDeleteCmd{User: "typo@example.com"}
+	require.NoError(t, runWhileOrganizationLocked(t, ctx, "globex", func() error { return cmd.Run(ctx) }))
+
+	assert.Equal(t, 0, liveUsersAt(t, ctx, "typo@example.com"))
 }

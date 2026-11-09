@@ -11,7 +11,7 @@
      repeated cards that would otherwise run together. The list keeps its
      accessible name so assistive software still hears the grouping. -->
 <nldd-list
-  variant="box-tinted"
+  appearance="box-tinted"
   accessible-label="Basics"
 >
   <nldd-list-item>
@@ -54,7 +54,7 @@
   >
     @for (nodePool of state().nodePools; track nodePool.name) {
       <nldd-list
-        variant="box-tinted"
+        appearance="box-tinted"
         [attr.accessible-label]="'Node pool ' + nodePool.name"
       >
         <nldd-list-item>
@@ -121,6 +121,6 @@
     text="Create cluster"
     [loading]="isCreating()"
     width="full"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
 </div>

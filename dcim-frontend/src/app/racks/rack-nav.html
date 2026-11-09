@@ -1,4 +1,4 @@
-<nldd-page sticky-header>
+<nldd-page sticky-header accessible-label="Racks">
   <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
   <nldd-simple-section>
     <nldd-title size="3">
@@ -7,10 +7,10 @@
     <nldd-spacer size="12"></nldd-spacer>
     <!-- Making a rack is an action on this list, not on the rack you have
          open, so it stands where the list does. -->
-    <nldd-toolbar label="Rack actions">
+    <nldd-toolbar accessible-label="Rack actions">
       <nldd-toolbar-item slot="start">
         <nldd-button
-          variant="secondary"
+          appearance="secondary"
           text="Add rack…"
           start-icon="plus-small"
           (click)="addRack()"
@@ -25,8 +25,8 @@
       type="navigation"
       dividers="on-touch"
       [attr.accessible-label]="'Racks in ' + currentDcName()"
-      empty-text="No racks found"
     >
+      <nldd-inline-dialog slot="empty" text="No racks found"></nldd-inline-dialog>
       <nldd-toggle-button-group slot="toolbar" type="radio" accessible-label="Data center">
         <!-- Every location, and where the menu starts. Which hall a rack is in
              is a thing you pick, not something the order of the list decides

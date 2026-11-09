@@ -31,7 +31,7 @@
              are what the application logged, and mixing the two would leave you
              guessing which keys are its own. -->
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Entry"
         >
           <nldd-list-item>
@@ -125,7 +125,7 @@
           >
         } @else {
           <nldd-list
-            variant="box-tinted"
+            appearance="box-tinted"
             accessible-label="Fields"
           >
             @for (entry of fieldEntries(log); track entry.key) {
@@ -195,7 +195,7 @@
          because it is the same question asked of the source you are reading. -->
     <nldd-toolbar
       slot="header"
-      label="Log source"
+      accessible-label="Log source"
     >
       <nldd-toolbar-item
         slot="start"
@@ -232,7 +232,7 @@
            filters add up to, it does not change what you are looking at. -->
       <nldd-toolbar-item slot="end">
         <nldd-button
-          variant="secondary"
+          appearance="secondary"
           start-icon="copy"
           text="Copy query"
           (click)="copyToClipboard(generatedQuery())"
@@ -252,7 +252,7 @@
       >
         @if (streamState() === 'off') {
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             start-icon="play"
             text="Stream"
             (click)="setStreamState('streaming')"
@@ -261,7 +261,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             [attr.text]="streamLabel()"
           >
             <nldd-menu
@@ -603,7 +603,7 @@
      has folded into a sheet. It also stays when the query came back empty
      because of what you typed: taking the field away would leave reloading
      the page as the only way to change the search. -->
-      <nldd-toolbar label="Search and filter">
+      <nldd-toolbar accessible-label="Search and filter">
         <nldd-toolbar-item
           slot="start"
           priority="2"
@@ -621,7 +621,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             start-icon="sort"
             [attr.text]="sortNewestFirst() ? 'Newest first' : 'Oldest first'"
           >
@@ -663,7 +663,7 @@
           slot="end"
         >
           <nldd-button
-            variant="secondary"
+            appearance="secondary"
             start-icon="list-decreasing-lines"
             text="Filters"
             aria-haspopup="dialog"
@@ -818,7 +818,7 @@
             slot="actions"
             type="button"
             text="Clear search"
-            variant="secondary"
+            appearance="secondary"
             (click)="clearSearch()"
           ></nldd-button>
         </nldd-inline-dialog>
@@ -846,7 +846,7 @@
               slot="actions"
               type="button"
               text="Clear search"
-              variant="secondary"
+              appearance="secondary"
               (click)="clearSearch()"
             ></nldd-button>
           }

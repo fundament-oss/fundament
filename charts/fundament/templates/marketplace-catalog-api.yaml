@@ -21,6 +21,7 @@ spec:
       containers:
         - name: marketplace-catalog-api
           image: {{ $.Values.images.marketplaceCatalogApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080

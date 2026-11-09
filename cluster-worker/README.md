@@ -11,7 +11,7 @@ A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labell
 
 | Handler | Runs on | Does |
 |---|---|---|
-| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; deletes orphaned shoots |
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; reports lost shoots; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
 | `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
 | `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
 | `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
@@ -59,9 +59,21 @@ sequenceDiagram
 - **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
   container defaults insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
   claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
-  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
+  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`, except
+  a request the Kubernetes or Gardener API rejects as invalid or malformed, or a Shoot spec
+  Gardener's admission refuses, which fails at once: a retry would only send it again. A row
   whose precondition is not met yet (for example, the project namespace does not exist)
-  is deferred instead of failed.
+  is deferred instead of failed. A cluster that has not reached Gardener and has no node
+  pool is parked instead (`retry_after` = infinity, nothing polls it) and records a
+  `sync_waiting_for_precondition` event: no Shoot is created without a worker. Inserting
+  the cluster's first pool wakes it in the same transaction (the node pool trigger sets
+  `retry_after` = now() on the cluster's parked rows), and the cluster's own row then
+  creates the Shoot with its pools; a pool's row leaves that to the cluster's row. The
+  trigger holds the cluster row while it wakes, and the worker locks that row and
+  rechecks the pools before it parks, so a pool is either seen by the recheck or finds
+  the row parked; a claimed row is never parked, so the trigger never waits for a sync
+  in progress. Deleting the cluster wakes a parked row too, so it runs the delete path
+  and completes instead of staying pending.
 - **Status.** A cluster's status is checked when its Shoot changes (see
   [Status cache](#status-cache); in mock mode the mock reports its own changes once a
   second, and a mock create runs through a real one's steps in about 9 seconds:
@@ -78,9 +90,12 @@ sequenceDiagram
   status, message or health changes, and then writes the status, its events and the
   ready outbox row in one transaction, so `shoot_status_updated` (the console's "Status
   changed") is the time of the last change. See [Ready clusters](#ready-clusters).
-- **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
-  deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
-  resources.
+- **Reconcile loop.** Every 5 minutes it reports clusters whose shoot is missing (see
+  [Lost clusters](#lost-clusters)), finishes deleting the shoots of deleted clusters, and
+  lets the shoot-side handlers re-assert their resources. A shoot is deleted only once its
+  cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
+  of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
+  a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
 
 ## Cluster status
 
@@ -97,6 +112,8 @@ stateDiagram-v2
         Claimed --> Completed: handler succeeded
         Claimed --> Retrying: handler failed
         Claimed --> Pending: precondition not met yet (deferred)
+        Claimed --> Parked: new cluster without a node pool
+        Parked --> Pending: first node pool inserted, or cluster deleted (trigger)
         Claimed --> Pending: worker died, transaction rolled back
         Retrying --> Claimed: backoff elapsed
         Retrying --> Failed: retries exhausted
@@ -112,6 +129,11 @@ stateDiagram-v2
         ready --> deleting: cluster deleted
         progressing --> deleting: cluster deleted
         deleting --> deleted: shoot gone
+        progressing --> lost: shoot gone, cluster not deleted
+        ready --> lost: shoot gone, cluster not deleted
+        error --> lost: shoot gone, cluster not deleted
+        deleting --> lost: shoot gone, cluster not deleted
+        lost --> progressing: a change creates the shoot again
     }
 ```
 
@@ -125,13 +147,18 @@ stateDiagram-v2
 | `error` | the last operation failed and Gardener will not retry it by itself |
 | `deleting` | the cluster is deleted, the shoot is going away |
 | `deleted` | the shoot is gone |
+| `lost` | the shoot of an active cluster is gone from Gardener; see [Lost clusters](#lost-clusters) |
 
 Changes are recorded in `tenant.cluster_events`: `sync_succeeded` / `sync_failed` per
 outbox row, `status_progressing` / `status_ready` / `status_error` / `status_deleted` on a
 status change, `status_progressing` with Gardener's progress message while an operation
 runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
-shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+shoot fundament had seen is no longer in Gardener,
+`nodepool_waiting` / `nodepool_error` (once per transition into that status) and
+`nodepool_ready` when a node pool's machines get stuck or recover (see "Node pool
+status" below), `sync_waiting_for_precondition` once when a new cluster's row parks
+until its first node pool (the message names what it waits for), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes
@@ -140,6 +167,41 @@ once per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` (1m). A change inside that win
 recorded when the window ends, if the message is still new, so a reconcile stuck on one
 task always records that task. A create of 10 to 15 minutes records about 10 to 15
 progress events.
+
+### Lost clusters
+
+A shoot can disappear from Gardener without fundament deleting it: an operator deletes
+it, or it is lost with its seed. Its workloads and data are gone with it. The next status
+check (a watch event, or the status sweep) records the cluster as `lost`, with a
+`status_lost` event and an `ALERT` error in the log; the API reports it as
+`CLUSTER_STATUS_LOST`, and the console offers no kubeconfig. The same transaction clears
+the recorded status of its node pools, whose machines went with the shoot, so they read
+as new when the shoot is created again. The reconcile loop logs an
+error for a missing shoot until its cluster is recorded as lost. Only a shoot a status
+check has seen is called lost, since Gardener can report a just-created shoot as not
+found; one that disappears before its first check stays `pending`, and the reconcile loop
+keeps logging it until a change to the cluster creates it again.
+
+Nothing recreates the shoot by itself: a new, empty cluster under the same name would
+hide that the data is gone. Any change to the cluster or its node pools syncs it, and
+that sync creates the shoot again, empty; the cluster then goes through `progressing`
+and `ready` as after a create, and the ready fan-out sets up users, namespaces and
+plugins again. A sync runs a status check before it applies the cluster, so a shoot that
+went missing since the last check is recorded as lost first instead of reading as an
+update of the cluster that was there.
+
+To act on a lost cluster:
+
+1. Find out why the shoot is gone (deleted by hand in the garden, or lost with its seed)
+   before anything creates it again, and tell the tenant that its workloads and data are
+   gone.
+2. The tenant then chooses: delete the cluster, which works because the delete sync finds
+   no shoot and completes, or change a node pool, which creates an empty shoot again. A
+   Kubernetes version "upgrade" to the version the cluster already has writes nothing, so
+   it does not count as a change.
+3. A cluster whose shoot disappeared before its first status check stays provisioning
+   (`pending`), and the reconcile loop logs `shoot missing in Gardener, not recreating it`
+   for it on every pass. The same two choices apply.
 
 ### Ready clusters
 
@@ -171,11 +233,11 @@ settling does not stick, and a cluster that breaks later shows it.
   `unhealthy` and `unknown` are unhealthy, and `progressing` (a condition within its
   grace period, or pardoned while an operation runs without errors) keeps the recorded
   health, or counts as unhealthy for a cluster that was never healthy. A Shoot without
-  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy` and
-  `SystemComponentsHealthy`. While the last operation is still the Create, Gardener
-  computes the label from errors only and rewrites it just after the cluster becomes
-  ready, so until the first reconcile a `healthy` label also needs those three
-  conditions. So a routine reconcile that breaks a condition shows as
+  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy`,
+  `SystemComponentsHealthy` and `EveryNodeReady`. While the last operation is still the
+  Create, Gardener computes the label from errors only and rewrites it just after the
+  cluster becomes ready, so until the first reconcile a `healthy` label also needs those
+  four conditions. So a routine reconcile that breaks a condition shows as
   unhealthy only once Gardener stops pardoning it.
 - A new cluster's conditions take a few minutes to pass after the create succeeds,
   and Gardener labels it unhealthy meanwhile. Until it is first healthy, a ready
@@ -187,6 +249,52 @@ settling does not stick, and a cluster that breaks later shows it.
   recorded as `status_warning` (once per distinct message: an error Gardener retries
   again and again, with progress in between, is compared with the last recorded warning)
   and does not change the status. Only `Failed` sets `error`.
+
+### Node pool status
+
+A node pool row is a desired shape; whether Gardener can stand machines under it only
+shows in the Shoot's `EveryNodeReady` condition and `lastErrors`, which name the pool's
+machine deployments. Those names carry the generated worker name
+(`kubename.GenerateWorkerName`, a fixed-length prefix+hash), never the pool name the
+user chose, so the match looks for the worker name. Every status check classifies each
+active pool from the same report the cluster rules read and stores the outcome on
+`tenant.node_pools` (`status`, `status_message`, `status_updated`):
+
+| Status | Meaning |
+|---|---|
+| `progressing` | the cluster's initial create or a change fundament pushed shapes this pool and has not finished: the pool was never classified and an operation runs, or the change still sits in the outbox — its machines are being created |
+| `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
+| `error` | the operation failed for good, naming this pool |
+| `ready` | the shoot settled with every change applied, and nothing names the pool |
+
+An operation that does not name an already classified pool leaves it where it is: a
+routine reconcile says nothing about pools whose machines stand, and relabeling them
+would hide their live metrics and spray ready events when the reconcile ends. A pool
+stored `waiting`/`error` stays stuck while the worker detail exists: `EveryNodeReady`
+names only the first failing machine deployment, so a detail naming another pool —
+even on a shoot that turned ready while unhealthy — does not mean this one recovered.
+A complaint naming a settled pool (`ready`, or NULL from before this feature) only
+turns it `waiting` while the initial create runs or a change of ours is in flight —
+otherwise it is a node problem, which the pool's live metrics status describes. While
+the cluster has a change that has not left the outbox (pending, retrying or failed; the
+state is cluster-wide, not per pool), what Gardener reports may predate it: a pool that
+is new (NULL) or `progressing` stays `progressing` rather than reading ready, and a
+complaint naming it is ignored; a pool stored `ready` keeps its status.
+The in-flight state is read after the pool list (a pool's INSERT commits together with
+its outbox row), so a pool inserted mid-check is never classified from a stale
+nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
+Gardener's machine deployment names, so one pool can never match another's text, nor
+the shoot's technical ID. Gardener's reason text is cleaned before it is stored
+(control characters dropped, capped at 1 KiB): it is node and provider text. A failure
+that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
+untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
+the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
+text as machines churn, so a changed reason refreshes the row silently. A pool
+classified for the first time as `ready` or `progressing` records nothing; its first
+`waiting`/`error` does. Each pool's row and events commit in one transaction.
+organization-api serves the stored status and reason until a pool is `ready`, then its
+live node metrics take over. The watch treats a change in the worker detail as a status
+change, so a new reason reaches the pool row without waiting for the sweep.
 
 ### Status cache
 
@@ -213,6 +321,31 @@ every reconcile task, when a condition message changes and on the cache's period
 resync, and those are dropped. A Shoot event that arrives just before the cluster's
 first sync is marked completed is checked again shortly.
 
+## Fleet inventory
+
+The staff fleet view in DCIM (FUN-23) reads what runs on each cluster from snapshots
+cluster-worker keeps. Every `INVENTORY_INTERVAL` the inventory worker queues every ready
+cluster of a live organization and `INVENTORY_WORKERS` workers count them, apart from the
+status sweep and outside readiness. Per cluster it lists nodes, the namespaces carrying
+`fundament.io/namespace-id` and the metadata of pods not in a terminal phase, all with
+`resourceVersion=0` so the API server answers from its watch cache. One transaction then
+stores the latest numbers:
+
+- `tenant.cluster_snapshots`: nodes, ready nodes, pods and allocatable pods, CPU and
+  memory. A failed read sets `last_error` and keeps the previous numbers and `observed`.
+- `tenant.node_pool_snapshots`: nodes per pool, matched on Gardener's
+  `worker.gardener.cloud/pool` label. A pool without nodes is stored as zero.
+- `tenant.namespace_snapshots`: pods per fundament namespace. A namespace missing on the
+  shoot keeps its old row, so it goes stale instead of reporting zero.
+
+Only the latest observation is kept. The rows are updated in place and never deleted:
+`fun_cluster_worker` has no DELETE on these tables.
+
+The reconcile loop also records every shoot Gardener lists in `tenant.gardener_shoots`
+(name, namespace, Kubernetes version, region, first and last seen) and soft-deletes the
+rows of shoots no longer listed. A failed list changes nothing. The fleet view compares
+this with the clusters table to report drift.
+
 ## Configuration
 
 Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
@@ -233,16 +366,59 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
 | `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
 | `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
-| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `1m` | retry backoff |
-| `OUTBOX_MAX_RETRIES` | `10` | |
+| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `2m` | retry backoff: 1s after the first failure, doubling up to the cap |
+| `OUTBOX_MAX_RETRIES` | `15` | attempts before a row fails for good; with the backoff above about 16 minutes, enough to ride out a short outage of a Shoot or the garden |
 | `OUTBOX_BACKOFF_DELAY` | `5s` | reconnect delay after losing the database connection |
 | `OUTBOX_PRECONDITION_DELAY`, `OUTBOX_MAX_PRECONDITION_DEFERRALS` | `30s`, `100` | |
 | `STATUS_INTERVAL` | `30m` | how often the status sweep checks every cluster; it also runs at startup, in real mode once the status cache has synced |
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
-| `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
+| `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off. Helm: `clusterWorker.maxReconcileDeletions`; see [Too many deletions in one pass](#too-many-deletions-in-one-pass) |
+| `INVENTORY_INTERVAL` | `15m` | how often every ready cluster is counted; see [Fleet inventory](#fleet-inventory) |
+| `INVENTORY_WORKERS` | `4` | clusters counted at once |
+| `INVENTORY_TIMEOUT` | `30s` | bound on one cluster's count, credentials and storing included; recording a failed count gets up to 10s more |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
+
+## Shoots the reconcile loop leaves alone
+
+### Shoot without a cluster
+
+A shoot whose `fundament.io/cluster-id` label names no row in `tenant.clusters` is never
+deleted: an empty, restored or wrong database looks exactly like a shoot of another
+installation sharing this Gardener. Every pass logs `shoot has no cluster in the database,
+not deleting it` with the shoot's name, namespace and cluster ID. To act on it:
+
+1. Find the shoot and its cluster ID:
+   `kubectl get shoots -A -l fundament.io/cluster-id=<cluster-id>`.
+2. Look the ID up: `SELECT id, name, deleted FROM tenant.clusters WHERE id = '<cluster-id>';`.
+3. If there is no row because the database was reset or restored, restore the database, or
+   [delete the shoot by hand](#deleting-a-shoot-by-hand) if the cluster is not coming back.
+4. If the shoot belongs to another installation sharing this Gardener, leave it alone.
+
+### Too many deletions in one pass
+
+When more shoots of deleted clusters await a deletion than `CLUSTER_MAX_RECONCILE_DELETIONS`,
+a pass deletes none of them and logs `refusing to delete shoots: too many in one pass,
+check the database` with their cluster IDs. A sudden batch of soft-deleted clusters points
+at a database problem rather than users deleting clusters. It also happens after the garden
+was unavailable for a while: delete syncs that failed in that time pile up, and every pass
+refuses them all, so the backlog does not drain by itself.
+
+1. Check that the clusters in the log are really deleted:
+   `SELECT id, name, deleted FROM tenant.clusters WHERE id = ANY('{<cluster-id>,...}');`.
+2. If they are, [delete their shoots by hand](#deleting-a-shoot-by-hand), or raise
+   `clusterWorker.maxReconcileDeletions` above the count for one pass and set it back.
+3. If they are not, fix the database first; the shoots stay until then.
+
+### Deleting a shoot by hand
+
+In the garden, with the shoot's namespace and name from the log:
+
+```sh
+kubectl -n <namespace> annotate shoot <name> confirmation.gardener.cloud/deletion=true
+kubectl -n <namespace> delete shoot <name>
+```
 
 ## Immediate cluster deletion
 

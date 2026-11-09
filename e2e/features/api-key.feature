@@ -19,3 +19,15 @@ Feature: API Key Management
     And I wait 5 seconds
     When I delete the API key
     Then I should not receive an error
+
+  @api @apikey @negative
+  Scenario Outline: Refuse an invalid lifetime
+    When I try to create an API key named "<name>" with expiry "<expiry>"
+    Then I should receive an invalid argument error
+    And the error message should contain "<message>"
+
+    Examples:
+      | name           | expiry  | message                                   |
+      | lifetime-words | forever | must be a duration such as 300s, 5m or 1h |
+      | lifetime-neg   | -1h     | must be a duration such as 300s, 5m or 1h |
+      | lifetime-zero  | 0s      | must be positive                          |

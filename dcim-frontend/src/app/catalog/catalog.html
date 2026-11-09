@@ -15,10 +15,10 @@
         <h1>{{ viewTitle() }}</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-toolbar label="Catalog actions">
+      <nldd-toolbar accessible-label="Catalog actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Add product…"
             start-icon="plus-small"
             (click)="overlays.newProduct(categoryFilter())"
@@ -36,7 +36,7 @@
            navigating: it cuts across whichever category you are in, so it belongs
            with the rows and not in the menu. -->
       @if (rows().length > 0 || searchQuery().trim()) {
-        <nldd-toolbar label="Product list">
+        <nldd-toolbar accessible-label="Product list">
           <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
             <nldd-search-field
               accessible-label="Search catalog"
@@ -67,7 +67,6 @@
           @for (row of rows(); track row.entry.id) {
             <nldd-list-item
               [attr.href]="entryPath(row.entry.id)"
-              [attr.accessible-label]="'Open ' + row.entry.model"
               (click)="openEntry($event, row.entry.id)"
             >
               <nldd-icon-cell

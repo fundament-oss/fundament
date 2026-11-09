@@ -9,6 +9,11 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db" "component" "database") | nindent 4 }}
 spec:
   instances: {{ $.Values.db.instances }}
+  {{- if kindIs "bool" $.Values.db.enablePDB }}
+  enablePDB: {{ $.Values.db.enablePDB }}
+  {{- else }}
+  enablePDB: {{ gt (int $.Values.db.instances) 1 }}
+  {{- end }}
   imageName: {{ $.Values.db.image }}
   enableSuperuserAccess: true
   {{- if $.Values.db.postgresql }}
@@ -56,6 +61,10 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-dcim-api
+      - name: fun_dcim_authn_api
+        login: true
+        passwordSecret:
+          name: db-fun-dcim-authn-api
       - name: fun_marketplace_catalog_api
         login: true
         passwordSecret:
@@ -72,6 +81,14 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-marketplace-install-api
+      - name: fun_platform_public_api
+        login: true
+        passwordSecret:
+          name: db-fun-platform-public-api
+      - name: fun_platform_admin_api
+        login: true
+        passwordSecret:
+          name: db-fun-platform-admin-api
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true

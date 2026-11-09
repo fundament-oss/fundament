@@ -145,7 +145,7 @@ func (r *FSCInstallationReconciler) reconcile(ctx context.Context, inst *openfsc
 		if err := r.Client.Update(ctx, inst); err != nil {
 			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // rate-limited immediate requeue; RequeueAfter would be a fixed delay
 	}
 
 	// Unreachable while the CRD's CEL rules are enforced; a stale CRD from an

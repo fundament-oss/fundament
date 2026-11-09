@@ -18,14 +18,14 @@
     <!-- The page actions in a toolbar of their own rather than in the title's
          actions slot: a toolbar takes a second and a third action without the
          title growing a row of controls. -->
-    <nldd-toolbar label="Member actions">
+    <nldd-toolbar accessible-label="Member actions">
       <nldd-toolbar-item slot="start">
         <nldd-button
           type="button"
           (click)="overlays.inviteMember.set(true)"
           text="Invite member…"
           start-icon="plus-small"
-          variant="primary"
+          appearance="primary"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
@@ -42,7 +42,7 @@
           [attr.href]="pageNav.path('/members/permissions')"
           text="About roles"
           start-icon="info"
-          variant="secondary"
+          appearance="secondary"
           (click)="openPermissions($event)"
         ></nldd-button>
         <nldd-menu-item
@@ -83,7 +83,7 @@
               type="button"
               (click)="loadMembers()"
               text="Try again"
-              variant="primary"
+              appearance="primary"
             ></nldd-button>
           </nldd-inline-dialog>
         </nldd-container>
@@ -92,7 +92,7 @@
       <!-- One list: an invitation and a member are the same person at a
            different stage, so the state belongs on the row rather than in a
            heading above a separate list. -->
-      <nldd-toolbar label="Member filters">
+      <nldd-toolbar accessible-label="Member filters">
         <!-- Highest priority: a search field has no menu form, so it is the
              last item to move into the overflow. -->
         <nldd-toolbar-item
@@ -115,7 +115,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             start-icon="filter"
             [attr.text]="filterLabel()"
           >
@@ -148,7 +148,7 @@
           </nldd-button>
           <nldd-menu-group
             slot="overflow"
-            label="Show"
+            text="Show"
           >
             <nldd-menu-item
               type="radio"
@@ -178,7 +178,7 @@
           <nldd-button
             expandable
             popup-type="menu"
-            variant="secondary"
+            appearance="secondary"
             start-icon="sort"
             [attr.text]="sortLabel()"
           >
@@ -214,7 +214,7 @@
           </nldd-button>
           <nldd-menu-group
             slot="overflow"
-            label="Sort by"
+            text="Sort by"
           >
             <nldd-menu-item
               type="radio"
@@ -258,7 +258,7 @@
                   type="button"
                   (click)="memberQuery.set('')"
                   text="Clear search"
-                  variant="secondary"
+                  appearance="secondary"
                 ></nldd-button>
               </nldd-inline-dialog>
             } @else {
@@ -273,7 +273,7 @@
         </nldd-box>
       } @else {
         <nldd-list
-          variant="box-tinted"
+          appearance="box-tinted"
           accessible-label="Members"
         >
           @for (member of visibleMembers(); track member.id) {
@@ -334,7 +334,7 @@
                   <nldd-icon-button
                     icon="more"
                     size="sm"
-                    variant="secondary"
+                    appearance="secondary"
                     popup-type="menu"
                     [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
                   >
@@ -391,7 +391,7 @@
                   <nldd-icon-button
                     icon="more"
                     size="sm"
-                    variant="secondary"
+                    appearance="secondary"
                     popup-type="menu"
                     [attr.accessible-label]="'Actions for ' + member.name"
                   >
@@ -442,14 +442,14 @@
     (click)="retryAction()"
     [attr.loading]="retrying() ? '' : null"
     text="Try again"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="actionError.set(null)"
     text="Cancel"
-    variant="secondary"
+    appearance="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Delete Member Modal -->
@@ -469,14 +469,14 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep member"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="confirmDeleteMember()"
     text="Remove member"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Invitation Email Modal -->
@@ -502,7 +502,7 @@
     type="button"
     (click)="invitationEmailMember.set(null)"
     text="Done"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Invite Sheet -->

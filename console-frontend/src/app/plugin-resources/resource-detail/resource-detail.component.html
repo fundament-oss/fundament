@@ -1,25 +1,38 @@
 @if (customUIUrl()) {
   <!-- The page padding and column of the generated detail page below, around
        the plugin's own screen. -->
-  @if (namespacesSettled()) {
-    <nldd-page>
-      <nldd-simple-section>
-        <app-plugin-iframe
-          [src]="customUIUrl()!"
-          [pluginName]="pluginName()"
-          [pluginVersion]="installationVersion()"
-          [installationId]="installationId()"
-          [crdKind]="crdDef()!.kind"
-          view="detail"
-          [clusterId]="clusterContext.selectedClusterId()!"
-          [resourceName]="resourceId()"
-          [resourceNamespace]="resourceNamespace()"
-          [namespaces]="namespaces()"
-          [namespaceDisplayNames]="namespaceDisplayNames()"
-        />
-      </nldd-simple-section>
-    </nldd-page>
-  }
+  <nldd-page>
+    <nldd-simple-section>
+      <!-- Outside the namespace wait: why the plugin is not working is worth
+           saying before its own screen can load. -->
+      <app-plugin-status-banner [installationName]="pluginName()" />
+      @if (namespacesSettled()) {
+        <!-- One iteration, keyed on the resource: the frame gets it once, in
+             fundament:init, so a route to another resource that reuses this
+             page gets a fresh frame rather than the old one's screen. -->
+        @for (key of [resourceKey()]; track key) {
+          <app-plugin-iframe
+            [src]="customUIUrl()!"
+            [pluginName]="pluginName()"
+            [pluginVersion]="installationVersion()"
+            [installationId]="installationId()"
+            [crdKind]="crdDef()!.kind"
+            view="detail"
+            [clusterId]="clusterContext.selectedClusterId()!"
+            [resourceName]="resourceId()"
+            [resourceNamespace]="resourceNamespace()"
+            [namespaces]="namespaces()"
+            [namespaceDisplayNames]="namespaceDisplayNames()"
+          />
+        }
+      } @else {
+        <nldd-inline-dialog
+          variant="loading"
+          text="Loading..."
+        ></nldd-inline-dialog>
+      }
+    </nldd-simple-section>
+  </nldd-page>
 } @else if (resource()) {
   <!-- Same outer layout as the other pages. The back button leads to the list
        this resource came from rather than to the menu, so it stays put when the
@@ -37,6 +50,7 @@
       collapse-anchor="resource-detail-title"
     ></nldd-top-title-bar>
     <nldd-simple-section>
+      <app-plugin-status-banner [installationName]="pluginName()" />
       <!-- The badge sits inside the h1: it belongs to the name rather than to
            the end of the line. That way the heading also reads as
            "burgerzaken-afspraken, Not ready" to whoever hears it. -->
@@ -61,7 +75,7 @@
           md-padding="24"
         >
           <nldd-list
-            variant="simple"
+            appearance="simple"
             accessible-label="Resource details"
           >
             @if (resource()!.metadata.namespace) {
@@ -132,7 +146,7 @@
             <!-- A row per field rather than a grid: what a field renders is up to
                  the plugin, and a full-width row fits a table as well as a word. -->
             <nldd-list
-              variant="simple"
+              appearance="simple"
               [attr.accessible-label]="group.name"
             >
               @for (field of group.fields; track field[0]) {
@@ -194,7 +208,7 @@
                  condition last flipped. Usually there is one, but a controller
                  may keep more, and each of those has its own history. -->
             <nldd-list
-              variant="simple"
+              appearance="simple"
               accessible-label="Conditions"
             >
               @for (cond of conditions(); track $index) {
@@ -247,7 +261,7 @@
               type="button"
               [attr.text]="'Delete ' + kind()"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
               (click)="openDeleteModal()"
             ></nldd-button>
           </nldd-container>
@@ -265,6 +279,8 @@
     (dismiss)="closeDeleteModal()"
   />
 } @else {
+  <!-- A plugin that is not running is the likely reason nothing was found. -->
+  <app-plugin-status-banner [installationName]="pluginName()" />
   <nldd-inline-dialog
     variant="alert"
     text="Resource not found"
@@ -274,7 +290,7 @@
       slot="actions"
       [routerLink]="listLink"
       text="Back to list"
-      variant="primary"
+      appearance="primary"
     ></nldd-button>
   </nldd-inline-dialog>
 }

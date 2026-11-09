@@ -24,3 +24,11 @@ test-feature feature:
 # Run e2e tests with specific tags (e.g., @smoke, @login)
 test-tags tags:
     NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" bun run test:tags "{{ tags }}"
+
+# Run the @real-gardener node pool provisioning test (needs a real Gardener;
+# see e2e/features/node-pool-provisioning.feature for setup). The default
+# profile excludes this tag, so it uses its own cucumber.json profile rather
+# than `test-tags @real-gardener` (which would AND against that exclusion
+# and always match zero scenarios).
+test-real-gardener:
+    NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" bun run test:real-gardener

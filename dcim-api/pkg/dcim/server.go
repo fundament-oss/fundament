@@ -8,12 +8,13 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
+	"github.com/svrana/go-connect-middleware/interceptors/logging"
+
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
-	"github.com/svrana/go-connect-middleware/interceptors/logging"
 )
 
 type Server struct {
@@ -29,7 +30,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		logger:        logger,
 		db:            database,
 		queries:       db.New(database.Pool),
-		authValidator: auth.NewValidator(jwtSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
+		authValidator: auth.NewValidatorForAudience(jwtSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger),
 	}
 
 	mux := http.NewServeMux()

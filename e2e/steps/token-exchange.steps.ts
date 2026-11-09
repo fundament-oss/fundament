@@ -108,10 +108,9 @@ When(
 When(
   'I call ExchangeToken with a valid-format but non-existent token',
   async function (this: ICustomWorld) {
-    // Generate a token that has valid format but doesn't exist in DB
-    // fun_ + 30 base62 chars + 6 checksum chars = 40 total
-    // We'll use a known-good format with correct CRC but non-existent in DB
-    const fakeToken = API_TOKEN_PREFIX + 'a'.repeat(30) + 'zzzzzz'; // Invalid checksum but valid characters
+    // fun_ + 30 base62 chars + their CRC32 checksum: passes the format check,
+    // so the refusal has to come from the database lookup.
+    const fakeToken = API_TOKEN_PREFIX + 'a'.repeat(30) + '4aercg';
 
     try {
       exchangeResponse = await this.tokenService!.exchangeToken(fakeToken);

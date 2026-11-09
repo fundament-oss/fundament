@@ -12,26 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const userGetByExternalRef = `-- name: UserGetByExternalRef :one
+const userGetByID = `-- name: UserGetByID :one
 SELECT id, name, email, created
 FROM dcim.users
-WHERE external_ref = $1 AND deleted IS NULL
+WHERE id = $1 AND deleted IS NULL
 `
 
-type UserGetByExternalRefParams struct {
-	ExternalRef pgtype.Text
+type UserGetByIDParams struct {
+	ID uuid.UUID
 }
 
-type UserGetByExternalRefRow struct {
+type UserGetByIDRow struct {
 	ID      uuid.UUID
 	Name    string
 	Email   pgtype.Text
 	Created pgtype.Timestamptz
 }
 
-func (q *Queries) UserGetByExternalRef(ctx context.Context, arg UserGetByExternalRefParams) (UserGetByExternalRefRow, error) {
-	row := q.db.QueryRow(ctx, userGetByExternalRef, arg.ExternalRef)
-	var i UserGetByExternalRefRow
+func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
+	var i UserGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -56,7 +56,7 @@ type UserListRow struct {
 // Deliberately no email. The roster is readable by every authenticated caller
 // and the assignee picker only ever renders a name, so listing it would hand
 // out the whole staff directory's addresses for no consumer. A caller reads
-// their own address through UserGetByExternalRef (GetCurrentUser) instead.
+// their own address through UserGetByID (GetCurrentUser) instead.
 func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
 	rows, err := q.db.Query(ctx, userList)
 	if err != nil {

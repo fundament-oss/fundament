@@ -34,7 +34,7 @@ import (
 // records the fundament-side name as informational metadata so operators can
 // correlate the resource back to fundament without parsing the generated name.
 const (
-	LabelNamespaceID    = "fundament.io/namespace-id"
+	LabelNamespaceID    = shoot.LabelNamespaceID
 	LabelNamespaceName  = "fundament.io/namespace-name"
 	LabelProjectID      = shootidentity.LabelProjectID
 	LabelOrganizationID = "fundament.io/organization-id"
@@ -48,26 +48,22 @@ const (
 // Handler reconciles tenant.namespaces rows to v1/Namespace resources on the
 // owning shoot cluster.
 type Handler struct {
-	pool       *pgxpool.Pool
-	queries    *db.Queries
-	shoot      shoot.ShootAccess
-	rbac       *projectrbac.Converger
-	maxRetries int32
-	logger     *slog.Logger
+	pool    *pgxpool.Pool
+	queries *db.Queries
+	shoot   shoot.ShootAccess
+	rbac    *projectrbac.Converger
+	logger  *slog.Logger
 }
 
-// New constructs a namespace handler. maxRetries mirrors the outbox worker's
-// MaxRetries so reconcile's conditional enqueue uses the same exhaustion
-// threshold as cluster reconcile.
-func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, maxRetries int32, logger *slog.Logger) *Handler {
+// New constructs a namespace handler.
+func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, logger *slog.Logger) *Handler {
 	queries := db.New(pool)
 	return &Handler{
-		pool:       pool,
-		queries:    queries,
-		shoot:      shootAccess,
-		rbac:       projectrbac.NewConverger(queries, shootAccess, logger),
-		maxRetries: maxRetries,
-		logger:     logger.With("handler", "namespace"),
+		pool:    pool,
+		queries: queries,
+		shoot:   shootAccess,
+		rbac:    projectrbac.NewConverger(queries, shootAccess, logger),
+		logger:  logger.With("handler", "namespace"),
 	}
 }
 
@@ -106,7 +102,7 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 	// api_available fan-out re-enqueues these rows once it is.
 	ready := row.ShootStatus.Valid && row.ShootStatus.String == string(gardener.StatusReady)
 	if !ready && !row.ShootApiAvailable.Valid {
-		return handler.NewPreconditionError("shoot API server not available yet")
+		return handler.NewPreconditionError("shoot API server not available yet") //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 
 	if row.Deleted.Valid {
@@ -117,7 +113,7 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 	// A cluster still being created can be announced before its API server
 	// answers from here; wait for it instead of spending retries.
 	if !ready && shoot.IsUnreachable(err) {
-		return handler.NewShootUnreachableError(err)
+		return handler.NewShootUnreachableError(err) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 	}
 	return err
 }
@@ -188,7 +184,7 @@ func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSy
 			return fmt.Errorf("get namespace %s after create conflict: %w", name, gerr)
 		}
 		if raced == nil {
-			return handler.NewPreconditionError(fmt.Sprintf("namespace %s create raced, retrying", name))
+			return handler.NewPreconditionError(fmt.Sprintf("namespace %s create raced, retrying", name)) //nolint:wrapcheck // typed PreconditionError for the outbox worker
 		}
 		if raced.Labels[LabelNamespaceID] == row.ID.String() {
 			return h.reconcileLabels(ctx, row, name, desired)
@@ -210,7 +206,7 @@ func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSy
 // a real collision we must never adopt.
 func (h *Handler) nameTakenError(name string, existing *shoot.ResourceInfo) error {
 	if existing.Labels[LabelManagedBy] == ManagedByValue {
-		return handler.NewPreconditionError(
+		return handler.NewPreconditionError( //nolint:wrapcheck // typed PreconditionError for the outbox worker
 			fmt.Sprintf("namespace %s held by another managed namespace, awaiting cleanup", name))
 	}
 	return fmt.Errorf("namespace name collision: %s already exists on shoot without matching label", name)
@@ -277,7 +273,8 @@ func (h *Handler) enqueueClusterNamespaces(ctx context.Context, clusterID uuid.U
 	for _, nsID := range namespaceIDs {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
-			MaxRetries:  h.maxRetries,
+			// A cluster whose API server became available retries a failed namespace too.
+			SkipIfFailed: false,
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", nsID, err))
 		}
@@ -327,7 +324,8 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	for _, id := range plan.CreateIDs {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
-			MaxRetries:  h.maxRetries,
+			// A namespace whose sync failed for good would fail again every round.
+			SkipIfFailed: true,
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", id, err))
 		}

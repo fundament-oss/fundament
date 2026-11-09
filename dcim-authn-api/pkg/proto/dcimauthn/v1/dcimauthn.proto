@@ -1,0 +1,29 @@
+edition = "2023";
+
+package dcimauthn.v1;
+
+import "google/protobuf/go_features.proto";
+
+option features.field_presence = IMPLICIT;
+option features.(pb.go).api_level = API_OPAQUE;
+option go_package = "github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1;dcimauthnv1";
+
+service AuthnService {
+  // GetUserInfo returns the authenticated caller's directory entry, resolved
+  // against dcim.users rather than echoed from the claims. Validates the JWT
+  // from the Authorization header or cookie; a subject that no longer
+  // resolves answers Unauthenticated (the session must end) and a directory
+  // outage answers Unavailable.
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+message GetUserInfoRequest {}
+
+message GetUserInfoResponse {
+  User user = 10;
+}
+
+message User {
+  string id = 10;
+  string name = 20;
+}

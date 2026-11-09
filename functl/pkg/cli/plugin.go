@@ -16,6 +16,7 @@ import (
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 
+	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/scaffold"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
@@ -34,6 +35,8 @@ const gitConfigTimeout = 2 * time.Second
 type PluginCmd struct {
 	Create  PluginCreateCmd  `cmd:"" help:"Scaffold a new plugin project."`
 	Publish PluginPublishCmd `cmd:"" help:"Push a plugin version to the marketplace registry."`
+	Dev     PluginDevCmd     `cmd:"" help:"Run a plugin with hot reload in the local k3d-fundament-plugin sandbox."`
+	DevDown PluginDevDownCmd `cmd:"" name:"dev-down" help:"Remove a plugin's dev installation from the local k3d-fundament-plugin sandbox."`
 }
 
 // PluginCreateCmd scaffolds a standalone plugin project.
@@ -273,75 +276,44 @@ type PluginPublishCmd struct {
 	PluginID   string `name:"plugin-id" help:"Listing uuid; when empty, resolved by the manifest's metadata.name via ListPlugins."`
 	Create     bool   `help:"Reserve the listing first when it does not exist, seeded from the manifest's metadata."`
 	Submit     bool   `help:"Open a review round for the pushed version in the same run."`
+	Replace    bool   `help:"Republish an existing draft version in place. A replaced version can never be submitted for review."`
+	Dev        bool   `help:"Development publish: -dev version suffix, implies --replace."`
 }
 
 // Run executes the plugin publish command.
 func (c *PluginPublishCmd) Run(ctx *Context) error {
+	if c.Dev && c.Submit {
+		return errors.New("--dev and --submit cannot be combined: dev versions are for the sandbox loop, not review")
+	}
+
 	src, err := os.ReadFile(c.Definition) //nolint:gosec // path comes from the operator's own CLI argument
 	if err != nil {
 		return fmt.Errorf("read definition: %w", err)
 	}
 
-	published, err := injectImage(src, c.Image, "IfNotPresent")
+	prepared, def, err := prepareManifest(src, filepath.Dir(c.Definition), c.Image, c.Dev)
 	if err != nil {
-		return fmt.Errorf("inject image: %w", err)
-	}
-
-	// Strict validation, the same parse the server runs — a rejection here is
-	// the same rejection the registry would answer with.
-	def, err := pluginruntime.ParseDefinition(published)
-	if err != nil {
-		return fmt.Errorf("invalid published manifest: %w", err)
-	}
-
-	registryURL := ctx.Config.RegistryURL
-	if registryURL == "" {
-		return errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL")
+		return err
 	}
 
 	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
-	pubClient := apiClient.Publications(registryURL)
-	callCtx := context.Background()
-
-	pluginID := c.PluginID
-	if pluginID == "" {
-		pluginID, err = resolvePluginID(callCtx, pubClient, def.Metadata.Name)
-		if errors.Is(err, errListingNotFound) && c.Create {
-			pluginID, err = createPlugin(callCtx, pubClient, def)
-			if err == nil {
-				fmt.Printf("created listing plugin=%s id=%s\n", def.Metadata.Name, pluginID)
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("resolve plugin id: %w", err)
-		}
-	}
-
-	resp, err := pubClient.CreatePluginVersion(callCtx, registryv1.CreatePluginVersionRequest_builder{
-		PluginId: pluginID,
-		Version:  def.Metadata.Version,
-		Manifest: published,
-	}.Build())
+	pubClient, err := publicationClient(ctx, apiClient)
 	if err != nil {
-		var connectErr *connect.Error
-		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeAlreadyExists {
-			// Create-only by design: an approved version's hash is a consent
-			// record and stays immutable (FUN-20).
-			return fmt.Errorf("%w\n(versions are create-only; bump metadata.version — a -dev prerelease suffix works)", err)
-		}
-		return fmt.Errorf("publish failed: %w", err)
+		return err
 	}
 
-	version := resp.GetVersion()
-	fmt.Printf("published plugin=%s version=%s hash=%s id=%s version_id=%s status=%s\n",
-		def.Metadata.Name, version.GetVersion(), version.GetDefinitionHash(),
-		version.GetPluginId(), version.GetId(), version.GetStatus())
+	version, err := publishVersion(context.Background(), pubClient, prepared, &def, publishOptions{
+		PluginID: c.PluginID, Create: c.Create, Replace: c.Replace, Dev: c.Dev,
+	})
+	if err != nil {
+		return err
+	}
 
 	if c.Submit {
-		submitted, err := pubClient.SubmitPluginVersion(callCtx, registryv1.SubmitPluginVersionRequest_builder{
+		submitted, err := pubClient.SubmitPluginVersion(context.Background(), registryv1.SubmitPluginVersionRequest_builder{
 			PluginVersionId: version.GetId(),
 		}.Build())
 		if err != nil {
@@ -352,6 +324,105 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 	}
 
 	return nil
+}
+
+// publicationClient returns the registry's publication client for apiClient.
+func publicationClient(ctx *Context, apiClient *client.Client) (registryv1connect.PublicationServiceClient, error) {
+	if ctx.Config.RegistryURL == "" {
+		return nil, errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL")
+	}
+	return apiClient.Publications(ctx.Config.RegistryURL), nil
+}
+
+// publishOptions selects how publishVersion resolves the listing and writes the version.
+type publishOptions struct {
+	PluginID             string
+	Create, Replace, Dev bool
+}
+
+// preparedManifest is a manifest ready to publish and the icon files its
+// digests refer to.
+type preparedManifest struct {
+	Bytes     []byte
+	IconFiles map[string][]byte
+}
+
+// prepareManifest resolves icon files under baseDir, injects the image (and for
+// dev the -dev suffix) into the source manifest and validates it, before any
+// network call.
+func prepareManifest(src []byte, baseDir, image string, dev bool) (preparedManifest, pluginruntime.PluginDefinition, error) {
+	src, iconFiles, iconPaths, err := resolveIconFiles(src, baseDir)
+	if err != nil {
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("resolve icons: %w", err)
+	}
+	if dev {
+		src, err = injectDevVersion(src)
+		if err != nil {
+			return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("inject dev version: %w", err)
+		}
+	}
+
+	published, err := injectImage(src, image, "IfNotPresent")
+	if err != nil {
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("inject image: %w", err)
+	}
+
+	// Strict validation, the same parse the server runs — a rejection here is
+	// the same rejection the registry would answer with.
+	def, err := pluginruntime.ParseDefinition(published)
+	if err != nil {
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("invalid published manifest: %w", err)
+	}
+	if _, err := pluginruntime.ValidateIcons(&def, iconFiles); err != nil {
+		// Validation only knows digests; name the file the author wrote instead.
+		msg := err.Error()
+		for digest, path := range iconPaths {
+			msg = strings.ReplaceAll(msg, digest, path)
+		}
+		return preparedManifest{}, pluginruntime.PluginDefinition{}, fmt.Errorf("invalid icons: %s", msg)
+	}
+	return preparedManifest{Bytes: published, IconFiles: iconFiles}, def, nil
+}
+
+// publishVersion pushes a manifest from prepareManifest as a plugin version.
+// Dev implies Replace.
+func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, prepared preparedManifest, def *pluginruntime.PluginDefinition, opts publishOptions) (*registryv1.PluginVersion, error) {
+	var err error
+	pluginID := opts.PluginID
+	if pluginID == "" {
+		pluginID, err = resolvePluginID(ctx, pubClient, def.Metadata.Name)
+		if errors.Is(err, errListingNotFound) && opts.Create {
+			pluginID, err = createPlugin(ctx, pubClient, def)
+			if err == nil {
+				fmt.Printf("created listing plugin=%s id=%s\n", def.Metadata.Name, pluginID)
+			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("resolve plugin id: %w", err)
+		}
+	}
+
+	resp, err := pubClient.CreatePluginVersion(ctx, registryv1.CreatePluginVersionRequest_builder{
+		PluginId:  pluginID,
+		Version:   def.Metadata.Version,
+		Manifest:  prepared.Bytes,
+		IconFiles: prepared.IconFiles,
+		Replace:   opts.Replace || opts.Dev,
+	}.Build())
+	if err != nil {
+		var connectErr *connect.Error
+		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeAlreadyExists {
+			// Create-only by design: an approved version's hash is a consent
+			// record (FUN-20). Not --replace: a replaced version is never submittable.
+			return nil, fmt.Errorf("%w\n(versions are create-only; bump metadata.version — a -dev prerelease suffix works)", err)
+		}
+		return nil, fmt.Errorf("publish failed: %w", err)
+	}
+	version := resp.GetVersion()
+	fmt.Printf("published plugin=%s version=%s hash=%s id=%s version_id=%s status=%s\n",
+		def.Metadata.Name, version.GetVersion(), version.GetDefinitionHash(),
+		version.GetPluginId(), version.GetId(), version.GetStatus())
+	return version, nil
 }
 
 // resolvePluginID looks up the listing id by name. ListPlugins is already
@@ -378,7 +449,7 @@ var errListingNotFound = errors.New("listing not found")
 // createPlugin reserves the listing, seeded from the manifest's metadata. The
 // listing copy (display name, descriptions, tags) is authored properly through
 // the developer portal afterwards; this is just enough to publish against.
-func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def pluginruntime.PluginDefinition) (string, error) {
+func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def *pluginruntime.PluginDefinition) (string, error) {
 	displayName := def.Metadata.DisplayName
 	if displayName == "" {
 		displayName = def.Metadata.Name
@@ -410,16 +481,40 @@ func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationSe
 	return resp.GetPlugin().GetId(), nil
 }
 
+// mapValue returns the value node for key in a YAML mapping, or nil.
+func mapValue(m *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// topLevelMapping parses src into doc and returns the mapping under the
+// document's top-level key; edits to it show up when doc is marshalled.
+func topLevelMapping(src []byte, doc *yaml.Node, key string) (*yaml.Node, error) {
+	if err := yaml.Unmarshal(src, doc); err != nil {
+		return nil, fmt.Errorf("parse yaml: %w", err)
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("unexpected manifest structure")
+	}
+	m := mapValue(doc.Content[0], key)
+	if m == nil || m.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("manifest has no %s mapping", key)
+	}
+	return m, nil
+}
+
 // setMapValue sets key=value on a YAML mapping node, replacing an existing key
 // or appending a new scalar pair.
 func setMapValue(m *yaml.Node, key, value string) {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			m.Content[i+1].Kind = yaml.ScalarNode
-			m.Content[i+1].Tag = "!!str"
-			m.Content[i+1].Value = value
-			return
-		}
+	if v := mapValue(m, key); v != nil {
+		v.Kind = yaml.ScalarNode
+		v.Tag = "!!str"
+		v.Value = value
+		return
 	}
 	m.Content = append(m.Content,
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
@@ -431,25 +526,43 @@ func setMapValue(m *yaml.Node, key, value string) {
 // preserving the rest of the document, and returns the published bytes.
 func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	var doc yaml.Node
-	if err := yaml.Unmarshal(src, &doc); err != nil {
-		return nil, fmt.Errorf("parse yaml: %w", err)
-	}
-	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("unexpected manifest structure")
-	}
-	root := doc.Content[0]
-	var spec *yaml.Node
-	for i := 0; i+1 < len(root.Content); i += 2 {
-		if root.Content[i].Value == "spec" {
-			spec = root.Content[i+1]
-			break
-		}
-	}
-	if spec == nil || spec.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("manifest has no spec mapping")
+	spec, err := topLevelMapping(src, &doc, "spec")
+	if err != nil {
+		return nil, err
 	}
 	setMapValue(spec, "image", image)
 	setMapValue(spec, "imagePullPolicy", pullPolicy)
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("marshal manifest: %w", err)
+	}
+	return out, nil
+}
+
+// devVersion appends the -dev suffix once.
+func devVersion(version string) string {
+	if strings.HasSuffix(version, "-dev") {
+		return version
+	}
+	return version + "-dev"
+}
+
+// injectDevVersion appends a -dev suffix to metadata.version, left alone if
+// already present, so a repeated dev publish stays idempotent.
+func injectDevVersion(src []byte) ([]byte, error) {
+	var doc yaml.Node
+	metadata, err := topLevelMapping(src, &doc, "metadata")
+	if err != nil {
+		return nil, err
+	}
+	var version string
+	if v := mapValue(metadata, "version"); v != nil {
+		version = v.Value
+	}
+	if version == "" {
+		return nil, fmt.Errorf("manifest has no metadata.version")
+	}
+	setMapValue(metadata, "version", devVersion(version))
 	out, err := yaml.Marshal(&doc)
 	if err != nil {
 		return nil, fmt.Errorf("marshal manifest: %w", err)

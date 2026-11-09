@@ -17,7 +17,6 @@
         @let nameControl = nodePoolControl.get('name');
         @let maxControl = nodePoolControl.get('autoscaleMax');
         @let machineTypeQuotaError = getMachineTypeQuotaError($index);
-        @let autoscaleMaxHint = getAutoscaleMaxHint($index);
         <!-- Held here, because inside the machine-type loop below $index is that
              loop's index: a click on the second option wrote to the second node
              pool instead of to the pool it sits in. -->
@@ -39,7 +38,7 @@
                   text="Remove"
                   start-icon="delete"
                   size="sm"
-                  variant="destructive"
+                  appearance="destructive"
                 ></nldd-button>
               }
             </nldd-title>
@@ -49,7 +48,7 @@
                      its type, and options it cannot take only invite a click that
                      saving would ignore. -->
                 <nldd-list
-                  variant="box-base"
+                  appearance="box-base"
                   accessible-label="Machine type"
                 >
                   <nldd-list-item>
@@ -68,7 +67,7 @@
                      and a popup shows them one at a time. Same shape as choosing a
                      role or a project. -->
                 <nldd-list
-                  variant="box-base"
+                  appearance="box-base"
                   accessible-label="Machine type"
                 >
                   @for (mt of machineTypes; track mt.value) {
@@ -93,9 +92,7 @@
                       <nldd-text-cell
                         width="full"
                         [attr.text]="mt.label"
-                        [attr.supporting-text]="
-                          hasNoQuota(mt.value) ? 'No quota in this organization' : null
-                        "
+                        [attr.supporting-text]="machineTypeNote(poolIndex, mt.value)"
                       ></nldd-text-cell>
                     </nldd-list-item>
                   }
@@ -153,9 +150,6 @@
                 min="1"
                 step="1"
               ></nldd-number-field>
-              @if (autoscaleMaxHint) {
-                <nldd-form-field-help-text>{{ autoscaleMaxHint }}</nldd-form-field-help-text>
-              }
               <nldd-validation-list>
                 <nldd-validation-item [id]="'autoscale-max-error-' + $index">{{
                   getAutoscaleMaxError($index)
@@ -173,7 +167,7 @@
             (click)="addNodePool()"
             text="New node pool"
             start-icon="plus-small"
-            variant="secondary"
+            appearance="secondary"
             size="md"
             width="full"
           ></nldd-button>

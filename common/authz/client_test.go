@@ -1,9 +1,12 @@
 package authz
 
 import (
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,7 +98,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Subject.Type != ObjectTypeUser {
 			t.Errorf("Subject.Type = %v, want %v", merged.Subject.Type, ObjectTypeUser)
@@ -121,7 +124,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Subject.Type != ObjectTypeOrganization {
 			t.Errorf("Subject.Type = %v, want %v", merged.Subject.Type, ObjectTypeOrganization)
@@ -144,7 +147,7 @@ func TestMergeEvaluation(t *testing.T) {
 			},
 		}
 
-		merged := mergeEvaluation(req.Evaluations[0], req)
+		merged := mergeEvaluation(&req.Evaluations[0], req)
 
 		if merged.Context["default_key"] != "default_value" {
 			t.Errorf("Context[default_key] = %v, want default_value", merged.Context["default_key"])
@@ -237,4 +240,40 @@ func TestDecision_DefaultsToFalse(t *testing.T) {
 	if d.Decision != false {
 		t.Errorf("zero-value Decision.Decision = %v, want false", d.Decision)
 	}
+}
+
+// A hung OpenFGA must fail the request, not hold it until the caller gives up.
+func TestCallsFailWithinBudgetWhenOpenFGAHangs(t *testing.T) {
+	var hanging atomic.Bool
+
+	store := newRef(t, hangableServer(t, &hanging).URL)
+	_, err := store.ID(t.Context())
+	require.NoError(t, err)
+
+	hanging.Store(true)
+	callBudget = 200 * time.Millisecond
+	t.Cleanup(func() { callBudget = 5 * time.Second })
+
+	c := NewClient(store)
+	user := User(uuid.New())
+	project := Project(uuid.New())
+
+	start := time.Now()
+	dec, err := c.Evaluate(t.Context(), EvaluationRequest{Subject: user, Action: CanView(), Resource: project})
+	require.Error(t, err)
+	assert.False(t, dec.Decision)
+	assert.Less(t, time.Since(start), time.Second, "Evaluate")
+
+	start = time.Now()
+	_, err = c.Evaluations(t.Context(), EvaluationsRequest{
+		Subject:     &user,
+		Evaluations: []EvaluationRequest{{Resource: project, Action: CanView()}},
+	})
+	require.Error(t, err)
+	assert.Less(t, time.Since(start), time.Second, "Evaluations")
+
+	start = time.Now()
+	_, err = c.ListObjects(t.Context(), user, CanView(), project.Type)
+	require.Error(t, err)
+	assert.Less(t, time.Since(start), time.Second, "ListObjects")
 }

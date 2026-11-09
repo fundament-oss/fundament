@@ -85,7 +85,19 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    */
   @Input() set initialData(data: NodePoolData[] | null) {
     if (data) {
-      this.loadInitialData(data);
+      this.loadPools(data, { existing: true });
+    }
+  }
+
+  /**
+   * Pools filled in earlier that do not exist yet, for the create wizard when
+   * you come back to this step: the form shows them as you left them. Unlike
+   * `initialData` they are new pools, so the quota counts them as growth and
+   * not as nodes the organization already has in use.
+   */
+  @Input() set draftData(data: NodePoolData[] | null | undefined) {
+    if (data && data.length > 0) {
+      this.loadPools(data, { existing: false });
     }
   }
 
@@ -118,12 +130,16 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.quotas = quotas;
     if (quotas) {
       // A new pool nobody picked a machine type or maximum for yet moves off a
-      // type it could not have, and down to the room that type has left, so
-      // the form does not open on a refusal.
+      // type with no room left for it, and down to the room its type has left,
+      // so the form does not open on a refusal.
       this.nodePools.controls.forEach((control, index) => {
         if (this.originals.has(control.get('name')?.value)) return;
         const mt = control.get('machineType');
-        if (mt?.pristine && !this.loadedPools.has(control) && !quotas.get(mt.value)?.quota) {
+        if (
+          mt?.pristine &&
+          !this.loadedPools.has(control) &&
+          poolRoom(index, this.poolDrafts(), this.originals, quotas).limit <= 0
+        ) {
           mt.setValue(this.preferredMachineType(), { emitEvent: false });
         }
         const max = control.get('autoscaleMax');
@@ -305,6 +321,23 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return !!this.quotas && !this.quotas.get(machineType)?.quota;
   }
 
+  /** What the list says on a machine type for the pool at `index`: that the
+   *  organization has no quota for it, or that the quota has no room left for
+   *  this pool. Null while the quotas are not in, or when the type fits. */
+  machineTypeNote(index: number, machineType: string): string | null {
+    const { quotas } = this;
+    if (!quotas) return null;
+    if (this.hasNoQuota(machineType)) return 'No quota in this organization';
+    const pools = this.poolDrafts();
+    // An existing pool can always stay what it is on its own machine type.
+    const original = this.originals.get(pools[index]?.name);
+    if (original?.machineType === machineType) return null;
+    const others = pools.filter((_, i) => i !== index);
+    return roomForNewPool(machineType, others, this.originals, quotas) <= 0
+      ? 'No room left in this organization'
+      : null;
+  }
+
   /** Said at the machine type as soon as it is picked: with no quota, nothing
    *  else in the pool can make it fit. */
   getMachineTypeQuotaError(index: number): string {
@@ -316,26 +349,23 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
 
-  /** The room under the maximum, as a hint that is there before saving. */
-  getAutoscaleMaxHint(index: number): string {
-    const room = this.roomFor(this.nodePools.at(index));
-    if (!room || room.quota === 0) return '';
-    const max = Number(this.nodePools.at(index).get('autoscaleMax')?.value);
-    if (!room.grows && max > room.limit) {
-      return `The organization is over its ${room.machineType} quota of ${room.quota} nodes, so this pool can shrink but not grow.`;
-    }
-    if (room.limit <= 0) {
-      return `The organization's other ${room.machineType} node pools take all ${room.quota} nodes of its quota.`;
-    }
-    return `Up to ${room.limit} for this pool: the organization's ${room.machineType} quota is ${room.quota} nodes, and its other node pools take ${room.quota - room.limit}.`;
-  }
-
   getAutoscaleMaxError(index: number): string {
     const control = this.nodePools.at(index).get('autoscaleMax');
     if (control?.hasError('required')) return 'The autoscale maximum is required.';
     if (control?.hasError('min')) return 'The autoscale maximum must be at least 1.';
     if (control?.hasError('quota')) {
-      const room = this.roomFor(this.nodePools.at(index));
+      const pool = this.nodePools.at(index);
+      const room = this.roomFor(pool);
+      // An existing pool is checked only when it grows, so what it has now is
+      // allowed even when the room is below it: say that, not "at most".
+      const original = this.originals.get(pool.get('name')?.value);
+      if (
+        room &&
+        original?.machineType === room.machineType &&
+        original.autoscaleMax > room.limit
+      ) {
+        return `This pool can stay at ${original.autoscaleMax} or shrink, but not grow: there is no room left in the organization's ${room.machineType} quota.`;
+      }
       return room && room.limit > 0
         ? `At most ${room.limit}, or the organization goes over its ${room.machineType} quota.`
         : `There is no room left in the organization's ${room?.machineType ?? ''} quota.`;
@@ -343,18 +373,23 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return '';
   }
 
-  private loadInitialData(data: NodePoolData[]) {
+  private loadPools(data: NodePoolData[], { existing }: { existing: boolean }) {
     // Clear existing form array
     while (this.nodePools.length > 0) {
       this.nodePools.removeAt(0);
     }
 
-    this.originals = new Map(data.map((pool) => [pool.name, pool]));
+    this.originals = existing ? new Map(data.map((pool) => [pool.name, pool])) : new Map();
 
-    // Add all initial node pools
     data.forEach((pool) => {
       const group = this.createNodePoolFormGroup(pool);
-      this.loadedPools.add(group);
+      // A draft's values were chosen already: the quotas arriving later must
+      // not move them the way they move a pool nobody touched yet.
+      if (existing) {
+        this.loadedPools.add(group);
+      } else {
+        Object.values(group.controls).forEach((control) => control.markAsDirty());
+      }
       this.nodePools.push(group);
     });
   }

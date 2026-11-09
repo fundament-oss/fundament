@@ -92,7 +92,7 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// deleted pool's disks until the next resync. controller-runtime
 			// delivers the delete event after the cache has dropped the object,
 			// so the List below no longer returns it.
-			if _, err := r.recomputeCephClusterNodes(ctx); err != nil {
+			if err := r.recomputeCephClusterNodes(ctx); err != nil {
 				return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes after deleting DiskPool %s: %w", req.Name, err)
 			}
 			return ctrl.Result{}, nil
@@ -103,52 +103,51 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// A pool being deleted has already released its claims; recompute the union
 	// without it and rely on owner-reference GC for the rest.
 	if !pool.DeletionTimestamp.IsZero() {
-		if _, err := r.recomputeCephClusterNodes(ctx); err != nil {
+		if err := r.recomputeCephClusterNodes(ctx); err != nil {
 			return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes while deleting DiskPool %s: %w", pool.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	result, err := r.reconcilePool(ctx, &pool)
-	if err != nil {
+	if err := r.reconcilePool(ctx, &pool); err != nil {
 		// Conflicts are routine with the cache-backed client: another
 		// reconcile's write can land before the informer delivers it. Retry
 		// against fresher state instead of flapping the pool to Degraded.
 		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // Requeue uses the rate limiter backoff; RequeueAfter is a fixed delay
 		}
 		// Record why the pool is stuck before surfacing the error, so the
 		// operator sees the reason in the console instead of only in the logs.
 		r.setDegraded(ctx, &pool, err)
 		return ctrl.Result{}, err
 	}
-	return result, nil
+	return ctrl.Result{}, nil
 }
 
 // reconcilePool does the work for a live DiskPool.
-func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.DiskPool) (ctrl.Result, error) {
+func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.DiskPool) error {
 	// One pool list serves both this pool's selection and the union below.
 	var pools v1alpha1.DiskPoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
-		return ctrl.Result{}, fmt.Errorf("list DiskPools: %w", err)
+		return fmt.Errorf("list DiskPools: %w", err)
 	}
 
 	// Step 2: Resolve this pool's spec.disks. This is its contribution to the
 	// shared OSD set, and what selectedDiskCount/rawCapacity report.
 	selected, notes, err := resolvePoolDisks(ctx, r.Client, pool, pools.Items)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("resolve disks for DiskPool %s: %w", pool.Name, err)
+		return fmt.Errorf("resolve disks for DiskPool %s: %w", pool.Name, err)
 	}
 
 	// Step 3: Set the singleton CephCluster's spec.storage.nodes to the union of
 	// all pools' disks, so pools don't clobber each other.
 	union, err := diskUnionOver(ctx, r.Client, pools.Items)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("compute disk union: %w", err)
+		return fmt.Errorf("compute disk union: %w", err)
 	}
 	clusterExists, err := r.reconcileCephClusterNodes(ctx, union)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes: %w", err)
+		return fmt.Errorf("reconcile CephCluster nodes: %w", err)
 	}
 
 	// A pool over zero disks contributes nothing to the cluster. Report it
@@ -159,7 +158,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 		status.Phase = v1alpha1.PhaseDegraded
 		status.SelectedDiskCount, status.RawCapacity = 0, resource.Quantity{}
 		status.Message = emptyPoolMessage(pool, notes)
-		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
+		return r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
 			Reason:  v1alpha1.ReasonNoUsableDisks,
 			Message: status.Message,
@@ -176,7 +175,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 		// stays 0: it counts contributed disks, and nothing was recorded.
 		status.SelectedDiskCount, status.RawCapacity = len(selected), resource.Quantity{}
 		status.Message = fmt.Sprintf("CephCluster %s/%s not found: disks are contributed once it exists", r.ClusterNamespace, cephClusterName)
-		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
+		return r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
 			Reason:  v1alpha1.ReasonCephClusterMissing,
 			Message: status.Message,
@@ -197,7 +196,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 	if ready.Message == "" {
 		ready.Message = "disks contributed to the shared Ceph cluster"
 	}
-	return ctrl.Result{}, r.writeStatus(ctx, pool, &v1alpha1.DiskPoolStatus{
+	return r.writeStatus(ctx, pool, &v1alpha1.DiskPoolStatus{
 		Phase:             v1alpha1.PhaseReady,
 		SelectedDiskCount: len(selected),
 		RawCapacity:       *rawCapacity,
@@ -237,13 +236,21 @@ func (r *DiskPoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.Dis
 
 // recomputeCephClusterNodes recomputes the union from scratch and records it;
 // the deletion paths use it, where no pool list is at hand.
-func (r *DiskPoolReconciler) recomputeCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
+func (r *DiskPoolReconciler) recomputeCephClusterNodes(ctx context.Context) error {
 	union, err := diskUnion(ctx, r.Client)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return r.reconcileCephClusterNodes(ctx, union)
+	_, err = r.reconcileCephClusterNodes(ctx, union)
+	return err
 }
+
+// continueUnhealthyField is the CephCluster switch that lets Rook update an OSD
+// that Ceph does not report ok-to-stop. It also lets Rook restart MDS and RGW
+// daemons that fail their ok-to-stop and ok-to-continue checks, and carry on
+// with a reconcile after a failed mgr update. Rook's mon checks and its refusal
+// to upgrade Ceph while it reports HEALTH_ERR stay in force.
+const continueUnhealthyField = "continueUpgradeAfterChecksEvenIfNotHealthy"
 
 // reconcileCephClusterNodes loads the singleton CephCluster and sets
 // spec.storage.nodes to the given union of all live DiskPools' disks. It
@@ -263,15 +270,30 @@ func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context, unio
 		return false, fmt.Errorf("get CephCluster: %w", err)
 	}
 
-	// Skip the identical write, for the same reason writeStatus does.
-	if current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes"); err == nil &&
-		found && equality.Semantic.DeepEqual(current, nodesIface) {
+	// With three or more OSDs, Rook restarts an OSD for an update only once
+	// Ceph reports it ok-to-stop. On a single node every pool keeps one replica
+	// (see ComputeReplication), so no OSD holding data ever is, and every
+	// reconcile after the first stalls in "Configuring Ceph OSDs": Rook checks
+	// even when all OSDs share a host. With more nodes the checks stay on:
+	// they keep an update from restarting a daemon while its data is degraded.
+	continueUnhealthy := DistinctNodeCount(union) == 1
+
+	// Skip the identical write, for the same reason writeStatus does. A field
+	// of the wrong type is not skipped: the write below replaces it.
+	current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes")
+	currentContinue, _, continueErr := unstructured.NestedBool(cc.Object, "spec", continueUnhealthyField)
+	if err == nil && found && equality.Semantic.DeepEqual(current, nodesIface) &&
+		continueErr == nil && currentContinue == continueUnhealthy {
 		return true, nil
 	}
 
-	// Set only spec.storage.nodes; do not touch other fields.
+	// Set only spec.storage.nodes and the switch that follows from them; do
+	// not touch other fields.
 	if err := unstructured.SetNestedSlice(cc.Object, nodesIface, "spec", "storage", "nodes"); err != nil {
 		return true, fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
+	}
+	if err := unstructured.SetNestedField(cc.Object, continueUnhealthy, "spec", continueUnhealthyField); err != nil {
+		return true, fmt.Errorf("set CephCluster spec.%s: %w", continueUnhealthyField, err)
 	}
 
 	if err := r.Client.Update(ctx, cc); err != nil {

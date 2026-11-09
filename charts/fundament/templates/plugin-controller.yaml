@@ -49,6 +49,13 @@ rules:
       - update
       - patch
       - delete
+  # Read uncached to explain why an unreachable plugin's pod is not starting.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
   - apiGroups:
       - apps
     resources:
@@ -147,6 +154,7 @@ spec:
       containers:
         - name: plugin-controller
           image: {{ $.Values.images.pluginController }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             - name: NAMESPACE
               valueFrom:
@@ -177,6 +185,12 @@ spec:
             # PluginDefinition manifest without hash verification. Never set in
             # production.
             - name: PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH
+              value: "true"
+            {{- end }}
+            {{- if $.Values.pluginController.allowDevMode }}
+            # Dev mode lets a PluginInstallation deploy a CR-supplied image with
+            # relaxed probes/filesystem. Never set in production.
+            - name: PLUGIN_CONTROLLER_ALLOW_DEV_MODE
               value: "true"
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" 8097) | nindent 10 }}

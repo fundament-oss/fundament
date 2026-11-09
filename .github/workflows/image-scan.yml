@@ -15,6 +15,11 @@ env:
   COSIGN_IMAGE: ghcr.io/sigstore/cosign/cosign:v3.1.3@sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
   CRANE_IMAGE: gcr.io/go-containerregistry/crane:v0.22.1@sha256:1f968817b95790bed063f71175aa6b8ff879fa17064020415f3e18bb6e6a36e1
 
+# Only runs of the same PR share a group; master pushes and scheduled runs never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -50,7 +55,7 @@ jobs:
         run: |
           set -o pipefail
           mise exec -- helm template charts/fundament \
-              -f charts/fundament/values-production.yaml --set jwtSecret=unused \
+              -f charts/fundament/values-example-prod.yaml --set jwtSecret=unused \
             | grep -E '^\s*(image|imageName):' | sed -E 's/.*image(Name)?:[[:space:]]*"?//; s/"$//' \
             | grep -v '^ghcr.io/fundament-oss/' | sort -u > chart-images.txt
           for dockerfile in $(git ls-files '*Dockerfile' | grep -vE '(^|/)(hotreload|functl)/'); do

@@ -30,6 +30,7 @@ spec:
       containers:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 8080
@@ -40,12 +41,37 @@ spec:
                   name: db-fun-authn-api
                   key: uri
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
+            {{- with .Values.authnApi.oidc }}
+            {{- if .issuer }}
+            # An external identity provider (authnApi.oidc) in place of Dex.
             - name: OIDC_ISSUER
-              value: {{ .Values.dex.issuer }}
+              value: {{ .issuer | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ .clientId | quote }}
+            {{- if .clientSecretRef.name }}
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretRef.name }}
+                  key: {{ .clientSecretRef.key }}
+            {{- end }}
+            - name: OIDC_SCOPES
+              value: {{ if kindIs "string" .scopes }}{{ required "authnApi.oidc.scopes is required with authnApi.oidc.issuer" .scopes | quote }}{{ else }}{{ fail "authnApi.oidc.scopes must be a comma-separated string, such as openid,profile,email" }}{{ end }}
+            - name: OIDC_DISPLAY_NAME
+              value: {{ required "authnApi.oidc.displayName is required with authnApi.oidc.issuer: it is the only way in" .displayName | quote }}
+            # Only Dex offers the password grant.
+            - name: PASSWORD_LOGIN_ENABLED
+              value: "false"
+            {{- else }}
+            {{- if not $.Values.dex.enabled }}{{ fail "authn-api needs an identity provider: enable dex or set authnApi.oidc.issuer" }}{{ end }}
+            - name: OIDC_ISSUER
+              value: {{ $.Values.dex.issuer }}
             - name: OIDC_DISCOVERY_URL
-              value: {{ .Values.dex.discoveryUrl }}
+              value: {{ $.Values.dex.discoveryUrl }}
             - name: OIDC_CLIENT_ID
               value: fundament
+            {{- end }}
+            {{- end }}
             - name: OIDC_REDIRECT_URL
               value: {{ .Values.externalUrls.authn }}/callback
             - name: FRONTEND_URL

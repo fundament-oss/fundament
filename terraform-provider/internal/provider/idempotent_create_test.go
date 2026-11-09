@@ -29,7 +29,7 @@ func (c *fakeClock) Now() time.Time { return c.now }
 
 func (c *fakeClock) Sleep(ctx context.Context, d time.Duration) error {
 	if err := ctx.Err(); err != nil {
-		return err
+		return err //nolint:wrapcheck // test double
 	}
 	c.sleeps = append(c.sleeps, d)
 	c.now = c.now.Add(d)

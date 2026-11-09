@@ -78,6 +78,12 @@ resource "fundament_cluster" "test" {
   name               = %[1]q
   region             = "eu-west-1"
   kubernetes_version = "1.28"
+  node_pool {
+    name          = "workers"
+    machine_type  = "n1-standard-1"
+    autoscale_min = 1
+    autoscale_max = 1
+  }
 }
 
 resource "fundament_plugin_installation" "test" {

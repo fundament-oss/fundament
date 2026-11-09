@@ -22,13 +22,13 @@
             [attr.text]="statusLabel(a.status)"
           ></nldd-badge>
         </h1>
-        <p slot="subtitle">{{ a.assetTag }}</p>
+        <p slot="supporting-text">{{ a.assetTag }}</p>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-toolbar label="Asset actions">
+      <nldd-toolbar accessible-label="Asset actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Edit asset"
             start-icon="pencil-on-square"
             (click)="openEditAsset()"
@@ -43,7 +43,7 @@
         @if (assetLocation()) {
           <nldd-toolbar-item slot="start">
             <nldd-button
-              variant="secondary"
+              appearance="secondary"
               text="View in rack"
               start-icon="eye"
               href="/racks"
@@ -62,7 +62,7 @@
         @if (a.status !== 'decommissioned') {
           <nldd-toolbar-item slot="end">
             <nldd-button
-              variant="secondary"
+              appearance="secondary"
               text="Decommission"
               (click)="openDecommissionAsset()"
             ></nldd-button>
@@ -82,7 +82,7 @@
       <!-- A form rather than a list: these are rows you read, not rows you walk
              through, so there is no arrow navigation to promise and Tab goes
              straight to the link in the catalog row. -->
-      <nldd-list type="form" variant="box-tinted" accessible-label="Asset details">
+      <nldd-list type="form" appearance="box-tinted" accessible-label="Asset details">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Asset tag"></nldd-text-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -173,7 +173,7 @@
           <h2>Notes</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" accessible-label="Notes">
+        <nldd-list appearance="box-tinted" accessible-label="Notes">
           @if (a.notes) {
             <nldd-list-item>
               <nldd-text-cell [attr.text]="a.notes"></nldd-text-cell>
@@ -202,15 +202,13 @@
         <!-- The track carries the line between the events, so the rows need no
              dividers of their own: two lines down the same list would be one
              too many. -->
-        <nldd-list variant="box-tinted" dividers="never" accessible-label="Asset history">
+        <nldd-list appearance="box-tinted" dividers="never" accessible-label="Asset history">
           @for (entry of assetHistory(); track entry.daysAgo + entry.description; let i = $index) {
             <nldd-list-item>
               <!-- A bare dot: the line is there to tie the events together, and
                    the sentence beside it already says what happened. -->
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-timeline-track-cell
-                [attr.position]="historyPosition(i)"
-              ></nldd-timeline-track-cell>
+              <nldd-step-cell [attr.position]="historyPosition(i)"></nldd-step-cell>
               <nldd-spacer-cell size="16"></nldd-spacer-cell>
               <nldd-text-cell
                 [attr.text]="entry.description"
@@ -238,7 +236,7 @@
           </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
-            variant="destructive"
+            appearance="destructive"
             text="Delete asset"
             start-icon="delete"
             (click)="openDeleteAsset()"
@@ -257,7 +255,7 @@
       >
         <nldd-button
           slot="actions"
-          variant="primary"
+          appearance="primary"
           text="Back to inventory"
           start-icon="arrow-left"
           href="/inventory"
@@ -293,13 +291,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep asset"
     (click)="cancelDeleteAsset()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete asset"
     (click)="confirmDeleteAsset()"
   ></nldd-button>
@@ -325,13 +323,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep in service"
     (click)="cancelDecommissionAsset()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
+    appearance="secondary"
     text="Decommission asset"
     (click)="confirmDecommissionAsset()"
   ></nldd-button>

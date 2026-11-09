@@ -11,7 +11,7 @@ import (
 )
 
 // minKubernetesMinor is the lowest Kubernetes 1.x minor the default Envoy Gateway
-// version supports. Envoy Gateway v1.8's bundled Gateway API CRDs (e.g. TLSRoute)
+// version installs on. Its bundled Gateway API CRDs (e.g. TLSRoute)
 // carry a CEL validation rule using the isIP() function, which the API server only
 // provides from Kubernetes 1.31. On older clusters the CRD is rejected as invalid
 // and the install otherwise fails with a cryptic
@@ -26,7 +26,7 @@ type serverVersioner interface {
 
 // newDiscoveryClient builds a discovery client from the rest config.
 func newDiscoveryClient(cfg *rest.Config) (*discovery.DiscoveryClient, error) {
-	return discovery.NewDiscoveryClientForConfig(cfg)
+	return discovery.NewDiscoveryClientForConfig(cfg) //nolint:wrapcheck // Start wraps it with context
 }
 
 // checkKubernetesVersion fails fast, with an actionable message, when the cluster

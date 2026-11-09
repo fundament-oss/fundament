@@ -30,7 +30,7 @@ type applyShootCalls struct {
 // shootConflict is the error gardener's API server returns when its controllers
 // stamp the shoot (status, finalizers) between our read and our update.
 func shootConflict(name string) error {
-	return apierrors.NewConflict(
+	return apierrors.NewConflict( //nolint:wrapcheck // test double returns the raw apierrors conflict the code under test checks
 		schema.GroupResource{Group: gardencorev1beta1.GroupName, Resource: "shoots"},
 		name,
 		assert.AnError,

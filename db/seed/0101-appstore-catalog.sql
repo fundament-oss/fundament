@@ -63,6 +63,10 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
 
+## Installed versions
+
+- cert-manager v1.21.3
+
 ## Key Features
 
 - **Automated Issuance**: Automatically provision TLS certificates from various issuers
@@ -74,7 +78,7 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 
 - Automatic HTTPS for web applications
 - Securing internal service-to-service communication
-- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.17.2'),
+- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.21.3'),
     -- `cloudnativepg`, not `cloudnative-pg`: the Console derives the PluginInstallation's
     -- metadata.name from this column via pluginResourceName(), which slugified the old
     -- prose name "CloudNativePG" to "cloudnativepg". Any cluster already running this
@@ -83,6 +87,10 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
     ('019b4000-3000-7000-8000-000000000003', '019b4000-0000-7000-8000-000000000000', 'cloudnativepg', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
 
 Create PostgreSQL databases for your projects from the console. The plugin installs the CloudNativePG operator, which runs and looks after each database.
+
+## Installed versions
+
+- CloudNativePG operator 1.30.1 (Helm chart 0.29.1)
 
 ## Key Features
 
@@ -98,7 +106,7 @@ Create PostgreSQL databases for your projects from the console. The plugin insta
 ## Use Cases
 
 - Development and test databases
-- Applications that need a relational database in their own namespace', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.26.0'),
+- Applications that need a relational database in their own namespace', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.30.1'),
     ('019b4000-3000-7000-8000-000000000004', '019b4000-0000-7000-8000-000000000000', 'eck-operator', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
 
 Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, management, and orchestration of Elasticsearch, Kibana, and the Elastic Stack on Kubernetes.
@@ -284,6 +292,10 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 
 The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
 
+## Installed versions
+
+- Envoy Gateway v1.9.3
+
 ## Key Features
 
 - **Standard Gateway API**: Native support for the Kubernetes Gateway API
@@ -299,6 +311,12 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
     ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
 
 The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes and turns their spare raw disks into block, shared file and object storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference, or an ObjectStorage to provision S3-compatible buckets through ObjectBucketClaims.
+
+## Installed versions
+
+- Rook v1.21.1
+- Ceph v19.2.7
+- Ceph CSI v3.18.2
 
 ## Key Features
 

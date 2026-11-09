@@ -98,7 +98,7 @@ func (d *OrganizationMembersDataSource) Configure(ctx context.Context, req datas
 	d.client = client
 }
 
-func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var state OrganizationMembersDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)

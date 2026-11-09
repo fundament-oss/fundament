@@ -177,7 +177,7 @@ nldd-sheet > *:not(nldd-page) {
    schemes; the override only made light-DOM text brighter than every component
    that colors itself, which showed up as icons glowing beside their neighbours. */
 /* The ground behind the app is the design system's base surface, not a pinned
-   Tailwind step: it is the same colour nldd-app-view paints, so the first paint
+   Tailwind step: it is the same colour nldd-shell paints, so the first paint
    before Angular boots already shows the right one, in both schemes. */
 body {
   @apply text-content font-body;
@@ -244,13 +244,13 @@ app-root:has(> nldd-status-bar) {
     z-index: 10;
   }
 
-  nldd-app-view {
+  nldd-shell {
     --context-inset-top: 24px;
 
     height: calc(100% - 24px);
   }
 
-  nldd-app-view[data-scroll='root'] {
+  nldd-shell[data-scroll='root'] {
     height: auto;
     min-height: calc(100dvh - 24px);
   }
@@ -258,7 +258,7 @@ app-root:has(> nldd-status-bar) {
   /* In root-scroll mode the document scrolls and the app view grows with its
      content. app-root grows along, or the bar runs out of room to stick in
      once the page is scrolled past one viewport. */
-  &:has(> nldd-app-view[data-scroll='root']) {
+  &:has(> nldd-shell[data-scroll='root']) {
     height: auto;
     min-height: 100%;
   }

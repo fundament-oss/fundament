@@ -37,20 +37,20 @@ export function extractOrganizationId(token: string): string {
 // seed), a user can authenticate before the authz-worker has written their
 // org-membership tuples to OpenFGA, so permission checks transiently fail with
 // permission_denied. Poll until they propagate.
-const AUTHZ_READY_TIMEOUT_MS = 60_000;
+export const AUTHZ_READY_TIMEOUT_MS = 60_000;
 const AUTHZ_READY_INTERVAL_MS = 2_000;
 
 /**
  * Wait until the authenticated user's org-membership tuples have propagated to
- * OpenFGA, using a read-only permission-gated call (ListAPIKeys) as the probe.
- * Mirrors the retry the terraform acceptance tests do around CreateAPIKey.
+ * OpenFGA, retrying the given read-only permission-gated probe. Mirrors the
+ * retry the terraform acceptance tests do around CreateAPIKey. Shared: the
+ * node-pool steps probe with getClusterByName the same way.
  */
-async function waitForAuthzReady(service: APIKeyService): Promise<void> {
+export async function waitForAuthzReady<T>(probe: () => Promise<T>): Promise<T> {
   const deadline = Date.now() + AUTHZ_READY_TIMEOUT_MS;
   for (;;) {
     try {
-      await service.listAPIKeys();
-      return;
+      return await probe();
     } catch (err) {
       if (
         err instanceof ConnectRpcError &&
@@ -115,7 +115,8 @@ Given(
     // Tolerate authz-worker -> OpenFGA propagation lag before any
     // permission-gated step runs (otherwise CreateAPIKey etc. flake with
     // permission_denied right after a fresh deploy).
-    await waitForAuthzReady(this.apiKeyService);
+    const service = this.apiKeyService;
+    await waitForAuthzReady(() => service.listAPIKeys());
   },
 );
 
@@ -129,7 +130,7 @@ Given(
   async function (this: ICustomWorld, name: string) {
     let response;
     try {
-      response = await this.apiKeyService!.createAPIKey({ name });
+      response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
     } catch (err) {
       if (err instanceof ConnectRpcError && err.code === 'already_exists') {
         // A leftover key from a previous test run. Delete it and retry.
@@ -138,7 +139,7 @@ Given(
         if (existing) {
           await this.apiKeyService!.deleteAPIKey(existing.id);
         }
-        response = await this.apiKeyService!.createAPIKey({ name });
+        response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
       } else {
         throw err;
       }
@@ -201,6 +202,28 @@ When('I delete the API key', async function (this: ICustomWorld) {
     this.lastApiError = error as Error;
   }
 });
+
+When(
+  'I try to create an API key named {string} with expiry {string}',
+  async function (this: ICustomWorld, name: string, expiresIn: string) {
+    try {
+      const response = await this.apiKeyService!.createAPIKey({
+        name,
+        expiresIn,
+      });
+      // Tracked so the cleanup removes a key that should have been refused.
+      this.createdApiKeys.set(name, response);
+      if (this.currentUserEmail) {
+        this.createdApiKeysByUser
+          .get(this.currentUserEmail)
+          ?.set(name, response);
+      }
+      this.lastApiError = undefined;
+    } catch (error) {
+      this.lastApiError = error as Error;
+    }
+  },
+);
 
 // --- Common Then Steps ---
 

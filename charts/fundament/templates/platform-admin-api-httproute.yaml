@@ -1,0 +1,18 @@
+{{- if and $.Values.platformAdminApi.enabled $.Values.platformAdminApi.httproute.enabled }}
+{{- if not $.Values.platformAdminApi.httproute.parentRefs }}{{ fail "platformAdminApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-platform-admin-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "platform-admin-api" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.platformAdminApi.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.platformAdminApi.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: platform-admin-api
+          port: 8080
+{{- end }}

@@ -26,6 +26,24 @@ describe('shared node pools form', () => {
     expect(form.nodePools.length).toBe(1);
     expect(form.nodePools.at(0).get('name')?.value).toBe('workers');
   });
+
+  it('shows the pools filled in earlier when the create wizard comes back to them', () => {
+    const form = build();
+    form.draftData = [
+      { name: 'workers', machineType: 'n1-standard-2', autoscaleMin: 2, autoscaleMax: 4 },
+      { name: 'batch', machineType: 'n1-standard-4', autoscaleMin: 1, autoscaleMax: 2 },
+    ];
+    expect(form.nodePoolsForm.value.nodePools).toEqual([
+      { name: 'workers', machineType: 'n1-standard-2', autoscaleMin: 2, autoscaleMax: 4 },
+      { name: 'batch', machineType: 'n1-standard-4', autoscaleMin: 1, autoscaleMax: 2 },
+    ]);
+  });
+
+  it('keeps its one pool to fill in when there is no draft yet', () => {
+    const form = build();
+    form.draftData = null;
+    expect(form.nodePools.length).toBe(1);
+  });
 });
 
 // The quota is the organization's, over every cluster, so the form takes its
@@ -42,6 +60,18 @@ describe('shared node pools form under a node quota', () => {
     return form;
   };
   const quotas = new Map([['local-medium', { quota: 10, inUse: 6 }]]);
+
+  it('counts a draft pool as new, and leaves its maximum as it was chosen', () => {
+    const form = build();
+    form.draftData = [
+      { name: 'workers', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+    ];
+    form.nodeQuotas = new Map([['local-medium', { quota: 10, inUse: 8 }]]);
+    // Not shrunk to the room as an untouched pool would be, and not counted as
+    // nodes already in use: 3 is over the 2 left, so the form says so.
+    expect(form.nodePools.at(0).get('autoscaleMax')?.value).toBe(3);
+    expect(form.nodePools.at(0).get('autoscaleMax')?.hasError('quota')).toBe(true);
+  });
 
   it('starts a new pool on a machine type that has room', () => {
     const form = build();
@@ -69,19 +99,33 @@ describe('shared node pools form under a node quota', () => {
     expect(form.nodePools.at(0).get('autoscaleMax')?.value).toBe(5);
   });
 
+  it('starts a new pool off a first machine type that is full', () => {
+    const form = build();
+    form.nodeQuotas = new Map([
+      ['local-small', { quota: 2, inUse: 2 }],
+      ['local-medium', { quota: 10, inUse: 6 }],
+    ]);
+    expect(form.nodePools.at(0).get('machineType')?.value).toBe('local-medium');
+    expect(form.machineTypeNote(0, 'local-small')).toBe('No room left in this organization');
+    expect(form.machineTypeNote(0, 'local-medium')).toBeNull();
+    expect(form.nodePoolsForm.valid).toBe(true);
+  });
+
   it('says at the machine type when there is no quota for it', () => {
     const form = build();
     form.nodeQuotas = quotas;
     form.selectMachineType(0, 'local-small');
     expect(form.hasNoQuota('local-small')).toBe(true);
+    expect(form.machineTypeNote(0, 'local-small')).toBe('No quota in this organization');
     expect(form.getMachineTypeQuotaError(0)).toContain('no quota for local-small');
     expect(form.nodePoolsForm.invalid).toBe(true);
   });
 
-  it('shows the room under the maximum and refuses a value above it', () => {
+  it('refuses a maximum above the room', () => {
     const form = build();
     form.nodeQuotas = quotas;
-    expect(form.getAutoscaleMaxHint(0)).toContain('Up to 4 for this pool');
+    form.nodePools.at(0).get('autoscaleMax')?.setValue(4);
+    expect(form.nodePoolsForm.valid).toBe(true);
 
     form.nodePools.at(0).get('autoscaleMax')?.setValue(5);
     expect(form.nodePools.at(0).get('autoscaleMax')?.hasError('quota')).toBe(true);
@@ -109,17 +153,19 @@ describe('shared node pools form under a node quota', () => {
     form.nodeQuotas = new Map([['local-medium', { quota: 4, inUse: 14 }]]);
     form.nodePools.at(0).get('autoscaleMax')?.setValue(6);
     expect(form.nodePoolsForm.valid).toBe(true);
-    expect(form.getAutoscaleMaxHint(0)).toContain('can shrink but not grow');
 
     form.nodePools.at(0).get('autoscaleMax')?.setValue(9);
     expect(form.nodePoolsForm.invalid).toBe(true);
+    expect(form.getAutoscaleMaxError(0)).toContain(
+      'This pool can stay at 8 or shrink, but not grow',
+    );
   });
 
   it('bounds nothing while the quotas are not in', () => {
     const form = build();
     form.nodePools.at(0).get('autoscaleMax')?.setValue(500);
     expect(form.nodePoolsForm.valid).toBe(true);
-    expect(form.getAutoscaleMaxHint(0)).toBe('');
+    expect(form.machineTypeNote(0, 'local-small')).toBeNull();
   });
 });
 

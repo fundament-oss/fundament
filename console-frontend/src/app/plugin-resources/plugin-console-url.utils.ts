@@ -53,15 +53,15 @@ export interface PluginLike {
   installationVersion: string;
   customComponents?: Record<
     string,
-    { list?: string; detail?: string; create?: string } | undefined
+    { list?: string; detail?: string; create?: string; edit?: string } | undefined
   >;
 }
 
-export type CustomUIView = 'list' | 'detail' | 'create';
+export type CustomUIView = 'list' | 'detail' | 'create' | 'edit';
 
 /**
  * buildCustomUIUrl returns the plugin-proxy URL for a resource kind's custom
- * component slot (list/detail/create), or `null` if the plugin doesn't
+ * component slot (list/detail/create/edit), or `null` if the plugin doesn't
  * declare one. Extracts the null-guard + config-lookup + URL-build sequence
  * that was previously duplicated across resource-list / resource-detail /
  * resource-create components.

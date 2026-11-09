@@ -35,7 +35,7 @@ const (
 	Namespace = "cnpg-system"
 	Repo      = "https://cloudnative-pg.github.io/charts"
 	Chart     = "cloudnative-pg"
-	Version   = "0.24.0" // ships CloudNativePG operator v1.26.0
+	Version   = "0.29.1" // ships CloudNativePG operator v1.30.1
 )
 
 // pendingGrace is how long a pending or uninstalling release counts as an
@@ -203,19 +203,19 @@ func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
 		return "", fmt.Errorf("list CRDs: %w", err)
 	}
 	for i := range crds.Items {
-		crd := &crds.Items[i]
-		if !strings.HasSuffix(crd.Name, "."+crdGroup) {
+		item := &crds.Items[i]
+		if !strings.HasSuffix(item.Name, "."+crdGroup) {
 			continue
 		}
-		release := crd.Annotations["meta.helm.sh/release-name"]
-		namespace := crd.Annotations["meta.helm.sh/release-namespace"]
+		release := item.Annotations["meta.helm.sh/release-name"]
+		namespace := item.Annotations["meta.helm.sh/release-namespace"]
 		if release == "" {
 			return fmt.Sprintf("CRD %s was not installed with Helm. To hand the operator to this plugin, remove that install but keep its CRDs (deleting them deletes every database), %s",
-				crd.Name, adoptCRDs), nil
+				item.Name, adoptCRDs), nil
 		}
 		if release != Release || namespace != Namespace {
 			return fmt.Sprintf("CRD %s belongs to Helm release %s/%s. To hand the operator to this plugin, run `helm -n %s uninstall %s` (its CRDs and databases stay), %s",
-				crd.Name, namespace, release, namespace, release, adoptCRDs), nil
+				item.Name, namespace, release, namespace, release, adoptCRDs), nil
 		}
 	}
 
@@ -228,8 +228,8 @@ func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
 		if d.Namespace == Namespace && d.Labels["app.kubernetes.io/instance"] == Release {
 			continue
 		}
-		for _, c := range d.Spec.Template.Spec.Containers {
-			if isOperatorImage(c.Image) {
+		for j := range d.Spec.Template.Spec.Containers {
+			if isOperatorImage(d.Spec.Template.Spec.Containers[j].Image) {
 				return fmt.Sprintf("Deployment %s/%s runs the CloudNativePG operator. To hand the operator to this plugin, delete that Deployment", d.Namespace, d.Name), nil
 			}
 		}

@@ -36,7 +36,7 @@
           type="button"
           (click)="inviteAnother()"
           text="Invite another person"
-          variant="neutral-transparent"
+          appearance="neutral-transparent"
           width="full"
         ></nldd-button>
       } @else {
@@ -80,7 +80,7 @@
           </nldd-form-field>
           <nldd-form-field label="Role">
             <nldd-list
-              variant="box-tinted"
+              appearance="box-tinted"
               accessible-label="Role"
             >
               @for (option of permissionOptions; track option.value) {
@@ -111,7 +111,7 @@
               (click)="submitInvitation()"
               text="Create invitation"
               [attr.loading]="isSubmitting() ? '' : null"
-              variant="primary"
+              appearance="primary"
               width="full"
             ></nldd-button>
           </nldd-form-actions>

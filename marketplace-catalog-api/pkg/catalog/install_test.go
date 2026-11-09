@@ -61,6 +61,30 @@ func softDeleteDefinition(t *testing.T, env *testEnv, definitionID uuid.UUID) {
 	require.NoError(t, err)
 }
 
+func TestInstallListPlugins_LogoFromLatestPublished(t *testing.T) {
+	env := newTestEnv(t)
+	srv := newInstallServer(t, env)
+	pluginID := seedLogoVersions(t, env, "install-logo")
+
+	for name, ctx := range map[string]context.Context{
+		"owner":    asOrganization(seededOrganizationID),
+		"stranger": asOrganization(seedOrganization(t, env, "install-logo-stranger")),
+	} {
+		t.Run(name, func(t *testing.T) {
+			list, err := srv.Service.ListPlugins(ctx, catalogv1.ListPluginsRequest_builder{Query: "install-logo"}.Build())
+			require.NoError(t, err)
+			require.Len(t, list.GetPlugins(), 1)
+			assert.Equal(t, "logo-b", list.GetPlugins()[0].GetLogo())
+			assert.Equal(t, "dark-b", list.GetPlugins()[0].GetLogoDark())
+
+			got, err := srv.Service.GetPlugin(ctx, catalogv1.GetPluginRequest_builder{PluginId: pluginID.String()}.Build())
+			require.NoError(t, err)
+			assert.Equal(t, "logo-b", got.GetPlugin().GetLogo())
+			assert.Equal(t, "dark-b", got.GetPlugin().GetLogoDark())
+		})
+	}
+}
+
 func listAsInstaller(t *testing.T, srv *install.Server, ctx context.Context) []uuid.UUID {
 	t.Helper()
 	resp, err := srv.Service.ListPlugins(ctx, &catalogv1.ListPluginsRequest{})

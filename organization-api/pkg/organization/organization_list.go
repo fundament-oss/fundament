@@ -21,8 +21,8 @@ func (s *Server) ListOrganizations(
 	}
 
 	result := make([]*organizationv1.Organization, 0, len(orgs))
-	for _, org := range orgs {
-		result = append(result, toOrg(org))
+	for i := range orgs {
+		result = append(result, toOrg(&orgs[i]))
 	}
 
 	return organizationv1.ListOrganizationsResponse_builder{
@@ -30,7 +30,7 @@ func (s *Server) ListOrganizations(
 	}.Build(), nil
 }
 
-func toOrg(org db.OrganizationListRow) *organizationv1.Organization {
+func toOrg(org *db.OrganizationListRow) *organizationv1.Organization {
 	return organizationv1.Organization_builder{
 		Id:      org.ID.String(),
 		Name:    org.Name,

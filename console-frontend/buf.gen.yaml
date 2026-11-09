@@ -12,3 +12,8 @@ inputs:
   - directory: ../marketplace-admin-api/pkg/proto
   - directory: ../marketplace-catalog-api/pkg/proto
   - directory: ../marketplace-registry-api/pkg/proto
+  # Only the public overview: fleet.v1 is the staff API and has no place in
+  # the console bundle.
+  - directory: ../platform-api/pkg/proto
+    paths:
+      - ../platform-api/pkg/proto/platform

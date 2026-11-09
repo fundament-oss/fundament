@@ -11,9 +11,11 @@ import {
   ElementRef,
   effect,
   untracked,
+  computed,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -36,6 +38,14 @@ import {
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
 import AutofocusDirective from '../autofocus.directive';
+import {
+  CUSTOM,
+  DURATION,
+  NEVER,
+  defaultExpiry,
+  expiryOptions,
+  maximumLabel,
+} from './expiry-options';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/badge';
@@ -54,6 +64,8 @@ import '@nldd/design-system/list-item';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
+import '@nldd/design-system/radio-button-field';
+import '@nldd/design-system/radio-button-group';
 import '@nldd/design-system/rich-text';
 import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
@@ -66,12 +78,26 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 
-const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
-  if (field?.invalid && field?.touched) {
-    return 'Name is required';
-  }
-  return '';
+/** The server's reason for refusing the lifetime, worded for under the field;
+ *  null when the refusal is about something else. */
+const getExpiresInRefusal = (err: unknown): string | null => {
+  if (!(err instanceof ConnectError) || err.code !== Code.InvalidArgument) return null;
+  const match = /expires_in: ([^\n[]+)/.exec(err.rawMessage);
+  if (!match) return null;
+  const reason = match[1].trim();
+  return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`;
 };
+
+/** What went wrong, without the `[code]` prefix Connect puts in front of its message. */
+const errorText = (err: unknown): string => {
+  if (err instanceof ConnectError) return err.rawMessage;
+  return err instanceof Error ? err.message : 'Unknown error';
+};
+
+/** A call that was cut off rather than refused: only the component going away does that. */
+const isAborted = (err: unknown): boolean =>
+  (err instanceof ConnectError && err.code === Code.Canceled) ||
+  (err instanceof DOMException && err.name === 'AbortError');
 
 const formatDate = (timestamp: Timestamp | undefined): string => formatDateUtil(timestamp, 'Never');
 
@@ -109,6 +135,12 @@ export default class ApiKeysComponent {
     // organization header and is refused. The very first fetch is left to the
     // effect below, which runs as soon as both halves of the owner are in.
     if (open && !wasOpen && this.owner !== undefined) this.loadApiKeys();
+    // Closing is the end of the visit: what it left behind, a half-filled form,
+    // an error or the token, would otherwise greet the next one.
+    if (!open && wasOpen) {
+      this.visit += 1;
+      this.resetTransientState();
+    }
   }
 
   get show(): boolean {
@@ -116,6 +148,9 @@ export default class ApiKeysComponent {
   }
 
   private isOpen = false;
+
+  /** Counts closes, so a call that outlives its visit knows it did. */
+  private visit = 0;
 
   @Output() closed = new EventEmitter<void>();
 
@@ -139,11 +174,51 @@ export default class ApiKeysComponent {
 
   newKeyName = signal('');
 
-  /** Set by the submit, not by leaving the field: an empty field you have not
-   *  tried to send yet is not a mistake. */
-  newKeySubmitted = signal(false);
+  /** The server's refusal of the name; the rules the field can check itself are
+   *  in its validation list. */
+  newKeyNameError = signal<string | null>(null);
 
+  /** The lifetime picked in the group; null until one is, which is the default.
+   *  The default is only known once the list has brought the maximum, and that
+   *  answer may land after the form was opened. */
+  newKeyExpiryChoice = signal<string | null>(null);
+
+  /** The duration typed under "Custom…". */
   newKeyExpiresIn = signal('');
+
+  newKeyExpiresInError = signal<string | null>(null);
+
+  /** Longest lifetime the server allows, such as "8760h"; empty when keys may
+   *  never expire, and null until a list has said which. */
+  maxExpiresIn = signal<string | null>(null);
+
+  expiryOptions = computed(() => expiryOptions(this.maxExpiresIn()));
+
+  /** The pick, while it is still on offer: a list that brings a lower maximum
+   *  takes options away, and a pick that went with them would be sent unseen. */
+  selectedExpiry = computed(() => {
+    const choice = this.newKeyExpiryChoice();
+    const options = this.expiryOptions();
+    if (choice !== null && options.some((option) => option.value === choice)) return choice;
+    return defaultExpiry(options);
+  });
+
+  maxExpiryLabel = computed(() => {
+    const max = this.maxExpiresIn();
+    return max ? maximumLabel(max) : null;
+  });
+
+  /** What the create sends: an empty duration is a key that never expires. */
+  expiresInToSend = computed(() => {
+    const choice = this.selectedExpiry();
+    if (choice === NEVER) return '';
+    if (choice === CUSTOM) return this.newKeyExpiresIn();
+    return choice;
+  });
+
+  readonly customExpiry = CUSTOM;
+
+  readonly durationPattern = DURATION.source;
 
   // Modal state
   showRevokeModal = signal(false);
@@ -154,10 +229,27 @@ export default class ApiKeysComponent {
 
   pendingKeyName = signal<string | null>(null);
 
+  /** A create is out. Not `loading`, which the list fetch shares: a submit made
+   *  while a reopen refetches would otherwise be dropped. */
+  creating = signal(false);
+
   // Newly created token (only shown once)
   createdToken = signal<string | null>(null);
 
   createdTokenPrefix = signal<string | null>(null);
+
+  /** The key the token belongs to, so the token goes when the key does. */
+  private createdKeyId: string | null = null;
+
+  /** Counts list fetches, so only the latest one's answer is used. */
+  private listRequest = 0;
+
+  /** The latest list fetch is still out, so `loading` is its to clear. */
+  private listPending = false;
+
+  /** The fetch count when the token arrived. A list asked for before that may
+   *  not hold the new key yet, so only a later one may say the key is gone. */
+  private createdKeyListRequest = 0;
 
   private currentUser = toSignal(inject(AuthnApiService).currentUser$);
 
@@ -176,11 +268,9 @@ export default class ApiKeysComponent {
     // owner would read as "no organization" and the id arriving would look like
     // a change — emptying the list the sheet had just fetched.
     effect(() => {
-      const userId = this.currentUser()?.id;
-      const organizationId = this.organizationContext.currentOrganizationId();
-      if (!userId || !organizationId) return;
+      const owner = this.currentOwner();
+      if (owner === undefined) return;
 
-      const owner = `${userId}/${organizationId}`;
       untracked(() => {
         if (this.owner === undefined || this.owner === owner) {
           const firstOwner = this.owner === undefined;
@@ -200,10 +290,18 @@ export default class ApiKeysComponent {
     });
   }
 
-  private resetState() {
+  /** Whose keys they are right now: unknown while either half is, as after a
+   *  logout. `owner` keeps the last known one through that gap. */
+  private currentOwner(): string | undefined {
+    const userId = this.currentUser()?.id;
+    const organizationId = this.organizationContext.currentOrganizationId();
+    return userId && organizationId ? `${userId}/${organizationId}` : undefined;
+  }
+
+  /** Everything a visit leaves behind. The list stays: a reopen refetches it. */
+  private resetTransientState() {
     this.dismissToken();
     this.cancelCreating();
-    this.apiKeys.set([]);
     this.error.set(null);
     this.showRevokeModal.set(false);
     this.showDeleteModal.set(false);
@@ -211,23 +309,47 @@ export default class ApiKeysComponent {
     this.pendingKeyName.set(null);
   }
 
+  private resetState() {
+    this.resetTransientState();
+    this.apiKeys.set([]);
+    // A fetch still out is for the previous owner. With the sheet closed no
+    // newer one passes it, so it is dropped here.
+    this.listRequest += 1;
+    this.listPending = false;
+  }
+
   async loadApiKeys() {
+    this.listRequest += 1;
+    const { listRequest } = this;
+    this.listPending = true;
     this.loading.set(true);
     this.error.set(null);
 
     try {
       const request = create(ListAPIKeysRequestSchema, {});
       const response = await firstValueFrom(this.apiKeyClient.listAPIKeys(request));
+      // A newer fetch has started since: its answer is the one to show.
+      if (listRequest !== this.listRequest) return;
       this.apiKeys.set(response.apiKeys);
+      this.maxExpiresIn.set(response.maxExpiresIn);
+      this.dismissTokenOfGoneKey(response.apiKeys, listRequest);
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to load API keys: ${err.message}`
-          : 'Failed to load API keys',
-      );
+      if (listRequest !== this.listRequest) return;
+      this.error.set(`Failed to load API keys: ${errorText(err)}`);
     } finally {
-      this.loading.set(false);
+      if (listRequest === this.listRequest) {
+        this.listPending = false;
+        this.loading.set(false);
+      }
     }
+  }
+
+  /** A token whose key was deleted or revoked, here or elsewhere, is no use any
+   *  more, and leaving it up says the key is still there. */
+  private dismissTokenOfGoneKey(apiKeys: APIKey[], listRequest: number) {
+    if (this.createdKeyId === null || listRequest <= this.createdKeyListRequest) return;
+    const key = apiKeys.find((apiKey) => apiKey.id === this.createdKeyId);
+    if (!key || isRevoked(key.revoked)) this.dismissToken();
   }
 
   openRevokeModal(apiKeyId: string, apiKeyName: string) {
@@ -255,16 +377,14 @@ export default class ApiKeysComponent {
         apiKeyId,
       });
       await firstValueFrom(this.apiKeyClient.revokeAPIKey(request));
+      if (apiKeyId === this.createdKeyId) this.dismissToken();
 
       // Reload the list after successful revocation
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to revoke API key: ${err.message}`
-          : 'Failed to revoke API key',
-      );
-      this.loading.set(false);
+      this.error.set(`Failed to revoke API key: ${errorText(err)}`);
+      // A list fetch started meanwhile, by a reopen, still holds the list.
+      if (!this.listPending) this.loading.set(false);
     }
   }
 
@@ -281,79 +401,137 @@ export default class ApiKeysComponent {
         apiKeyId,
       });
       await firstValueFrom(this.apiKeyClient.deleteAPIKey(request));
+      if (apiKeyId === this.createdKeyId) this.dismissToken();
 
       // Reload the list after successful deletion
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to delete API key: ${err.message}`
-          : 'Failed to delete API key',
-      );
-      this.loading.set(false);
+      this.error.set(`Failed to delete API key: ${errorText(err)}`);
+      if (!this.listPending) this.loading.set(false);
     }
   }
 
   startCreating() {
     this.isCreating.set(true);
     this.newKeyName.set('');
-    this.newKeySubmitted.set(false);
+    this.newKeyNameError.set(null);
+    this.newKeyExpiryChoice.set(null);
     this.newKeyExpiresIn.set('');
+    this.newKeyExpiresInError.set(null);
     this.error.set(null);
   }
 
   cancelCreating() {
     this.isCreating.set(false);
     this.newKeyName.set('');
-    this.newKeySubmitted.set(false);
+    this.newKeyNameError.set(null);
+    this.newKeyExpiryChoice.set(null);
     this.newKeyExpiresIn.set('');
+    this.newKeyExpiresInError.set(null);
+    this.error.set(null);
   }
 
-  async createApiKey(event?: Event) {
-    event?.preventDefault();
+  /** The form's only trigger: Enter in a field and the button both submit it,
+   *  and the browser holds the submit back while a field's own rules fail. */
+  async createApiKey(event: Event) {
+    event.preventDefault();
+    if (this.creating()) return;
 
-    this.newKeySubmitted.set(true);
-
-    const name = this.newKeyName().trim();
-    if (!name) {
-      return;
-    }
-
-    this.loading.set(true);
+    // A logout or another organization while the call is out: its token is not
+    // for whoever is signed in by then. The live owner, not `owner`, which a
+    // logout leaves standing.
+    const owner = this.currentOwner();
+    const { visit } = this;
+    this.creating.set(true);
     this.error.set(null);
+    this.newKeyNameError.set(null);
+    this.newKeyExpiresInError.set(null);
+
+    const request = create(CreateAPIKeyRequestSchema, {
+      name: this.newKeyName().trim(),
+      expiresIn: this.expiresInToSend(),
+    });
+    const expiry = this.selectedExpiry();
 
     try {
-      const expiresIn = this.newKeyExpiresIn();
-      const request = create(CreateAPIKeyRequestSchema, {
-        name,
-        expiresIn,
-      });
-
       const response = await withIdempotency(
         (opts) => this.apiKeyClient.createAPIKey(request, opts),
         { signal: this.idempotency.reset() },
       );
+      if (this.currentOwner() !== owner) return;
+
+      // A sheet closed while the call was out still takes the token: it was
+      // never shown, and dropping it would leave a key nobody can use. The next
+      // open shows it.
 
       // Store the token to display to the user (only time it's shown)
       this.createdToken.set(response.token);
       this.createdTokenPrefix.set(response.tokenPrefix);
+      this.createdKeyId = response.id;
+      this.createdKeyListRequest = this.listRequest;
 
       // Reset the creation form
       this.isCreating.set(false);
       this.newKeyName.set('');
+      this.newKeyExpiryChoice.set(null);
       this.newKeyExpiresIn.set('');
 
       // Reload the list to show the new key
       await this.loadApiKeys();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to create API key: ${err.message}`
-          : 'Failed to create API key',
-      );
+      // A refusal, though, is about a form the close already threw away.
+      if (this.currentOwner() === owner && this.visit === visit)
+        this.showCreateError(err, { ...request, expiry });
     } finally {
-      this.loading.set(false);
+      this.creating.set(false);
     }
+  }
+
+  /** Puts a refusal under the field it is about, and anything else in the banner.
+   *  The fields stay editable while the call is out, so a refusal of a value
+   *  that has been changed since is about nothing on screen, and goes. */
+  private showCreateError(
+    err: unknown,
+    submitted: { name: string; expiresIn: string; expiry: string },
+  ) {
+    if (isAborted(err)) return;
+    if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
+      // Unique across the organization, while the list shows only your own
+      // keys: the name may be taken by a key you cannot see.
+      if (this.newKeyName().trim() !== submitted.name) return;
+      this.newKeyNameError.set(
+        'An API key with this name already exists in this organization, possibly made by another member.',
+      );
+      return;
+    }
+    const expiresInRefusal = getExpiresInRefusal(err);
+    if (expiresInRefusal) {
+      // A preset is refused only when the maximum is not the one the options
+      // were made for: it changed since the list came, or no list has come. A
+      // fresh list brings the options that hold now. It clears the banner as it
+      // starts, so it goes first.
+      if (submitted.expiry !== CUSTOM) this.loadApiKeys();
+      if (
+        this.selectedExpiry() !== submitted.expiry ||
+        this.expiresInToSend() !== submitted.expiresIn
+      ) {
+        return;
+      }
+      // Only a typed duration has a field to put the refusal under.
+      if (submitted.expiry === CUSTOM) {
+        this.newKeyExpiresInError.set(expiresInRefusal);
+      } else {
+        this.error.set(`This lifetime is not allowed. ${expiresInRefusal}`);
+      }
+      return;
+    }
+    this.error.set(`Failed to create API key: ${errorText(err)}`);
+  }
+
+  onExpiryChange(event: Event) {
+    const { value } = (event as CustomEvent<{ value: string }>).detail;
+    this.newKeyExpiryChoice.set(value);
+    this.newKeyExpiresInError.set(null);
   }
 
   async copyToken() {
@@ -384,9 +562,8 @@ export default class ApiKeysComponent {
   dismissToken() {
     this.createdToken.set(null);
     this.createdTokenPrefix.set(null);
+    this.createdKeyId = null;
   }
-
-  getNameError = getNameError;
 
   formatDate = formatDate;
 

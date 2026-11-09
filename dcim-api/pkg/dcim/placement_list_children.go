@@ -26,8 +26,8 @@ func (s *Server) ListChildPlacements(
 	}
 
 	placements := make([]*dcimv1.Placement, 0, len(rows))
-	for _, row := range rows {
-		placements = append(placements, placementFromParentListRow(&row))
+	for i := range rows {
+		placements = append(placements, placementFromParentListRow(&rows[i]))
 	}
 
 	return dcimv1.ListChildPlacementsResponse_builder{

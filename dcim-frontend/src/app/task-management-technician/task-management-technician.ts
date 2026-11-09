@@ -105,11 +105,11 @@ interface ProgressSnapshot {
      * text color the page already sets, and it stood in the page's own layout.
      * So there it steps aside and its children take its place.
      *
-     * Standing on its own it must not: the `nldd-app-view` under it sizes itself
+     * Standing on its own it must not: the `nldd-shell` under it sizes itself
      * against its ancestors, and `display: contents` takes the host's box out of
-     * that chain, so the app-view collapsed and its panes clipped what would not
+     * that chain, so the shell collapsed and its panes clipped what would not
      * fit — nothing scrolled. Left alone the host is `inline`, which is what
-     * every other Angular component that holds an app-view is.
+     * every other Angular component that holds a shell is.
      */
     '[style.display]': "embedded() ? 'contents' : null",
   },

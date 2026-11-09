@@ -25,18 +25,15 @@ import {
 import { MemberSchema } from '../../generated/v1/member_pb';
 import {
   PluginSummarySchema,
-  PluginDetailSchema,
   PresetSchema,
   TagSchema,
   CategorySchema,
-  AuthorSchema,
-  DocumentationLinkSchema,
-  PluginDefinitionVersionSchema,
-  type PluginDetail,
-  type PluginDefinitionVersion,
+  type Tag,
+  type Category,
 } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
+import { OrganizationOverviewSchema } from '../../generated/platform/v1/overview_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
@@ -164,7 +161,8 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
         currentNodes: 1,
         minNodes: 1,
         maxNodes: 3,
-        status: NodePoolStatus.HEALTHY,
+        status: NodePoolStatus.WAITING_FOR_MACHINES,
+        statusMessage: 'Waiting for a machine to join the cluster.',
         version: '1.34.0',
       }),
     ],
@@ -687,11 +685,27 @@ export const presets = [
   }),
 ];
 
+export interface DemoPluginDetail {
+  id: string;
+  name: string;
+  organizationName: string;
+  displayName: string;
+  description: string;
+  descriptionShort: string;
+  tags: Tag[];
+  categories: Category[];
+  author?: { name: string; url: string };
+  repositoryUrl: string;
+  documentationLinks: { id: string; title: string; urlName: string; url: string }[];
+  pluginVersion: string;
+  definitionHash: string;
+}
+
 /** Detail view, derived from the summary so the two can never disagree. */
-export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
+export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return undefined;
-  return create(PluginDetailSchema, {
+  return {
     id: summary.id,
     name: summary.name,
     organizationName: summary.organizationName,
@@ -700,19 +714,19 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
     descriptionShort: summary.descriptionShort,
     tags: summary.tags,
     categories: summary.categories,
-    author: create(AuthorSchema, { name: 'Fundament', url: 'https://fundament.dev' }),
+    author: { name: 'Fundament', url: 'https://fundament.dev' },
     repositoryUrl: `https://github.com/fundament/plugins/tree/main/${summary.name}`,
     documentationLinks: [
-      create(DocumentationLinkSchema, {
+      {
         id: `doc-${summary.name}`,
         title: 'Documentatie',
         urlName: 'docs',
         url: `https://docs.fundament.dev/plugins/${summary.name}`,
-      }),
+      },
     ],
     pluginVersion: summary.pluginVersion,
     definitionHash: summary.definitionHash,
-  });
+  };
 };
 
 /**
@@ -720,15 +734,15 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
  * picker offers. An unknown plugin gets an empty list, the same "nothing published"
  * answer the real backend gives.
  */
-export const pluginDefinitionVersions = (pluginId: string): PluginDefinitionVersion[] => {
+export const pluginDefinitionVersions = (
+  pluginId: string,
+): { version: string; hash: string }[] => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return [];
-  return (VERSIONS[summary.name] ?? []).map((version) =>
-    create(PluginDefinitionVersionSchema, {
-      version,
-      hash: definitionHash(summary.name, version),
-    }),
-  );
+  return (VERSIONS[summary.name] ?? []).map((version) => ({
+    version,
+    hash: definitionHash(summary.name, version),
+  }));
 };
 
 /** Plugins already running when the walkthrough starts, per cluster. */
@@ -1216,3 +1230,25 @@ export const logLines: DemoLogLine[] = [
     fields: { controllers: '6' },
   },
 ];
+
+// The public platform overview (FUN-23): the demo organization among a few
+// neighbours, so the page shows a table rather than a single row.
+export const platformOrganizations = [
+  { name: organization.name, alias: organization.alias, clusters: 3, projects: 5, namespaces: 12 },
+  {
+    name: 'gemeente-utrecht',
+    alias: 'Gemeente Utrecht',
+    clusters: 3,
+    projects: 12,
+    namespaces: 40,
+  },
+  { name: 'gemeente-zwolle', alias: 'Gemeente Zwolle', clusters: 1, projects: 4, namespaces: 9 },
+  {
+    name: 'rvo',
+    alias: 'Rijksdienst voor Ondernemend Nederland',
+    clusters: 2,
+    projects: 7,
+    namespaces: 21,
+  },
+  { name: 'vng', alias: 'VNG', clusters: 2, projects: 6, namespaces: 14 },
+].map((o) => create(OrganizationOverviewSchema, o));

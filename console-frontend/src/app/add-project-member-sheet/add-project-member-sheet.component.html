@@ -39,7 +39,7 @@
             type="button"
             (click)="onClose()"
             text="Close"
-            variant="primary"
+            appearance="primary"
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {
@@ -80,7 +80,7 @@
           </nldd-form-field>
           <nldd-form-field label="Role">
             <nldd-list
-              variant="box-base"
+              appearance="box-base"
               accessible-label="Role"
             >
               @for (option of permissionOptions; track option.value) {
@@ -125,7 +125,7 @@
               >
             </div>
             <nldd-list
-              variant="box-tinted"
+              appearance="box-tinted"
               accessible-label="Namespaces"
             >
               <!-- Not a shortcut for ticking the rest: it also covers namespaces
@@ -215,7 +215,7 @@
           @if (draftNamespaces().length > 0) {
             <nldd-form-field label="Roles">
               <nldd-list
-                variant="box-tinted"
+                appearance="box-tinted"
                 accessible-label="Roles"
               >
                 @for (role of allRoles; track role) {
@@ -255,7 +255,7 @@
               (click)="saveMember()"
               text="Add member to project"
               [attr.loading]="isAddingMember() ? '' : null"
-              variant="primary"
+              appearance="primary"
               width="full"
             ></nldd-button>
           </nldd-form-actions>

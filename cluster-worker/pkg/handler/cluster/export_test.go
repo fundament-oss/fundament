@@ -19,3 +19,8 @@ func (h *Handler) DrainStatusQueue(ctx context.Context) {
 func (h *Handler) StatusRequeues(clusterID uuid.UUID) int {
 	return h.statusQueue.NumRequeues(clusterID)
 }
+
+// StatusQueueLen reports how many status checks are queued.
+func (h *Handler) StatusQueueLen() int {
+	return h.statusQueue.Len()
+}

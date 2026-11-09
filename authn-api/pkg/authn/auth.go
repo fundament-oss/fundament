@@ -50,6 +50,14 @@ type Config struct {
 	// New normalizes them once; read the result off the server rather than
 	// this field. See return_to.go for why the list is the CORS origins.
 	AllowedReturnOrigins []string
+	// PasswordLoginEnabled says the identity provider takes the password grant
+	// /login/password relies on. Dex does for its static users; an external
+	// provider (Fundament SSO) does not, and signs people in through /login.
+	PasswordLoginEnabled bool
+	// OIDCDisplayName names the identity provider on the console's login
+	// button, which starts /login. Empty means no button: with Dex, the
+	// password form is the way in.
+	OIDCDisplayName string
 }
 
 // authzEvaluator is the subset of authz.Client used by handlers — extracted

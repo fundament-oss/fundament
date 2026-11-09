@@ -36,7 +36,10 @@ export function namespaceFieldHtml(namespaces?: string[]): string {
 // --- Field validation ---
 //
 // The form is judged on submit, from each nldd-text-field's own attributes:
-// required, maxlength, pattern and, for type="number", min and max. A failure
+// required, maxlength, pattern and, for a whole-number field, data-min and
+// data-max. A whole-number field is a text field with keyboard="numeric": the
+// design system's text field has no type="number", and nldd-number-field
+// cannot be left empty, which an optional port or limit has to be. A failure
 // marks the field invalid and puts the message in the validation item its
 // `unmet` names. A field inside a hidden section is not submitted, so it is
 // not judged either; that is how a field is required only while it shows.
@@ -70,11 +73,12 @@ export function fieldError(el: TextField): string | null {
     // Falls back to the text the validation item was written with.
     return el.getAttribute('data-error') ?? '';
   }
-  if (el.getAttribute('type') === 'number') {
+  if (el.getAttribute('keyboard') === 'numeric') {
+    // Digits only: Number() also takes 0x50, 0b1 and 1e3.
+    if (!/^-?\d+$/.test(value)) return 'Enter a whole number.';
     const num = Number(value);
-    const minAttr = el.getAttribute('min');
-    const maxAttr = el.getAttribute('max');
-    if (!Number.isInteger(num)) return 'Enter a whole number.';
+    const minAttr = el.getAttribute('data-min');
+    const maxAttr = el.getAttribute('data-max');
     if (num < Number(minAttr ?? -Infinity) || num > Number(maxAttr ?? Infinity)) {
       if (minAttr === null) return `Enter a number of at most ${maxAttr}.`;
       if (maxAttr === null) return `Enter a number of at least ${minAttr}.`;

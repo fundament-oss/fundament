@@ -80,7 +80,7 @@ func TestMutateDeployment_UsesConstantContainerName(t *testing.T) {
 	}
 
 	deploy := &appsv1.Deployment{}
-	mutateDeployment(deploy, cr, &def, nil)
+	mutateDeployment(deploy, cr, &def, nil, "")
 
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
 	// A container name is a 63-char DNS label; the installation name is not.
@@ -165,7 +165,7 @@ func TestMutateDeployment_UsesManifestImage(t *testing.T) {
 		{Name: "FUNDAMENT_CLUSTER_ID", Value: "test-cluster"},
 	}
 	deploy := &appsv1.Deployment{}
-	mutateDeployment(deploy, cr, &def, envVars)
+	mutateDeployment(deploy, cr, &def, envVars, "")
 
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
 	container := deploy.Spec.Template.Spec.Containers[0]
@@ -204,7 +204,7 @@ func TestMutateDeployment_MeetsRestrictedPodSecurity(t *testing.T) {
 	}
 
 	deploy := &appsv1.Deployment{}
-	mutateDeployment(deploy, cr, &def, nil)
+	mutateDeployment(deploy, cr, &def, nil, "")
 
 	evaluator, err := policy.NewEvaluator(policy.DefaultChecks(), nil)
 	require.NoError(t, err)
@@ -221,7 +221,7 @@ func TestMutateDeployment_GivesHelmAWritableHome(t *testing.T) {
 	}
 
 	deploy := &appsv1.Deployment{}
-	mutateDeployment(deploy, cr, &def, nil)
+	mutateDeployment(deploy, cr, &def, nil, "")
 
 	container := deploy.Spec.Template.Spec.Containers[0]
 	// A non-root uid without a passwd entry gets HOME=/, where helm cannot
@@ -234,6 +234,78 @@ func TestMutateDeployment_GivesHelmAWritableHome(t *testing.T) {
 	require.Len(t, deploy.Spec.Template.Spec.Volumes, 1)
 	assert.Equal(t, "tmp", deploy.Spec.Template.Spec.Volumes[0].Name)
 	assert.NotNil(t, deploy.Spec.Template.Spec.Volumes[0].EmptyDir)
+}
+
+func TestMutateDeployment_DevImageOverridesManifestImage(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{
+			Image:           "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+			ImagePullPolicy: "IfNotPresent",
+		},
+	}
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+
+	deploy := &appsv1.Deployment{}
+	mutateDeployment(deploy, cr, &def, nil, devImage)
+
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	container := deploy.Spec.Template.Spec.Containers[0]
+	// Byte-for-byte: skaffold file sync matches pods by string equality
+	// between container.Image and the built artifact tag.
+	assert.Equal(t, devImage, container.Image)
+	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
+}
+
+func TestMutateDeployment_DevModeRelaxations(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{Image: "repo@sha256:" + strings.Repeat("a", 64)},
+	}
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+
+	devDeploy := &appsv1.Deployment{}
+	mutateDeployment(devDeploy, cr, &def, nil, devImage)
+	devContainer := devDeploy.Spec.Template.Spec.Containers[0]
+	require.NotNil(t, devContainer.SecurityContext)
+	assert.Equal(t, new(false), devContainer.SecurityContext.ReadOnlyRootFilesystem)
+	require.NotNil(t, devContainer.LivenessProbe)
+	assert.Equal(t, int32(5), devContainer.LivenessProbe.PeriodSeconds)
+	assert.Equal(t, int32(60), devContainer.LivenessProbe.FailureThreshold)
+	require.NotNil(t, devContainer.ReadinessProbe)
+	assert.Equal(t, int32(5), devContainer.ReadinessProbe.PeriodSeconds)
+	assert.Equal(t, int32(60), devContainer.ReadinessProbe.FailureThreshold)
+
+	// Pins production behavior unchanged.
+	prodDeploy := &appsv1.Deployment{}
+	mutateDeployment(prodDeploy, cr, &def, nil, "")
+	prodContainer := prodDeploy.Spec.Template.Spec.Containers[0]
+	require.NotNil(t, prodContainer.SecurityContext)
+	assert.Equal(t, new(true), prodContainer.SecurityContext.ReadOnlyRootFilesystem)
+	require.NotNil(t, prodContainer.LivenessProbe)
+	assert.Equal(t, int32(10), prodContainer.LivenessProbe.PeriodSeconds)
+	assert.Equal(t, int32(3), prodContainer.LivenessProbe.FailureThreshold)
+	require.NotNil(t, prodContainer.ReadinessProbe)
+	assert.Equal(t, int32(10), prodContainer.ReadinessProbe.PeriodSeconds)
+	assert.Equal(t, int32(3), prodContainer.ReadinessProbe.FailureThreshold)
+}
+
+func TestMutateDeployment_DevModeMeetsRestrictedPodSecurity(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{Image: "repo@sha256:" + strings.Repeat("a", 64)},
+	}
+	devImage := "localhost:5112/foo-plugin-dev:abc@sha256:" + strings.Repeat("a", 64)
+
+	deploy := &appsv1.Deployment{}
+	mutateDeployment(deploy, cr, &def, nil, devImage)
+
+	evaluator, err := policy.NewEvaluator(policy.DefaultChecks(), nil)
+	require.NoError(t, err)
+	lv := psaapi.LevelVersion{Level: psaapi.LevelRestricted, Version: psaapi.LatestVersion()}
+	for _, res := range evaluator.EvaluatePod(lv, &deploy.Spec.Template.ObjectMeta, &deploy.Spec.Template.Spec) {
+		assert.True(t, res.Allowed, "%s: %s", res.ForbiddenReason, res.ForbiddenDetail)
+	}
 }
 
 func TestMutateNamespace_EnforcesRestrictedPodSecurity(t *testing.T) {

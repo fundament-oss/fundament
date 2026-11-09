@@ -26,8 +26,8 @@ func (s *Server) ListNotes(
 	}
 
 	notes := make([]*dcimv1.Note, 0, len(rows))
-	for _, row := range rows {
-		notes = append(notes, noteFromListRow(&row))
+	for i := range rows {
+		notes = append(notes, noteFromListRow(&rows[i]))
 	}
 
 	return dcimv1.ListNotesResponse_builder{

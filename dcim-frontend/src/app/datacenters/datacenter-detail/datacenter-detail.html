@@ -22,16 +22,16 @@
            "Rooms & rack rows" says nothing in a tab or a bookmark. -->
       <nldd-title id="layout-title" size="2">
         <h1>{{ site.name }} layout</h1>
-        <span slot="subtitle">Rooms & rack rows</span>
+        <span slot="supporting-text">Rooms & rack rows</span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <!-- One button for everything you can add here. A room needs a data
            center, a row needs a room and a rack needs a row, and from a menu
            like this there is no such context: the form asks for it. -->
-      <nldd-toolbar label="Layout actions">
+      <nldd-toolbar accessible-label="Layout actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            variant="primary"
+            appearance="primary"
             text="Add"
             start-icon="plus-small"
             expandable
@@ -56,7 +56,7 @@
              floor at once. -->
         <nldd-title size="4">
           <h2>{{ room.name }}</h2>
-          <span slot="subtitle">Floor {{ room.floor }}</span>
+          <span slot="supporting-text">Floor {{ room.floor }}</span>
           <nldd-icon-button
             slot="end"
             icon="ellipsis"
@@ -81,7 +81,7 @@
           </nldd-icon-button>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <nldd-list variant="box-tinted" [attr.accessible-label]="room.name">
+        <nldd-list appearance="box-tinted" [attr.accessible-label]="room.name">
           @for (row of rackRowsForRoom(room.id); track row.id) {
             <nldd-list-item>
               <!-- The row is the heading of what follows it, so it wears a title
@@ -189,7 +189,7 @@
       }
       <!-- And the new hall in a list of its own, on the spot where it will
            appear. -->
-      <nldd-list variant="box-tinted" accessible-label="Add a room">
+      <nldd-list appearance="box-tinted" accessible-label="Add a room">
         <nldd-list-item button (click)="openCreateRoom()">
           <nldd-icon-cell icon="plus-small" size="20" color="accent"></nldd-icon-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -261,7 +261,7 @@
               [attr.value]="room.floor ?? 1"
               min="0"
               max="99"
-              full-width
+              width="full"
               [attr.invalid]="isRoomFieldInvalid('floor') ? '' : null"
               unmet="error-room-floor"
               (keydown.enter)="saveRoom()"
@@ -274,7 +274,7 @@
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button
-              variant="primary"
+              appearance="primary"
               width="full"
               text="Save"
               (click)="saveRoom()"
@@ -299,13 +299,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep room"
     (click)="cancelDeleteRoom()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete room"
     (click)="confirmDeleteRoom()"
   ></nldd-button>
@@ -359,13 +359,13 @@
           <!-- Two short number fields side by side. A collection rather than a
                grid of our own: the design system already knows what a row of
                items is and how it should behave when the sheet gets narrow. -->
-          <nldd-collection item-width="120px">
+          <nldd-collection item-min-width="120px">
             <nldd-form-field label="Position X">
               <nldd-number-field
                 #fRowX
                 [attr.value]="row.positionX ?? 1"
                 min="1"
-                full-width
+                width="full"
                 [attr.invalid]="isRowFieldInvalid('position_x') ? '' : null"
                 unmet="error-row-x"
                 (keydown.enter)="saveRackRow()"
@@ -381,7 +381,7 @@
                 #fRowY
                 [attr.value]="row.positionY ?? 1"
                 min="1"
-                full-width
+                width="full"
                 [attr.invalid]="isRowFieldInvalid('position_y') ? '' : null"
                 unmet="error-row-y"
                 (keydown.enter)="saveRackRow()"
@@ -395,7 +395,7 @@
           </nldd-collection>
           <nldd-form-actions>
             <nldd-button
-              variant="primary"
+              appearance="primary"
               width="full"
               text="Save"
               (click)="saveRackRow()"
@@ -420,13 +420,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep rack row"
     (click)="cancelDeleteRackRow()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete rack row"
     (click)="confirmDeleteRackRow()"
   ></nldd-button>
@@ -499,7 +499,7 @@
               [attr.value]="rack.totalU ?? 42"
               min="1"
               max="60"
-              full-width
+              width="full"
               [attr.invalid]="isRackFieldInvalid('total_units') ? '' : null"
               unmet="error-rack-totalu"
               (keydown.enter)="saveRack()"
@@ -512,7 +512,7 @@
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button
-              variant="primary"
+              appearance="primary"
               width="full"
               text="Save"
               (click)="saveRack()"
@@ -537,13 +537,13 @@
 >
   <nldd-button
     slot="actions"
-    variant="primary"
+    appearance="primary"
     text="Keep rack"
     (click)="cancelDeleteRack()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="destructive"
+    appearance="destructive"
     text="Delete rack"
     (click)="confirmDeleteRack()"
   ></nldd-button>

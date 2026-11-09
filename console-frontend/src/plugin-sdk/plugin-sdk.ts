@@ -13,6 +13,7 @@
  *     - fundament:theme-changed   Theme switched by the user.
  *     - fundament:token-refreshed New PluginToken (mint refresh).
  *     - fundament:auth-failed     Persistent mint failure; reject pending getToken() calls.
+ *     - fundament:resources-changed  A sheet over this page saved something.
  *
  *   Plugin → host (mostly sent automatically by this SDK):
  *     - plugin:ready              Plugin loaded.
@@ -22,6 +23,12 @@
  *     - plugin:navigate-back      Router hop to the parent list.
  *     - plugin:request-token-refresh  Ask the host to mint a fresh token
  *                                     (sent when a plugin fetch returns 401).
+ *     - plugin:open-sheet         Open one of this plugin's pages in a console sheet.
+ *     - plugin:close-sheet        From a sheet: done.
+ *
+ * Sheets are the console's own, over the whole window: a sheet a plugin draws
+ * inside its frame dims and covers only that frame. A sheet loads a page the
+ * definition names (customComponents[kind].create/edit/detail), never a URL.
  */
 
 // GET_TOKEN_TIMEOUT_MS bounds any getToken() waiter — no plugin fetch should
@@ -44,12 +51,30 @@ interface ResourceContext {
   namespace?: string;
 }
 
+type View = 'list' | 'detail' | 'create' | 'edit';
+
+type Presentation = 'page' | 'sheet';
+
+interface SheetRequest {
+  // The kind whose page opens; this page's own kind when absent.
+  kind?: string;
+  view: 'create' | 'edit' | 'detail';
+  // Required for edit and detail.
+  resource?: ResourceContext;
+  // Handed to the sheet page's init as is: at most 16 string values.
+  params?: Record<string, string>;
+}
+
 interface InitContext {
   theme: Theme;
   pluginName: string;
   crdKind: string;
-  view: 'list' | 'detail' | 'create';
+  view: View;
+  // 'sheet' when this page is open in a console sheet rather than on a route.
+  presentation: Presentation;
   resource?: ResourceContext;
+  // From the openSheet() call that opened this page; absent on a route.
+  params?: Record<string, string>;
   // Cluster-side namespace names: what Kubernetes calls take.
   namespaces?: string[];
   // Optional label per entry of namespaces, the name the console shows for it
@@ -114,6 +139,19 @@ interface FundamentSdk {
     delete<T = unknown>(args: K8sDeleteArgs): Promise<T>;
   };
   onThemeChange(cb: (theme: Theme) => void): () => void;
+  /**
+   * Opens one of this plugin's pages in a console sheet over this page. From
+   * a sheet, the new sheet takes its place.
+   */
+  openSheet(request: SheetRequest): void;
+  /**
+   * Leaves this page: out of the sheet when it is in one, back to the list
+   * when it is on a route, so a create page works as either. `changed` tells
+   * the page under the sheet to read its resources again.
+   */
+  closeSheet(options?: { changed?: boolean }): void;
+  /** Called when a sheet over this page saved something, or was replaced. */
+  onResourcesChanged(cb: () => void): () => void;
 }
 
 declare global {
@@ -129,8 +167,11 @@ type HostMessage =
       theme: Theme;
       pluginName: string;
       crdKind: string;
-      view: 'list' | 'detail' | 'create';
+      view: View;
+      // Absent from a console that predates sheets: a page on a route.
+      presentation?: Presentation;
       resource?: ResourceContext;
+      params?: Record<string, string>;
       namespaces?: string[];
       namespaceDisplayNames?: Record<string, string>;
       kubeApiProxyUrl: string;
@@ -140,11 +181,14 @@ type HostMessage =
     }
   | { type: 'fundament:theme-changed'; theme: Theme }
   | { type: 'fundament:token-refreshed'; token: string; tokenExpiresAt: number }
-  | { type: 'fundament:auth-failed'; reason: AuthFailReason };
+  | { type: 'fundament:auth-failed'; reason: AuthFailReason }
+  | { type: 'fundament:resources-changed' };
 
 let parentOrigin: string | null = null;
 
 const themeListeners = new Set<(theme: Theme) => void>();
+
+const resourcesChangedListeners = new Set<() => void>();
 
 interface AuthState {
   token: string | null;
@@ -217,7 +261,9 @@ function handleHostMessage(data: HostMessage): void {
         pluginName: data.pluginName,
         crdKind: data.crdKind,
         view: data.view,
+        presentation: data.presentation ?? 'page',
         resource: data.resource,
+        params: data.params,
         namespaces: data.namespaces,
         namespaceDisplayNames: data.namespaceDisplayNames,
         kubeApiProxyUrl: data.kubeApiProxyUrl,
@@ -256,6 +302,17 @@ function handleHostMessage(data: HostMessage): void {
     auth.token = null;
     auth.failed = { reason: data.reason };
     failAllWaiters(data.reason);
+    return;
+  }
+
+  if (data.type === 'fundament:resources-changed') {
+    resourcesChangedListeners.forEach((cb) => {
+      try {
+        cb();
+      } catch {
+        // listeners must not crash the SDK
+      }
+    });
   }
 }
 
@@ -333,6 +390,14 @@ function getTokenImpl(): Promise<string> {
 function requestHostRefresh(): void {
   if (parentOrigin === null) return;
   window.parent.postMessage({ type: 'plugin:request-token-refresh' }, parentOrigin);
+}
+
+// Posts to the console once init has pinned its origin: a sheet is only ever
+// asked for from a page that is up, and never to '*'.
+function postToHost(message: Record<string, unknown>): void {
+  initPromise.then(() => {
+    if (parentOrigin !== null) window.parent.postMessage(message, parentOrigin);
+  });
 }
 
 async function fetchImpl(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -472,6 +537,24 @@ const sdk: FundamentSdk = {
     themeListeners.add(cb);
     return () => {
       themeListeners.delete(cb);
+    };
+  },
+  openSheet(request) {
+    postToHost({ ...request, type: 'plugin:open-sheet' });
+  },
+  closeSheet(options) {
+    initPromise.then((ctx) => {
+      postToHost(
+        ctx.presentation === 'sheet'
+          ? { type: 'plugin:close-sheet', changed: options?.changed === true }
+          : { type: 'plugin:navigate-back' },
+      );
+    });
+  },
+  onResourcesChanged(cb) {
+    resourcesChangedListeners.add(cb);
+    return () => {
+      resourcesChangedListeners.delete(cb);
     };
   },
 };

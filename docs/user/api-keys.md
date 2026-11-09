@@ -1,7 +1,7 @@
 ---
 title: API keys
 sidebar:
-  order: 9
+  order: 10
 ---
 
 API keys let scripts, CI pipelines, the [functl CLI](./functl.md) and the

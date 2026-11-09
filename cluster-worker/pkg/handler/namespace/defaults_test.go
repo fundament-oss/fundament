@@ -105,7 +105,7 @@ func TestEffectiveDefaults(t *testing.T) {
 func TestEnsure_AppliesLimitRange(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	row.ClusterDefaultCpuLimitM = i4(500)
 	row.ProjectDefaultCpuLimitM = i4(250)
 	row.ClusterDefaultMemoryLimitMi = i4(512)
@@ -126,7 +126,7 @@ func TestEnsure_AppliesLimitRange(t *testing.T) {
 func TestEnsure_RemovesLimitRangeWhenDefaultsCleared(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	row.ClusterDefaultCpuLimitM = i4(500)
 
 	require.NoError(t, h.ensure(context.Background(), row))
@@ -146,7 +146,7 @@ func TestEnsure_RemovesLimitRangeWhenDefaultsCleared(t *testing.T) {
 func TestEnsure_InvalidMergeFailsWithoutApplying(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	row.ProjectDefaultCpuRequestM = i4(800)
 	row.ClusterDefaultCpuLimitM = i4(500)
 
@@ -166,7 +166,7 @@ func TestEnsure_InvalidMergeFailsWithoutApplying(t *testing.T) {
 func TestEnsure_LimitRangeErrorPropagates(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
-	row := testRow("team-a")
+	row := testRow()
 	row.ClusterDefaultCpuLimitM = i4(500)
 	mock.EnsureLimitRangeError = errors.New("boom")
 

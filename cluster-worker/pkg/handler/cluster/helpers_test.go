@@ -79,13 +79,18 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
 		StatusWorkers:               2,
 		StatusProgressEventInterval: time.Minute,
-		MaxRetries:                  10,
+		MaxReconcileDeletions:       3,
 	})
 }
 
 func newTestHandlerWithConfig(t *testing.T, db *testDB, mock *gardener.MockClient, cfg cluster.Config) *cluster.Handler {
 	t.Helper()
 
+	// The app sets it from the reconcile loop's config; a pass is recorded
+	// with it.
+	if cfg.ReconcileInterval == 0 {
+		cfg.ReconcileInterval = 5 * time.Minute
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
@@ -97,7 +102,7 @@ func newMock(t *testing.T) *gardener.MockClient {
 }
 
 // insertCluster inserts a cluster into the test DB. The trigger auto-creates an
-// outbox row with status=pending (which propagates to clusters.outbox_status).
+// outbox row with status=pending.
 func insertCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string) uuid.UUID {
 	t.Helper()
 
@@ -156,7 +161,6 @@ func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, na
 }
 
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.
-// The trigger propagates this to clusters.outbox_status.
 func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 
@@ -173,6 +177,26 @@ func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one outbox row to be marked completed")
+}
+
+// markOutboxFailed sets the latest outbox row for a cluster to failed, as when
+// its sync ran out of retries.
+func markOutboxFailed(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	result, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox
+		 SET status = 'failed', processed = now()
+		 WHERE id = (
+		     SELECT id FROM tenant.cluster_outbox
+		     WHERE cluster_id = $1
+		     ORDER BY id DESC
+		     LIMIT 1
+		 )`,
+		clusterID,
+	)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one outbox row to be marked failed")
 }
 
 // setShootStatus directly sets shoot_status with updated = now() - 1 min to avoid
@@ -272,32 +296,25 @@ func assertNoEvent(t *testing.T, db *testDB, clusterID uuid.UUID, eventType stri
 	require.Equalf(t, 0, count, "expected no %q event for cluster %s", eventType, clusterID)
 }
 
-// assertOutboxReconcileExists asserts a reconcile outbox row exists for the cluster.
-func assertOutboxReconcileExists(t *testing.T, db *testDB, clusterID uuid.UUID) {
+// setShootUpdating marks (or clears) a fundament-pushed rollout, as the sync
+// handler does when ApplyShoot changes the Shoot's spec.
+func setShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID, updating bool) {
 	t.Helper()
-
-	var count int
-	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET shoot_updating = $2 WHERE id = $1`, clusterID, updating)
 	require.NoError(t, err)
-	require.Greaterf(t, count, 0, "expected a reconcile outbox row for cluster %s", clusterID)
 }
 
-// assertNoOutboxReconcile asserts no reconcile outbox row exists for the cluster.
-func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
+// getNodePoolStatus returns the stored status and message (empty for NULL).
+func getNodePoolStatus(t *testing.T, db *testDB, clusterID uuid.UUID, name string) (status, message string) {
 	t.Helper()
 
-	var count int
 	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
+		`SELECT COALESCE(status, ''), COALESCE(status_message, '') FROM tenant.node_pools WHERE cluster_id = $1 AND name = $2`,
+		clusterID, name,
+	).Scan(&status, &message)
 	require.NoError(t, err)
-	require.Equalf(t, 0, count, "expected no reconcile outbox row for cluster %s", clusterID)
+	return status, message
 }
 
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).
@@ -345,4 +362,19 @@ func getShootStatusUpdated(t *testing.T, db *testDB, clusterID uuid.UUID) time.T
 	).Scan(&updated)
 	require.NoError(t, err)
 	return updated
+}
+
+// markClusterSyncsCompleted completes every outbox row of a cluster and of its
+// node pools: nothing of the cluster's is left in flight.
+func markClusterSyncsCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'completed', processed = now()
+		 WHERE tenant.cluster_outbox.cluster_id = $1
+		    OR tenant.cluster_outbox.node_pool_id IN (
+		        SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)`,
+		clusterID,
+	)
+	require.NoError(t, err)
 }

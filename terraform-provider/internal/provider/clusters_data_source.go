@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
 // Ensure ClustersDataSource satisfies various datasource interfaces.
@@ -101,7 +102,7 @@ func (d *ClustersDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // signature set by datasource.DataSource
 	var state ClustersDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
@@ -181,6 +182,8 @@ func clusterStatusToString(status organizationv1.ClusterStatus) string {
 		return "running"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
 		return "upgrading"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+		return "unhealthy"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
 		return "error"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING:
@@ -189,6 +192,8 @@ func clusterStatusToString(status organizationv1.ClusterStatus) string {
 		return "stopped"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING:
 		return "deleting"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_LOST:
+		return "lost"
 	default:
 		return "unspecified"
 	}

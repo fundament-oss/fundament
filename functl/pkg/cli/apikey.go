@@ -42,7 +42,7 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 	}
 
 	w := NewTableWriter()
-	fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tPREFIX\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
 	for _, key := range apiKeys {
 		created := ""
 		if key.GetCreated().IsValid() {
@@ -60,7 +60,7 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 		if key.GetRevoked().IsValid() {
 			revoked = key.GetRevoked().AsTime().Format(TimeFormat)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s...\t%s\t%s\t%s\t%s\n",
 			key.GetId(),
 			key.GetName(),
 			key.GetTokenPrefix(),
@@ -70,13 +70,16 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 			revoked,
 		)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	return nil
 }
 
 // APIKeyCreateCmd handles the apikey create command.
 type APIKeyCreateCmd struct {
 	Name      string `arg:"" help:"Name for the API key."`
-	ExpiresIn string `help:"How long until the Key expires. Format is specified in string, e.g. '1h', '300s', or '5m'. Omit for no expiry." short:"e"`
+	ExpiresIn string `help:"How long until the Key expires. Format is specified in string, e.g. '1h', '300s', or '5m'. Omit for no expiry, unless the server sets a maximum lifetime." short:"e"`
 }
 
 // Run executes the apikey create command.

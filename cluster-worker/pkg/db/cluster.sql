@@ -40,17 +40,56 @@ RETURNING
 
 -- name: ClusterListActive :many
 -- Used by periodic reconciliation to compare with Gardener state.
+-- latest_sync_completed: the cluster's own latest sync row completed, so a
+-- missing Shoot is not one a queued or failing sync has yet to create. "Latest
+-- sync row" is the cluster_sync_state view's row
+-- (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
+-- The version and update flag feed the drift findings reconcile records.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.kubernetes_version,
     tenant.organizations.name AS organization_name,
-    COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS latest_sync_completed
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id;
+
+-- name: ClusterListDeletedByIDs :many
+-- Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
+-- Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+-- and only once the delete sync has settled.
+-- sync_running: the cluster's own latest sync row (as in ClusterGetPushState)
+-- is still queued.
+SELECT
+    tenant.clusters.id,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS sync_running
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = ANY(@cluster_ids::uuid[])
+    AND tenant.clusters.deleted IS NOT NULL
 ORDER BY
     tenant.clusters.id;
 
@@ -77,6 +116,88 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
+-- name: NodePoolListStatusByClusterID :many
+-- The status path needs only identity and the stored classification; the
+-- worker-group build query above, with its catalog joins, stays with sync.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id;
+
+-- name: ClusterGetPushState :one
+-- What is in flight for the cluster, read AFTER the pool list: a pool's INSERT
+-- commits together with its cluster_outbox row, so any pool the list returned
+-- has its outbox row visible here. The state read with the cluster row at the
+-- start of a check is stale for pools inserted since.
+-- sync_pending: a change was saved but its sync has not applied it to Gardener:
+-- the cluster's own latest sync row has not completed, or a node pool's latest
+-- row (its create, update or delete) is still queued, or failed for a pool that
+-- is still active.
+SELECT
+    tenant.clusters.shoot_updating,
+    (
+        COALESCE((
+            SELECT tenant.cluster_outbox.status
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+            ORDER BY tenant.cluster_outbox.id DESC
+            LIMIT 1
+        ) <> 'completed', false)
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.node_pools
+            WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+              AND COALESCE((
+                  SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+                      OR (tenant.cluster_outbox.status = 'failed' AND tenant.node_pools.deleted IS NULL)
+                  FROM tenant.cluster_outbox
+                  WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+                  ORDER BY tenant.cluster_outbox.id DESC
+                  LIMIT 1
+              ), false)
+        )
+    )::boolean AS sync_pending
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = @cluster_id;
+
+-- name: NodePoolUpdateStatus :execrows
+-- Record what Gardener reports about one pool's machines. Keyed by id: the
+-- row was just read by the same check, and with soft deletes (cluster_id,
+-- name) could meanwhile mean a recreated pool.
+UPDATE tenant.node_pools
+SET
+    status = @status,
+    status_message = @message,
+    status_updated = now()
+WHERE
+    id = @node_pool_id
+    AND deleted IS NULL;
+
+-- name: NodePoolClearStatusByClusterID :exec
+-- Forget what was recorded about a lost cluster's pools: their machines went
+-- with the Shoot. When a change creates it again they read as new, so as
+-- progressing while the create runs, instead of their old status and reason.
+UPDATE tenant.node_pools
+SET
+    status = NULL,
+    status_message = NULL,
+    status_updated = now()
+WHERE
+    cluster_id = @cluster_id
+    AND deleted IS NULL;
+
 -- name: NodePoolGetClusterID :one
 -- Returns the cluster_id for a node pool (including soft-deleted node pools).
 -- Used by the cluster handler to resolve node_pool_id → cluster_id.
@@ -91,6 +212,9 @@ WHERE
 -- Returns whether a cluster has been successfully synced to Gardener at least once.
 -- Checks outbox history directly (EXISTS on completed rows with cluster_id set).
 -- This remains true even if the latest outbox row is retrying or failed.
+-- The same "completed outbox row" test is spelled in ClusterListForStatusSweep,
+-- ClusterGetForStatusCheck (synced) and organization-api's cluster queries
+-- (reached_gardener); change them together.
 SELECT EXISTS (
     SELECT 1
     FROM tenant.cluster_outbox
@@ -109,7 +233,13 @@ FROM
 WHERE
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        -- reached Gardener: the test ClusterHasEverBeenSynced spells out
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )
     AND (
         tenant.clusters.deleted IS NULL
@@ -140,7 +270,13 @@ SELECT
     catalog.regions.cloud_profile_region,
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        -- reached Gardener: the test ClusterHasEverBeenSynced spells out
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )::boolean AS synced
 FROM
     tenant.clusters
@@ -176,11 +312,17 @@ WHERE
 -- name: ClusterMarkShootUpdating :execrows
 -- Mark a ready cluster as updating once Gardener accepted a spec change. It
 -- stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
--- keeps working while the update rolls out.
+-- keeps working while the update rolls out. A cluster still settling after
+-- its create keeps the awaiting-health message: organization-api keys the
+-- STARTING status on that exact text, and an update mid-settle must not
+-- relabel the cluster unhealthy.
 UPDATE tenant.clusters
 SET
     shoot_updating = true,
-    shoot_status_message = @message,
+    shoot_status_message = CASE
+        WHEN tenant.clusters.shoot_status_message = @awaiting_message THEN tenant.clusters.shoot_status_message
+        ELSE @message
+    END,
     shoot_status_updated = now()
 WHERE
     id = @cluster_id
@@ -227,6 +369,40 @@ ORDER BY
     tenant.cluster_events.created DESC
 LIMIT
     1;
+
+-- name: ClusterMarkShootDeleted :execrows
+-- Record that a deleted cluster has no Shoot (it never reached Gardener, or
+-- the Shoot is already gone), so it stops counting against the organization's
+-- cluster quota at once instead of at the next status sweep. The same end
+-- state the sweep writes when it confirms a deletion.
+UPDATE tenant.clusters
+SET
+    shoot_status = 'deleted',
+    shoot_status_message = @message,
+    shoot_health = NULL,
+    shoot_updating = false,
+    shoot_api_available = NULL,
+    shoot_status_updated = now()
+WHERE
+    id = @cluster_id
+    AND deleted IS NOT NULL
+    AND shoot_status IS DISTINCT FROM 'deleted';
+
+-- name: ClusterCreateEventUnlessLatest :execrows
+-- Insert an event unless the cluster's latest one already says the same (type
+-- and message): a cluster waiting on a precondition records the wait once,
+-- however many of its outbox rows park meanwhile. The caller holds the
+-- cluster row (OutboxLockCluster), so two parks cannot both insert.
+INSERT INTO tenant.cluster_events (cluster_id, event_type, message)
+SELECT @cluster_id, @event_type, @message
+WHERE (
+    SELECT tenant.cluster_events.event_type = @event_type::text
+       AND tenant.cluster_events.message IS NOT DISTINCT FROM @message::text
+    FROM tenant.cluster_events
+    WHERE tenant.cluster_events.cluster_id = @cluster_id
+    ORDER BY tenant.cluster_events.created DESC, tenant.cluster_events.id DESC
+    LIMIT 1
+) IS DISTINCT FROM true;
 
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).

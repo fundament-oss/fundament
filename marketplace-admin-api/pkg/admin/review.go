@@ -271,6 +271,8 @@ type adminSubmissionRow struct {
 	ReviewerUserID     pgtype.UUID
 	RejectionReason    pgtype.Text
 	Feedback           string
+	Logo               string
+	LogoDark           string
 }
 
 func submissionRowFromList(row *db.SubmissionListRow) *adminSubmissionRow {
@@ -279,7 +281,7 @@ func submissionRowFromList(row *db.SubmissionListRow) *adminSubmissionRow {
 		OrganizationID: row.OrganizationID, SubmitterUserID: row.SubmitterUserID,
 		Status: row.Status, Submitted: row.Submitted, Reviewed: row.Reviewed,
 		Closed: row.Closed, ReviewerUserID: row.ReviewerUserID, RejectionReason: row.RejectionReason,
-		Feedback: row.Feedback,
+		Feedback: row.Feedback, Logo: row.Logo, LogoDark: row.LogoDark,
 	}
 }
 
@@ -289,7 +291,7 @@ func submissionRowFromGet(row *db.SubmissionGetByIDRow) *adminSubmissionRow {
 		OrganizationID: row.OrganizationID, SubmitterUserID: row.SubmitterUserID,
 		Status: row.Status, Submitted: row.Submitted, Reviewed: row.Reviewed,
 		Closed: row.Closed, ReviewerUserID: row.ReviewerUserID, RejectionReason: row.RejectionReason,
-		Feedback: row.Feedback,
+		Feedback: row.Feedback, Logo: row.Logo, LogoDark: row.LogoDark,
 	}
 }
 
@@ -306,6 +308,8 @@ func submissionFromRow(row *adminSubmissionRow, status marketplacev1.SubmissionS
 		ReviewerUserId:  pgUUIDOrEmpty(row.ReviewerUserID),
 		RejectionReason: rejectionReasonFromDB(row.RejectionReason),
 		Feedback:        row.Feedback,
+		Logo:            row.Logo,
+		LogoDark:        row.LogoDark,
 	}.Build()
 }
 

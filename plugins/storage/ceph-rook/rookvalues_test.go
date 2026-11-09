@@ -161,3 +161,48 @@ func TestDefaultCephImageMatchesSmokeScript(t *testing.T) {
 	assert.Contains(t, string(smoke), "CEPH_IMAGE:-"+cfg.CephImage,
 		"rook-smoke.sh must default to the same Ceph image as the plugin")
 }
+
+// Rook's StorageClasses name the drivers after the operator namespace, so the
+// drivers chart must register them under exactly those names.
+func TestCSIDriversValuesFollowRookNamespace(t *testing.T) {
+	t.Parallel()
+	v := CSIDriversValues(&Config{RookNamespace: "storage-system"})
+	assert.Equal(t, "storage-system", v["operatorConfig.namespace"])
+	assert.Equal(t, RBDProvisioner("storage-system"), v["drivers.rbd.name"])
+	assert.Equal(t, CephFSProvisioner("storage-system"), v["drivers.cephfs.name"])
+	assert.Equal(t, "false", v["drivers.nfs.enabled"])
+	assert.Equal(t, "false", v["drivers.nvmeof.enabled"])
+}
+
+// Nodes run kernels older than 7.0, which cannot use AES256K CSI keys.
+func TestBootstrapCephClusterCSIKeysAreAES(t *testing.T) {
+	t.Parallel()
+	keyType, found, err := unstructured.NestedString(BootstrapCephCluster("rook-ceph", testConfig()).Object,
+		"spec", "security", "cephx", "csi", "keyType")
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, "aes", keyType)
+}
+
+// Ceph warns about the aes CSI keys for as long as they exist; muted, so the
+// health the plugin reports still flags a real problem.
+func TestBootstrapCephClusterMutesAESKeyWarnings(t *testing.T) {
+	t.Parallel()
+	muted, found, err := unstructured.NestedMap(BootstrapCephCluster("rook-ceph", testConfig()).Object,
+		"spec", "healthCheck", "muteHealthWarning")
+	require.NoError(t, err)
+	require.True(t, found)
+	for _, code := range []string{"AUTH_INSECURE_CLIENT_KEY_TYPE", "AUTH_INSECURE_KEYS_ALLOWED", "AUTH_INSECURE_KEYS_CREATABLE"} {
+		policy, _, _ := unstructured.NestedString(muted, code, "policy")
+		assert.Equal(t, "mute", policy, code)
+	}
+}
+
+// The ceph-csi image is pinned by digest with the chart, not left to
+// ceph-csi-operator's default.
+func TestRookValuesPinCephCSI(t *testing.T) {
+	t.Parallel()
+	v := RookValues(testConfig())
+	assert.Equal(t, "quay.io/cephcsi/cephcsi", v["csi.cephcsi.repository"])
+	assert.Contains(t, v["csi.cephcsi.tag"], "@sha256:")
+}

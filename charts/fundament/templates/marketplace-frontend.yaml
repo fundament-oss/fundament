@@ -60,6 +60,7 @@ spec:
       containers:
         - name: marketplace-frontend
           image: {{ $.Values.images.marketplaceFrontend }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
           env:
             # Substituted into the CSP connect-src directive by the server
             # (see marketplace-frontend/src/server.ts). These are the origins the

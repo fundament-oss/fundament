@@ -59,12 +59,6 @@ func (stubPluginSA) Resolve(_ context.Context, _, _, _ string) (pluginsa.Token, 
 	return pluginsa.Token{Token: "plugin-sa-token", PinnedDefinitionHash: "sha256:mock"}, nil
 }
 
-type stubCanView struct{ allow bool }
-
-func (s stubCanView) CanViewCluster(_ context.Context, _, _ uuid.UUID) (bool, error) {
-	return s.allow, nil
-}
-
 func newPluginGateway(t *testing.T, secret []byte, sarAllow, canView bool) *pluginGateway {
 	t.Helper()
 	var forwarded *http.Request

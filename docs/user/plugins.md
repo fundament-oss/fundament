@@ -1,7 +1,7 @@
 ---
 title: Plugins
 sidebar:
-  order: 7
+  order: 8
 ---
 
 In Fundament, popular platform capabilities such as storage, networking and database services are provided as Plugins. Each Plugin is installed on a per-cluster basis, giving organizations control over which features they want to enable in their environment. Plugins often wrap proven open source projects -preferably CNCF projects- to deliver 𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒-grade functionality in a Kubernetes-native way.

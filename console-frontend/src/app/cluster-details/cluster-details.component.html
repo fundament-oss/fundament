@@ -35,7 +35,7 @@
         </h1>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-toolbar label="Cluster actions">
+      <nldd-toolbar accessible-label="Cluster actions">
         <!-- Parked until there is a terminal to open: the handler behind this
              only logged to the console, and a button that does nothing is worse
              than one that is not there. Uncomment both halves together, the
@@ -98,7 +98,7 @@
         <nldd-box>
           <nldd-container padding="16">
             <nldd-list
-              variant="simple"
+              appearance="simple"
               accessible-label="Cluster basics"
             >
               <!-- An empty value reads as a row that forgot to fill itself in.
@@ -157,7 +157,7 @@
               <h3>Provisioning status</h3>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
-            <nldd-list variant="simple">
+            <nldd-list appearance="simple">
               <nldd-list-item>
                 <nldd-text-cell text="Gardener status"></nldd-text-cell>
                 <nldd-cell width="fit-content">
@@ -195,13 +195,29 @@
                   ></nldd-text-cell>
                 </nldd-list-item>
               }
+              @if (clusterData.syncState?.outboxMessage) {
+                <nldd-list-item>
+                  <nldd-text-cell
+                    text="Waiting for"
+                    width="fit-content"
+                  ></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="right"
+                    [attr.text]="formatEventMessage(clusterData.syncState!.outboxMessage!)"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
-                  <nldd-text-cell text="Sync error"></nldd-text-cell>
+                  <!-- Width on the label on purpose: beside a long error the shared min-content rule still lets it collapse to one letter per line. -->
+                  <nldd-text-cell
+                    text="Sync error"
+                    width="fit-content"
+                  ></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
-                    width="fit-content"
                     horizontal-alignment="right"
                     [attr.text]="formatEventMessage(clusterData.syncState.outboxError)"
                   ></nldd-text-cell>
@@ -250,7 +266,7 @@
                 [attr.href]="pageNav.path('/metrics')"
                 (click)="pageNav.navigate($event, '/metrics')"
                 text="View metrics"
-                variant="secondary"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -328,7 +344,7 @@
                 (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
                 text="Edit"
                 start-icon="pencil"
-                variant="secondary"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -343,7 +359,7 @@
             } @else {
               <nldd-collection
                 layout="grid"
-                item-width="320px"
+                item-min-width="320px"
                 gap="16"
               >
                 @for (pool of clusterData.nodePools; track pool.name) {
@@ -354,21 +370,13 @@
                         <nldd-badge
                           slot="end"
                           size="sm"
-                          [attr.color]="
-                            pool.status === NodePoolStatus.HEALTHY
-                              ? 'success'
-                              : pool.status === NodePoolStatus.UNHEALTHY
-                                ? 'critical'
-                                : pool.status === NodePoolStatus.DEGRADED
-                                  ? 'warning'
-                                  : 'neutral'
-                          "
+                          [attr.color]="getNodePoolStatusColor(pool.status)"
                           [attr.text]="getNodePoolStatusLabel(pool.status)"
                         ></nldd-badge>
                       </nldd-title>
                       <nldd-spacer size="8"></nldd-spacer>
                       <nldd-list
-                        variant="simple"
+                        appearance="simple"
                         dividers="never"
                       >
                         <nldd-list-item size="sm">
@@ -408,6 +416,20 @@
                           </nldd-list-item>
                         }
                       </nldd-list>
+                      @if (pool.statusMessage) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text size="sm">{{ pool.statusMessage }}</nldd-text>
+                      }
+                      <!-- The pool's own sync, fundament applying its last change, set
+                           while it retries or after it failed for good. -->
+                      @if (pool.syncError) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text
+                          size="sm"
+                          color="critical"
+                          >Sync error: {{ formatEventMessage(pool.syncError) }}</nldd-text
+                        >
+                      }
                     </nldd-container>
                   </nldd-card>
                 }
@@ -432,15 +454,18 @@
                   ></nldd-badge>
                 }
               </h3>
+              <!-- Installing runs through a plugin's own page, the one place
+                   that picks a version, asks for config and offers retry and
+                   uninstall. So this starts where plugins are found, the same
+                   as the sidebar's "Install plugins…". The marketplace is
+                   another site, so only the console's own page opens in place. -->
               <nldd-button
                 slot="end"
-                [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/plugins')"
-                (click)="
-                  pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')
-                "
-                text="Edit"
-                start-icon="pencil"
-                variant="secondary"
+                [attr.href]="browsePluginsUrl || pageNav.path('/plugins')"
+                (click)="browsePluginsUrl || pageNav.navigate($event, '/plugins')"
+                text="Install plugins…"
+                start-icon="add-plugin"
+                appearance="secondary"
                 size="sm"
               ></nldd-button>
             </nldd-title>
@@ -454,18 +479,24 @@
               ></nldd-inline-dialog>
               <nldd-spacer size="16"></nldd-spacer>
             } @else if (installedPlugins().length > 0) {
-              <!-- Informational only: these cards report what is installed, editing
-                   runs through the Edit button above. So no href and no button. -->
+              <!-- Each card opens the plugin's page, whose Manage sheet updates,
+                   retries or uninstalls it on this cluster. -->
               <nldd-collection
                 layout="grid"
-                item-width="320px"
+                item-min-width="320px"
                 gap="16"
               >
                 @for (plugin of installedPlugins(); track plugin.id) {
-                  <nldd-card>
+                  <nldd-card
+                    [attr.href]="pageNav.path('/plugins/' + plugin.id)"
+                    [attr.accessible-label]="pluginDisplayName(plugin)"
+                    (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
+                  >
                     <nldd-container padding="16">
                       <app-plugin-icon
                         [name]="pluginIconName(plugin.name)"
+                        [logo]="plugin.logo"
+                        [logoDark]="plugin.logoDark"
                         class="block h-10 w-10"
                       />
                       <nldd-spacer size="12"></nldd-spacer>
@@ -501,24 +532,17 @@
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
               <p>Deleting a cluster is permanent and cannot be undone.</p>
-              @if (namespaces().length > 0) {
+              @if (projects().length > 0) {
                 <p>
-                  This cluster still has {{ namespaces().length }} namespace{{
-                    namespaces().length === 1 ? '' : 's'
-                  }}.
-                  <nldd-link
-                    [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/namespaces')"
-                    (click)="
-                      pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/namespaces')
-                    "
-                    text="Delete all namespaces"
-                  ></nldd-link>
-                  before you can delete the cluster.
+                  This cluster still has {{ projects().length }} project{{
+                    projects().length === 1 ? '' : 's'
+                  }}. Delete {{ projects().length === 1 ? 'it, and its' : 'them, and their' }}
+                  namespaces, before you can delete the cluster.
                 </p>
-              } @else if (namespacesLoadError()) {
+              } @else if (projectsLoadError()) {
                 <p>
-                  Couldn't load this cluster's namespaces, so deletion is blocked until we can
-                  confirm it is empty. Reload the page and try again.
+                  Couldn't load this cluster's projects, so deletion is blocked until we can confirm
+                  it is empty. Reload the page and try again.
                 </p>
               }
             </nldd-rich-text>
@@ -529,7 +553,7 @@
               (click)="onDeleteClusterClick()"
               text="Delete cluster"
               start-icon="delete"
-              variant="destructive"
+              appearance="destructive"
             ></nldd-button>
           </nldd-container>
         </nldd-box>
@@ -537,7 +561,7 @@
     }
   </nldd-simple-section>
 </nldd-page>
-<!-- The node pool and plugin editors, each opening as a sheet over this page. -->
+<!-- The node pool and namespace editors, each opening as a sheet over this page. -->
 <router-outlet />
 <!-- Nothing was downloaded, so there is nothing to lay out: the alert says what
      went wrong and offers the way out. -->
@@ -554,7 +578,7 @@
     slot="actions"
     type="button"
     text="Close"
-    variant="primary"
+    appearance="primary"
     width="full"
     (click)="closeKubeconfigError()"
   ></nldd-button>
@@ -606,7 +630,7 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep cluster"
-    variant="primary"
+    appearance="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -614,7 +638,7 @@
     (click)="deleteCluster()"
     text="Delete cluster"
     [loading]="isDeleting()"
-    variant="destructive"
+    appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Shown instead of the confirmation when the cluster cannot be deleted yet. -->
@@ -626,21 +650,40 @@
   accessible-label="Cluster deletion blocked"
   (close)="showDeleteBlockedModal.set(false)"
 >
-  @if (namespaces().length > 0) {
-    <nldd-button
-      slot="actions"
-      type="button"
-      (click)="goToNamespaces()"
-      text="Manage namespaces"
-      variant="primary"
-    ></nldd-button>
+  @if (projects().length > 0) {
+    <!-- Each row leads to the project's settings, where it is deleted. -->
+    <nldd-list
+      appearance="box-tinted"
+      accessible-label="Projects on this cluster"
+    >
+      @for (project of projects(); track project.id) {
+        <nldd-list-item
+          [attr.href]="pageNav.path('/projects/' + project.id + '/general')"
+          (click)="goToProject($event, project.id)"
+        >
+          <nldd-text-cell
+            width="full"
+            [attr.text]="project.name"
+            [attr.supporting-text]="
+              project.namespaceCount + ' namespace' + (project.namespaceCount === 1 ? '' : 's')
+            "
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-icon-cell
+            icon="chevron-right"
+            size="20"
+            color="secondary"
+          ></nldd-icon-cell>
+        </nldd-list-item>
+      }
+    </nldd-list>
   }
   <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteBlockedModal.set(false)"
     text="Close"
-    variant="secondary"
+    appearance="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- One list, drawn twice: on the page it gets the first few, in the sheet all
@@ -673,12 +716,12 @@
             hide-below="md"
           ></nldd-spacer-cell>
         }
-        <nldd-timeline-track-cell
+        <nldd-step-cell
           status="past"
           [attr.position]="
             isFirst && isLast ? 'only' : isLast ? 'last' : isFirst ? 'first' : 'between'
           "
-        ></nldd-timeline-track-cell>
+        ></nldd-step-cell>
         <nldd-spacer-cell size="12"></nldd-spacer-cell>
         @if (inSheet) {
           <!-- What kind of event it was in the overline, what it says as the
@@ -728,7 +771,7 @@
             (click)="showAllEventsSheet.set(true)"
             text="Show all events"
             end-icon="chevron-right"
-            variant="secondary"
+            appearance="secondary"
           ></nldd-button>
         </nldd-cell>
       </nldd-list-item>

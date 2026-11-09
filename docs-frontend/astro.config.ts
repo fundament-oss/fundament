@@ -1,14 +1,12 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
 import asciidoc from 'astro-asciidoc';
-import type { default as shikiHighlighter } from './shiki-highlighter.js';
+import { ShikiHighlighter } from './shiki-highlighter.js';
 import { fileURLToPath } from 'node:url';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
 import { umamiScriptAttrs } from './src/analytics';
 import linksValidator from './src/links-validator';
 import sidebarMetaPlugin from './src/sidebar-meta-plugin';
-
-type ShikiOptions = Parameters<typeof shikiHighlighter>[0];
 
 export default defineConfig({
   // Use 'never' to prevent trailing slashes on URLs, see https://docs.astro.build/en/reference/configuration-reference/#trailingslash
@@ -42,15 +40,12 @@ export default defineConfig({
           'icon-set': 'fas', // Use the newer Font Awesome 5+ icon set instead of the deprecated 4 set, see https://docs.asciidoctor.org/pdf-converter/latest/icons/#font
         },
       },
-      highlighters: {
-        shiki: {
-          path: fileURLToPath(new URL('shiki-highlighter.js', import.meta.url)),
-          options: {
-            themes: ['solarized-light'],
-            langs: ['javascript', 'bash', 'asciidoc'],
-          } satisfies ShikiOptions,
-        },
-      },
+      highlighters: [
+        await ShikiHighlighter.create('shiki', {
+          themes: ['solarized-light'],
+          langs: ['javascript', 'bash', 'asciidoc'],
+        }),
+      ],
     }),
     starlight({
       title: 'Fundament Docs',

@@ -27,9 +27,14 @@ jobs:
         run: |
           VERSION="${GITHUB_SHA::7}-master-${{ github.run_number }}"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          # Go's pseudo-version of this commit, which `functl plugin create`
+          # pins as the SDK version. This form holds while the repository has
+          # no semver tag.
+          COMMIT_TIME="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y%m%d%H%M%S "$GITHUB_SHA")"
+          SDK_VERSION="v0.0.0-${COMMIT_TIME}-${GITHUB_SHA::12}"
 
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/arm64 windows/amd64; do
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             GOOS="${target%/*}"
             GOARCH="${target#*/}"
             OUT_DIR="dist/functl_${GOOS}_${GOARCH}"
@@ -42,7 +47,7 @@ jobs:
             mkdir -p "$OUT_DIR"
             CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
               go build -trimpath \
-                -ldflags "-s -w -X github.com/fundament-oss/fundament/functl/pkg/cli.version=${VERSION}" \
+                -ldflags "-s -w -X github.com/fundament-oss/fundament/functl/pkg/cli.version=${VERSION} -X github.com/fundament-oss/fundament/functl/pkg/scaffold.DefaultSDKVersion=${SDK_VERSION}" \
                 -o "$OUT_DIR/$BIN" ./functl/cmd/functl
             if [ "$GOOS" = "windows" ]; then
               (cd "$OUT_DIR" && zip -q "../functl_${GOOS}_${GOARCH}.zip" "$BIN")
@@ -80,6 +85,7 @@ jobs:
           gh release upload functl-latest \
             dist/functl_linux_amd64.tar.gz \
             dist/functl_linux_arm64.tar.gz \
+            dist/functl_darwin_amd64.tar.gz \
             dist/functl_darwin_arm64.tar.gz \
             dist/functl_windows_amd64.zip \
             dist/SHA256SUMS \

@@ -29,7 +29,7 @@
     type="button"
     (click)="dismiss.emit()"
     [attr.text]="'Keep ' + resourceKind().toLowerCase()"
-    variant="primary"
+    appearance="primary"
     [disabled]="deleting()"
   ></nldd-button>
   <nldd-button
@@ -37,7 +37,7 @@
     type="button"
     (click)="confirm.emit()"
     [attr.text]="'Delete ' + resourceKind().toLowerCase()"
-    variant="destructive"
+    appearance="destructive"
     [disabled]="deleting()"
   ></nldd-button>
 </nldd-modal-dialog>

@@ -43,7 +43,7 @@ import '@nldd/design-system/title';
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <nldd-list
-        variant="box-tinted"
+        appearance="box-tinted"
         [attr.accessible-label]="section.copy.title"
       >
         @for (row of section.rows; track row.label) {

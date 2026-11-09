@@ -77,7 +77,7 @@ metadata:
   description: Does something useful
   author: My Team
   license: Apache-2.0
-  icon: puzzle-piece
+  icon: puzzle-piece   # a built-in icon name, or a file: see Icons
   tags:
     - example
 spec:
@@ -152,6 +152,35 @@ are one contract with nothing to enforce it at build time. The generated
 actually embedded; the rest is on you, so change them together.
 
 `definition.yaml` has **no `spec.image`**: `functl plugin publish --image=<repo>@sha256:<digest>` injects the pushed digest, so a published definition pins immutable code and its hash binds that code. A manifest that names a mutable tag is rejected.
+
+## Icons
+
+`metadata.icon` is a built-in icon name or a path to a logo file. `metadata.iconDark` is an optional dark-mode logo and needs `metadata.icon` to be a file. Each `menu` entry's `icon` is a built-in icon name or a path to a menu icon file.
+
+```yaml
+metadata:
+  icon: assets/logo.svg
+  iconDark: assets/logo-dark.svg
+spec:
+  menu:
+    project:
+      - crd: myresources.my-api.io
+        icon: assets/menu.svg
+```
+
+`functl plugin publish` reads the files and stores them with the definition. Paths are relative to the directory containing `definition.yaml` and cannot escape it. A value that contains a `/` or ends in `.svg` or `.png` is read as a path; any other value must be a lowercase built-in icon name such as `shield-check-mark`, so `logo.jpg` is rejected.
+
+| Role | Formats | Limit |
+| --- | --- | --- |
+| Logo, dark logo | SVG or PNG, PNGs at most 1024×1024 pixels | 16 KiB |
+| Menu icon | SVG only | 8 KiB |
+
+- A version has at most 64 icon files. A file used in both roles must meet the stricter limit.
+- Menu icons are tinted to follow the theme, so draw them in a single colour.
+- The root element must carry `xmlns="http://www.w3.org/2000/svg"` and every element must be in the SVG namespace. Editor elements such as Inkscape's `sodipodi` or `rdf` metadata are rejected: export as plain SVG.
+- Scripts, event handlers, `foreignObject`, external references and a `DOCTYPE` are rejected, as are backslashes in attribute values and `<style>` blocks.
+- A plugin without a logo shows a generic icon. Icons are part of the definition, so changing one needs a new version. A draft can be republished in place with `--replace`, but a replaced version can never be submitted for review.
+- Installed plugins and the browse screens show the logo of the latest published version, so a plugin that is not published shows the generic icon on console screens.
 
 ## Declaring config
 
@@ -301,15 +330,19 @@ With `--console=vite`, `console/` is build output: pass `console.RequireHTML()` 
 ## Build a container image
 
 The scaffolder writes a self-contained Dockerfile that builds with the project
-directory as its context:
+directory as its context. Go cross-compiles for the target platform, so on an
+Apple Silicon Mac the Go build of the linux/amd64 image `just docker` asks for
+does not run under emulation. Only the final stage's `RUN` steps do, such as the
+helm template's `apk add helm`:
 
 ```dockerfile
-FROM golang:1.27.2-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
+ARG TARGETOS TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /my-plugin-plugin .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /my-plugin-plugin .
 
 FROM alpine:3.21
 # Add any CLI tools your plugin needs; the helm template installs helm here.
