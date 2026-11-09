@@ -1,4 +1,4 @@
-# deploy-remote — one-time-use fundament/Gardener box on Hetzner Cloud
+# test-env — one-time-use fundament/Gardener box on Hetzner Cloud
 
 Spin up a throwaway cloud box that runs the full fundament + Gardener local stack
 (k3d, kind, MetalLB, Calico, local DNS) and drives a shoot to completion — then
@@ -11,7 +11,7 @@ needed (Docker you already run for k3d).
 ## Layout
 
 ```
-deploy-remote/
+test-env/
 ├── flake.nix                     nixosConfigurations.hetzner (built by nixos-anywhere)
 ├── justfile                      thin wrappers around hetzner.sh
 ├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
@@ -43,7 +43,7 @@ every boot (`ephemeral-scratch.nix`), so a reboot returns to clean container sta
 ## Workflow
 
 ```sh
-cd deploy-remote
+cd test-env
 cp secrets/hetzner.env.example secrets/hetzner.env   # paste a Read&Write API token
 just up        # create box + install NixOS (nixos-anywhere in docker); waits until ready
 just stack     # deploy fundament + Gardener, run a shoot, trust the box CA; prints the console URL
@@ -53,7 +53,7 @@ just status    # list project servers — never forget a box is billing
 just down      # DESTROY the box — stops billing (also untrusts the box CA)
 ```
 
-Every recipe is also exposed at the repo root: `just deploy-remote up`, etc.
+Every recipe is also exposed at the repo root: `just test-env up`, etc.
 
 **Time to ready:** ~35–45 min end-to-end from `just up` to a reachable
 console — `up` ~8–10 min (box create + NixOS install), `stack`
