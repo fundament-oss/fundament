@@ -70,7 +70,7 @@ spec:
             - name: config
               mountPath: /etc/dex
               readOnly: true
-          {{- include "fundament.resources" $.Values.dex.resources | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.dex.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

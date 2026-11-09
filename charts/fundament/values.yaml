@@ -58,7 +58,8 @@ grpcAppProtocol: kubernetes.io/h2c
 # component's containers. Empty means no requests, so the pods are BestEffort;
 # set sizes in the values file of an environment that needs them.
 
-# wait-for-db init containers on the db-migrations and OpenFGA pods
+# The wait-for-db init containers of the db-migrations Job, the OpenFGA
+# Deployment and the openfga-bootstrap Job.
 waitForDb:
   resources: {}
 
@@ -403,6 +404,8 @@ openfga:
 # Plugin Controller
 pluginController:
   enabled: false
+  # Only this chart's own plugin-controller (enabled above). The copies that
+  # cluster-worker installs on shoots (provisionShoots) get no resources.
   resources: {}
   logLevel: info
   # Skip the plugin definition-hash gate for installs with an empty

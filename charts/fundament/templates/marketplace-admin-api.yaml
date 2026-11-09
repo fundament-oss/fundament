@@ -48,7 +48,7 @@ spec:
               value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.marketplaceAdmin }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          {{- include "fundament.resources" $.Values.marketplaceAdminApi.resources | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.marketplaceAdminApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1

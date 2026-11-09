@@ -188,13 +188,13 @@ https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
 {{- end }}
 
 {{/*
-A container's standard resources block; renders nothing when empty.
+A container's standard resources block, indented to "indent"; renders nothing,
+not even a blank line, when empty.
 
-Usage: {{- include "fundament.resources" $.Values.authnApi.resources | nindent 10 }}
+Usage: {{- include "fundament.resources" (dict "resources" $.Values.authnApi.resources "indent" 10) }}
 */}}
 {{- define "fundament.resources" -}}
-{{- with . }}
-resources:
-  {{- toYaml . | nindent 2 }}
+{{- with .resources }}
+{{- printf "resources:\n%s" (toYaml . | indent 2) | nindent $.indent }}
 {{- end }}
 {{- end }}

@@ -27,7 +27,7 @@ spec:
       owner: fundament
   storage:
     size: {{ $.Values.db.storageSize }}
-  {{- include "fundament.resources" $.Values.db.resources | nindent 2 }}
+  {{- include "fundament.resources" (dict "resources" $.Values.db.resources "indent" 2) }}
   managed:
     roles:
       - name: fun_authn_api

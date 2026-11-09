@@ -57,7 +57,7 @@ spec:
               mountPath: /usr/share/nginx/html/assets/config/config.json
               subPath: config.json
               readOnly: true
-          {{- include "fundament.resources" $.Values.consoleDemoFrontend.resources | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.consoleDemoFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:

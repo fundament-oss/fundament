@@ -53,7 +53,7 @@ spec:
               value: {{ include "fundament.openfga.storeName" $ }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          {{- include "fundament.resources" $.Values.marketplaceRegistryApi.resources | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.marketplaceRegistryApi.resources "indent" 10) }}
 
 ---
 apiVersion: v1

@@ -31,11 +31,11 @@ spec:
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
-          {{- include "fundament.resources" $.Values.shootProxy.resources | nindent 10 }}
           ports:
             - containerPort: 443
               name: https
           {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.shootProxy.resources "indent" 10) }}
 ---
 apiVersion: v1
 kind: Service
@@ -77,11 +77,11 @@ spec:
           args:
             - TCP-LISTEN:443,fork,reuseaddr
             - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}
-          {{- include "fundament.resources" $.Values.shootProxy.resources | nindent 10 }}
           ports:
             - containerPort: 443
               name: https
           {{- include "fundament.tcpProbes" (dict "port" "https") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.shootProxy.resources "indent" 10) }}
 ---
 apiVersion: v1
 kind: Service

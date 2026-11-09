@@ -52,7 +52,7 @@ spec:
             - name: config
               mountPath: /app/public/assets/config
               readOnly: true
-          {{- include "fundament.resources" $.Values.dcimFrontend.resources | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $.Values.dcimFrontend.resources "indent" 10) }}
       volumes:
         - name: config
           configMap:
