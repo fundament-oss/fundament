@@ -108,4 +108,5 @@ resource "fundament_project_member" "viewer" {
 - `authn_endpoint` (String) The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, derived from endpoint by replacing 'organization' with 'authn' in the subdomain.
 - `endpoint` (String) The URL of the Fundament organization API, for example https://organization.fundament.example. Required: set it here or in the FUNDAMENT_ENDPOINT environment variable.
 - `kube_api_proxy_url` (String) The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.
+- `marketplace_install_url` (String) The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.
 - `organization_id` (String) The ID of the organization to manage, shown in the console under General. Required: set it here or in the FUNDAMENT_ORGANIZATION_ID environment variable.

@@ -5,6 +5,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -70,5 +72,25 @@ func TestDeriveAuthnEndpoint(t *testing.T) {
 				t.Errorf("deriveAuthnEndpoint(%q) = %q, want %q", tt.organizationEndpoint, result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestResolveOptionalURL(t *testing.T) {
+	got, err := resolveOptionalURL("https://config.example", "not a url", "FUNDAMENT_X")
+	require.NoError(t, err, "config wins; the env value is not read")
+	assert.Equal(t, "https://config.example", got)
+
+	got, err = resolveOptionalURL("", "https://env.example", "FUNDAMENT_X")
+	require.NoError(t, err)
+	assert.Equal(t, "https://env.example", got)
+
+	got, err = resolveOptionalURL("", "", "FUNDAMENT_X")
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	for _, bad := range []string{"marketplace.example", "ftp://x.example", "https://"} {
+		_, err = resolveOptionalURL("", bad, "FUNDAMENT_X")
+		require.Error(t, err, bad)
+		assert.Contains(t, err.Error(), "FUNDAMENT_X")
 	}
 }

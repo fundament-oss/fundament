@@ -84,7 +84,7 @@ func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg Plugin
 }
 
 const pluginDefinitionGetByName = `-- name: PluginDefinitionGetByName :one
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
@@ -100,8 +100,10 @@ type PluginDefinitionGetByNameParams struct {
 }
 
 type PluginDefinitionGetByNameRow struct {
-	Manifest []byte
-	Hash     string
+	Manifest  []byte
+	Hash      string
+	Logo      string
+	MenuIcons []byte
 }
 
 // The same lookup as PluginDefinitionGetPublished, keyed the way a
@@ -115,12 +117,17 @@ type PluginDefinitionGetByNameRow struct {
 func (q *Queries) PluginDefinitionGetByName(ctx context.Context, arg PluginDefinitionGetByNameParams) (PluginDefinitionGetByNameRow, error) {
 	row := q.db.QueryRow(ctx, pluginDefinitionGetByName, arg.OrganizationName, arg.PluginName, arg.Version)
 	var i PluginDefinitionGetByNameRow
-	err := row.Scan(&i.Manifest, &i.Hash)
+	err := row.Scan(
+		&i.Manifest,
+		&i.Hash,
+		&i.Logo,
+		&i.MenuIcons,
+	)
 	return i, err
 }
 
 const pluginDefinitionGetPublished = `-- name: PluginDefinitionGetPublished :one
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = $1::uuid
@@ -133,8 +140,10 @@ type PluginDefinitionGetPublishedParams struct {
 }
 
 type PluginDefinitionGetPublishedRow struct {
-	Manifest []byte
-	Hash     string
+	Manifest  []byte
+	Hash      string
+	Logo      string
+	MenuIcons []byte
 }
 
 // Which versions are reachable is the connecting role's definitions policy:
@@ -148,7 +157,12 @@ type PluginDefinitionGetPublishedRow struct {
 func (q *Queries) PluginDefinitionGetPublished(ctx context.Context, arg PluginDefinitionGetPublishedParams) (PluginDefinitionGetPublishedRow, error) {
 	row := q.db.QueryRow(ctx, pluginDefinitionGetPublished, arg.PluginID, arg.Version)
 	var i PluginDefinitionGetPublishedRow
-	err := row.Scan(&i.Manifest, &i.Hash)
+	err := row.Scan(
+		&i.Manifest,
+		&i.Hash,
+		&i.Logo,
+		&i.MenuIcons,
+	)
 	return i, err
 }
 

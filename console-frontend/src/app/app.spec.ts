@@ -29,6 +29,7 @@ import {
   AUTHN_TRANSPORT,
   ORGANIZATION_TRANSPORT,
   MARKETPLACE_TRANSPORT,
+  INSTALL_TRANSPORT,
 } from '../connect/connect.module';
 
 // The shell injects service clients (MetricsHealthService among them), and every
@@ -58,6 +59,7 @@ async function configure(extraProviders: unknown[] = []) {
       { provide: AUTHN_TRANSPORT, useValue: unusedTransport },
       { provide: ORGANIZATION_TRANSPORT, useValue: unusedTransport },
       { provide: MARKETPLACE_TRANSPORT, useValue: unusedTransport },
+      { provide: INSTALL_TRANSPORT, useValue: unusedTransport },
       { provide: ConfigService, useValue: { getConfig: () => config } as ConfigService },
       ...(extraProviders as never[]),
     ],

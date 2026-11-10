@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/install/v1/installv1connect"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
@@ -16,7 +17,8 @@ type FundamentClient struct {
 	MemberService    organizationv1connect.MemberServiceClient
 	InviteService    organizationv1connect.InviteServiceClient
 	NamespaceService organizationv1connect.NamespaceServiceClient
-	PluginService    organizationv1connect.PluginServiceClient
+	// InstallService is the marketplace install API; nil without marketplace_install_url.
+	InstallService installv1connect.InstallServiceClient
 
 	// KubeProxyURL is the base URL for the kube-api-proxy service.
 	KubeProxyURL        string
@@ -83,7 +85,7 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
-func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID, kubeProxyURL string) *FundamentClient {
+func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID, kubeProxyURL, installURL string) *FundamentClient {
 	transport := &AuthTransport{
 		TokenSource:    tm,
 		OrganizationID: organizationID,
@@ -93,10 +95,10 @@ func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organ
 		tokenSource: tm,
 		transport:   http.DefaultTransport,
 	}
-	return newFundamentClientWithTransport(endpoint, kubeProxyURL, transport, kubeProxyTransport)
+	return newFundamentClientWithTransport(endpoint, kubeProxyURL, installURL, transport, kubeProxyTransport)
 }
 
-func newFundamentClientWithTransport(endpoint, kubeProxyURL string, transport, kubeProxyTransport http.RoundTripper) *FundamentClient {
+func newFundamentClientWithTransport(endpoint, kubeProxyURL, installURL string, transport, kubeProxyTransport http.RoundTripper) *FundamentClient {
 	httpClient := &http.Client{
 		Timeout:   30 * time.Second,
 		Transport: transport,
@@ -106,14 +108,17 @@ func newFundamentClientWithTransport(endpoint, kubeProxyURL string, transport, k
 		Transport: kubeProxyTransport,
 	}
 
-	return &FundamentClient{
+	client := &FundamentClient{
 		ClusterService:      organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
 		ProjectService:      organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
 		MemberService:       organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
 		InviteService:       organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
 		NamespaceService:    organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
-		PluginService:       organizationv1connect.NewPluginServiceClient(httpClient, endpoint),
 		KubeProxyURL:        kubeProxyURL,
 		KubeProxyHTTPClient: kubeProxyClient,
 	}
+	if installURL != "" {
+		client.InstallService = installv1connect.NewInstallServiceClient(httpClient, installURL)
+	}
+	return client
 }

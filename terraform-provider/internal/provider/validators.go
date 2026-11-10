@@ -76,32 +76,22 @@ func (v httpURLValidator) ValidateString(_ context.Context, req validator.String
 		return
 	}
 
-	raw := req.ConfigValue.ValueString()
+	if err := checkHTTPURL(req.ConfigValue.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(req.Path, "Invalid URL", err.Error())
+	}
+}
 
+// checkHTTPURL reports why raw is not an http or https URL with a host.
+func checkHTTPURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid URL",
-			fmt.Sprintf("Value %q is not a valid URL: %s", raw, err),
-		)
-		return
+		return fmt.Errorf("value %q is not a valid URL: %w", raw, err)
 	}
-
 	if u.Scheme != "http" && u.Scheme != "https" {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid URL Scheme",
-			fmt.Sprintf("URL must use http or https scheme, got %q", u.Scheme),
-		)
-		return
+		return fmt.Errorf("URL must use http or https scheme, got %q", u.Scheme)
 	}
-
 	if u.Host == "" {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid URL",
-			fmt.Sprintf("URL %q is missing a host", raw),
-		)
+		return fmt.Errorf("URL %q is missing a host", raw)
 	}
+	return nil
 }

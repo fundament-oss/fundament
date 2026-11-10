@@ -100,3 +100,83 @@ message DocumentationLink {
   string url_name = 30;
   string url = 40;
 }
+
+// A plugin manifest (definition.yaml) as the console reads it: the parsed
+// form of a stored version's manifest.
+message PluginDefinition {
+  PluginDefinitionMetadata metadata = 10;
+  string image = 20;
+  string image_pull_policy = 30;
+  PluginPermissions permissions = 40;
+  PluginMenu menu = 50;
+  repeated string crds = 60;
+  map<string, PluginComponentMapping> custom_components = 70;
+  repeated PluginAllowedResource allowed_resources = 80;
+  map<string, PluginUIHint> ui_hints = 90;
+}
+message PluginDefinitionMetadata {
+  string name = 10;
+  string display_name = 20;
+  string version = 30;
+  string description = 40;
+  string author = 50;
+  string license = 60;
+  string icon = 70;
+  PluginURLs urls = 80;
+  repeated string tags = 90;
+}
+message PluginURLs {
+  string homepage = 10;
+  string repository = 20;
+  string documentation = 30;
+}
+message PluginPermissions {
+  repeated string capabilities = 10;
+  repeated PluginPolicyRule rbac = 20;
+}
+message PluginPolicyRule {
+  repeated string api_groups = 10;
+  repeated string resources = 20;
+  repeated string verbs = 30;
+}
+message PluginMenu {
+  repeated PluginMenuEntry organization = 10;
+  repeated PluginMenuEntry project = 20;
+}
+message PluginMenuEntry {
+  string crd = 10;
+  bool list = 20;
+  bool detail = 30;
+  string icon = 40;
+  string label = 50;
+  string singular_label = 60;
+}
+message PluginComponentMapping {
+  string list = 10;
+  string detail = 20;
+  string create = 30;
+  // Opened only in a console sheet, never routed.
+  string edit = 40;
+}
+message PluginAllowedResource {
+  string group = 10;
+  string version = 20;
+  string resource = 30;
+  repeated string verbs = 40;
+}
+message PluginUIHint {
+  repeated PluginFormGroup form_groups = 10;
+  PluginStatusMapping status_mapping = 20;
+}
+message PluginFormGroup {
+  string name = 10;
+  repeated string fields = 20;
+}
+message PluginStatusMapping {
+  string json_path = 10;
+  map<string, PluginStatusValue> values = 20;
+}
+message PluginStatusValue {
+  string badge = 10;
+  string label = 20;
+}

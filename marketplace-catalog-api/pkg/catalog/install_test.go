@@ -341,3 +341,21 @@ func TestInstallRLS_PublishersCoverEveryInstallableListing(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallGetPluginDefinitionReturnsParsedDefinition(t *testing.T) {
+	env := newTestEnv(t)
+	srv := newInstallServer(t, env)
+	seedPlugin(t, env, seedOptions{
+		Name: "install-parsed-draft", Visibility: "public", Published: false, Manifest: []byte(testManifest),
+	})
+
+	resp, err := srv.Service.GetPluginDefinition(asOrganization(seededOrganizationID), catalogv1.GetPluginDefinitionRequest_builder{
+		Name:              catalogv1.PluginRef_builder{OrganizationName: seededOrganizationName, PluginName: "install-parsed-draft"}.Build(),
+		Version:           "1.0.0",
+		IncludeDefinition: true,
+	}.Build())
+	require.NoError(t, err)
+
+	require.NotNil(t, resp.GetDefinition())
+	assert.Equal(t, "seeded", resp.GetDefinition().GetMetadata().GetName())
+}

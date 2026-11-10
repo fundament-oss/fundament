@@ -14,6 +14,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testPluginName = "test-plugin-def"
+
+// seedCatalogPlugin inserts a row into appstore.plugins owned by orgID and returns its id.
+func seedCatalogPlugin(t *testing.T, env *testEnv, name string, orgID uuid.UUID) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := env.adminPool.Exec(t.Context(),
+		"INSERT INTO appstore.plugins (id, organization_id, name, description) VALUES ($1, $2, $3, $4)",
+		id, orgID, name, "test plugin",
+	)
+	require.NoError(t, err)
+	return id
+}
+
 func Test_Plugins_RLS_Policies(t *testing.T) {
 	t.Parallel()
 
