@@ -92,12 +92,17 @@ type registryClient = registryv1connect.PublicationServiceClient
 
 func newClient(t *testing.T, env *testEnv, opts ...connect.ClientOption) registryClient {
 	t.Helper()
+	return newClientWithConfig(t, env, registry.Config{JWTSecret: testJWTSecret}, opts...)
+}
+
+func newClientWithConfig(t *testing.T, env *testEnv, cfg registry.Config, opts ...connect.ClientOption) registryClient {
+	t.Helper()
 
 	database, err := registry.NewDB(context.Background(), slog.Default(), psqldb.Config{URL: registryDSN(env.dbName)})
 	require.NoError(t, err)
 	t.Cleanup(database.Close)
 
-	server := registry.New(slog.Default(), registry.Config{JWTSecret: testJWTSecret}, database, nil)
+	server := registry.New(slog.Default(), cfg, database, nil)
 
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(ts.Close)

@@ -555,6 +555,12 @@ marketplaceRegistryApi:
   replicas: 1
   resources: {}
   logLevel: info
+  # Incoming webhooks (e.g. Mattermost) told about every new plugin review
+  # request. The Secret key holds a comma-separated list of URLs; they embed a
+  # credential, so they never go in values. Name empty: no notifications.
+  reviewWebhooksSecretRef:
+    name: ""
+    key: urls
   httproute:
     enabled: false
     parentRefs: []

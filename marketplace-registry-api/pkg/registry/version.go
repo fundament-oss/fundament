@@ -15,6 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/notify"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
 )
 
@@ -284,10 +285,11 @@ func (s *Server) SubmitPluginVersion(
 	if updated == 0 {
 		return nil, statusChangedError(row.Status)
 	}
-	if _, err := qtx.SubmissionCreate(ctx, db.SubmissionCreateParams{
+	submissionID, err := qtx.SubmissionCreate(ctx, db.SubmissionCreateParams{
 		PluginDefinitionID: versionID,
 		SubmitterUserID:    userID,
-	}); err != nil {
+	})
+	if err != nil {
 		// submissions_uq_open: a round is open on a version the status says is
 		// submittable.
 		if isUniqueViolation(err) {
@@ -300,6 +302,8 @@ func (s *Server) SubmitPluginVersion(
 	if err := tx.Commit(ctx); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("commit transaction: %w", err))
 	}
+
+	s.notifyReviewRequested(ctx, submissionID, &row)
 
 	version, err := s.loadVersion(ctx, versionID)
 	if err != nil {
@@ -373,6 +377,31 @@ func (s *Server) WithdrawPluginVersion(
 	}
 
 	return registryv1.WithdrawPluginVersionResponse_builder{Version: version}.Build(), nil
+}
+
+// notifyReviewRequested tells reviewers about the new round in the background,
+// so a slow or failing webhook never delays or fails the submit.
+//
+// NOTE: best-effort, a crash or webhook outage loses the message. Move this to
+// a transactional outbox (like tenant.cluster_outbox) for guaranteed delivery.
+func (s *Server) notifyReviewRequested(ctx context.Context, submissionID uuid.UUID, row *db.PluginVersionGetByIDRow) {
+	if s.notifier == nil {
+		return
+	}
+
+	plugin, err := s.queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: row.PluginID})
+	if err != nil {
+		s.logger.WarnContext(ctx, "loading plugin for review notification", "submission_id", submissionID, "error", err)
+		return
+	}
+
+	req := notify.ReviewRequest{
+		SubmissionID:      submissionID,
+		PluginName:        plugin.Name,
+		PluginDisplayName: plugin.DisplayName,
+		Version:           row.PluginVersion,
+	}
+	go s.notifier.ReviewRequested(context.WithoutCancel(ctx), req)
 }
 
 // canSubmit encodes the publisher half of the review lifecycle (FUN-20).
