@@ -41,18 +41,20 @@ describe('PluginIconComponent', () => {
   it('shows the generic plugin icon when logo is empty', () => {
     const fixture = create({});
     expect(imgs(fixture)).toHaveLength(0);
-    expect(fallback(fixture)?.getAttribute('name')).toBe('plugin');
+    expect(fallback(fixture)?.getAttribute('icon')).toBe('plugin');
+    // nldd-icon has no name attribute; setting it renders the default placeholder.
+    expect(fallback(fixture)?.hasAttribute('name')).toBe(false);
   });
 
   it('ignores logoDark without a logo', () => {
     const fixture = create({ logoDark: LOGO_DARK });
     expect(imgs(fixture)).toHaveLength(0);
-    expect(fallback(fixture)?.getAttribute('name')).toBe('plugin');
+    expect(fallback(fixture)?.getAttribute('icon')).toBe('plugin');
   });
 
   it('ignores a logo that is not a data:image value', () => {
     const fixture = create({ logo: 'https://example.com/logo.png' });
     expect(imgs(fixture)).toHaveLength(0);
-    expect(fallback(fixture)?.getAttribute('name')).toBe('plugin');
+    expect(fallback(fixture)?.getAttribute('icon')).toBe('plugin');
   });
 });

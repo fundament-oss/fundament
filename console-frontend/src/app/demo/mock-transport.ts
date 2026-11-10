@@ -501,6 +501,8 @@ export default function createDemoTransport(): Transport {
               image: p.image,
               categoryIds: p.categories.map((c) => c.id),
               tags: p.tags.map((t) => t.name),
+              logo: p.logo,
+              logoDark: p.logoDark,
             }),
           ),
         });
@@ -555,6 +557,8 @@ export default function createDemoTransport(): Transport {
             authorName: detail.author?.name ?? '',
             authorUrl: detail.author?.url ?? '',
             repositoryUrl: detail.repositoryUrl,
+            logo: detail.logo,
+            logoDark: detail.logoDark,
             documentationLinks: detail.documentationLinks.map((l) =>
               create(MarketplaceDocumentationLinkSchema, {
                 id: l.id,
