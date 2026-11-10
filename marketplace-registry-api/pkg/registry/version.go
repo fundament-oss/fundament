@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -380,7 +381,8 @@ func (s *Server) WithdrawPluginVersion(
 }
 
 // notifyReviewRequested tells reviewers about the new round in the background,
-// so a slow or failing webhook never delays or fails the submit.
+// so neither the lookup nor a slow webhook delays or fails the submit. The
+// detached context keeps the caller's RLS identity for the plugin lookup.
 //
 // NOTE: best-effort, a crash or webhook outage loses the message. Move this to
 // a transactional outbox (like tenant.cluster_outbox) for guaranteed delivery.
@@ -389,20 +391,29 @@ func (s *Server) notifyReviewRequested(ctx context.Context, submissionID uuid.UU
 		return
 	}
 
-	plugin, err := s.queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: row.PluginID})
-	if err != nil {
-		s.logger.WarnContext(ctx, "loading plugin for review notification", "submission_id", submissionID, "error", err)
-		return
-	}
+	pluginID, version := row.PluginID, row.PluginVersion
+	go func() {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), notifyTimeout)
+		defer cancel()
 
-	req := notify.ReviewRequest{
-		SubmissionID:      submissionID,
-		PluginName:        plugin.Name,
-		PluginDisplayName: plugin.DisplayName,
-		Version:           row.PluginVersion,
-	}
-	go s.notifier.ReviewRequested(context.WithoutCancel(ctx), req)
+		plugin, err := s.queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: pluginID})
+		if err != nil {
+			s.logger.WarnContext(ctx, "loading plugin for review notification", "submission_id", submissionID, "error", err)
+			return
+		}
+
+		s.notifier.ReviewRequested(ctx, notify.ReviewRequest{
+			SubmissionID:      submissionID,
+			PluginName:        plugin.Name,
+			PluginDisplayName: plugin.DisplayName,
+			Version:           version,
+		})
+	}()
 }
+
+// notifyTimeout bounds a background notification: the plugin lookup plus the
+// webhook posts, which run in parallel with their own shorter timeout.
+const notifyTimeout = 15 * time.Second
 
 // canSubmit encodes the publisher half of the review lifecycle (FUN-20).
 // APPROVED and REJECTED are terminal here: an approved version is immutable

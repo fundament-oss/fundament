@@ -66,5 +66,6 @@ func TestSubmitPluginVersionNotifiesReviewers(t *testing.T) {
 
 	second := notifier.next(t)
 	assert.NotEqual(t, first.SubmissionID, second.SubmissionID, "a resubmission opens a new round")
-	assert.Empty(t, notifier, "the idempotent submit must not notify")
+	assert.Never(t, func() bool { return len(notifier) > 0 }, 200*time.Millisecond, 10*time.Millisecond,
+		"the idempotent submit must not notify")
 }

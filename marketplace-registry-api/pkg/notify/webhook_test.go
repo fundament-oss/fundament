@@ -18,6 +18,8 @@ import (
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/notify"
 )
 
+const testAdminURL = "https://marketplace-admin.example.com"
+
 func TestReviewRequestedPostsToEveryWebhook(t *testing.T) {
 	var bodies [2]atomic.Value
 	servers := make([]string, 2)
@@ -50,12 +52,14 @@ func TestReviewRequestedPostsToEveryWebhook(t *testing.T) {
 
 		var payload map[string]string
 		require.NoError(t, json.Unmarshal(raw, &payload))
-		assert.Contains(t, payload["text"], "**Cert Manager** (`cert-manager`) version `1.2.3`")
+		assert.Contains(t, payload["text"], "`Cert Manager` (`cert-manager`) version `1.2.3`")
 		assert.Contains(t, payload["text"], "https://marketplace-admin.example.com/admin/submissions/"+submissionID.String())
 	}
 }
 
-func TestReviewRequestedOmitsLinkWithoutAdminURL(t *testing.T) {
+// The display name is publisher-controlled; it must not break out of its code
+// span into links, formatting or mentions.
+func TestReviewRequestedRendersDisplayNameAsCode(t *testing.T) {
 	var body atomic.Value
 	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
@@ -63,15 +67,38 @@ func TestReviewRequestedOmitsLinkWithoutAdminURL(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	webhooks, err := notify.NewWebhooks(slog.Default(), []string{ts.URL}, "")
+	webhooks, err := notify.NewWebhooks(slog.Default(), []string{ts.URL}, testAdminURL)
+	require.NoError(t, err)
+
+	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{
+		SubmissionID:      uuid.New(),
+		PluginName:        "p",
+		PluginDisplayName: "x` [click](https://evil.example) @channel\n**urgent**",
+		Version:           "1",
+	})
+
+	raw, ok := body.Load().([]byte)
+	require.True(t, ok)
+	var payload map[string]string
+	require.NoError(t, json.Unmarshal(raw, &payload))
+	assert.Contains(t, payload["text"], "`x' [click](https://evil.example) @channel **urgent**` (`p`)")
+}
+
+func TestReviewRequestedDoesNotFollowRedirects(t *testing.T) {
+	var redirected atomic.Bool
+	target := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) { redirected.Store(true) }))
+	t.Cleanup(target.Close)
+	redirecting := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusFound))
+	t.Cleanup(redirecting.Close)
+
+	var logs bytes.Buffer
+	webhooks, err := notify.NewWebhooks(slog.New(slog.NewTextHandler(&logs, nil)), []string{redirecting.URL}, testAdminURL)
 	require.NoError(t, err)
 
 	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: uuid.New(), PluginName: "p", Version: "1"})
 
-	raw, ok := body.Load().([]byte)
-	require.True(t, ok)
-	assert.NotContains(t, string(raw), "Open submission")
-	assert.Contains(t, string(raw), "**p** (`p`)")
+	assert.False(t, redirected.Load())
+	assert.Contains(t, logs.String(), "unexpected status 302")
 }
 
 // A failing webhook must not stop the others, and its log line must not leak
@@ -94,7 +121,7 @@ func TestReviewRequestedLogsFailuresWithoutTheURL(t *testing.T) {
 		failing.URL + "/hooks/secret-one",
 		unreachable.URL + "/hooks/secret-two",
 		ok.URL,
-	}, "")
+	}, testAdminURL)
 	require.NoError(t, err)
 
 	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: uuid.New(), PluginName: "p", Version: "1"})
@@ -107,7 +134,10 @@ func TestReviewRequestedLogsFailuresWithoutTheURL(t *testing.T) {
 
 func TestNewWebhooksRejectsInvalidURLs(t *testing.T) {
 	for _, raw := range []string{"", "not a url", "/relative", "ftp://example.com/hook"} {
-		_, err := notify.NewWebhooks(slog.Default(), []string{raw}, "")
-		assert.Error(t, err, "%q", raw)
+		_, err := notify.NewWebhooks(slog.Default(), []string{raw}, testAdminURL)
+		assert.Error(t, err, "webhook %q", raw)
+
+		_, err = notify.NewWebhooks(slog.Default(), []string{"https://example.com/hook"}, raw)
+		assert.Error(t, err, "admin URL %q", raw)
 	}
 }

@@ -38,6 +38,7 @@ type config struct {
 	// Empty disables notifications.
 	ReviewWebhookURLs []string `env:"REVIEW_WEBHOOK_URLS"`
 	// Base URL of the marketplace-admin frontend, for links in notifications.
+	// Required when ReviewWebhookURLs is set.
 	MarketplaceAdminURL string `env:"MARKETPLACE_ADMIN_URL"`
 }
 

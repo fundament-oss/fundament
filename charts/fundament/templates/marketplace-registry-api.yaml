@@ -58,12 +58,10 @@ spec:
                 secretKeyRef:
                   name: {{ .name }}
                   key: {{ .key }}
-            {{- end }}
-            {{- end }}
-            {{- with $.Values.externalUrls.marketplaceAdmin }}
             # Links in review notifications point at the review backoffice.
             - name: MARKETPLACE_ADMIN_URL
-              value: {{ . | quote }}
+              value: {{ required "externalUrls.marketplaceAdmin is required with marketplaceRegistryApi.reviewWebhooksSecretRef.name" $.Values.externalUrls.marketplaceAdmin | quote }}
+            {{- end }}
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}

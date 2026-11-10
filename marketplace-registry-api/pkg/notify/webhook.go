@@ -42,23 +42,32 @@ type Webhooks struct {
 	client   *http.Client
 }
 
-// NewWebhooks validates rawURLs up front so a typo fails the deployment, not
+// NewWebhooks validates its URLs up front so a typo fails the deployment, not
 // the first submission. Webhook URLs embed a secret, so errors and logs only
-// ever name the host.
+// ever name the host. adminURL is required: the link is how reviewers act.
 func NewWebhooks(logger *slog.Logger, rawURLs []string, adminURL string) (*Webhooks, error) {
+	if !isAbsoluteHTTP(adminURL) {
+		return nil, errors.New("marketplace admin URL must be an absolute http(s) URL when review webhooks are enabled")
+	}
 	targets := make([]*url.URL, 0, len(rawURLs))
 	for i, raw := range rawURLs {
-		u, err := url.Parse(strings.TrimSpace(raw))
-		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		raw = strings.TrimSpace(raw)
+		if !isAbsoluteHTTP(raw) {
 			return nil, fmt.Errorf("review webhook URL #%d is not an absolute http(s) URL", i+1)
 		}
+		u, _ := url.Parse(raw)
 		targets = append(targets, u)
 	}
 	return &Webhooks{
 		logger:   logger,
 		targets:  targets,
 		adminURL: strings.TrimRight(adminURL, "/"),
-		client:   &http.Client{Timeout: requestTimeout},
+		client: &http.Client{
+			Timeout: requestTimeout,
+			// A redirect can turn the POST into a GET that "succeeds"; report
+			// the 3xx as a failure instead.
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		},
 	}, nil
 }
 
@@ -83,16 +92,27 @@ func (w *Webhooks) ReviewRequested(ctx context.Context, req ReviewRequest) {
 	wg.Wait()
 }
 
+func isAbsoluteHTTP(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
+}
+
+// message renders publisher-controlled values as code spans, so a crafted
+// display name cannot inject links, formatting or @channel mentions.
 func (w *Webhooks) message(req ReviewRequest) string {
 	name := req.PluginDisplayName
 	if name == "" {
 		name = req.PluginName
 	}
-	text := fmt.Sprintf(":mag: New review requested: **%s** (%#q) version %#q", name, req.PluginName, req.Version)
-	if w.adminURL != "" {
-		text += fmt.Sprintf("\n[Open submission](%s/admin/submissions/%s)", w.adminURL, req.SubmissionID)
-	}
-	return text
+	return fmt.Sprintf(":mag: New review requested: %s (%s) version %s\n[Open submission](%s/admin/submissions/%s)",
+		codeSpan(name), codeSpan(req.PluginName), codeSpan(req.Version), w.adminURL, req.SubmissionID)
+}
+
+// codeSpan wraps s in backticks. Code spans cannot contain a backtick or a
+// line break, so those are replaced rather than escaped.
+func codeSpan(s string) string {
+	s = strings.NewReplacer("`", "'", "\r", " ", "\n", " ").Replace(s)
+	return "`" + s + "`"
 }
 
 func (w *Webhooks) post(ctx context.Context, target *url.URL, body []byte) error {
