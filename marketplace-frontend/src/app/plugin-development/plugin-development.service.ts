@@ -40,7 +40,6 @@ export interface AuthoredPlugin {
   version: string; // latest pushed version
   author: PluginAuthor;
   repositoryUrl: string;
-  icon: string; // base name under /img/plugins/<icon>.svg
   logo: string; // data: URI; empty when the plugin has none
   logoDark: string;
   tags: string[];
@@ -152,7 +151,6 @@ export default class PluginDevelopmentService {
       version: latest?.version ?? '',
       author: { name: plugin.authorName, url: plugin.authorUrl },
       repositoryUrl: plugin.repositoryUrl,
-      icon: plugin.name,
       logo: plugin.logo,
       logoDark: plugin.logoDark,
       tags: plugin.tags,

@@ -47,7 +47,6 @@ import {
   isTransitionalStatus,
   shouldPollStatus,
 } from '../utils/cluster-status';
-import getPluginIconName from '../utils/plugin-icon-name';
 import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -947,8 +946,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getEventTypeColor = getEventTypeColor;
 
   pluginDisplayName = pluginDisplayName;
-
-  pluginIconName = getPluginIconName;
 
   getEventDetails = getEventDetails;
 

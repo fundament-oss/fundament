@@ -28,7 +28,6 @@
     }
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
       <app-plugin-icon
-        [name]="pluginIconName(p.name)"
         [logo]="p.logo"
         [logoDark]="p.logoDark"
         class="block h-14 w-14"
