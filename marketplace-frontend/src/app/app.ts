@@ -75,19 +75,28 @@ export default class App {
   // above the header then says this is.
   protected readonly pocUrl = this.configService.getConfig().pocUrl ?? '';
 
+  // The portal's header drops its "Browse the marketplace" button on a narrow
+  // screen, so its account menu carries the link instead.
+  protected readonly storefrontInMenu = this.variant === 'registry' && !!this.storefrontUrl;
+
   private session = inject(SessionService);
+
+  protected readonly user = this.session.user;
+
+  // A build without a session surface (the demo) knows straight away: nobody
+  // can be signed in there.
+  private readonly sessionResolved = signal(!this.session.hasSessionSurface());
 
   /**
    * Whether the visitor has a console session. 'unknown' until
    * authn-api has answered, so the header does not flash "Sign in" at someone
-   * who is signed in. A build without a session surface (the demo) knows
-   * straight away: nobody can be signed in there.
+   * who is signed in. After that it follows SessionService, so a session that
+   * turns up or ends later shows in the header too.
    */
-  protected readonly sessionState = signal<'unknown' | 'signed-in' | 'signed-out'>(
-    this.session.hasSessionSurface() ? 'unknown' : 'signed-out',
-  );
-
-  protected readonly user = this.session.user;
+  protected readonly sessionState = computed(() => {
+    if (!this.sessionResolved()) return 'unknown';
+    return this.user() ? 'signed-in' : 'signed-out';
+  });
 
   /** What the account button says: the user's name, or a generic label for an
    *  account that has none. */
@@ -121,10 +130,7 @@ export default class App {
       // the first registry call needs the header. Asked once: every portal
       // route is behind the guard, which sends a visitor without a session to
       // the login.
-      this.organizationContext
-        .ensureOrganizationId()
-        .then(() => this.sessionState.set(this.user() ? 'signed-in' : 'signed-out'))
-        .catch(() => this.sessionState.set('signed-out'));
+      this.markResolvedAfter(this.organizationContext.ensureOrganizationId());
     }
 
     // The account menu only exists for a signed-in visitor, so the menu element
@@ -156,18 +162,20 @@ export default class App {
    * returning here should not have to reload to see it.
    */
   private watchSession() {
-    const check = (lookup: Promise<unknown>) => {
-      lookup
-        .then((user) => this.sessionState.set(user ? 'signed-in' : 'signed-out'))
-        .catch(() => this.sessionState.set('signed-out'));
-    };
     const onVisible = () => {
-      if (document.visibilityState === 'visible') check(this.session.recheckUser());
+      if (document.visibilityState === 'visible')
+        this.markResolvedAfter(this.session.recheckUser());
     };
 
-    check(this.session.ensureUser());
+    this.markResolvedAfter(this.session.ensureUser());
     document.addEventListener('visibilitychange', onVisible);
     this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  /** Ends the 'unknown' state once a session lookup has settled, whatever it
+   *  found: the lookup itself writes the answer to SessionService.user. */
+  private markResolvedAfter(lookup: Promise<unknown>) {
+    lookup.catch(() => {}).finally(() => this.sessionResolved.set(true));
   }
 
   protected onOrganizationSelect(id: string) {
@@ -234,9 +242,8 @@ export default class App {
       return;
     }
 
-    this.sessionState.set('signed-out');
     if (this.variant === 'registry') {
-      this.organizationContext.clearOrganizationId();
+      this.organizationContext.forgetStoredOrganization();
       this.session.redirectAfterLogout(this.location.prepareExternalUrl('/manage'));
     }
   }

@@ -25,7 +25,7 @@
             <span class="text-accent-600 hidden sm:inline">Plugin Developer Portal</span>
           }
           @case ('admin') {
-            <span class="text-accent-600">Review Backoffice</span>
+            <span class="text-accent-600 hidden sm:inline">Review Backoffice</span>
           }
           @default {
             <span class="text-accent-600">Marketplace</span>
@@ -55,12 +55,11 @@
         </app-developer-link>
       }
       @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
-        <!-- Which organization the portal publishes for, always in view; the
-             account menu switches it. Named from organization-api once it
-             answers; until then, or where it is not configured, a shortened id
-             in monospace so it does not pass for a name. On a narrow header
-             the account button needs the room, and its menu marks the active
-             organization. -->
+        <!-- Which organization the portal publishes for; the account menu
+             switches it. Named from organization-api once it answers; until
+             then, or where it is not configured, a shortened id in monospace
+             so it does not pass for a name. On a narrow header the account
+             button needs the room, so the strip below the bar says it there. -->
         <span class="hidden text-sm text-gray-500 lg:inline dark:text-gray-400" aria-hidden="true">
           Publishing as
         </span>
@@ -76,7 +75,9 @@
         </span>
       }
       @if (variant !== 'catalog' && storefrontUrl) {
-        <a [href]="storefrontUrl" class="hidden md:block">
+        <!-- The portal's account button needs the room on a narrow header; its
+             menu carries this link there. -->
+        <a [href]="storefrontUrl" [class]="variant === 'registry' ? 'hidden md:block' : null">
           <nldd-button text="Browse the marketplace" appearance="neutral-tinted"></nldd-button>
         </a>
       }
@@ -86,7 +87,7 @@
              moment later. -->
         @switch (sessionState()) {
           @case ('signed-in') {
-            <!-- Mirrors the console's account menu. Both links open in this
+            <!-- Mirrors the console's account menu. Its links open in this
                  tab, so they carry what they lead to as an icon rather than
                  an external-link glyph. -->
             <nldd-button
@@ -145,7 +146,14 @@
                     [attr.href]="developerUrl + '/manage'"
                   ></nldd-menu-item>
                 }
-                @if (consoleUrl || developerUrl) {
+                @if (storefrontInMenu) {
+                  <nldd-menu-item
+                    icon="puzzle-piece"
+                    text="Browse the marketplace"
+                    [attr.href]="storefrontUrl"
+                  ></nldd-menu-item>
+                }
+                @if (consoleUrl || developerUrl || storefrontInMenu) {
                   <nldd-menu-divider></nldd-menu-divider>
                 }
                 <nldd-menu-item text="Appearance" icon="appearance">
@@ -194,8 +202,12 @@
       }
       <!-- A signed-in visitor picks the theme under Appearance in the account
            menu; everyone else gets this toggle, so an anonymous first load
-           does not have to fetch the menu element for it. -->
-      @if (sessionState() !== 'signed-in') {
+           does not have to fetch the menu element for it. The portal waits for
+           authn-api: nearly everyone there is signed in, and would see the
+           toggle vanish as the account button appears. -->
+      @if (
+        variant === 'registry' ? sessionState() === 'signed-out' : sessionState() !== 'signed-in'
+      ) {
         <nldd-icon-button
           [icon]="isDarkMode() ? 'sun' : 'moon'"
           [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -206,6 +218,22 @@
       }
     </nav>
   </div>
+  @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
+    <!-- The bar shows this from lg up. Kept in view below that as well, so a
+         developer in several organizations can see which one they publish for. -->
+    <div class="border-dividers border-t lg:hidden">
+      <p class="mx-auto flex max-w-7xl items-center gap-2 px-4 py-1.5 text-sm sm:px-6">
+        <nldd-icon
+          icon="apartment-building"
+          class="text-accent-600 block! h-4 w-4 shrink-0"
+        ></nldd-icon>
+        <span class="shrink-0 text-gray-500 dark:text-gray-400">Publishing as</span>
+        <span class="truncate font-medium" [class.font-mono]="!active.named">{{
+          active.label
+        }}</span>
+      </p>
+    </div>
+  }
 </header>
 
 <!-- Page content -->

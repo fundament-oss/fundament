@@ -81,4 +81,13 @@ describe('SessionService', () => {
     await session.recheckUser();
     expect(getUserInfo).toHaveBeenCalledTimes(3);
   });
+
+  it('does not count the redirect after a logout as a login attempt', () => {
+    const session = TestBed.inject(SessionService);
+
+    session.redirectAfterLogout('/manage');
+
+    // With the flag set, Back from the login gets past the guard.
+    expect(session.hasTriedLogin()).toBe(false);
+  });
 });
