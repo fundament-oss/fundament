@@ -13,6 +13,7 @@ import type { Organization } from '../../generated/v1/organization_pb';
 import type { Invitation } from '../../generated/v1/invite_pb';
 import isPresenting from '../presentation/presenting';
 
+import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
