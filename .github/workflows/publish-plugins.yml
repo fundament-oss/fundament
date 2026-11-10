@@ -66,7 +66,9 @@ jobs:
           echo "sha=$(jq -r .commit "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
 
       # The definition comes from the commit the image was built from, so the
-      # published RBAC and console surface match the code in the image.
+      # published RBAC and console surface match the code in the image. The whole
+      # plugin directory is extracted because the definition's logo paths are
+      # relative to it.
       - name: Stamp the definition
         id: definition
         env:
@@ -74,10 +76,13 @@ jobs:
           SHA: ${{ steps.build.outputs.sha }}
         run: |
           git fetch --no-tags --depth 1 origin "$SHA"
-          git show "$SHA:plugins/$PLUGIN/definition.yaml" > "$RUNNER_TEMP/definition.yaml"
-          base=$(yq '.metadata.version' "$RUNNER_TEMP/definition.yaml")
-          V="$base-master.$RUN" yq -i '.metadata.version = strenv(V)' "$RUNNER_TEMP/definition.yaml"
-          echo "name=$(yq '.metadata.name' "$RUNNER_TEMP/definition.yaml")" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/src"
+          git archive "$SHA" "plugins/$PLUGIN" | tar -x -C "$RUNNER_TEMP/src"
+          def="$RUNNER_TEMP/src/plugins/$PLUGIN/definition.yaml"
+          base=$(yq '.metadata.version' "$def")
+          V="$base-master.$RUN" yq -i '.metadata.version = strenv(V)' "$def"
+          echo "path=$def" >> "$GITHUB_OUTPUT"
+          echo "name=$(yq '.metadata.name' "$def")" >> "$GITHUB_OUTPUT"
 
       - name: Pick the image
         id: image
@@ -105,6 +110,7 @@ jobs:
           RUN: ${{ steps.build.outputs.run }}
           IMAGE: ${{ steps.image.outputs.ref }}
           SUBMIT: ${{ inputs.submit && '--submit' || '' }}
+          DEFINITION: ${{ steps.definition.outputs.path }}
         run: |
           # functl falls back to the fundament-poc endpoints when a variable is
           # empty, so an incomplete environment must stop here.
@@ -119,7 +125,7 @@ jobs:
           functl="$RUNNER_TEMP/bin/functl"
           "$functl" auth login "$FUNCTL_API_KEY"
           "$functl" org set "$PUBLISHER_ORGANIZATION_ID"
-          if out=$("$functl" plugin publish "$RUNNER_TEMP/definition.yaml" --image "$IMAGE" --create $SUBMIT 2>&1); then
+          if out=$("$functl" plugin publish "$DEFINITION" --image "$IMAGE" --create $SUBMIT 2>&1); then
             echo "$out"
             echo "$out" | grep '^published' >> "$GITHUB_STEP_SUMMARY"
           elif grep -q 'already_exists: version .* already exists for this plugin' <<< "$out"; then

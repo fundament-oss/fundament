@@ -46,7 +46,6 @@ import {
   isInstallInProgress,
   isInstallTerminating,
 } from '../utils/plugin-install-status';
-import getPluginIconName from '../utils/plugin-icon-name';
 import createInstallPoller from '../utils/install-poller';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
@@ -1008,6 +1007,4 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
     }
   }
-
-  getPluginIconName = getPluginIconName;
 }

@@ -31,10 +31,15 @@ import {
   type Tag,
   type Category,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
+import {
+  ClusterStatus,
+  ContainerDefaultsSchema,
+  NodePoolStatus,
+} from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import { OrganizationOverviewSchema } from '../../generated/platform/v1/overview_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
+import demoLogo from './plugin-logos';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
 
@@ -515,9 +520,8 @@ export const nodeUsage = [
 
 // --- Plugins --------------------------------------------------------------
 
-// The catalog the walkthrough shows. Every `name` must have a matching icon at
-// public/img/plugins/<name>.svg — the plugin card renders that path directly and
-// has no fallback, so a plugin without an icon shows a broken image mid-demo.
+// The catalog the walkthrough shows. Logos come from ./plugin-logos; a name
+// without one shows the generic plugin icon.
 // cert-manager and openfsc mirror the real definitions in plugins/*/definition.yaml.
 
 const tag = (id: string, name: string) => create(TagSchema, { id, name });
@@ -569,6 +573,7 @@ const published = (name: string) => ({
   image: `ghcr.io/fundament/plugins/${name}:${latestVersion(name)}`,
   pluginVersion: latestVersion(name),
   definitionHash: definitionHash(name, latestVersion(name)),
+  ...demoLogo(name),
 });
 
 // cert-manager is deliberately first: it is the card the platform-engineer tour
@@ -734,9 +739,7 @@ export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => 
  * picker offers. An unknown plugin gets an empty list, the same "nothing published"
  * answer the real backend gives.
  */
-export const pluginDefinitionVersions = (
-  pluginId: string,
-): { version: string; hash: string }[] => {
+export const pluginDefinitionVersions = (pluginId: string): { version: string; hash: string }[] => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return [];
   return (VERSIONS[summary.name] ?? []).map((version) => ({

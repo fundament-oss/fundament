@@ -22,7 +22,6 @@ import InstallPluginModalComponent, {
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
 import { PluginIconComponent } from '../icons';
-import getPluginIconName from '../utils/plugin-icon-name';
 import renderMarkdown from '../markdown';
 import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import {
@@ -173,8 +172,6 @@ export default class PluginDetailsComponent implements OnInit {
   private pluginInstallationService = inject(PluginInstallationService);
 
   private idempotency = createIdempotencyRef();
-
-  pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
 

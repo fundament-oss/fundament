@@ -26,7 +26,6 @@ export interface PluginSubmission {
   title: string;
   description: string;
   categories: string[];
-  icon: string; // base name under /img/plugins/<icon>.svg
   // data: URIs of the submitted version; empty when it declares none.
   logo: string;
   logoDark: string;
@@ -177,7 +176,6 @@ export default class AdminReviewService {
       categories: (plugin?.categoryIds ?? [])
         .map((categoryId) => categories.get(categoryId))
         .filter((name): name is string => name !== undefined),
-      icon: plugin?.name ?? '',
       logo: submission.logo,
       logoDark: submission.logoDark,
       menuIcons: [],

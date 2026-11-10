@@ -14,7 +14,6 @@ const submission: PluginSubmission = {
   title: 'Grafana',
   description: '',
   categories: [],
-  icon: 'grafana',
   logo: LOGO,
   logoDark: LOGO_DARK,
   menuIcons: MENU_ICONS,
