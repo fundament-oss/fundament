@@ -594,36 +594,40 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <nldd-text
-    size="sm"
-    line-height="tight"
-    horizontal-alignment="center"
-  >
-    To confirm, type <strong>{{ deleteConfirmationSlug() }}</strong> below.
-  </nldd-text>
-  <nldd-spacer size="4"></nldd-spacer>
-  <nldd-form-field>
-    <nldd-text-field
-      id="deleteConfirmation"
-      accessible-label="Cluster to delete"
-      [value]="deleteConfirmationInput()"
-      [attr.invalid]="deleteConfirmationInvalid() ? '' : null"
-      unmet="delete-cluster-error"
-      (input)="onDeleteConfirmationInput($event)"
-    ></nldd-text-field>
-    <nldd-validation-list>
-      <nldd-validation-item id="delete-cluster-error"
-        >The name above, exactly as it is written</nldd-validation-item
-      >
-    </nldd-validation-list>
-  </nldd-form-field>
-  @if (errorMessage()) {
-    <nldd-spacer size="24"></nldd-spacer>
-    <nldd-banner
-      variant="critical"
-      [attr.text]="errorMessage()"
-    ></nldd-banner>
-  }
+  <!-- One wrapper on purpose: nldd-button-group hides any action that is the
+       fourth child of this dialog or later, and it counts every child. -->
+  <nldd-container layout="stack">
+    <nldd-text
+      size="sm"
+      line-height="tight"
+      horizontal-alignment="center"
+    >
+      To confirm, type <strong>{{ deleteConfirmationSlug() }}</strong> below.
+    </nldd-text>
+    <nldd-spacer size="4"></nldd-spacer>
+    <nldd-form-field>
+      <nldd-text-field
+        id="deleteConfirmation"
+        accessible-label="Cluster to delete"
+        [value]="deleteConfirmationInput()"
+        [attr.invalid]="deleteConfirmationInvalid() ? '' : null"
+        unmet="delete-cluster-error"
+        (input)="onDeleteConfirmationInput($event)"
+      ></nldd-text-field>
+      <nldd-validation-list>
+        <nldd-validation-item id="delete-cluster-error"
+          >The name above, exactly as it is written</nldd-validation-item
+        >
+      </nldd-validation-list>
+    </nldd-form-field>
+    @if (errorMessage()) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
+    }
+  </nldd-container>
   <nldd-button
     slot="actions"
     type="button"
