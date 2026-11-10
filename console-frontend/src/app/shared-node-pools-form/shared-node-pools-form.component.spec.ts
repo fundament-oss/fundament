@@ -246,12 +246,54 @@ describe('shared node pools form with existing pools', () => {
     expect(form.getMachineTypeQuotaError(0)).toContain('can keep or lower its maximum');
   });
 
-  it('tells a renamed existing pool that it counts as a new one', () => {
+  // Saving matches pools by name, so a new name would replace the pool and its
+  // nodes instead of renaming it.
+  it('keeps the name of an existing pool', () => {
     const form = build();
     form.machineTypeOptions = machineTypeOptions;
-    form.nodeQuotas = new Map();
-    form.nodePools.at(0).get('name')?.setValue('renamed');
-    expect(form.nodePools.at(0).get('machineType')?.value).toBe('local-medium');
-    expect(form.getMachineTypeQuotaError(0)).toContain('a renamed pool counts as a new one');
+    form.onNodePoolNameInput(0, new CustomEvent('input', { detail: { value: 'renamed' } }));
+    expect(form.nodePools.at(0).get('name')?.value).toBe('workers');
+  });
+
+  // The API takes names the form's rules would not, and the field is read-only:
+  // a rule the name breaks would block every save with an error nobody can fix.
+  it('does not check the name of an existing pool against the form rules', () => {
+    const form = TestBed.createComponent(SharedNodePoolsFormComponent).componentInstance;
+    form.initialData = [
+      { name: 'Legacy_Pool', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+      { name: 'web', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+      { name: 'Web', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+    ];
+    form.machineTypeOptions = machineTypeOptions;
+    expect(form.nodePoolsForm.valid).toBe(true);
+
+    form.addNodePool();
+    form.onNodePoolNameInput(3, new CustomEvent('input', { detail: { value: 'WEB' } }));
+    expect(form.getNodePoolNameError(3)).not.toBe('');
+  });
+
+  // Without the attribute the field would take the typing and show it, while
+  // the form keeps the old name.
+  it('renders the name of an existing pool read-only and a new one editable', () => {
+    const fixture = TestBed.createComponent(SharedNodePoolsFormComponent);
+    const form = fixture.componentInstance;
+    form.initialData = [
+      { name: 'workers', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+    ];
+    form.machineTypeOptions = machineTypeOptions;
+    form.addNodePool();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('#nodePoolName-0')?.hasAttribute('readonly')).toBe(true);
+    expect(el.querySelector('#nodePoolName-1')?.hasAttribute('readonly')).toBe(false);
+  });
+
+  it('lets a pool added next to it be named', () => {
+    const form = build();
+    form.machineTypeOptions = machineTypeOptions;
+    form.addNodePool();
+    form.onNodePoolNameInput(1, new CustomEvent('input', { detail: { value: 'batch' } }));
+    expect(form.nodePools.at(1).get('name')?.value).toBe('batch');
   });
 });

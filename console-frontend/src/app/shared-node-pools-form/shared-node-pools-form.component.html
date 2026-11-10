@@ -113,10 +113,13 @@
               }
             </nldd-form-field>
             <nldd-form-field label="Node pool name">
+              <!-- Read-only for an existing pool: saving matches pools by name, so a
+                   new name would not rename the pool but replace it and its nodes. -->
               <nldd-text-field
                 [id]="'nodePoolName-' + $index"
                 [value]="nameControl?.value ?? ''"
-                [appAutofocus]="$first"
+                [appAutofocus]="$first && !isExistingPool(poolIndex)"
+                [attr.readonly]="isExistingPool(poolIndex) ? '' : null"
                 [invalid]="!!(nameControl?.invalid && formSubmitted())"
                 [attr.unmet]="'node-pool-name-error-' + $index"
                 (input)="onNodePoolNameInput($index, $event)"
