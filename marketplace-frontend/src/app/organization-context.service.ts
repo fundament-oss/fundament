@@ -85,6 +85,19 @@ export default class OrganizationContextService {
     }
   }
 
+  /** Forgets the session's organizations and the stored selection, so the next
+   *  person to sign in on this browser starts from their own first membership. */
+  clearOrganizationId() {
+    this.organizationId.set(null);
+    this.organizationIds.set([]);
+    this.organizations.set([]);
+    this.loaded = undefined;
+    this.loadedFor = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
   private async load(): Promise<string | null> {
     // SessionService swallows the unauthenticated case, so no session means no
     // memberships: the header is left unset and the registry answers with its

@@ -40,6 +40,20 @@ async function setUp(
   return TestBed.inject(OrganizationContextService);
 }
 
+describe('OrganizationContextService.clearOrganizationId', () => {
+  it('forgets the organizations and the stored selection', async () => {
+    const context = await setUp({}, vi.fn());
+    await context.ensureOrganizationId();
+    context.setOrganizationId(GLOBEX);
+
+    context.clearOrganizationId();
+
+    expect(context.organizationId()).toBeNull();
+    expect(context.organizations()).toEqual([]);
+    await expect(context.ensureOrganizationId()).resolves.toBe(ACME);
+  });
+});
+
 describe('OrganizationContextService organization names', () => {
   it("names the session's organizations, in membership order, and nothing else", async () => {
     const context = await setUp({ organizationApiUrl: 'https://organization.test' }, () =>

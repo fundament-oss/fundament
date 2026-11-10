@@ -23,6 +23,7 @@ import '@nldd/design-system/form-field';
 import '@nldd/design-system/dropdown';
 import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/inline-dialog';
+import { Location } from '@angular/common';
 import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
@@ -51,6 +52,8 @@ export default class App {
 
   private route = inject(ActivatedRoute);
 
+  private location = inject(Location);
+
   private themeService = inject(ThemeService);
 
   protected toastService = inject(ToastService);
@@ -75,7 +78,7 @@ export default class App {
   private session = inject(SessionService);
 
   /**
-   * Whether the storefront's visitor has a console session. 'unknown' until
+   * Whether the visitor has a console session. 'unknown' until
    * authn-api has answered, so the header does not flash "Sign in" at someone
    * who is signed in. A build without a session surface (the demo) knows
    * straight away: nobody can be signed in there.
@@ -90,8 +93,7 @@ export default class App {
    *  account that has none. */
   protected readonly accountLabel = computed(() => this.user()?.name || 'Signed in');
 
-  // The organization the developer portal acts for; the picker only shows
-  // when the session belongs to more than one.
+  // The organization the developer portal acts for, picked in the account menu.
   protected organizationContext = inject(OrganizationContextService);
 
   // Theme state, owned by ThemeService so the server can render it too.
@@ -115,20 +117,23 @@ export default class App {
     if (this.pocUrl) import('@nldd/design-system/status-bar').catch(() => {});
 
     if (this.variant === 'registry') {
-      // Resolve the membership up front so the picker is filled before the
-      // first registry call needs the header.
-      this.organizationContext.ensureOrganizationId().catch(() => {});
+      // Resolve the membership up front so the account menu is filled before
+      // the first registry call needs the header. Asked once: every portal
+      // route is behind the guard, which sends a visitor without a session to
+      // the login.
+      this.organizationContext
+        .ensureOrganizationId()
+        .then(() => this.sessionState.set(this.user() ? 'signed-in' : 'signed-out'))
+        .catch(() => this.sessionState.set('signed-out'));
     }
 
-    // The header's menus (account, organization) only exist for a signed-in
-    // visitor, so the menu element is fetched once one is needed rather than
-    // weighing on every anonymous first load. Until it is defined the buttons
-    // render as plain buttons; a custom element upgrades in place. The
-    // account menu's header needs identity and container, so they come along.
+    // The account menu only exists for a signed-in visitor, so the menu element
+    // is fetched once one is needed rather than weighing on every anonymous
+    // first load. Until it is defined the button renders as a plain button; a
+    // custom element upgrades in place. The menu's header needs identity and
+    // container, so they come along.
     const menuLoad = effect(() => {
-      const needed =
-        this.sessionState() === 'signed-in' || this.organizationContext.organizations().length > 1;
-      if (!needed) return;
+      if (this.sessionState() !== 'signed-in') return;
       Promise.all([
         import('@nldd/design-system/menu'),
         import('@nldd/design-system/identity'),
@@ -217,14 +222,22 @@ export default class App {
 
   /**
    * Signs out of the console session. The storefront is public, so the
-   * visitor stays on the page it was on, now as a signed-out visitor.
+   * visitor stays on the page it was on, now as a signed-out visitor. Nothing
+   * in the portal works without a session, so it goes to the login, and to
+   * /manage after that: whoever signs in next may not have the page left here.
    */
   async handleLogout() {
     try {
       await this.session.logout();
-      this.sessionState.set('signed-out');
     } catch {
       this.toastService.error('Logging out failed. Please try again.');
+      return;
+    }
+
+    this.sessionState.set('signed-out');
+    if (this.variant === 'registry') {
+      this.organizationContext.clearOrganizationId();
+      this.session.redirectAfterLogout(this.location.prepareExternalUrl('/manage'));
     }
   }
 }
