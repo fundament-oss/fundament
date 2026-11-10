@@ -704,6 +704,8 @@ export interface DemoPluginDetail {
   documentationLinks: { id: string; title: string; urlName: string; url: string }[];
   pluginVersion: string;
   definitionHash: string;
+  logo: string;
+  logoDark: string;
 }
 
 /** Detail view, derived from the summary so the two can never disagree. */
@@ -731,6 +733,8 @@ export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => 
     ],
     pluginVersion: summary.pluginVersion,
     definitionHash: summary.definitionHash,
+    logo: summary.logo,
+    logoDark: summary.logoDark,
   };
 };
 

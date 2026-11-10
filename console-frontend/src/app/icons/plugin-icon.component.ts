@@ -38,7 +38,7 @@ import { isCustomIcon } from '../utils/custom-icon';
           />
         }
       } @else {
-        <nldd-icon name="plugin" color="accent"></nldd-icon>
+        <nldd-icon icon="plugin" color="accent"></nldd-icon>
       }
     </span>
   `,
