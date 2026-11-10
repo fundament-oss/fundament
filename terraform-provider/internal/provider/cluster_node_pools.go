@@ -40,7 +40,7 @@ func clusterNodePoolBlock() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"name": schema.StringAttribute{
-					Description: "The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter.",
+					Description: "The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter. Changing it replaces the node pool and its nodes.",
 					Required:    true,
 					Validators: []validator.String{
 						stringvalidator.LengthBetween(1, 63),
