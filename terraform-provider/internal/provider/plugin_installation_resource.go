@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -35,6 +34,7 @@ import (
 var _ resource.Resource = &PluginInstallationResource{}
 var _ resource.ResourceWithConfigure = &PluginInstallationResource{}
 var _ resource.ResourceWithImportState = &PluginInstallationResource{}
+var _ resource.ResourceWithModifyPlan = &PluginInstallationResource{}
 
 type PluginInstallationResource struct {
 	client *FundamentClient
@@ -178,7 +178,6 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				Description: "The published version of the plugin definition to pin (definitionRef.pluginVersion). Optional; when omitted the provider pins the latest published version for the plugin. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString(unpinnedPluginVersion),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
@@ -188,7 +187,6 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				Description: "The sha256 content hash of the pinned plugin definition (definitionRef.definitionHash), prefixed with \"sha256:\". Optional; when omitted the provider pins the hash of the latest published definition. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString(unpinnedDefinitionHash),
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(definitionHashRegex, "definition_hash must be 'sha256:' followed by a 64-character hex digest (or the placeholder 'sha256:unknown')"),
 				},
@@ -268,27 +266,22 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	clusterID := plan.ClusterID.ValueString()
 	organizationName := plan.OrganizationName.ValueString()
 	pluginName := plan.PluginName.ValueString()
-	pluginVersion := plan.PluginVersion.ValueString()
-	definitionHash := plan.DefinitionHash.ValueString()
 	name := installationName(organizationName, pluginName)
 
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 
-	// When the version isn't explicitly pinned (the "unknown" placeholder or
-	// empty), pin the latest published definition resolved from the marketplace.
-	// Version and hash are pinned together as a matched pair.
-	if pluginVersion == "" || pluginVersion == unpinnedPluginVersion {
-		version, hash, err := r.resolveLatestDefinition(ctx, organizationName, pluginName)
+	pluginVersion, definitionHash, resolve := pinFromPlan(plan.PluginVersion, plan.DefinitionHash)
+	if resolve {
+		var err error
+		pluginVersion, definitionHash, err = r.resolveLatestDefinition(ctx, organizationName, pluginName)
 		if err != nil {
 			resp.Diagnostics.AddError("Unable to Resolve Plugin Definition", err.Error())
 			return
 		}
-		pluginVersion = version
-		definitionHash = hash
-		plan.PluginVersion = types.StringValue(version)
-		plan.DefinitionHash = types.StringValue(hash)
 	}
+	plan.PluginVersion = types.StringValue(pluginVersion)
+	plan.DefinitionHash = types.StringValue(definitionHash)
 
 	tflog.Debug(ctx, "Waiting for cluster to be running before installing plugin", map[string]any{"cluster_id": clusterID})
 
@@ -398,6 +391,37 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	tflog.Info(ctx, "Created plugin installation", map[string]any{"id": plan.ID.ValueString(), "phase": plan.Phase.ValueString()})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// pinFromPlan returns the version and hash to pin. resolve is true when no
+// version is pinned, so both come from the latest published definition.
+func pinFromPlan(version, hash types.String) (string, string, bool) {
+	v := version.ValueString()
+	if version.IsUnknown() || v == "" || v == unpinnedPluginVersion {
+		return "", "", true
+	}
+	h := hash.ValueString()
+	if hash.IsUnknown() || h == "" {
+		h = unpinnedDefinitionHash
+	}
+	return v, h, false
+}
+
+// ModifyPlan fails the plan, not the apply, when an unpinned install has no
+// install API to resolve its version from.
+func (r *PluginInstallationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // signature set by resource.ResourceWithModifyPlan
+	if !req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || r.client == nil || r.client.InstallService != nil {
+		return
+	}
+	var version types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("plugin_version"), &version)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if _, _, resolve := pinFromPlan(version, types.StringUnknown()); resolve {
+		resp.Diagnostics.AddAttributeError(path.Root("plugin_version"), "Marketplace Install URL Not Configured",
+			"marketplace_install_url (or FUNDAMENT_MARKETPLACE_INSTALL_URL) must be set to install a plugin without a pinned plugin_version.")
+	}
 }
 
 // resolveLatestDefinition returns the newest published version and its
