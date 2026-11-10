@@ -22,6 +22,21 @@
     ></nldd-button>
   </nldd-banner>
 }
+@if (!isBarePage() && organizationDataService.loadError(); as message) {
+  <nldd-banner
+    variant="critical"
+    text="The console could not load your organization"
+    [attr.supporting-text]="message"
+  >
+    <nldd-button
+      slot="actions"
+      type="button"
+      (click)="handleOrganizationsRecheck()"
+      text="Try again"
+      appearance="secondary"
+    ></nldd-button>
+  </nldd-banner>
+}
 <nldd-shell>
   @if (isBarePage()) {
     <router-outlet />

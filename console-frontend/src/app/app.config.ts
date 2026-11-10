@@ -16,6 +16,7 @@ import {
   ORGANIZATION_TRANSPORT,
   PLATFORM_TRANSPORT,
 } from '../connect/connect.module';
+import { readableErrors } from '../connect/readable-errors';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import provideStaleChunkReload from './reload-on-stale-chunk';
@@ -62,6 +63,8 @@ export const appConfig: ApplicationConfig = {
       const configService = inject(ConfigService);
       return configService.loadConfig();
     }),
+    // Every transport below runs readableErrors, so a failed call reaches a
+    // page as a line it can show as it is.
     // Provide the Authn transport
     {
       provide: AUTHN_TRANSPORT,
@@ -75,6 +78,7 @@ export const appConfig: ApplicationConfig = {
               ...init,
               credentials: 'include', // Include the HTTP-only authentication cookie with requests, also below
             }),
+          interceptors: [readableErrors],
         });
       },
     },
@@ -84,7 +88,10 @@ export const appConfig: ApplicationConfig = {
       provide: MARKETPLACE_TRANSPORT,
       useFactory: () => {
         const configService = inject(ConfigService);
-        return createConnectTransport({ baseUrl: configService.getConfig().marketplaceApiUrl });
+        return createConnectTransport({
+          baseUrl: configService.getConfig().marketplaceApiUrl,
+          interceptors: [readableErrors],
+        });
       },
     },
     // Provide the Platform transport for the public overview (FUN-23).
@@ -98,6 +105,7 @@ export const appConfig: ApplicationConfig = {
         return createConnectTransport({
           baseUrl: configService.getConfig().platformApiUrl ?? '',
           useHttpGet: true,
+          interceptors: [readableErrors],
         });
       },
     },
@@ -112,6 +120,7 @@ export const appConfig: ApplicationConfig = {
         return createConnectTransport({
           baseUrl: configService.getConfig().marketplaceApiUrl,
           fetch: organizationFetch(injector),
+          interceptors: [readableErrors],
         });
       },
       deps: [Injector],
@@ -130,6 +139,7 @@ export const appConfig: ApplicationConfig = {
               handleVersionMismatch(serverVersion);
             }
           }),
+          interceptors: [readableErrors],
         });
       },
       deps: [Injector],

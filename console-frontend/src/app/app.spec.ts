@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
-import { Transport, createRouterTransport } from '@connectrpc/connect';
+import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
 import App, { isBarePageUrl } from './app';
 import routes from './app.routes';
@@ -24,6 +24,7 @@ import { ConfigService, type AppConfiguration } from './config.service';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import { UNAVAILABLE_MESSAGE, readableErrors } from '../connect/readable-errors';
 import {
   AUTHN_TRANSPORT,
   ORGANIZATION_TRANSPORT,
@@ -84,6 +85,7 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
     calls.push('refreshToken');
   });
   const userOrganizations = signal<Organization[]>([ORGANIZATION as Organization]);
+  const loadError = signal<string | null>(null);
   await configure([
     ...(extraProviders as never[]),
     { provide: AuthnApiService, useValue: { refreshToken } },
@@ -106,6 +108,7 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
         setUserOrganizations: (orgs: Organization[]) => userOrganizations.set(orgs),
         organizations: signal([ORGANIZATION]),
         clusterSummaries: signal([]),
+        loadError,
         getOrganizationById: () => ORGANIZATION,
         getProjectById: () => undefined,
         getClusterById: () => undefined,
@@ -130,6 +133,7 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
     navigatedTo,
     refreshToken,
     calls,
+    loadError,
   };
 }
 
@@ -149,6 +153,33 @@ function memberOf(organizations: Organization[], invitations: Invitation[] = [])
     });
   });
   return [{ provide: ORGANIZATION_TRANSPORT, useValue: transport }];
+}
+
+/**
+ * The organization-api with its authorization service down while `outage.down`
+ * holds, as the gateway answers once the pods go unready, and as a member of
+ * ORGANIZATION once it is back. Its errors go through the same interceptor as
+ * the console's own transport.
+ */
+function duringOutage() {
+  const outage = { down: true };
+  const transport = createRouterTransport(
+    ({ service }) => {
+      service(OrganizationService, {
+        listOrganizations: () => {
+          if (outage.down) throw new ConnectError('HTTP 503', Code.Unavailable);
+          return create(ListOrganizationsResponseSchema, {
+            organizations: [ORGANIZATION as Organization],
+          });
+        },
+      });
+      service(InviteService, {
+        listInvitations: () => create(ListInvitationsResponseSchema, { invitations: [] }),
+      });
+    },
+    { transport: { interceptors: [readableErrors] } },
+  );
+  return { outage, providers: [{ provide: ORGANIZATION_TRANSPORT, useValue: transport }] };
 }
 
 describe('App', () => {
@@ -210,6 +241,24 @@ describe('App', () => {
     expect(app.showOrgPicker()).toBe(true);
     expect(app.selectedOrgId()).toBeNull();
     expect(navigatedTo).toEqual([]);
+  });
+
+  // With the organizations out of reach the console would otherwise stay
+  // empty: the shell says why, and checking again once it is back clears it.
+  it('says why the organizations could not be loaded, until they can', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    onTestFinished(() => quiet.mockRestore());
+    const { outage, providers } = duringOutage();
+    const { app, loadError } = await setUpShell('/clusters', null, providers);
+
+    await app.handleOrganizationsRecheck();
+    expect(loadError()).toBe(UNAVAILABLE_MESSAGE);
+    expect(app.selectedOrgId()).toBeNull();
+
+    outage.down = false;
+    await app.handleOrganizationsRecheck();
+    expect(loadError()).toBeNull();
+    expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
   });
 
   it('settles on the organization an operator has since added someone to', async () => {
