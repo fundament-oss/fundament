@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -314,4 +315,38 @@ func TestDefinitionHashRegex(t *testing.T) {
 			t.Errorf("expected %q to be invalid", v)
 		}
 	}
+}
+
+// Delete waits for the controller to finish uninstalling, so a replacement
+// created right after does not run into the old, Terminating installation.
+func TestWaitForPluginGone_PollsUntilNotFound(t *testing.T) {
+	var gets atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if gets.Add(1) < 3 {
+			_, _ = w.Write([]byte(`{"status":{"phase":"Terminating","message":"uninstalling plugin"}}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	r := &PluginInstallationResource{client: &FundamentClient{KubeProxyURL: srv.URL, KubeProxyHTTPClient: srv.Client()}}
+	require.NoError(t, r.waitForPluginGone(context.Background(), "cluster-abc", "acme--grafana", time.Millisecond))
+	assert.Equal(t, int32(3), gets.Load())
+}
+
+func TestWaitForPluginGone_TimesOutWithLastPhase(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"status":{"phase":"Terminating","message":"uninstalling plugin"}}`))
+	}))
+	defer srv.Close()
+
+	r := &PluginInstallationResource{client: &FundamentClient{KubeProxyURL: srv.URL, KubeProxyHTTPClient: srv.Client()}}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	err := r.waitForPluginGone(ctx, "cluster-abc", "acme--grafana", time.Millisecond)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.ErrorContains(t, err, "Terminating")
+	assert.ErrorContains(t, err, "uninstalling plugin")
 }

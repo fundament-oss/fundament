@@ -3,12 +3,12 @@
 page_title: "fundament_plugin_installation Resource - fundament"
 subcategory: ""
 description: |-
-  Manages a plugin installation on a Fundament cluster via the kube-api-proxy. Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.
+  Manages a plugin installation on a Fundament cluster via the kube-api-proxy. Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. Delete waits up to 10 minutes for the plugin to be uninstalled and the installation removed. Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.
 ---
 
 # fundament_plugin_installation (Resource)
 
-Manages a plugin installation on a Fundament cluster via the kube-api-proxy. Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.
+Manages a plugin installation on a Fundament cluster via the kube-api-proxy. Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. Delete waits up to 10 minutes for the plugin to be uninstalled and the installation removed. Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.
 
 ## Example Usage
 
