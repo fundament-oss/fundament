@@ -30,6 +30,7 @@ describe('SessionService', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it('does not ask again for a user it just confirmed', async () => {
@@ -84,9 +85,16 @@ describe('SessionService', () => {
 
   it('does not count the redirect after a logout as a login attempt', () => {
     const session = TestBed.inject(SessionService);
+    // The whole object: jsdom's location.replace cannot be spied on. No assign
+    // here on purpose, since that would leave this page in the history.
+    const replace = vi.fn();
+    vi.stubGlobal('location', { origin: 'https://portal.test', replace });
 
     session.redirectAfterLogout('/manage');
 
+    expect(replace).toHaveBeenCalledExactlyOnceWith(
+      'https://authn.test/login?return_to=https%3A%2F%2Fportal.test%2Fmanage',
+    );
     // With the flag set, Back from the login gets past the guard.
     expect(session.hasTriedLogin()).toBe(false);
   });
