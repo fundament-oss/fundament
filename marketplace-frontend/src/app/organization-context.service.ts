@@ -7,6 +7,29 @@ import SessionService from './session.service';
 
 const STORAGE_KEY = 'marketplace_selected_organization_id';
 
+// localStorage is absent during a server render and throws on access where the
+// browser blocks site data, even for a typeof check. The selection is only a
+// convenience, so neither may get in the way of the portal or of logging out.
+function readStoredOrganization(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredOrganization(id: string | null): void {
+  try {
+    if (id === null) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, id);
+    }
+  } catch {
+    // Nowhere to remember it; the selection lasts until the page is reloaded.
+  }
+}
+
 /** One of the session's organizations, as the header shows it. */
 export interface OrganizationOption {
   id: string;
@@ -80,9 +103,19 @@ export default class OrganizationContextService {
   setOrganizationId(id: string) {
     this.organizationId.set(id);
     this.loaded = Promise.resolve(id);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, id);
-    }
+    writeStoredOrganization(id);
+  }
+
+  /**
+   * Forgets the stored selection, so the next person to sign in on this browser
+   * starts from their own first membership. Only the stored copy: this runs on
+   * the way out to the login, and emptying the signals would make everything
+   * watching the organization reload against a session that has just ended.
+   */
+  // A method although it touches only storage: the key belongs to this service.
+  // eslint-disable-next-line class-methods-use-this
+  forgetStoredOrganization() {
+    writeStoredOrganization(null);
   }
 
   private async load(): Promise<string | null> {
@@ -98,7 +131,7 @@ export default class OrganizationContextService {
     // the names are only for the header's switcher.
     this.loadNames(ids).catch(() => {});
 
-    const stored = typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY);
+    const stored = readStoredOrganization();
     const active = stored && ids.includes(stored) ? stored : (ids[0] ?? null);
     this.organizationId.set(active);
     return active;

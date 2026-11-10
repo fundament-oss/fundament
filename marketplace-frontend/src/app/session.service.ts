@@ -225,6 +225,17 @@ export default class SessionService {
   }
 
   /**
+   * Leaves for the login after signing out. Not recorded as a login attempt,
+   * since nobody has tried one yet: with the flag set, pressing Back from the
+   * login page would get past the guard and land on a portal with no session.
+   * A replace, so the signed-out page leaves the history: Back could otherwise
+   * restore it from the back/forward cache, where no guard runs at all.
+   */
+  redirectAfterLogout(path: string): void {
+    window.location.replace(this.loginUrl(path));
+  }
+
+  /**
    * Asks authn-api for the session. keepOnError keeps the user this page
    * already had when authn fails for any reason other than saying there is
    * no session.
