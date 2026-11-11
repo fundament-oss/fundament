@@ -1,4 +1,4 @@
-FROM ghcr.io/printeers/trek:0.12.5
+FROM ghcr.io/printeers/trek:0.12.6
 COPY ./trek.yaml /data
 COPY ./testdata /data/testdata
 COPY ./migrations /data/migrations

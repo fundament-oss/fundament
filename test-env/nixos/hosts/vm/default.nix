@@ -17,12 +17,10 @@
   boot.loader.efi.canTouchEfiVariables = false;
   services.qemuGuest.enable = true;
 
-  # TODO: remove this binfmt block once both are fixed:
-  #   - ghcr.io/printeers/trek publishes arm64; then bump FROM in db/Dockerfile.
-  #   - GARDENER_VERSION in test-env/mod.just is v1.140.0 or later (metrics-exporter 0.44.0).
+  # TODO: remove this binfmt block once GARDENER_VERSION in test-env/mod.just is
+  # v1.140.0 or later (metrics-exporter 0.44.0).
   # x86_64 binaries run emulated on aarch64, as Docker Desktop runs them on a Mac:
-  # ghcr.io/printeers/trek (the db image's base) is amd64-only, and Gardener's
-  # metrics-exporter 0.43.0 ships an amd64 binary in its arm64 image.
+  # Gardener's metrics-exporter 0.43.0 ships an amd64 binary in its arm64 image.
   # The emulator is static so containers can run it (fixBinary), and non-PIE for
   # x86_64 only: nixpkgs' static-PIE qemu-x86_64 segfaults on start, and its
   # aarch64 targets fail to link.
