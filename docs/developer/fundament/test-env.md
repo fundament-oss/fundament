@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-`just dev` runs the platform in mock mode: a cluster you create exists only as a row in the database. The test environment runs the platform against a real Gardener, inside a VM, so cluster lifecycle, node pools, shoot status and cluster RBAC behave as in an installation. The whole e2e suite runs there, including the scenarios that need a real Gardener (`@real-gardener`).
+`just dev` runs the platform in mock mode: a cluster you create exists only as a row in the database. The test environment runs the platform against a real Gardener, inside a VM, so cluster lifecycle, node pools, shoot status and cluster RBAC behave as in an installation. The whole e2e suite runs there, including the scenarios that need a real Gardener (`@real-gardener`); the ones that need clusters to exist only in the database (`@mock-gardener`) skip.
 
 ```
  your machine: Linux on x86_64 with KVM, or macOS on Apple silicon
