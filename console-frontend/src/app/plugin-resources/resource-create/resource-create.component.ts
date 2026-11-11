@@ -10,7 +10,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import PluginRegistryService from '../plugin-registry.service';
@@ -23,12 +23,16 @@ import ProjectNamespacesService from '../project-namespaces.service';
 import ProjectNamespacesLoader from '../project-namespaces-loader';
 import type { ParsedCrd } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
+import { resourceListLabel, resourceSingularLabelMidSentence } from '../crd-schema.utils';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/page';
 import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
 
 @Component({
   selector: 'app-resource-create',
@@ -39,6 +43,8 @@ import '@nldd/design-system/simple-section';
 })
 export default class ResourceCreateComponent implements OnInit {
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   private titleService = inject(TitleService);
 
@@ -64,6 +70,22 @@ export default class ResourceCreateComponent implements OnInit {
   protected projectId = computed(() => this.routeParams().get('id') ?? '');
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
+
+  private menuItem = computed(() =>
+    this.plugin()?.menu.project?.find((i) => i.crd === this.resourceKind()),
+  );
+
+  /** Names the list the back button returns to, as the list titles itself. */
+  protected kindLabel = computed(() =>
+    resourceListLabel(this.menuItem(), this.crdDef()?.kind, this.resourceKind()),
+  );
+
+  /** "New database", the same title a create sheet gets. Until the CRD has
+   *  loaded there is no kind to name, and the title says what the page is for. */
+  protected title = computed(() => {
+    const singular = resourceSingularLabelMidSentence(this.menuItem(), this.crdDef()?.kind);
+    return singular ? `New ${singular}` : 'New';
+  });
 
   customUIUrl = computed(() =>
     buildCustomUIUrl({
@@ -135,7 +157,9 @@ export default class ResourceCreateComponent implements OnInit {
   readonly listLink = ['..'];
 
   constructor() {
-    this.titleService.setTitle('Create');
+    effect(() => {
+      this.titleService.setTitle(this.title());
+    });
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
@@ -177,5 +201,12 @@ export default class ResourceCreateComponent implements OnInit {
     } finally {
       this.crdLoaded.set(true);
     }
+  }
+
+  goToList(event?: Event): void {
+    // The back event bubbles and composes, so the split view in the shell hears
+    // it too and would navigate one step further up on its own.
+    event?.stopPropagation();
+    this.router.navigate(this.listLink, { relativeTo: this.route });
   }
 }

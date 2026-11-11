@@ -6,13 +6,18 @@
 // detailSection hook, after the SDK loaded.
 
 import {
+  emptyStateHtml,
   errorBox,
+  hintHtml,
+  loadingHtml,
+  phaseBadgeHtml,
   quantityError,
   escapeHtml,
-  emptyRow,
-  errorRow,
-  renderDefList,
+  renderKeyValueList,
+  resourceListHtml,
   resourceNameError,
+  sectionHtml,
+  wireListRows,
   wireSubmit,
   formFieldHtml,
   formActionsHtml,
@@ -50,9 +55,19 @@ export function mountBucketsSection(container, item, ctx, cfg) {
   const namespaces = ctx.namespaces ?? [];
 
   container.innerHTML = `
-    <h2 class="plugin-heading">Buckets</h2>
-    <div class="buckets-body"></div>
+    <nldd-spacer size="24"></nldd-spacer>
+    ${sectionHtml(
+      'Buckets',
+      `<nldd-button data-role="create" type="button" appearance="primary" start-icon="plus-small"
+                    text="New bucket…"></nldd-button>
+      <nldd-spacer size="16"></nldd-spacer>
+      <div class="buckets-body"></div>`,
+    )}
   `;
+  // The create page needs the class its claim is provisioned against.
+  container.querySelector('[data-role="create"]').addEventListener('click', () => {
+    fundament.openSheet({ kind: OBC_KIND, view: 'create', params: { storageClassName } });
+  });
   const body = container.querySelector('.buckets-body');
 
   // A bucket created, or a sheet replaced: the list may be out of date.
@@ -60,21 +75,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
   showList();
 
   async function showList() {
-    const headers = ['Name', 'Namespace', 'Phase', 'Bucket'];
-    body.innerHTML = `
-      <div class="plugin-actions">
-        <button type="button" class="plugin-button" data-role="create">Create bucket</button>
-      </div>
-      <table class="plugin-table">
-        <thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
-        <tbody>${emptyRow(headers.length, 'Loading…')}</tbody>
-      </table>
-    `;
-    // The create page needs the class its claim is provisioned against.
-    body.querySelector('[data-role="create"]').addEventListener('click', () => {
-      fundament.openSheet({ kind: OBC_KIND, view: 'create', params: { storageClassName } });
-    });
-    const tbody = body.querySelector('tbody');
+    body.innerHTML = loadingHtml('Loading buckets…');
 
     let claims;
     let failedNamespaces = [];
@@ -97,35 +98,37 @@ export function mountBucketsSection(container, item, ctx, cfg) {
       }
       claims = claims.filter((c) => c.spec?.storageClassName === storageClassName);
     } catch (err) {
-      tbody.innerHTML = errorRow(headers.length, err);
+      body.innerHTML = errorBox(err);
       return;
     }
 
-    const failureNote = failedNamespaces.length === 0 ? '' : errorRow(
-      headers.length, Error(`listing failed in ${failedNamespaces.join(', ')}`));
+    const failureNote = failedNamespaces.length === 0
+      ? ''
+      : `<nldd-spacer size="12"></nldd-spacer>${errorBox(
+        `listing failed in ${failedNamespaces.join(', ')}`,
+        'Some buckets may be missing',
+      )}`;
     if (claims.length === 0) {
-      tbody.innerHTML = failureNote || emptyRow(headers.length, 'No buckets on this storage yet.');
+      body.innerHTML = failureNote || emptyStateHtml({
+        icon: 'cylinder-split-slash',
+        text: 'No buckets on this storage yet',
+      });
       return;
     }
-    tbody.innerHTML = claims
-      .map((c) => `
-        <tr data-name="${escapeHtml(c.metadata?.name ?? '')}" data-namespace="${escapeHtml(c.metadata?.namespace ?? '')}">
-          <td><a href="#" class="row-link">${escapeHtml(c.metadata?.name ?? '')}</a></td>
-          <td>${escapeHtml(c.metadata?.namespace ?? '')}</td>
-          <td>${escapeHtml(c.status?.phase ?? 'Unknown')}</td>
-          <td>${escapeHtml(requestedBucket(c.spec))}</td>
-        </tr>`)
-      .join('') + failureNote;
-    tbody.querySelectorAll('a.row-link').forEach((link) => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const row = link.closest('tr');
-        fundament.openSheet({
-          kind: OBC_KIND,
-          view: 'detail',
-          resource: { name: row.dataset.name, namespace: row.dataset.namespace },
-        });
-      });
+    // The namespace's console name where the project gave one: the cluster
+    // name (tnt-<project>--<name>) is not what anyone calls it.
+    const displayName = (ns) => ctx.namespaceDisplayNames?.[ns] ?? ns;
+    body.innerHTML = resourceListHtml(
+      claims.map((c) => ({
+        name: c.metadata?.name ?? '',
+        namespace: c.metadata?.namespace ?? '',
+        supportingText: `Namespace ${displayName(c.metadata?.namespace ?? '')} · bucket ${requestedBucket(c.spec)}`,
+        badge: phaseBadgeHtml(c.status?.phase),
+      })),
+      'Buckets',
+    ) + failureNote;
+    wireListRows(body, (name, namespace) => {
+      fundament.openSheet({ kind: OBC_KIND, view: 'detail', resource: { name, namespace } });
     });
   }
 }
@@ -140,7 +143,7 @@ export async function bucketDetailPage(ctx) {
     sheetBody.innerHTML = errorBox('no bucket claim given', 'Cannot show the bucket');
     return;
   }
-  sheetBody.innerHTML = '<p class="plugin-text">Loading…</p>';
+  sheetBody.innerHTML = loadingHtml();
   try {
     const [claim, cm] = await Promise.all([
       fundament.k8s.get({ ...OBC, namespace, name }),
@@ -157,12 +160,12 @@ export async function bucketDetailPage(ctx) {
     if (spec.additionalConfig?.maxSize) pairs.push(['Max size', spec.additionalConfig.maxSize]);
     if (spec.additionalConfig?.maxObjects) pairs.push(['Max objects', spec.additionalConfig.maxObjects]);
 
-    let connection = '<p class="plugin-text">Connection details appear once the claim is Bound.</p>';
+    let connection = hintHtml('Connection details appear once the claim is Bound.');
     if (cm) {
-      connection = renderDefList([
+      connection = renderKeyValueList([
         ['Endpoint', `http://${cm.data?.BUCKET_HOST ?? '?'}:${cm.data?.BUCKET_PORT ?? '?'}`],
         ['Bucket', cm.data?.BUCKET_NAME ?? '—'],
-      ]);
+      ], 'Connection');
     }
 
     // Without the client-side uniqueness pre-check, a taken exact name
@@ -172,27 +175,34 @@ export async function bucketDetailPage(ctx) {
     let pendingNote = '';
     if (phase !== 'Bound') {
       pendingNote = spec.bucketName
-        ? `<p class="plugin-hint">The provisioner has not fulfilled this claim yet and retries with backoff. For an exact bucket name this can mean the name is already taken on this store — in or outside Kubernetes. If it stays Pending, delete the claim and pick another name.</p>`
-        : `<p class="plugin-hint">The provisioner has not fulfilled this claim yet; it retries with backoff.</p>`;
+        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml('The provisioner has not fulfilled this claim yet and retries with backoff. For an exact bucket name this can mean the name is already taken on this store, in or outside Kubernetes. If it stays Pending, delete the claim and pick another name.')}`
+        : `<nldd-spacer size="12"></nldd-spacer>${hintHtml('The provisioner has not fulfilled this claim yet; it retries with backoff.')}`;
     }
 
     // The Secret's name is shown; its values never reach this iframe.
     const mount = `envFrom:
   - configMapRef: { name: ${name} }
   - secretRef: { name: ${name} }`;
-    sheetBody.lastElementChild.outerHTML = `
-      ${renderDefList(pairs)}
+    sheetBody.innerHTML = `
+      ${renderKeyValueList(pairs, 'Bucket claim')}
       ${pendingNote}
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="5"><h2>Connection</h2></nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
       ${connection}
-      <p class="plugin-hint">
-        Credentials are in the Secret <code>${escapeHtml(name)}</code> (same namespace),
-        as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Give a pod both with:
-      </p>
-      <pre class="plugin-text"><code>${escapeHtml(mount)}</code></pre>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-rich-text>
+        <p>
+          Credentials are in the Secret <code>${escapeHtml(name)}</code> (same namespace),
+          as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Give a pod both with:
+        </p>
+        <pre><code>${escapeHtml(mount)}</code></pre>
+      </nldd-rich-text>
+      <nldd-spacer size="24"></nldd-spacer>
     `;
     // No Close of its own: the console's sheet has one.
   } catch (err) {
-    sheetBody.lastElementChild.outerHTML = errorBox(err);
+    sheetBody.innerHTML = errorBox(err);
   }
 }
 

@@ -3,7 +3,7 @@
 // with the kind and view it was asked for, so the form is picked here rather
 // than by an HTML file per form. The create forms also serve the routed
 // create page, which loads this same file.
-import { loadSdk, ensureNldd, errorBox } from './_shared.js';
+import { bootPage, errorBox } from './_shared.js';
 import {
   consumerCreatePage,
   consumerEditPage,
@@ -30,19 +30,12 @@ const PAGES = {
 
 async function main() {
   const content = document.getElementById('content');
-  await loadSdk();
-  const ctx = await fundament.init;
+  // The forms are built from the NLDD bundle; bootPage says so in plain text
+  // when it does not load.
+  const ctx = await bootPage();
   const page = PAGES[ctx.crdKind]?.[ctx.view];
   if (!page) {
     content.innerHTML = errorBox(`no ${ctx.view} form for ${ctx.crdKind}`, 'Cannot open');
-    return;
-  }
-  // The forms are built from the NLDD bundle; without it they would render
-  // as bare markup.
-  try {
-    await ensureNldd();
-  } catch (err) {
-    content.innerHTML = errorBox(err, 'Cannot open the form');
     return;
   }
   await page(ctx);

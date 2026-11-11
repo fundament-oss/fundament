@@ -3,8 +3,10 @@
 //
 // The plugin CSP has no 'unsafe-inline', which rules out onclick= and inline
 // style alike: events go through addEventListener, styling through the
-// <nldd-*> components on the sheet pages and the .plugin-* classes in
-// plugin-sdk.css.
+// <nldd-*> components, which every page loads (bootPage).
+//
+// The Console draws each page's title bar, title and way back, so a
+// page starts with its own content: no <h1>, no back button.
 
 // Loads the plugin SDK v1. The iframe runs on the plugin-proxy origin, which
 // also serves the SDK, so these bare paths satisfy script-src 'self'. The /v1/
@@ -26,9 +28,8 @@ export function loadSdk() {
 
 // Loads the shared NLDD Design System bundle served next to the SDK
 // (FUN-18) and mirrors the body's light/dark class into data-scheme.
-// Memoized and loaded only by sheet.js, so a host without the bundle
-// still serves the read-only views; the stylesheet is awaited too, or a form
-// renders unstyled with the error swallowed.
+// Memoized; the stylesheet is awaited too, or a page renders unstyled with the
+// error swallowed.
 let nlddLoad;
 let nlddThemeSync = false;
 export function ensureNldd() {
@@ -71,6 +72,24 @@ export function ensureNldd() {
   return nlddLoad;
 }
 
+// Every page starts here: the SDK and the design system side by side, then
+// the init context. The NLDD bundle is what sets the pages in RijksSans and
+// draws every <nldd-*> element, so a page does not render without it.
+export async function bootPage() {
+  try {
+    await Promise.all([loadSdk(), ensureNldd()]);
+  } catch (err) {
+    // Without the bundle no <nldd-*> element renders, an error banner
+    // included, so this one says it in plain text.
+    const message = document.createElement('p');
+    message.className = 'plugin-text';
+    message.textContent = `Cannot open this page: ${err?.message ?? err}`;
+    document.querySelector('.plugin-card')?.replaceChildren(message);
+    throw err;
+  }
+  return fundament.init;
+}
+
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -81,18 +100,88 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-export function emptyRow(colspan, message = 'No items.') {
-  return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(message)}</td></tr>`;
-}
-
-export function errorRow(colspan, err) {
-  const message = err?.message ?? String(err);
-  return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
-}
-
-// The block-level sibling of errorRow, for detail views and sheet pages.
+// A critical banner for a page or section whose data failed to load.
 export function errorBox(err, prefix = 'Failed to load') {
-  return `<div class="plugin-error">${escapeHtml(`${prefix}: ${err?.message ?? err}`)}</div>`;
+  return `<nldd-banner variant="critical" text="${escapeHtml(`${prefix}: ${err?.message ?? err}`)}"></nldd-banner>`;
+}
+
+// What a list or detail shows while it reads.
+export function loadingHtml(text = 'Loading…') {
+  return `<nldd-inline-dialog variant="loading" text="${escapeHtml(text)}"></nldd-inline-dialog>`;
+}
+
+// A list with nothing in it: what is missing, and what makes it appear.
+export function emptyStateHtml({ icon, text, supportingText }) {
+  return `<nldd-inline-dialog icon="${escapeHtml(icon)}" icon-color="secondary" text="${escapeHtml(text)}"${
+    supportingText ? ` supporting-text="${escapeHtml(supportingText)}"` : ''
+  }></nldd-inline-dialog>`;
+}
+
+// The badge colors definition.yaml's uiHints give the Console's own views,
+// plus a claim's Bound/Pending/Lost. Anything else is said as is, in gray.
+const PHASE_COLORS = {
+  Ready: 'success',
+  Bound: 'success',
+  Provisioning: 'warning',
+  Pending: 'warning',
+  Degraded: 'critical',
+  Lost: 'critical',
+};
+
+export function phaseBadgeHtml(phase) {
+  const text = phase || 'Unknown';
+  return `<nldd-badge color="${PHASE_COLORS[text] ?? 'neutral'}" text="${escapeHtml(text)}"></nldd-badge>`;
+}
+
+// A list of resources as one box of rows, each a button that opens the
+// resource: its name, a summary under it, and its status at the end. The
+// summary carries what the old table columns did, as a sentence rather than a
+// column that is empty for most rows.
+export function resourceListHtml(rows, accessibleLabel) {
+  const items = rows
+    .map(({ name, namespace, text, supportingText, badge }) => {
+      const ns = namespace ? ` data-namespace="${escapeHtml(namespace)}"` : '';
+      const supporting = supportingText ? ` supporting-text="${escapeHtml(supportingText)}"` : '';
+      const status = badge
+        ? `<nldd-spacer-cell size="12"></nldd-spacer-cell><nldd-cell width="fit-content">${badge}</nldd-cell>`
+        : '';
+      return `
+        <nldd-list-item button data-name="${escapeHtml(name)}"${ns}>
+          <nldd-text-cell text="${escapeHtml(text ?? name)}"${supporting}></nldd-text-cell>
+          ${status}
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-icon-cell icon="chevron-right" color="secondary" size="20"></nldd-icon-cell>
+        </nldd-list-item>`;
+    })
+    .join('');
+  return `<nldd-list appearance="box-tinted" accessible-label="${escapeHtml(accessibleLabel)}">${items}</nldd-list>`;
+}
+
+// Opens a row's resource on click, and on Enter or Space, which the row's
+// inner button turns into a click.
+export function wireListRows(root, open) {
+  root.querySelectorAll('nldd-list-item[data-name]').forEach((row) => {
+    row.addEventListener('click', () => open(row.dataset.name, row.dataset.namespace || undefined));
+  });
+}
+
+// A titled box on a detail page, as the Console's generated detail page draws
+// its sections.
+export function sectionHtml(title, body) {
+  return `
+    <nldd-box>
+      <nldd-container padding="16" md-padding="24">
+        <nldd-title size="5"><h2>${escapeHtml(title)}</h2></nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
+        ${body}
+      </nldd-container>
+    </nldd-box>`;
+}
+
+// Secondary explanation under a list or a section. Trusted markup: callers
+// escape what they put in.
+export function hintHtml(html) {
+  return `<nldd-text size="sm" color="secondary">${html}</nldd-text>`;
 }
 
 // Posts a navigate message to the parent, which resolves it relative to the
@@ -105,24 +194,21 @@ export function navigateToDetail(name, namespace) {
   );
 }
 
-// Makes each data-name row a keyboard-reachable link. Anchors must be in the DOM.
-export function wireRowLinks(root) {
-  root.querySelectorAll('a.row-link').forEach((link) => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const row = link.closest('tr');
-      navigateToDetail(row.dataset.name, row.dataset.namespace || undefined);
-    });
-  });
-}
-
-// Renders a key/value definition list from [key, value] pairs. Both halves are
-// escaped here, so pass raw values — pre-escaped ones render as "&amp;".
-export function renderDefList(pairs) {
+// Renders [key, value] pairs as an nldd-list, label left and value right: the
+// same rows the Console's generated detail page draws. Both halves are escaped
+// here, so pass raw values: pre-escaped ones render as "&amp;".
+export function renderKeyValueList(pairs, accessibleLabel) {
   const rows = pairs
-    .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
+    .map(
+      ([k, v]) => `
+        <nldd-list-item>
+          <nldd-text-cell text="${escapeHtml(k)}"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell width="fit-content" horizontal-alignment="right" text="${escapeHtml(v)}"></nldd-text-cell>
+        </nldd-list-item>`,
+    )
     .join('');
-  return `<dl class="plugin-deflist">${rows}</dl>`;
+  return `<nldd-list appearance="simple" accessible-label="${escapeHtml(accessibleLabel)}">${rows}</nldd-list>`;
 }
 
 // Mirrors the Kubernetes object-name pattern the CRDs enforce; returns an
@@ -154,7 +240,9 @@ export function formFieldHtml(label, control, { errorId, hint } = {}) {
     </nldd-form-field>`;
 }
 
-// The Save/Create and Cancel pair at the bottom of every form.
+// The Save/Create and Cancel pair at the bottom of every form, in the same
+// group the Console's own dialogs use. The spacer keeps the buttons off the
+// bottom edge of the sheet.
 export function formActionsHtml({ submitId, submitText, cancelId }) {
   return `
     <nldd-form-actions>
@@ -162,7 +250,8 @@ export function formActionsHtml({ submitId, submitText, cancelId }) {
         <nldd-button id="${submitId}" type="submit" appearance="primary" text="${escapeHtml(submitText)}"></nldd-button>
         <nldd-button id="${cancelId}" type="button" appearance="secondary" text="Cancel"></nldd-button>
       </nldd-button-group>
-    </nldd-form-actions>`;
+    </nldd-form-actions>
+    <nldd-spacer size="24"></nldd-spacer>`;
 }
 
 export function errorBannerHtml(id) {

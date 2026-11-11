@@ -9,7 +9,6 @@ import type { FSCInstallation } from './types.ts';
 import type { InitContext } from './sdk.ts';
 
 const content = document.getElementById('content') as HTMLElement;
-const heading = document.getElementById('heading') as HTMLElement;
 
 // This view renders only .plugin-* markup (no <nldd-*> components), so it loads
 // just the SDK — not the NLDD Design System bundle.
@@ -33,8 +32,6 @@ if (ctx && !ctx.resource?.name) {
       name: ctx.resource!.name as string,
       namespace: ctx.resource!.namespace ?? undefined,
     });
-    heading.textContent = `FSC Installation · ${item.metadata?.name ?? ctx.resource!.name}`;
-
     const directory = item.spec?.directory ?? {};
     const spec = {
       Namespace: item.metadata?.namespace,

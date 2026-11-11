@@ -1,18 +1,20 @@
 import {
-  loadSdk,
+  bootPage,
   errorBox,
   fetchCephCapacity,
   escapeHtml,
+  hintHtml,
   humanizeQuantity,
-  renderDefList,
+  loadingHtml,
+  renderKeyValueList,
+  sectionHtml,
 } from './_shared.js';
 
-await loadSdk();
-const ctx = await fundament.init;
-
 const content = document.getElementById('content');
-const heading = document.getElementById('heading');
 const actions = document.getElementById('actions');
+content.innerHTML = loadingHtml();
+
+const ctx = await bootPage();
 
 const RESOURCE = {
   group: 'ceph.fundament.io',
@@ -47,26 +49,27 @@ async function diskIndex() {
 // behind it has no path to show and says so rather than rendering bare.
 function renderDiskList(entries, byName) {
   const names = (entries ?? []).map((d) => d.name);
-  if (names.length === 0) return '<p class="plugin-text">No disks selected.</p>';
+  if (names.length === 0) return hintHtml('No disks selected.');
   const rows = names
     .map((diskName) => {
       const path = byName.get(diskName)?.status?.path;
       const primary = path ?? diskName;
       const secondary = path ? diskName : 'no matching disk found';
-      return `<li>${escapeHtml(primary)}<br /><span class="plugin-hint">${escapeHtml(
-        secondary,
-      )}</span></li>`;
+      return `
+        <nldd-list-item>
+          <nldd-text-cell text="${escapeHtml(primary)}" supporting-text="${escapeHtml(secondary)}"></nldd-text-cell>
+        </nldd-list-item>`;
     })
     .join('');
-  return `<ul>${rows}</ul>`;
+  return `<nldd-list appearance="simple" accessible-label="Contributed disks">${rows}</nldd-list>`;
 }
 
 function renderReadOnly(item, byName) {
   const status = item.status ?? {};
   const spec = item.spec ?? {};
 
+  // The phase is the badge beside the Console's title; the message says why.
   const pairs = [
-    ['Phase', status.phase ?? 'Unknown'],
     // Labelled as contributions, not capacity: the obvious reading is wrong.
     ['Disks contributed', String(status.selectedDiskCount ?? '—')],
     ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
@@ -74,24 +77,24 @@ function renderReadOnly(item, byName) {
   if (status.message) pairs.push(['Message', status.message]);
 
   return `
-    <h2 class="plugin-heading">Status</h2>
-    ${renderDefList(pairs)}
-    <p class="plugin-hint">
-      Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
-      turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
-      are placed across all of the cluster's disks, so the raw size above is this pool's
-      contribution.
-    </p>
-    <p class="plugin-hint" data-role="capacity"></p>
-    <h2 class="plugin-heading">Contributed Disks</h2>
-    ${renderDiskList(spec.disks, byName)}
+    ${sectionHtml(
+      'Status',
+      `${renderKeyValueList(pairs, 'Status')}
+      <nldd-spacer size="12"></nldd-spacer>
+      ${hintHtml(`Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage
+        objects turn that capacity into StorageClasses. Volumes provisioned through those
+        StorageClasses are placed across all of the cluster's disks, so the raw size above is
+        this pool's contribution.`)}
+      <div data-role="capacity"></div>`,
+    )}
+    <nldd-spacer size="24"></nldd-spacer>
+    ${sectionHtml('Contributed disks', renderDiskList(spec.disks, byName))}
   `;
 }
 
 async function showDetail() {
   try {
     const item = await fundament.k8s.get({ ...RESOURCE, name });
-    heading.textContent = `Disk Pool · ${item.metadata?.name ?? name}`;
     content.innerHTML = renderReadOnly(item, await diskIndex());
     actions.hidden = false;
     // .onclick, not addEventListener: this button lives outside #content and
@@ -105,8 +108,10 @@ async function showDetail() {
     fetchCephCapacity().then((cap) => {
       const el = content.querySelector('[data-role="capacity"]');
       if (!cap || !el) return;
-      el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
-        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`;
+      el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
+        `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`,
+      ))}`;
     });
   } catch (err) {
     actions.hidden = true;
@@ -115,7 +120,7 @@ async function showDetail() {
 }
 
 if (!name) {
-  content.textContent = 'No disk pool selected.';
+  content.innerHTML = errorBox('no disk pool selected', 'Cannot show the disk pool');
 } else {
   // The edit sheet saved: show what it saved.
   fundament.onResourcesChanged(() => showDetail());
