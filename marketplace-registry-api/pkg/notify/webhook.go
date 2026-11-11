@@ -38,7 +38,7 @@ type ReviewRequest struct {
 type Webhooks struct {
 	logger   *slog.Logger
 	targets  []*url.URL
-	adminURL string
+	adminURL *url.URL
 	client   *http.Client
 }
 
@@ -46,8 +46,9 @@ type Webhooks struct {
 // the first submission. Webhook URLs embed a secret, so errors and logs only
 // ever name the host. adminURL is required: the link is how reviewers act.
 func NewWebhooks(logger *slog.Logger, rawURLs []string, adminURL string) (*Webhooks, error) {
-	if !isAbsoluteHTTP(adminURL) {
-		return nil, errors.New("marketplace admin URL must be an absolute http(s) URL when review webhooks are enabled")
+	admin, err := url.Parse(strings.TrimSpace(adminURL))
+	if err != nil || !isAbsoluteHTTP(adminURL) || admin.RawQuery != "" || admin.Fragment != "" {
+		return nil, errors.New("marketplace admin URL must be an absolute http(s) URL without query or fragment when review webhooks are enabled")
 	}
 	targets := make([]*url.URL, 0, len(rawURLs))
 	for i, raw := range rawURLs {
@@ -61,7 +62,7 @@ func NewWebhooks(logger *slog.Logger, rawURLs []string, adminURL string) (*Webho
 	return &Webhooks{
 		logger:   logger,
 		targets:  targets,
-		adminURL: strings.TrimRight(adminURL, "/"),
+		adminURL: admin,
 		client: &http.Client{
 			Timeout: requestTimeout,
 			// A redirect can turn the POST into a GET that "succeeds"; report
@@ -104,8 +105,8 @@ func (w *Webhooks) message(req ReviewRequest) string {
 	if name == "" {
 		name = req.PluginName
 	}
-	return fmt.Sprintf(":mag: New review requested: %s (%s) version %s\n[Open submission](%s/admin/submissions/%s)",
-		codeSpan(name), codeSpan(req.PluginName), codeSpan(req.Version), w.adminURL, req.SubmissionID)
+	return fmt.Sprintf(":mag: New review requested: %s (%s) version %s\n[Open submission](%s)",
+		codeSpan(name), codeSpan(req.PluginName), codeSpan(req.Version), w.adminURL.JoinPath("admin", "submissions", req.SubmissionID.String()))
 }
 
 // codeSpan wraps s in backticks. Code spans cannot contain a backtick or a

@@ -140,4 +140,30 @@ func TestNewWebhooksRejectsInvalidURLs(t *testing.T) {
 		_, err = notify.NewWebhooks(slog.Default(), []string{"https://example.com/hook"}, raw)
 		assert.Error(t, err, "admin URL %q", raw)
 	}
+
+	// The submission path is appended to the admin URL; a query or fragment
+	// would swallow it.
+	for _, raw := range []string{testAdminURL + "?x=1", testAdminURL + "#top"} {
+		_, err := notify.NewWebhooks(slog.Default(), []string{"https://example.com/hook"}, raw)
+		assert.Error(t, err, "admin URL %q", raw)
+	}
+}
+
+func TestReviewRequestedJoinsTheAdminLinkUnderABasePath(t *testing.T) {
+	var body atomic.Value
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body.Store(b)
+	}))
+	t.Cleanup(ts.Close)
+
+	webhooks, err := notify.NewWebhooks(slog.Default(), []string{ts.URL}, "https://example.com/review/")
+	require.NoError(t, err)
+
+	submissionID := uuid.New()
+	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: submissionID, PluginName: "p", Version: "1"})
+
+	raw, ok := body.Load().([]byte)
+	require.True(t, ok)
+	assert.Contains(t, string(raw), "(https://example.com/review/admin/submissions/"+submissionID.String()+")")
 }
