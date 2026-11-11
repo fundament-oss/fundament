@@ -84,17 +84,17 @@ export default class App {
   private session = inject(SessionService);
 
   // The backoffice's reviewers sign in against the staff IDP, not the console.
-  private staffSession = inject(StaffSessionService);
+  // Only the backoffice asks for it, so the storefront and the portal do not
+  // build a dcim-authn-api client for every visitor (FUN-20).
+  private readonly staffSession = this.variant === 'admin' ? inject(StaffSessionService) : null;
 
   protected readonly user: Signal<{ id: string; name: string } | null> =
-    this.variant === 'admin' ? this.staffSession.user : this.session.user;
+    this.staffSession?.user ?? this.session.user;
 
   // A build without a session surface (the demo) knows straight away: nobody
   // can be signed in there.
   private readonly sessionResolved = signal(
-    this.variant === 'admin'
-      ? !this.staffSession.hasSessionSurface()
-      : !this.session.hasSessionSurface(),
+    !(this.staffSession ?? this.session).hasSessionSurface(),
   );
 
   /**
@@ -165,10 +165,11 @@ export default class App {
       afterNextRender(() => this.watchSession());
     }
 
-    if (this.variant === 'admin' && this.staffSession.hasSessionSurface()) {
+    const { staffSession } = this;
+    if (staffSession?.hasSessionSurface()) {
       // The route guard asks as well; the lookups are shared. Once known, the
       // header follows StaffSessionService.user through sign-in and sign-out.
-      afterNextRender(() => this.markResolvedAfter(this.staffSession.ensureUser()));
+      afterNextRender(() => this.markResolvedAfter(staffSession.ensureUser()));
     }
   }
 
@@ -254,7 +255,7 @@ export default class App {
    * is a page of its own.
    */
   async handleLogout() {
-    if (this.variant === 'admin') {
+    if (this.staffSession) {
       try {
         await this.staffSession.logout();
       } catch {

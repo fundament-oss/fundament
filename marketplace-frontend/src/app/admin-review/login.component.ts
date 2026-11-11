@@ -74,10 +74,25 @@ export default class LoginComponent {
     inject(TitleService).setTitle('Sign in');
 
     // Someone who is already signed in (in DCIM, or in another tab) has no
-    // business here: send them on to where they were going.
+    // business here: send them on to where they were going. Unless the review
+    // API has just refused that same session, which sending them on would only
+    // repeat, round and round: say so instead, and leave the form to sign in
+    // afresh.
+    const refused = this.session.takeRefusal();
     this.session
       .ensureUser()
-      .then((user) => (user ? this.goOn() : false))
+      .then((user) => {
+        // A sign-in started meanwhile has taken over, and navigates itself; a
+        // second navigation would cancel its own.
+        if (!user || this.isLoading()) return;
+        if (refused) {
+          this.error.set(
+            'You are signed in, but the review service did not accept your session. Sign in again, or ask an administrator to check the session setup if this keeps happening.',
+          );
+          return;
+        }
+        this.goOn().catch(() => {});
+      })
       .catch(() => {});
 
     afterNextRender(() => {

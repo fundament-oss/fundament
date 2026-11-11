@@ -54,7 +54,8 @@ export const REGISTRY_TRANSPORT = new InjectionToken<Transport>('registry-transp
 // expires, or the reviewer signs out in DCIM) sends the reviewer back to the
 // login, and then on to the page they were on, rather than leaving the API's
 // `unauthenticated` on screen with nowhere to sign in. The error still reaches
-// the caller.
+// the caller. Marked as a refusal, so that a session dcim-authn-api still
+// accepts is not sent straight back here by the login page, round and round.
 function staffSessionInterceptor(): Interceptor {
   const router = inject(Router);
   const session = inject(StaffSessionService);
@@ -68,7 +69,7 @@ function staffSessionInterceptor(): Interceptor {
         ConnectError.from(err).code === Code.Unauthenticated &&
         !router.url.startsWith('/login')
       ) {
-        session.sessionEnded();
+        session.sessionRefused();
         router.navigate(['/login'], { queryParams: { returnUrl: router.url } }).catch(() => {});
       }
       throw err;

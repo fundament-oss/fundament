@@ -1,11 +1,20 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { DCIM_AUTHN_CLIENT } from '../../connect/dcim-authn';
+import endpoint from '../../connect/endpoint';
 import { ConfigService } from '../config.service';
 
 export interface StaffUser {
   id: string;
   name: string;
+}
+
+/** What dcim-authn-api said about the session. `failed` tells an outage (it
+ *  could not be asked, or could not answer) apart from an answer that there is
+ *  no session: `user` is null in both. */
+export interface StaffSession {
+  user: StaffUser | null;
+  failed: boolean;
 }
 
 /**
@@ -31,13 +40,20 @@ export default class StaffSessionService {
   /** The signed-in reviewer, or null when there is none (or not yet known). */
   readonly user = signal<StaffUser | null>(null);
 
-  private pending?: Promise<StaffUser | null>;
+  // The lookup still out, which every caller joins rather than starting one of
+  // its own. login() replaces it with a fresh one, since an older lookup was
+  // asked before the cookie existed.
+  private pending?: Promise<StaffSession>;
 
   // Bumped by every lookup and by every sign-out, so an answer that a newer
   // one overtook leaves the newer one in place. Without it, the empty answer
   // to a lookup started before signing in could land after the one started
   // by login(), and sign the reviewer straight back out.
   private lookups = 0;
+
+  // Set when marketplace-admin-api refused a session that dcim-authn-api may
+  // still accept (see sessionRefused), and taken by the login page it leads to.
+  private refused = false;
 
   /**
    * Whether this build has anywhere to sign in. The demo bundle and a
@@ -54,14 +70,14 @@ export default class StaffSessionService {
    * happened since (here or in DCIM) is found by the next caller.
    */
   ensureUser(): Promise<StaffUser | null> {
+    return this.ensureSession().then((session) => session.user);
+  }
+
+  /** As ensureUser, but telling an outage apart from no session at all. */
+  ensureSession(): Promise<StaffSession> {
     const user = this.user();
-    if (user) return Promise.resolve(user);
-    this.pending ??= this.lookup()
-      .then((result) => result.user)
-      .finally(() => {
-        this.pending = undefined;
-      });
-    return this.pending;
+    if (user) return Promise.resolve({ user, failed: false });
+    return this.pending ?? this.startLookup();
   }
 
   /**
@@ -86,7 +102,10 @@ export default class StaffSessionService {
       throw new Error(StaffSessionService.loginFailureMessage(response.status));
     }
 
-    const { user, failed } = await this.lookup();
+    // A fresh lookup, which callers from here on join: one already out was
+    // asked before the cookie existed.
+    this.refused = false;
+    const { user, failed } = await this.startLookup();
     if (failed) {
       // Signed in, but dcim-authn-api (or its directory) did not answer the
       // question who that is. A retry may well work.
@@ -96,8 +115,12 @@ export default class StaffSessionService {
     }
     if (!user) {
       // dcim-authn-api answered that there is no session, right after setting
-      // one: the cookie is not one this page can send back. A cookie domain
-      // that does not cover this host, most likely.
+      // one: the browser did not send the cookie back to it from this page. A
+      // cookie domain that does not cover dcim-authn-api's host, or a browser
+      // that blocks the cookie on a cross-site call. Whether the cookie also
+      // reaches marketplace-admin-api only shows on the first review call: a
+      // refusal there leads back to the login page, which then says so (see
+      // sessionRefused).
       throw new Error('You were signed in, but the session did not reach this site.');
     }
     return user;
@@ -120,21 +143,47 @@ export default class StaffSessionService {
     this.sessionEnded();
   }
 
-  /** Forgets the reviewer after an API has said the session is gone. */
+  /** Forgets the reviewer after signing out. */
   sessionEnded(): void {
     // Supersede any lookup still out, so its answer cannot sign the reviewer
     // back in.
     this.lookups += 1;
+    this.pending = undefined;
     this.user.set(null);
   }
 
   /**
-   * Asks dcim-authn-api who is signed in. For the guard any failure counts as
-   * nobody: a reviewer who cannot be identified cannot use the backoffice
-   * either, and the login page is where an outage then shows. `failed` tells
-   * login() an outage apart from an answer that there is no session.
+   * Forgets the reviewer after marketplace-admin-api refused the session. Most
+   * often it ran out, and dcim-authn-api says the same, so the login page
+   * shows its form. But dcim-authn-api may still accept it (a cookie domain
+   * that leaves out marketplace-admin-api's host, a JWT secret that differs):
+   * the login page would then send the reviewer straight back to the page
+   * that was just refused, and round again. The flag lets it say what
+   * happened instead.
    */
-  private async lookup(): Promise<{ user: StaffUser | null; failed: boolean }> {
+  sessionRefused(): void {
+    this.refused = true;
+    this.sessionEnded();
+  }
+
+  /** Whether marketplace-admin-api refused the session since the last
+   *  sign-in. Asking clears it, so only the login page it led to sees it. */
+  takeRefusal(): boolean {
+    const { refused } = this;
+    this.refused = false;
+    return refused;
+  }
+
+  private startLookup(): Promise<StaffSession> {
+    const lookup: Promise<StaffSession> = this.lookup().finally(() => {
+      if (this.pending === lookup) this.pending = undefined;
+    });
+    this.pending = lookup;
+    return lookup;
+  }
+
+  /** Asks dcim-authn-api who is signed in. */
+  private async lookup(): Promise<StaffSession> {
     this.lookups += 1;
     const lookup = this.lookups;
     let user: StaffUser | null = null;
@@ -156,15 +205,8 @@ export default class StaffSessionService {
     return { user, failed };
   }
 
-  // Joined under the configured URL rather than resolved against it, which
-  // would drop a path prefix dcim-authn-api may be served under.
   private endpoint(path: string): URL {
-    const configured = this.configService.getConfig().dcimAuthnApiUrl ?? '';
-    const base = new URL(
-      configured.endsWith('/') ? configured : `${configured}/`,
-      window.location.origin,
-    );
-    return new URL(path, base);
+    return endpoint(this.configService.getConfig().dcimAuthnApiUrl, path);
   }
 
   private static loginFailureMessage(status: number): string {

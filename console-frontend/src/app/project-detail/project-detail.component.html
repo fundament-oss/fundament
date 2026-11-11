@@ -220,6 +220,13 @@
         >
       </nldd-validation-list>
     </nldd-form-field>
+    @if (deleteError()) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="deleteError()"
+      ></nldd-banner>
+    }
   </nldd-container>
   <nldd-button
     slot="actions"

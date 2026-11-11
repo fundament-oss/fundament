@@ -90,7 +90,7 @@ describe('App', () => {
         if (outcome === 'fails') throw new Error('dcim-authn said no');
       });
       const consoleLogout = vi.spyOn(session, 'logout');
-      Object.assign(app, { variant: 'admin' });
+      Object.assign(app, { variant: 'admin', staffSession });
       return { navigate, consoleLogout };
     }
 

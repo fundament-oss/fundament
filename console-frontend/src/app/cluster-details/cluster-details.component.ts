@@ -836,25 +836,30 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
           this.showDeleteBlockedModal.set(true);
         } else {
           // Its projects were deleted in the meantime, so a retry can succeed.
-          this.deleteError.set(
-            `This cluster could not be deleted: ${error.rawMessage}. Try again.`,
-          );
+          this.showDeleteError(`This cluster could not be deleted: ${error.message}. Try again.`);
         }
         return;
       }
-      // rawMessage for a ConnectError: its message carries the status code as
-      // a prefix ("[not_found] ..."), which means nothing to the reader.
-      let detail: string | undefined;
-      if (error instanceof ConnectError) {
-        detail = error.rawMessage;
-      } else if (error instanceof Error) {
-        detail = error.message;
-      }
-      this.deleteError.set(
-        detail ? `Failed to delete cluster: ${detail}` : 'Failed to delete cluster',
+      // The transport's readableErrors interceptor has already made the
+      // message one for the reader, without Connect's "[code]" prefix.
+      this.showDeleteError(
+        error instanceof Error
+          ? `Failed to delete cluster: ${error.message}`
+          : 'Failed to delete cluster',
       );
     } finally {
       this.isDeleting.set(false);
+    }
+  }
+
+  /** In the dialog while it is open, so a retry is one click away. The dialog
+   *  can be closed (Escape) while the call runs, and a failure must not then
+   *  land in a dialog nobody sees: the page shows it instead. */
+  private showDeleteError(message: string): void {
+    if (this.showDeleteModal()) {
+      this.deleteError.set(message);
+    } else {
+      this.errorMessage.set(message);
     }
   }
 

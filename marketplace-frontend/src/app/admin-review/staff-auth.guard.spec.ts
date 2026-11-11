@@ -57,13 +57,14 @@ describe('staffAuthGuard', () => {
     expect(await runGuard()).toBe('/login?returnUrl=%2Fadmin%2Fsubmissions%2F42');
   });
 
-  // Nobody can use the backoffice without being identified, so an outage is
-  // shown on the login page, as a failed sign-in, rather than as an API error.
-  it('sends a visitor to the login when dcim-authn-api does not answer', async () => {
+  // An outage of dcim-authn-api alone must not lock out a reviewer whose
+  // session marketplace-admin-api still accepts: it decides, as it did before
+  // there was a login, and a refusal there leads to the login all the same.
+  it('lets the navigation through when dcim-authn-api does not answer', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, 'unavailable');
 
-    expect(await runGuard('/admin')).toBe('/login?returnUrl=%2Fadmin');
+    expect(await runGuard('/admin')).toBe(true);
   });
 
   it('lets the navigation through when there is nowhere to sign in', async () => {
@@ -206,6 +207,63 @@ describe('StaffSessionService.login', () => {
 
     expect(await early).toEqual(reviewer);
     expect(session.user()).toEqual(reviewer);
+  });
+
+  // A lookup started while login() reads the session back (the header, the
+  // guard) joins that one rather than overtaking it, which would leave login()
+  // with the answer from before and a wrong error.
+  it('shares the lookup login() reads the session back with', async () => {
+    const reviewer = { id: 'u1', name: 'Rev Iewer' };
+    const { session, getUserInfo } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    let answerLookup!: () => void;
+    getUserInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerLookup = () => resolve({ user: reviewer });
+        }),
+    );
+    let posted!: () => void;
+    const postDone = new Promise<void>((resolve) => {
+      posted = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      posted();
+      return new Response('{}');
+    });
+
+    const login = session.login('rev@example.com', 'secret');
+    await postDone;
+    await Promise.resolve();
+    const joined = session.ensureUser();
+    answerLookup();
+
+    await expect(login).resolves.toEqual(reviewer);
+    expect(await joined).toEqual(reviewer);
+    expect(getUserInfo).toHaveBeenCalledTimes(1);
+  });
+
+  it('remembers a refusal by the review API for the login page, once', async () => {
+    const reviewer = { id: 'u1', name: 'Rev Iewer' };
+    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+    await session.login('rev@example.com', 'secret');
+
+    session.sessionRefused();
+
+    expect(session.user()).toBeNull();
+    expect(session.takeRefusal()).toBe(true);
+    expect(session.takeRefusal()).toBe(false);
+  });
+
+  it('forgets a refusal on signing in again', async () => {
+    const reviewer = { id: 'u1', name: 'Rev Iewer' };
+    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+
+    session.sessionRefused();
+    await session.login('rev@example.com', 'secret');
+
+    expect(session.takeRefusal()).toBe(false);
   });
 
   it('ignores a lookup that answers after signing out', async () => {

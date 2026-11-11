@@ -21,7 +21,13 @@ const staffAuthGuard: CanActivateChildFn = async (_route, state) => {
   // this is belt and braces: a server has no session to look up.
   if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
 
-  if (await session.ensureUser()) return true;
+  // Only an answer that there is no session leads to the login. When
+  // dcim-authn-api cannot answer (down, unreachable), marketplace-admin-api
+  // still decides on its own, as it did before there was a login here: a
+  // reviewer holding a valid session keeps working through the outage, and
+  // one it refuses is sent to the login by the transport's interceptor.
+  const { user, failed } = await session.ensureSession();
+  if (user || failed) return true;
 
   return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };

@@ -3,6 +3,7 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN_CLIENT } from '../connect/authn';
+import endpoint from '../connect/endpoint';
 import { ConfigService } from './config.service';
 
 // Set on the way out to the login, cleared as soon as a session resolves, so
@@ -119,12 +120,7 @@ export default class SessionService {
    * place so the header does not claim a sign-out that did not happen.
    */
   async logout(): Promise<void> {
-    const configured = this.configService.getConfig().authnApiUrl ?? '';
-    const base = new URL(
-      configured.endsWith('/') ? configured : `${configured}/`,
-      window.location.origin,
-    );
-    const response = await fetch(new URL('logout', base), {
+    const response = await fetch(endpoint(this.configService.getConfig().authnApiUrl, 'logout'), {
       method: 'POST',
       credentials: 'include',
     });
@@ -176,16 +172,7 @@ export default class SessionService {
       return url.href;
     }
 
-    // Joined under the configured URL rather than resolved against it, which
-    // would drop a path prefix authn-api may be served under. The base is
-    // itself resolved against this page, so a root-relative authnApiUrl
-    // (`/api/authn`) works as it did when this was string concatenation.
-    const configured = config.authnApiUrl ?? '';
-    const base = new URL(
-      configured.endsWith('/') ? configured : `${configured}/`,
-      window.location.origin,
-    );
-    const url = new URL('login', base);
+    const url = endpoint(config.authnApiUrl, 'login');
     url.searchParams.set('return_to', new URL(path, window.location.origin).href);
     return url.href;
   }
