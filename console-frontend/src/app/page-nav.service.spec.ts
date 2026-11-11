@@ -14,11 +14,15 @@ function navAt(url: string, clusterName?: string): PageNavService {
         provide: OrganizationDataService,
         useValue: {
           getClusterById: () => (clusterName ? { cluster: { name: clusterName } } : undefined),
-          getProjectById: () => ({ project: { name: 'project-one', alias: 'Project one' } }),
-          getOrganizationById: () => undefined,
+          getProjectById: () => ({
+            project: { name: 'project-one', alias: 'Project one' },
+            cluster: { id: 'c1', name: clusterName },
+          }),
+          clusterSummaries: () => [],
+          currentOrganizationDisplayName: () => 'Acme',
         },
       },
-      { provide: OrganizationContextService, useValue: { currentOrganizationId: () => null } },
+      { provide: OrganizationContextService, useValue: { currentOrganizationName: () => 'acme' } },
     ],
   });
   return TestBed.inject(PageNavService);
@@ -30,6 +34,11 @@ describe('PageNavService.backText', () => {
     expect(nav.backText()).toBe('prod');
   });
 
+  it('names the cluster on its general page', () => {
+    const nav = navAt('/organizations/acme/clusters/c1/general', 'prod');
+    expect(nav.backText()).toBe('prod');
+  });
+
   it('falls back to "Cluster" when the cluster is unknown', () => {
     const nav = navAt('/clusters/c1/plugin-resources/p/databases');
     expect(nav.backText()).toBe('Cluster');
@@ -38,5 +47,10 @@ describe('PageNavService.backText', () => {
   it('names the project on a project plugin route', () => {
     const nav = navAt('/projects/pr1/plugin-resources/p/databases', 'prod');
     expect(nav.backText()).toBe('Project one');
+  });
+
+  it('names the organization on its own pages', () => {
+    const nav = navAt('/organizations/acme/clusters');
+    expect(nav.backText()).toBe('Acme');
   });
 });

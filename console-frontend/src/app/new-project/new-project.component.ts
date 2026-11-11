@@ -1,11 +1,13 @@
 import {
   Component,
-  OnInit,
-  Input,
   Output,
   EventEmitter,
   inject,
+  input,
   signal,
+  computed,
+  effect,
+  untracked,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -26,6 +28,7 @@ import {
 import AutofocusDirective from '../autofocus.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
+import NavContextService from '../nav-context.service';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -53,12 +56,46 @@ import '@nldd/design-system/validation-list';
   templateUrl: './new-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class NewProjectComponent implements OnInit {
+export default class NewProjectComponent {
   protected pageNav = inject(PageNavService);
 
   /** Owned by the shell: the sheet opens over the page you were on, and that
    *  page stays mounted behind it. */
-  @Input() show = false;
+  show = input(false);
+
+  private navContext: NavContextService = inject(NavContextService);
+
+  /** Opened inside a cluster or a project: the project goes on that cluster,
+   *  and there is nothing to choose. The sheet covers the page without
+   *  changing the address, so the place is the one it was opened in. Opened
+   *  from the organization (or by its own address), the user picks. */
+  protected scoped = computed(() => this.navContext.context().kind !== 'organization');
+
+  /** The cluster a scoped project goes on, from the organization's data, so
+   *  it does not depend on the list this sheet fetched. Null while a project's
+   *  cluster is still being looked up. */
+  protected fixedCluster = computed(() => {
+    if (!this.scoped()) return null;
+    const id = this.navContext.clusterId();
+    return id
+      ? (this.organizationDataService.clusterSummaries().find((cluster) => cluster.id === id) ??
+          null)
+      : null;
+  });
+
+  /** A scoped sheet whose cluster cannot be found: the projects have loaded
+   *  and the place is still not among them, or the organization itself could
+   *  not be loaded and never will be without a reload. Offering a choice
+   *  instead would put the project somewhere the user did not start from. */
+  protected fixedClusterMissing = computed(
+    () =>
+      this.scoped() &&
+      !this.fixedCluster() &&
+      (this.organizationDataService.organizationLoadFailed() ||
+        (this.organizationDataService.clustersLoaded() &&
+          (this.navContext.context().kind === 'cluster' ||
+            this.organizationDataService.projectsSettled()))),
+  );
 
   @Output() closed = new EventEmitter<void>();
 
@@ -104,8 +141,26 @@ export default class NewProjectComponent implements OnInit {
     ],
   });
 
-  async ngOnInit() {
-    await this.loadClusters();
+  constructor() {
+    // Each opening starts over: the component outlives the sheet (the shell
+    // defers it once and keeps it), so the cluster list is fetched again, as a
+    // cluster may have been added since, and the choice made last time does
+    // not carry over.
+    effect(() => {
+      if (!this.show()) return;
+      untracked(() => {
+        this.projectForm.patchValue({ clusterId: '' });
+        this.loadClusters();
+      });
+    });
+
+    // A scoped sheet's cluster is the place's, kept in the form so submitting
+    // sends it. Empty until it is known, which the form's `required` refuses.
+    effect(() => {
+      if (!this.scoped()) return;
+      const id = this.fixedCluster()?.id ?? '';
+      untracked(() => this.projectForm.patchValue({ clusterId: id }));
+    });
   }
 
   async loadClusters() {
@@ -114,7 +169,7 @@ export default class NewProjectComponent implements OnInit {
       const request = create(ListClustersRequestSchema, {});
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
-      if (response.clusters.length > 0) {
+      if (!this.scoped() && !this.projectForm.value.clusterId && response.clusters.length > 0) {
         this.projectForm.patchValue({ clusterId: response.clusters[0].id });
       }
     } catch (error) {

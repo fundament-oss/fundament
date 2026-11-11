@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
-import App, { isBarePageUrl, parentOf } from './app';
+import App, { isBarePageUrl } from './app';
 import routes from './app.routes';
 import AuthnApiService from './authn-api.service';
 import {
@@ -466,19 +466,6 @@ describe('App', () => {
     TestBed.tick();
     expect(reset).toHaveBeenCalled();
     expect(loadPlugins).not.toHaveBeenCalled();
-  });
-});
-
-describe('parentOf', () => {
-  it('leads a cluster plugin page to its cluster', () => {
-    expect(parentOf('/organizations/acme-corp/clusters/c1/plugin-resources/p/Kind/x?a=b')).toBe(
-      '/clusters/c1',
-    );
-  });
-
-  it('keeps leading project pages to their project and others to the organization', () => {
-    expect(parentOf('/organizations/acme-corp/projects/p1/members')).toBe('/projects/p1');
-    expect(parentOf('/organizations/acme-corp/clusters/c1')).toBe('/');
   });
 });
 

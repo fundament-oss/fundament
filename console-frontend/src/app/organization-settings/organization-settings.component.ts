@@ -79,7 +79,7 @@ export default class OrganizationComponent implements OnInit {
   aliasInvalid = computed(() => this.saveAttempted() && this.editingName().trim() === '');
 
   constructor() {
-    this.titleService.setTitle('General');
+    this.titleService.setTitle('Organization overview');
   }
 
   ngOnInit() {
