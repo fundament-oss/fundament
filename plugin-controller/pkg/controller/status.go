@@ -17,6 +17,10 @@ import (
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 )
 
+// waitingForPluginMessage is the status message of an installation whose plugin
+// has not answered yet since the current spec was applied.
+const waitingForPluginMessage = "waiting for the plugin to start"
+
 func pluginServiceURL(installationName string) string {
 	// The Service is constant-named inside the plugin's own namespace.
 	return fmt.Sprintf("http://%s.%s.svc.cluster.local:8080", childResourceName, pluginNamespace(installationName))
@@ -71,13 +75,27 @@ func (s *statusPoller) unreachableStatus(ctx context.Context, cr *pluginsv1.Plug
 	// pod is still starting. After, it is one that stopped answering, typically
 	// a crash loop: reporting that as Deploying would show a broken plugin as
 	// one still being installed.
+	//
+	// While it is starting, not answering is expected, and the dial error
+	// (connection refused, no such host) says nothing about what is wrong. The
+	// console shows this message during every install, so it says what is
+	// happening instead. The workload inspection below still replaces it with
+	// the real cause when the pod cannot start. A pod that runs while the plugin
+	// stays out of reach (wrong port, DNS, NetworkPolicy) gives the inspection
+	// nothing to find, so past the startup window the dial error is the only
+	// clue there is, and it is reported after all.
 	phase := pluginsv1.PluginPhaseDeploying
-	if hasSettled(cr) {
+	message := waitingForPluginMessage
+	switch {
+	case hasSettled(cr):
 		phase = pluginsv1.PluginPhaseDegraded
+		message = fmt.Sprintf("plugin not reachable: %v", rpcErr)
+	case isStartupOverdue(cr, time.Now()):
+		message = fmt.Sprintf("%s: %v", waitingForPluginMessage, rpcErr)
 	}
 	status := pluginsv1.PluginInstallationStatus{
 		Phase:              phase,
-		Message:            fmt.Sprintf("plugin not reachable: %v", rpcErr),
+		Message:            message,
 		ObservedGeneration: cr.Generation,
 	}
 
@@ -109,6 +127,16 @@ func hasSettled(cr *pluginsv1.PluginInstallation) bool {
 	default:
 		return false
 	}
+}
+
+// isStartupOverdue reports whether the current spec has been on its way up for
+// longer than progressWindow.
+func isStartupOverdue(cr *pluginsv1.PluginInstallation, now time.Time) bool {
+	progressing := meta.FindStatusCondition(cr.Status.Conditions, ConditionProgressing)
+	return progressing != nil &&
+		progressing.Status == metav1.ConditionTrue &&
+		progressing.ObservedGeneration == cr.Generation &&
+		now.Sub(progressing.LastTransitionTime.Time) > progressWindow
 }
 
 func mapPhase(phase string) (pluginsv1.PluginPhase, error) {

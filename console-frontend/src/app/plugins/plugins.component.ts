@@ -42,7 +42,6 @@ import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
-  installTransitionNotice,
   isInstallInProgress,
   isInstallTerminating,
 } from '../utils/plugin-install-status';
@@ -53,6 +52,9 @@ import PluginInstallationService, {
   RetryAbortedError,
   RetryConfigVersionError,
 } from '../plugin-installation/plugin-installation.service';
+import PluginInstallWatchService, {
+  type InstallWatchTarget,
+} from '../plugin-installation/install-watch.service';
 import injectBrowsePluginsUrl from './browse-plugins-url';
 
 import '@nldd/design-system/activity-indicator';
@@ -193,6 +195,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
+
+  private installWatch = inject(PluginInstallWatchService);
 
   private presentationEnabled = inject(PRESENTATION_ENABLED);
 
@@ -516,6 +520,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Poll installation status and surface transitions (installed / failed / removed).
   private async refreshInstalls() {
     const changes = this.localChanges;
+    const readToken = this.installWatch.readToken();
     let byCluster: { clusterId: string; installs: InstallWithCluster[] | null }[];
     try {
       byCluster = await this.fetchInstallsByCluster();
@@ -544,15 +549,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           p.organizationName === next.organizationName &&
           p.pluginName === next.pluginName,
       );
-      if (!prev) return;
-      const notice = installTransitionNotice(
+      if (!prev || prev.phase === next.phase) return;
+      this.installWatch.observe(
+        this.watchTarget(next.clusterId, next.organizationName, next.pluginName),
         prev.phase,
         next.phase,
-        this.pluginDisplayName(next.organizationName, next.pluginName),
-        this.clusterName(next.clusterId),
+        readToken,
+        next.message,
       );
-      if (notice?.kind === 'success') this.notificationService.success(notice.text);
-      else if (notice?.kind === 'error') this.notificationService.error(notice.text);
     });
 
     // Detect installs that vanished from a cluster we successfully read. A
@@ -573,8 +577,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         preserved.push(prev);
         return;
       }
-      this.notificationService.success(
-        `Plugin ${this.pluginDisplayName(prev.organizationName, prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
+      this.installWatch.observe(
+        this.watchTarget(prev.clusterId, prev.organizationName, prev.pluginName),
+        prev.phase,
+        null,
+        readToken,
       );
     });
 
@@ -863,6 +870,21 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** The installation as the install watcher names it in a notification. */
+  private watchTarget(
+    clusterId: string,
+    organizationName: string,
+    pluginName: string,
+  ): InstallWatchTarget {
+    return {
+      clusterId,
+      clusterName: this.clusterName(clusterId),
+      organizationName,
+      pluginName,
+      pluginLabel: this.pluginDisplayName(organizationName, pluginName),
+    };
+  }
+
   private setInstallPhase(
     clusterId: string,
     organizationName: string,
@@ -911,16 +933,25 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       })),
     ]);
 
+    // Each install is watched as soon as its cluster accepted it: a cluster
+    // that is slow to answer must not hold up following the others.
     const results = await Promise.allSettled(
       targets.map((clusterId) =>
-        this.pluginInstallationService.installPlugin(
-          clusterId,
-          plugin.organizationName,
-          plugin.name,
-          selection.version,
-          selection.hash,
-          selection.config,
-        ),
+        this.pluginInstallationService
+          .installPlugin(
+            clusterId,
+            plugin.organizationName,
+            plugin.name,
+            selection.version,
+            selection.hash,
+            selection.config,
+          )
+          .then(() =>
+            this.installWatch.watch(
+              this.watchTarget(clusterId, plugin.organizationName, plugin.name),
+              'install',
+            ),
+          ),
       ),
     );
 
@@ -963,6 +994,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         clusterId,
         pluginResourceName(plugin.organizationName, plugin.name),
       );
+      this.installWatch.watch(
+        this.watchTarget(clusterId, plugin.organizationName, plugin.name),
+        'uninstall',
+      );
       this.startInstallPollingIfNeeded();
     } catch {
       // Roll back to the phase it had, so the row stops claiming it is going away.
@@ -987,12 +1022,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Pending');
 
     try {
-      await this.pluginInstallationService.retryInstall(
-        clusterId,
-        plugin.organizationName,
-        plugin.name,
-        retry.version,
-        retry.hash,
+      await this.installWatch.followRetry(
+        this.watchTarget(clusterId, plugin.organizationName, plugin.name),
+        () =>
+          this.pluginInstallationService.retryInstall(
+            clusterId,
+            plugin.organizationName,
+            plugin.name,
+            retry.version,
+            retry.hash,
+          ),
       );
       this.startInstallPollingIfNeeded();
     } catch (err) {

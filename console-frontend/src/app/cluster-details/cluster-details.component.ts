@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   computed,
+  DestroyRef,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -41,8 +42,19 @@ import {
   ListPublishersRequestSchema,
   type PluginSummary,
 } from '../../generated/catalog/v1/catalog_pb';
+import type { Publisher } from '../../generated/marketplace/v1/common_pb';
 import installedListings from './installed-listings';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  pluginResourceName,
+} from '../plugin-installation/plugin-installation.service';
+import type { PluginInstallationItem, PluginInstallIssue } from '../plugin-resources/types';
+import {
+  hasInvalidConfig,
+  healthOf,
+  installIssue,
+  installPhase,
+} from '../utils/plugin-install-status';
+import createInstallPoller from '../utils/install-poller';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import {
   getStatusBadgeColor,
@@ -335,6 +347,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pluginInstallationService = inject(PluginInstallationService);
 
+  /** Re-reads the plugins' installation status while one of them can still
+   *  change on its own, so an install started elsewhere shows how it ends. */
+  private installPoller = createInstallPoller(inject(DestroyRef), () =>
+    this.refreshInstalledPlugins(),
+  );
+
   private cdr = inject(ChangeDetectorRef);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
@@ -430,6 +448,20 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
+
+  /** What is wrong with each installed plugin, by installation name: on its
+   *  way up or down, Degraded, Failed. A plugin that runs as it should has
+   *  none. Keyed by organization as well as plugin name: two organizations can
+   *  publish a plugin under the same name. */
+  private pluginIssues = signal<ReadonlyMap<string, PluginInstallIssue>>(new Map());
+
+  /** The catalog and its publishers as last read, so a status re-read does
+   *  not fetch them again. A listing names its publisher by id only. */
+  private catalogPlugins: PluginSummary[] = [];
+
+  private catalogPublishers: Publisher[] = [];
+
+  private publisherNames = new Map<string, string>();
 
   isLoadingPlugins = signal<boolean>(true);
 
@@ -843,9 +875,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
-      this.installedPlugins.set(
-        installedListings(pluginsResponse.plugins, publishersResponse.publishers, installations),
-      );
+      this.catalogPlugins = pluginsResponse.plugins;
+      this.catalogPublishers = publishersResponse.publishers;
+      this.publisherNames = new Map(publishersResponse.publishers.map((p) => [p.id, p.name]));
+      this.applyInstallations(installations);
     } catch (error) {
       this.notificationService.error(
         error instanceof Error
@@ -855,6 +888,44 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoadingPlugins.set(false);
     }
+  }
+
+  /** Re-reads the installations for the poll. A read that fails keeps what
+   *  is shown: it says nothing about whether a plugin went away. */
+  private async refreshInstalledPlugins(): Promise<void> {
+    const clusterId = this.clusterData.basics.id;
+    if (!clusterId) return;
+    try {
+      this.applyInstallations(await this.pluginInstallationService.listInstallations(clusterId));
+    } catch {
+      // The next poll tries again.
+    }
+  }
+
+  /** What is wrong with an installed plugin; null when it runs as it should. */
+  pluginIssue(plugin: PluginSummary): PluginInstallIssue | null {
+    const publisher = this.publisherNames.get(plugin.organizationId);
+    if (publisher === undefined) return null;
+    return this.pluginIssues().get(pluginResourceName(publisher, plugin.name)) ?? null;
+  }
+
+  private applyInstallations(installations: PluginInstallationItem[]): void {
+    const issues = new Map<string, PluginInstallIssue>();
+    installations.forEach((item) => {
+      const { organizationName, pluginName } = item.spec.definitionRef;
+      const issue = installIssue(healthOf(item));
+      if (issue) issues.set(pluginResourceName(organizationName, pluginName), issue);
+    });
+    this.installedPlugins.set(
+      installedListings(this.catalogPlugins, this.catalogPublishers, installations),
+    );
+    this.pluginIssues.set(issues);
+    this.installPoller.pace(
+      installations.map((item) => ({
+        phase: installPhase(item.status?.phase),
+        configInvalid: hasInvalidConfig(item),
+      })),
+    );
   }
 
   // Sync status methods
