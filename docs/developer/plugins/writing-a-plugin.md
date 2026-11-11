@@ -336,7 +336,7 @@ does not run under emulation. Only the final stage's `RUN` steps do, such as the
 helm template's `apk add helm`:
 
 ```dockerfile
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS build
 ARG TARGETOS TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
