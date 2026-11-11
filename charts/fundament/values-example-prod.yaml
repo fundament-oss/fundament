@@ -1,5 +1,9 @@
 # Sandbox environment values
 
+externalUrls:
+  # Review webhook messages link here (marketplaceRegistryApi below).
+  marketplaceAdmin: https://marketplace-admin.example.com
+
 db:
   enabled: true
   instances: 2
@@ -50,7 +54,7 @@ marketplaceRegistryApi:
   replicas: 2
   # Mattermost incoming webhooks told about every new plugin review request.
   # The Secret (key "urls", comma-separated) is created by secret management;
-  # links point at externalUrls.marketplaceAdmin, which must be set.
+  # links point at externalUrls.marketplaceAdmin.
   reviewWebhooksSecretRef:
     name: review-webhooks
 
