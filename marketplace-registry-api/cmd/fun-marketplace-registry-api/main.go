@@ -34,8 +34,8 @@ type config struct {
 	// wildcard origin, which browsers reject on credentialed requests.
 	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS,required,notEmpty"`
 	OpenFGA            authz.Config
-	// Incoming webhooks (e.g. Mattermost) told about every new review round.
-	// Empty disables notifications.
+	// Slack-compatible incoming webhooks (Mattermost, Slack, Rocket.Chat, Zulip,
+	// Discord) told about every new review round. Empty disables notifications.
 	ReviewWebhookURLs []string `env:"REVIEW_WEBHOOK_URLS"`
 	// Base URL of the marketplace-admin frontend, for links in notifications.
 	// Required when ReviewWebhookURLs is set.
@@ -138,6 +138,9 @@ func run() error {
 		}
 		registryCfg.ReviewNotifier = webhooks
 		logger.Info("review webhooks enabled", "count", len(cfg.ReviewWebhookURLs))
+	} else {
+		// The chart's Secret ref is optional, so a mistyped name also lands here.
+		logger.Info("review webhooks disabled: REVIEW_WEBHOOK_URLS is empty")
 	}
 
 	server := registry.New(logger, registryCfg, database, authzClient)

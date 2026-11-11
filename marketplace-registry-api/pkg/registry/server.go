@@ -29,7 +29,7 @@ type Config struct {
 
 // ReviewNotifier is implemented by notify.Webhooks.
 type ReviewNotifier interface {
-	ReviewRequested(ctx context.Context, req notify.ReviewRequest)
+	ReviewRequested(ctx context.Context, req *notify.ReviewRequest)
 }
 
 type Server struct {

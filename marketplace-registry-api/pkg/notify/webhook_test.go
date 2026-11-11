@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -20,120 +21,160 @@ import (
 
 const testAdminURL = "https://marketplace-admin.example.com"
 
-func TestReviewRequestedPostsToEveryWebhook(t *testing.T) {
-	var bodies [2]atomic.Value
-	servers := make([]string, 2)
-	for i := range servers {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, http.MethodPost, r.Method)
-			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
-			b, err := io.ReadAll(r.Body)
-			assert.NoError(t, err)
-			bodies[i].Store(b)
-		}))
-		t.Cleanup(ts.Close)
-		servers[i] = ts.URL + "/hooks/secret"
-	}
+// recorder is a TLS webhook that keeps the last body it received.
+type recorder struct {
+	*httptest.Server
+	body  atomic.Value
+	calls atomic.Int32
+}
 
-	webhooks, err := notify.NewWebhooks(slog.Default(), servers, "https://marketplace-admin.example.com/")
+func newRecorder(t *testing.T, status int) *recorder {
+	t.Helper()
+	r := &recorder{}
+	r.Server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, http.MethodPost, req.Method)
+		assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+		b, err := io.ReadAll(req.Body)
+		assert.NoError(t, err)
+		r.body.Store(b)
+		r.calls.Add(1)
+		w.WriteHeader(status)
+	}))
+	t.Cleanup(r.Close)
+	return r
+}
+
+func (r *recorder) text(t *testing.T) string {
+	t.Helper()
+	raw, ok := r.body.Load().([]byte)
+	require.True(t, ok, "webhook was not called")
+	var payload map[string]string
+	require.NoError(t, json.Unmarshal(raw, &payload))
+	return payload["text"]
+}
+
+// newWebhooks trusts the test servers' certificate (all httptest TLS servers
+// share one).
+func newWebhooks(t *testing.T, logger *slog.Logger, urls []string, adminURL string) *notify.Webhooks {
+	t.Helper()
+	webhooks, err := notify.NewWebhooks(logger, urls, adminURL)
 	require.NoError(t, err)
+	ts := httptest.NewTLSServer(http.NotFoundHandler())
+	t.Cleanup(ts.Close)
+	notify.SetTransport(webhooks, ts.Client().Transport)
+	return webhooks
+}
 
-	submissionID := uuid.New()
-	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{
-		SubmissionID:      submissionID,
+func request() *notify.ReviewRequest {
+	return &notify.ReviewRequest{SubmissionID: uuid.New(), PluginVersionID: uuid.New(), PluginName: "p", Version: "1"}
+}
+
+func TestReviewRequestedPostsToEveryWebhook(t *testing.T) {
+	a, b := newRecorder(t, http.StatusOK), newRecorder(t, http.StatusOK)
+	webhooks := newWebhooks(t, slog.Default(), []string{a.URL + "/hooks/secret", b.URL}, testAdminURL+"/")
+
+	req := &notify.ReviewRequest{
+		SubmissionID:      uuid.New(),
+		PluginVersionID:   uuid.New(),
 		PluginName:        "cert-manager",
 		PluginDisplayName: "Cert Manager",
 		Version:           "1.2.3",
-	})
+	}
+	webhooks.ReviewRequested(context.Background(), req)
 
-	for i := range bodies {
-		raw, ok := bodies[i].Load().([]byte)
-		require.True(t, ok, "webhook %d was not called", i)
-
-		var payload map[string]string
-		require.NoError(t, json.Unmarshal(raw, &payload))
-		assert.Contains(t, payload["text"], "`Cert Manager` (`cert-manager`) version `1.2.3`")
-		assert.Contains(t, payload["text"], "https://marketplace-admin.example.com/admin/submissions/"+submissionID.String())
+	for _, r := range []*recorder{a, b} {
+		assert.Equal(t,
+			":mag: New review requested: `Cert Manager` (`cert-manager`) version `1.2.3`\n"+
+				testAdminURL+"/admin/submissions/"+req.SubmissionID.String(),
+			r.text(t))
 	}
 }
 
 // The display name is publisher-controlled; it must not break out of its code
-// span into links, formatting or mentions.
+// span into links, formatting, mentions or Slack control sequences.
 func TestReviewRequestedRendersDisplayNameAsCode(t *testing.T) {
-	var body atomic.Value
-	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		b, _ := io.ReadAll(r.Body)
-		body.Store(b)
-	}))
-	t.Cleanup(ts.Close)
+	r := newRecorder(t, http.StatusOK)
+	webhooks := newWebhooks(t, slog.Default(), []string{r.URL}, testAdminURL)
 
-	webhooks, err := notify.NewWebhooks(slog.Default(), []string{ts.URL}, testAdminURL)
-	require.NoError(t, err)
+	req := request()
+	req.PluginDisplayName = "x` [click](https://evil.example) @channel <!channel> <https://evil|Open>\n**urgent**"
+	webhooks.ReviewRequested(context.Background(), req)
 
-	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{
-		SubmissionID:      uuid.New(),
-		PluginName:        "p",
-		PluginDisplayName: "x` [click](https://evil.example) @channel\n**urgent**",
-		Version:           "1",
-	})
+	assert.Contains(t, r.text(t),
+		"`x' [click](https://evil.example) @channel ‹!channel› ‹https://evil|Open› **urgent**` (`p`)")
+}
 
-	raw, ok := body.Load().([]byte)
-	require.True(t, ok)
-	var payload map[string]string
-	require.NoError(t, json.Unmarshal(raw, &payload))
-	assert.Contains(t, payload["text"], "`x' [click](https://evil.example) @channel **urgent**` (`p`)")
+func TestReviewRequestedJoinsTheAdminLinkUnderABasePath(t *testing.T) {
+	r := newRecorder(t, http.StatusOK)
+	webhooks := newWebhooks(t, slog.Default(), []string{r.URL}, "https://example.com/review/")
+
+	req := request()
+	webhooks.ReviewRequested(context.Background(), req)
+
+	assert.Contains(t, r.text(t), "\nhttps://example.com/review/admin/submissions/"+req.SubmissionID.String())
 }
 
 func TestReviewRequestedDoesNotFollowRedirects(t *testing.T) {
-	var redirected atomic.Bool
-	target := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) { redirected.Store(true) }))
-	t.Cleanup(target.Close)
-	redirecting := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusFound))
+	target := newRecorder(t, http.StatusOK)
+	redirecting := httptest.NewTLSServer(http.RedirectHandler(target.URL, http.StatusFound))
 	t.Cleanup(redirecting.Close)
 
 	var logs bytes.Buffer
-	webhooks, err := notify.NewWebhooks(slog.New(slog.NewTextHandler(&logs, nil)), []string{redirecting.URL}, testAdminURL)
-	require.NoError(t, err)
+	webhooks := newWebhooks(t, slog.New(slog.NewTextHandler(&logs, nil)), []string{redirecting.URL}, testAdminURL)
 
-	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: uuid.New(), PluginName: "p", Version: "1"})
+	webhooks.ReviewRequested(context.Background(), request())
 
-	assert.False(t, redirected.Load())
+	assert.Zero(t, target.calls.Load())
 	assert.Contains(t, logs.String(), "unexpected status 302")
 }
 
 // A failing webhook must not stop the others, and its log line must not leak
 // the secret path of the URL.
 func TestReviewRequestedLogsFailuresWithoutTheURL(t *testing.T) {
-	var called atomic.Bool
-	ok := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) { called.Store(true) }))
-	t.Cleanup(ok.Close)
-	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	t.Cleanup(failing.Close)
-	unreachable := httptest.NewServer(http.NotFoundHandler())
+	ok := newRecorder(t, http.StatusOK)
+	failing := newRecorder(t, http.StatusInternalServerError)
+	unreachable := httptest.NewTLSServer(http.NotFoundHandler())
 	unreachable.Close()
 
 	var logs bytes.Buffer
-	logger := slog.New(slog.NewTextHandler(&logs, nil))
-
-	webhooks, err := notify.NewWebhooks(logger, []string{
+	webhooks := newWebhooks(t, slog.New(slog.NewTextHandler(&logs, nil)), []string{
 		failing.URL + "/hooks/secret-one",
 		unreachable.URL + "/hooks/secret-two",
 		ok.URL,
 	}, testAdminURL)
-	require.NoError(t, err)
 
-	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: uuid.New(), PluginName: "p", Version: "1"})
+	webhooks.ReviewRequested(context.Background(), request())
 
-	assert.True(t, called.Load())
+	assert.Equal(t, int32(1), ok.calls.Load())
 	assert.Contains(t, logs.String(), "unexpected status 500")
 	assert.Equal(t, 2, bytes.Count(logs.Bytes(), []byte("review webhook failed")))
 	assert.NotContains(t, logs.String(), "secret-")
 }
 
+// A submit → withdraw → submit loop on one version notifies once per cooldown;
+// other versions are unaffected.
+func TestReviewRequestedCoolsDownPerVersion(t *testing.T) {
+	r := newRecorder(t, http.StatusOK)
+	webhooks := newWebhooks(t, slog.Default(), []string{r.URL}, testAdminURL)
+	now := time.Now()
+	notify.SetClock(webhooks, func() time.Time { return now })
+
+	req := request()
+	webhooks.ReviewRequested(context.Background(), req)
+	webhooks.ReviewRequested(context.Background(), req)
+	assert.Equal(t, int32(1), r.calls.Load(), "a repeat within the cooldown is suppressed")
+
+	webhooks.ReviewRequested(context.Background(), request())
+	assert.Equal(t, int32(2), r.calls.Load(), "another version still notifies")
+
+	now = now.Add(5 * time.Minute)
+	webhooks.ReviewRequested(context.Background(), req)
+	assert.Equal(t, int32(3), r.calls.Load(), "the version notifies again after the cooldown")
+}
+
 func TestNewWebhooksRejectsInvalidURLs(t *testing.T) {
-	for _, raw := range []string{"", "not a url", "/relative", "ftp://example.com/hook"} {
+	// http is rejected too: a webhook URL carries its credential.
+	for _, raw := range []string{"", "not a url", "/relative", "ftp://example.com/hook", "http://example.com/hook"} {
 		_, err := notify.NewWebhooks(slog.Default(), []string{raw}, testAdminURL)
 		assert.Error(t, err, "webhook %q", raw)
 
@@ -147,23 +188,4 @@ func TestNewWebhooksRejectsInvalidURLs(t *testing.T) {
 		_, err := notify.NewWebhooks(slog.Default(), []string{"https://example.com/hook"}, raw)
 		assert.Error(t, err, "admin URL %q", raw)
 	}
-}
-
-func TestReviewRequestedJoinsTheAdminLinkUnderABasePath(t *testing.T) {
-	var body atomic.Value
-	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		b, _ := io.ReadAll(r.Body)
-		body.Store(b)
-	}))
-	t.Cleanup(ts.Close)
-
-	webhooks, err := notify.NewWebhooks(slog.Default(), []string{ts.URL}, "https://example.com/review/")
-	require.NoError(t, err)
-
-	submissionID := uuid.New()
-	webhooks.ReviewRequested(context.Background(), notify.ReviewRequest{SubmissionID: submissionID, PluginName: "p", Version: "1"})
-
-	raw, ok := body.Load().([]byte)
-	require.True(t, ok)
-	assert.Contains(t, string(raw), "(https://example.com/review/admin/submissions/"+submissionID.String()+")")
 }

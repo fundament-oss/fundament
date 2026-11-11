@@ -391,7 +391,7 @@ func (s *Server) notifyReviewRequested(ctx context.Context, submissionID uuid.UU
 		return
 	}
 
-	pluginID, version := row.PluginID, row.PluginVersion
+	versionID, pluginID, version := row.ID, row.PluginID, row.PluginVersion
 	go func() {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), notifyTimeout)
 		defer cancel()
@@ -402,8 +402,9 @@ func (s *Server) notifyReviewRequested(ctx context.Context, submissionID uuid.UU
 			return
 		}
 
-		s.notifier.ReviewRequested(ctx, notify.ReviewRequest{
+		s.notifier.ReviewRequested(ctx, &notify.ReviewRequest{
 			SubmissionID:      submissionID,
+			PluginVersionID:   versionID,
 			PluginName:        plugin.Name,
 			PluginDisplayName: plugin.DisplayName,
 			Version:           version,

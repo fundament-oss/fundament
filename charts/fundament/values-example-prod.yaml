@@ -52,9 +52,13 @@ dcimFrontend:
 marketplaceRegistryApi:
   enabled: true
   replicas: 2
-  # Mattermost incoming webhooks told about every new plugin review request.
-  # The Secret (key "urls", comma-separated) is created by secret management;
-  # links point at externalUrls.marketplaceAdmin.
+  # Slack-compatible incoming webhooks told about every new plugin review
+  # request. The Secret (key "urls", comma-separated https URLs) is created by
+  # secret management; links point at externalUrls.marketplaceAdmin.
+  #   Mattermost, Slack, Rocket.Chat: the incoming-webhook URL as is
+  #   Zulip:   https://<zulip>/api/v1/external/slack_incoming?api_key=<key>&stream=<stream>&topic=<topic>
+  #   Discord: the webhook URL plus /slack
+  # Use a private channel: messages name plugins that are not public yet.
   reviewWebhooksSecretRef:
     name: review-webhooks
 

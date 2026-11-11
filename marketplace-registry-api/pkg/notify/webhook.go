@@ -1,10 +1,12 @@
-// Package notify tells reviewers about new review rounds through incoming
-// webhooks (Mattermost, or anything accepting the same {"text": ...} payload).
+// Package notify tells reviewers about new review rounds through
+// Slack-compatible incoming webhooks: Mattermost, Slack, Rocket.Chat, and Zulip
+// or Discord through their Slack endpoints. The payload is {"text": ...}.
 //
 // NOTE: delivery is best-effort. A message is lost when a webhook is down or
-// the pod stops mid-send. The planned follow-up is a transactional outbox
-// (like tenant.cluster_outbox) written in the submit transaction and drained
-// by a worker with retries.
+// the pod stops mid-send, and the per-version cooldown lives in memory per
+// replica. The planned follow-up is a transactional outbox (like
+// tenant.cluster_outbox) written in the submit transaction and drained by a
+// worker with retries, which can also hold the cooldown durably.
 package notify
 
 import (
@@ -23,11 +25,17 @@ import (
 	"github.com/google/uuid"
 )
 
-const requestTimeout = 5 * time.Second
+const (
+	requestTimeout = 5 * time.Second
+	// cooldown suppresses repeat notifications for one version, so a
+	// submit → withdraw → submit loop cannot flood the reviewers' channel.
+	cooldown = 5 * time.Minute
+)
 
 // ReviewRequest is a newly opened review round.
 type ReviewRequest struct {
 	SubmissionID      uuid.UUID
+	PluginVersionID   uuid.UUID
 	PluginName        string
 	PluginDisplayName string
 	Version           string
@@ -40,23 +48,27 @@ type Webhooks struct {
 	targets  []*url.URL
 	adminURL *url.URL
 	client   *http.Client
+	now      func() time.Time
+
+	mu       sync.Mutex
+	notified map[uuid.UUID]time.Time // plugin version → last notification
 }
 
 // NewWebhooks validates its URLs up front so a typo fails the deployment, not
-// the first submission. Webhook URLs embed a secret, so errors and logs only
-// ever name the host. adminURL is required: the link is how reviewers act.
+// the first submission. Webhook URLs carry a credential, so they must be https,
+// and errors and logs only ever name the host. adminURL is required: the link
+// is how reviewers act.
 func NewWebhooks(logger *slog.Logger, rawURLs []string, adminURL string) (*Webhooks, error) {
-	admin, err := url.Parse(strings.TrimSpace(adminURL))
-	if err != nil || !isAbsoluteHTTP(adminURL) || admin.RawQuery != "" || admin.Fragment != "" {
-		return nil, errors.New("marketplace admin URL must be an absolute http(s) URL without query or fragment when review webhooks are enabled")
+	admin, err := parseHTTPS(adminURL)
+	if err != nil || admin.RawQuery != "" || admin.Fragment != "" {
+		return nil, errors.New("marketplace admin URL must be an absolute https URL without query or fragment when review webhooks are enabled")
 	}
 	targets := make([]*url.URL, 0, len(rawURLs))
 	for i, raw := range rawURLs {
-		raw = strings.TrimSpace(raw)
-		if !isAbsoluteHTTP(raw) {
-			return nil, fmt.Errorf("review webhook URL #%d is not an absolute http(s) URL", i+1)
+		u, err := parseHTTPS(raw)
+		if err != nil {
+			return nil, fmt.Errorf("review webhook URL #%d is not an absolute https URL", i+1)
 		}
-		u, _ := url.Parse(raw)
 		targets = append(targets, u)
 	}
 	return &Webhooks{
@@ -69,12 +81,20 @@ func NewWebhooks(logger *slog.Logger, rawURLs []string, adminURL string) (*Webho
 			// the 3xx as a failure instead.
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		},
+		now:      time.Now,
+		notified: make(map[uuid.UUID]time.Time),
 	}, nil
 }
 
 // ReviewRequested posts to every webhook and returns once all have finished.
 // Failures are logged, never returned: a notification must not fail a submit.
-func (w *Webhooks) ReviewRequested(ctx context.Context, req ReviewRequest) {
+func (w *Webhooks) ReviewRequested(ctx context.Context, req *ReviewRequest) {
+	if !w.claim(req.PluginVersionID) {
+		w.logger.InfoContext(ctx, "review notification suppressed by cooldown",
+			"submission_id", req.SubmissionID, "plugin_version_id", req.PluginVersionID)
+		return
+	}
+
 	body, err := json.Marshal(map[string]string{"text": w.message(req)})
 	if err != nil {
 		w.logger.ErrorContext(ctx, "encoding review webhook payload", "error", err)
@@ -93,26 +113,56 @@ func (w *Webhooks) ReviewRequested(ctx context.Context, req ReviewRequest) {
 	wg.Wait()
 }
 
-func isAbsoluteHTTP(raw string) bool {
-	u, err := url.Parse(raw)
-	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
+// claim reports whether versionID may notify now, and if so starts its
+// cooldown. Expired entries are pruned on the way.
+func (w *Webhooks) claim(versionID uuid.UUID) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	now := w.now()
+	for id, at := range w.notified {
+		if now.Sub(at) >= cooldown {
+			delete(w.notified, id)
+		}
+	}
+	if _, recent := w.notified[versionID]; recent {
+		return false
+	}
+	w.notified[versionID] = now
+	return true
+}
+
+func parseHTTPS(raw string) (*url.URL, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return nil, err //nolint:wrapcheck // callers replace it with a message that omits the URL
+	}
+	if u.Scheme != "https" || u.Host == "" {
+		return nil, errors.New("not an absolute https URL")
+	}
+	return u, nil
 }
 
 // message renders publisher-controlled values as code spans, so a crafted
-// display name cannot inject links, formatting or @channel mentions.
-func (w *Webhooks) message(req ReviewRequest) string {
+// display name cannot inject links, formatting or mentions. The link is a bare
+// URL on its own line: every client auto-links that, while Markdown link
+// syntax shows literally in Slack and Google Chat.
+func (w *Webhooks) message(req *ReviewRequest) string {
 	name := req.PluginDisplayName
 	if name == "" {
 		name = req.PluginName
 	}
-	return fmt.Sprintf(":mag: New review requested: %s (%s) version %s\n[Open submission](%s)",
-		codeSpan(name), codeSpan(req.PluginName), codeSpan(req.Version), w.adminURL.JoinPath("admin", "submissions", req.SubmissionID.String()))
+	return fmt.Sprintf(":mag: New review requested: %s (%s) version %s\n%s",
+		codeSpan(name), codeSpan(req.PluginName), codeSpan(req.Version),
+		w.adminURL.JoinPath("admin", "submissions", req.SubmissionID.String()))
 }
 
-// codeSpan wraps s in backticks. Code spans cannot contain a backtick or a
-// line break, so those are replaced rather than escaped.
+// codeSpan wraps s in backticks. A backtick or line break would end the span,
+// and < > open Slack control sequences (<!channel>, <url|text>) that are not
+// documented as inert inside code, so all of them are replaced. Escaping to
+// &lt; would show literally in CommonMark clients.
 func codeSpan(s string) string {
-	s = strings.NewReplacer("`", "'", "\r", " ", "\n", " ").Replace(s)
+	s = strings.NewReplacer("`", "'", "\r", " ", "\n", " ", "<", "‹", ">", "›").Replace(s)
 	return "`" + s + "`"
 }
 

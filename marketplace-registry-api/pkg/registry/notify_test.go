@@ -16,7 +16,7 @@ import (
 
 type recordingNotifier chan notify.ReviewRequest
 
-func (n recordingNotifier) ReviewRequested(_ context.Context, req notify.ReviewRequest) { n <- req }
+func (n recordingNotifier) ReviewRequested(_ context.Context, req *notify.ReviewRequest) { n <- *req }
 
 func (n recordingNotifier) next(t *testing.T) notify.ReviewRequest {
 	t.Helper()
@@ -52,6 +52,7 @@ func TestSubmitPluginVersionNotifiesReviewers(t *testing.T) {
 	assert.Equal(t, plugin.GetName(), first.PluginName)
 	assert.Equal(t, "1.2.3", first.Version)
 	assert.NotEqual(t, uuid.Nil, first.SubmissionID)
+	assert.Equal(t, version.GetId(), first.PluginVersionID.String(), "the cooldown is keyed by version")
 
 	_, err = client.SubmitPluginVersion(context.Background(), submit)
 	require.NoError(t, err)
