@@ -49,10 +49,9 @@
       ></nldd-activity-indicator>
     } @else if (loadFailed()) {
       <nldd-inline-dialog
-        icon="exclamation-triangle"
-        icon-color="secondary"
+        variant="alert"
         text="The projects on this cluster could not be loaded"
-        supporting-text="The other clusters' projects did load. Try again in a moment."
+        supporting-text="Try again in a moment."
       >
         <nldd-button
           slot="actions"

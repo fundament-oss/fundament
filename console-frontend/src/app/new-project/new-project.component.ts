@@ -84,15 +84,17 @@ export default class NewProjectComponent {
   });
 
   /** A scoped sheet whose cluster cannot be found: the projects have loaded
-   *  and the place is still not among them. Offering a choice instead would
-   *  put the project somewhere the user did not start from. */
+   *  and the place is still not among them, or the organization itself could
+   *  not be loaded and never will be without a reload. Offering a choice
+   *  instead would put the project somewhere the user did not start from. */
   protected fixedClusterMissing = computed(
     () =>
       this.scoped() &&
       !this.fixedCluster() &&
-      this.organizationDataService.clustersLoaded() &&
-      (this.navContext.context().kind === 'cluster' ||
-        this.organizationDataService.projectsSettled()),
+      (this.organizationDataService.organizationLoadFailed() ||
+        (this.organizationDataService.clustersLoaded() &&
+          (this.navContext.context().kind === 'cluster' ||
+            this.organizationDataService.projectsSettled()))),
   );
 
   @Output() closed = new EventEmitter<void>();

@@ -211,6 +211,12 @@ export class OrganizationDataService {
 
   private loadProjectsPromise: Promise<void> | null = null;
 
+  /** The same two for project loads: a reload does not wait for the load
+   *  before it, so an older answer can come back after a newer one. */
+  private projectLoadRequests = 0;
+
+  private appliedProjectLoad = 0;
+
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
   projectsLoaded = signal(false);
 
@@ -229,6 +235,10 @@ export class OrganizationDataService {
    *  reads "no clusters" as a state rather than as "not fetched yet" waits on this. */
   clustersLoaded = signal(false);
 
+  /** True when the organization or its cluster list could not be fetched.
+   *  Without it, whatever waits on `clustersLoaded` would wait for good. */
+  organizationLoadFailed = signal(false);
+
   async loadOrganizationData(organizationId?: string) {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
@@ -242,6 +252,7 @@ export class OrganizationDataService {
     this.projectsSettled.set(false);
     this.projectLoadFailures.set(new Set());
     this.clustersLoaded.set(false);
+    this.organizationLoadFailed.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
 
@@ -282,6 +293,7 @@ export class OrganizationDataService {
         },
       ]);
     } catch (error) {
+      if (generation === this.generation) this.organizationLoadFailed.set(true);
       // eslint-disable-next-line no-console
       console.error('Error loading organization data:', error);
     } finally {
@@ -326,6 +338,8 @@ export class OrganizationDataService {
     const orgData = this.organizations()[0];
     if (!orgData) return false;
     const { generation } = this;
+    this.projectLoadRequests += 1;
+    const seq = this.projectLoadRequests;
 
     this.loading.set(true);
     try {
@@ -345,11 +359,18 @@ export class OrganizationDataService {
 
       if (generation !== this.generation) return false;
 
-      this.projectLoadFailures.set(
-        new Set(
-          requested.filter((_, i) => results[i].status === 'rejected').map((cluster) => cluster.id),
-        ),
-      );
+      // Only the newest answer says which clusters failed: an older one that
+      // comes back late would bring back a failure a retry already cleared.
+      if (seq > this.appliedProjectLoad) {
+        this.appliedProjectLoad = seq;
+        this.projectLoadFailures.set(
+          new Set(
+            requested
+              .filter((_, i) => results[i].status === 'rejected')
+              .map((cluster) => cluster.id),
+          ),
+        );
+      }
       this.projectsSettled.set(true);
 
       const failures = results.filter((result) => result.status === 'rejected');
@@ -619,6 +640,7 @@ export class OrganizationDataService {
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);
     this.clustersLoaded.set(false);
+    this.organizationLoadFailed.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
     this.loadProjectsPromise = null;

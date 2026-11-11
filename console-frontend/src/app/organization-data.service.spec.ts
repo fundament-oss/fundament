@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { create } from '@bufbuild/protobuf';
-import { of, Subject, throwError } from 'rxjs';
+import { type Observable, of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OrganizationDataService } from './organization-data.service';
 import { CLUSTER, ORGANIZATION, PROJECT, MEMBER } from '../connect/tokens';
@@ -62,6 +62,8 @@ function build(listed: ClusterSummary[]) {
     membersFail: false,
     holdMembers: false,
     pendingMembers: [] as PendingMembers[],
+    /** Answers ListProjects; a test swaps it to hold or fail the answers. */
+    listProjects: (): Observable<{ projects: [] }> => of({ projects: [] }),
   };
 
   TestBed.configureTestingModule({
@@ -90,7 +92,7 @@ function build(listed: ClusterSummary[]) {
               : of(create(ListClustersResponseSchema, { clusters: server.listed })),
         },
       },
-      { provide: PROJECT, useValue: { listProjects: () => of({ projects: [] }) } },
+      { provide: PROJECT, useValue: { listProjects: () => server.listProjects() } },
       {
         provide: MEMBER,
         useValue: {
@@ -348,5 +350,40 @@ describe('OrganizationDataService members', () => {
 
     expect(reported).not.toHaveBeenCalled();
     expect(service.memberCount()).toBeNull();
+  });
+});
+
+describe('OrganizationDataService project loads', () => {
+  const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the failures of the newest load when an older one answers last', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    // The first load hangs and then fails; the retry after it succeeds.
+    const first = new Subject<{ projects: [] }>();
+    server.listProjects = () => first.asObservable();
+    const before = service.loadProjectsAndNamespaces();
+    server.listProjects = () => of({ projects: [] });
+    await service.reloadProjectsAndNamespaces();
+    expect(service.projectLoadFailures().size).toBe(0);
+
+    first.error(new Error('unreachable'));
+    await before.catch(() => {});
+
+    expect(service.projectLoadFailures().size).toBe(0);
+  });
+
+  it('reports an organization that could not be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+    server.fail = true;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    expect(service.clustersLoaded()).toBe(false);
+    expect(service.organizationLoadFailed()).toBe(true);
   });
 });

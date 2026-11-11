@@ -41,6 +41,7 @@ describe('NewProjectComponent submit', () => {
             ],
             clustersLoaded: () => true,
             projectsSettled: () => true,
+            organizationLoadFailed: () => false,
           },
         },
         {
