@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  Signal,
   afterNextRender,
   computed,
   effect,
@@ -33,6 +34,7 @@ import ThemeService, { type ThemePreference } from './theme.service';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 import SessionService from './session.service';
+import StaffSessionService from './admin-review/staff-session.service';
 import { VARIANT } from './variant';
 
 @Component({
@@ -81,17 +83,26 @@ export default class App {
 
   private session = inject(SessionService);
 
-  protected readonly user = this.session.user;
+  // The backoffice's reviewers sign in against the staff IDP, not the console.
+  private staffSession = inject(StaffSessionService);
+
+  protected readonly user: Signal<{ id: string; name: string } | null> =
+    this.variant === 'admin' ? this.staffSession.user : this.session.user;
 
   // A build without a session surface (the demo) knows straight away: nobody
   // can be signed in there.
-  private readonly sessionResolved = signal(!this.session.hasSessionSurface());
+  private readonly sessionResolved = signal(
+    this.variant === 'admin'
+      ? !this.staffSession.hasSessionSurface()
+      : !this.session.hasSessionSurface(),
+  );
 
   /**
-   * Whether the visitor has a console session. 'unknown' until
-   * authn-api has answered, so the header does not flash "Sign in" at someone
-   * who is signed in. After that it follows SessionService, so a session that
-   * turns up or ends later shows in the header too.
+   * Whether the visitor has a session: the console's, or in the backoffice the
+   * staff one. 'unknown' until authn has answered, so the header does not
+   * flash "Sign in" at someone who is signed in. After that it follows the
+   * session service, so a session that turns up or ends later shows in the
+   * header too.
    */
   protected readonly sessionState = computed(() => {
     if (!this.sessionResolved()) return 'unknown';
@@ -152,6 +163,12 @@ export default class App {
       // In the browser only: the answer is per visitor, and a server render
       // is shared by everyone who loads that page.
       afterNextRender(() => this.watchSession());
+    }
+
+    if (this.variant === 'admin' && this.staffSession.hasSessionSurface()) {
+      // The route guard asks as well; the lookups are shared. Once known, the
+      // header follows StaffSessionService.user through sign-in and sign-out.
+      afterNextRender(() => this.markResolvedAfter(this.staffSession.ensureUser()));
     }
   }
 
@@ -233,8 +250,21 @@ export default class App {
    * visitor stays on the page it was on, now as a signed-out visitor. Nothing
    * in the portal works without a session, so it goes to the login, and to
    * /manage after that: whoever signs in next may not have the page left here.
+   * The backoffice works the same way with the staff session, but its login
+   * is a page of its own.
    */
   async handleLogout() {
+    if (this.variant === 'admin') {
+      try {
+        await this.staffSession.logout();
+      } catch {
+        this.toastService.error('Logging out failed. Please try again.');
+        return;
+      }
+      this.router.navigateByUrl('/login', { replaceUrl: true }).catch(() => {});
+      return;
+    }
+
     try {
       await this.session.logout();
     } catch {

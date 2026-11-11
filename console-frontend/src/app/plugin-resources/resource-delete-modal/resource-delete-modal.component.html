@@ -1,5 +1,7 @@
 <!-- The name in the title, because that is what you are about to lose; the rest
-     is supporting text, so the dialog says one thing and explains it once. -->
+     is supporting text, so the dialog says one thing and explains it once.
+     Centered explicitly: left to itself the dialog left-aligns and puts its buttons
+     in a row while the error shows, so they would move under the pointer on a retry. -->
 <nldd-modal-dialog
   appDialogSync
   [show]="show()"
@@ -8,12 +10,13 @@
     'Deleting this ' + resourceKind().toLowerCase() + ' is permanent and cannot be undone.'
   "
   variant="alert"
+  horizontal-alignment="center"
   (close)="dismiss.emit()"
 >
   <!-- One wrapper on purpose: nldd-button-group hides any action that is the
        fourth child of this dialog or later, and it counts every child. -->
   @if (errorMessage()) {
-    <nldd-container layout="stack">
+    <nldd-container>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-box>
         <nldd-container padding="16">

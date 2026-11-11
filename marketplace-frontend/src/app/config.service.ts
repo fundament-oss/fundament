@@ -28,6 +28,13 @@ export interface AppConfiguration {
    */
   authnApiUrl?: string;
   /**
+   * Base URL of dcim-authn-api. The review backoffice only: reviewers are
+   * Fundament staff, who sign in against the staff IDP rather than the
+   * console's (see StaffSessionService). Empty means there is nothing to sign
+   * in against, and the backoffice's routes are left unguarded.
+   */
+  dcimAuthnApiUrl?: string;
+  /**
    * Base URL of organization-api. The developer portal reads the names of the
    * session's organizations from it, for the header's organization switcher.
    * Empty leaves the switcher on shortened ids.

@@ -1,0 +1,120 @@
+import {
+  Component,
+  ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/container';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/password-field';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/validation-list';
+import { TitleService } from '../title.service';
+import StaffSessionService from './staff-session.service';
+import { safeReturnUrl } from './staff-auth.guard';
+
+// Close enough to tell a typo from an address; the IDP decides the rest.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * The review backoffice's login, modelled on DCIM's: reviewers sign in with
+ * their Fundament staff account, which is also their DCIM account.
+ */
+@Component({
+  selector: 'app-admin-login',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './login.component.html',
+})
+export default class LoginComponent {
+  private router = inject(Router);
+
+  private route = inject(ActivatedRoute);
+
+  private session = inject(StaffSessionService);
+
+  private emailField = viewChild<ElementRef<HTMLElement>>('emailField');
+
+  email = signal('');
+
+  password = signal('');
+
+  /** Whether the form has been submitted at least once. Before that, a field
+   *  that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
+
+  error = signal<string | null>(null);
+
+  isLoading = signal(false);
+
+  emailError = computed(() => {
+    const email = this.email().trim();
+    if (!email) return 'Email address is required';
+    if (!EMAIL_PATTERN.test(email)) return 'Please enter a valid email address';
+    return '';
+  });
+
+  passwordError = computed(() => (this.password() ? '' : 'Password is required'));
+
+  constructor() {
+    inject(TitleService).setTitle('Sign in');
+
+    // Someone who is already signed in (in DCIM, or in another tab) has no
+    // business here: send them on to where they were going.
+    this.session
+      .ensureUser()
+      .then((user) => {
+        if (user) this.goOn();
+      })
+      .catch(() => {});
+
+    afterNextRender(() => {
+      // After Lit's own render, which settles on a microtask after this hook.
+      setTimeout(() => this.emailField()?.nativeElement.focus());
+    });
+  }
+
+  onEmailInput(event: Event) {
+    this.email.set((event.target as HTMLInputElement).value);
+  }
+
+  onPasswordInput(event: Event) {
+    this.password.set((event.target as HTMLInputElement).value);
+  }
+
+  async onSubmit() {
+    this.formSubmitted.set(true);
+    if (this.isLoading()) return;
+    if (this.emailError() || this.passwordError()) return;
+
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      await this.session.login(this.email().trim(), this.password());
+      this.goOn();
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'Signing in failed.');
+      this.isLoading.set(false);
+    }
+  }
+
+  private goOn() {
+    const returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+    this.router.navigateByUrl(returnUrl, { replaceUrl: true }).catch(() => {});
+  }
+}

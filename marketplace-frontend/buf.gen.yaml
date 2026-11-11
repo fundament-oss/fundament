@@ -15,6 +15,9 @@ inputs:
     paths:
       - ../organization-api/pkg/proto/v1/organization.proto
   - directory: ../authn-api/pkg/proto
+  # The review backoffice signs reviewers in against the staff IDP, whose
+  # session dcim-authn-api serves (FUN-20).
+  - directory: ../dcim-authn-api/pkg/proto
   - directory: ../marketplace-api/pkg/proto
   - directory: ../marketplace-admin-api/pkg/proto
   - directory: ../marketplace-catalog-api/pkg/proto

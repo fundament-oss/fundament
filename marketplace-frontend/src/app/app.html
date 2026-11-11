@@ -81,122 +81,121 @@
           <nldd-button text="Browse the marketplace" appearance="neutral-tinted"></nldd-button>
         </a>
       }
-      @if (variant !== 'admin') {
-        <!-- The console's session, read back from authn-api. Nothing while the
-             answer is out, rather than a "Sign in" that turns into a name a
-             moment later. -->
-        @switch (sessionState()) {
-          @case ('signed-in') {
-            <!-- Mirrors the console's account menu. Its links open in this
+      <!-- The console's session, read back from authn-api; in the backoffice
+           the staff session, from dcim-authn-api. Nothing while the answer is
+           out, rather than a "Sign in" that turns into a name a moment later. -->
+      @switch (sessionState()) {
+        @case ('signed-in') {
+          <!-- Mirrors the console's account menu. Its links open in this
                  tab, so they carry what they lead to as an icon rather than
                  an external-link glyph. -->
-            <nldd-button
-              expandable
-              popup-type="menu"
-              single-line
-              max-width="200px"
-              appearance="neutral-tinted"
-              start-icon="person-circle"
-              [attr.text]="accountLabel()"
-              [attr.accessible-label]="'Account: ' + accountLabel()"
-            >
-              <nldd-menu slot="popup" placement="bottom-end" accessible-label="Account">
-                <!-- The menu's header slot is unpadded on purpose, so the
+          <nldd-button
+            expandable
+            popup-type="menu"
+            single-line
+            max-width="200px"
+            appearance="neutral-tinted"
+            start-icon="person-circle"
+            [attr.text]="accountLabel()"
+            [attr.accessible-label]="'Account: ' + accountLabel()"
+          >
+            <nldd-menu slot="popup" placement="bottom-end" accessible-label="Account">
+              <!-- The menu's header slot is unpadded on purpose, so the
                      container supplies the spacing. -->
-                <nldd-container slot="header" padding-inline="16" padding-block="12">
-                  <nldd-identity
-                    [attr.text]="accountLabel()"
-                    [attr.supporting-text]="user()?.id || null"
-                  ></nldd-identity>
-                </nldd-container>
-                <!-- The portal acts for one organization at a time, so the
+              <nldd-container slot="header" padding-inline="16" padding-block="12">
+                <nldd-identity
+                  [attr.text]="accountLabel()"
+                  [attr.supporting-text]="user()?.id || null"
+                ></nldd-identity>
+              </nldd-container>
+              <!-- The portal acts for one organization at a time, so the
                      account's memberships are also where it is chosen. Plain
                      items rather than type="radio": one radio item makes
                      nldd-menu indent every item below it for a check-mark
                      column. So the active one says so in words. -->
-                @if (variant === 'registry' && organizationContext.organizations().length > 0) {
-                  <nldd-menu-group text="Organizations" class="menu-group-strong-divider">
-                    @for (
-                      organization of organizationContext.organizations();
-                      track organization.id
-                    ) {
-                      <nldd-menu-item
-                        icon="apartment-building"
-                        [attr.text]="organization.label"
-                        [attr.details]="
-                          organization.id === organizationContext.organizationId() ? 'Active' : null
-                        "
-                        [class.font-mono]="!organization.named"
-                        (select)="onOrganizationSelect(organization.id)"
-                      ></nldd-menu-item>
-                    }
-                  </nldd-menu-group>
-                }
-                @if (consoleUrl) {
-                  <nldd-menu-item
-                    icon="console"
-                    text="Open the Console"
-                    [attr.href]="consoleUrl"
-                  ></nldd-menu-item>
-                }
-                @if (developerUrl) {
-                  <nldd-menu-item
-                    icon="code"
-                    text="Plugin developer portal"
-                    [attr.href]="developerUrl + '/manage'"
-                  ></nldd-menu-item>
-                }
-                @if (storefrontInMenu) {
-                  <nldd-menu-item
-                    icon="puzzle-piece"
-                    text="Browse the marketplace"
-                    [attr.href]="storefrontUrl"
-                  ></nldd-menu-item>
-                }
-                @if (consoleUrl || developerUrl || storefrontInMenu) {
-                  <nldd-menu-divider></nldd-menu-divider>
-                }
-                <nldd-menu-item text="Appearance" icon="appearance">
-                  <nldd-menu>
+              @if (variant === 'registry' && organizationContext.organizations().length > 0) {
+                <nldd-menu-group text="Organizations" class="menu-group-strong-divider">
+                  @for (
+                    organization of organizationContext.organizations();
+                    track organization.id
+                  ) {
                     <nldd-menu-item
-                      text="System"
-                      icon="display"
-                      type="radio"
-                      [attr.selected]="themePreference() === 'system' ? '' : null"
-                      (select)="setTheme('system')"
+                      icon="apartment-building"
+                      [attr.text]="organization.label"
+                      [attr.details]="
+                        organization.id === organizationContext.organizationId() ? 'Active' : null
+                      "
+                      [class.font-mono]="!organization.named"
+                      (select)="onOrganizationSelect(organization.id)"
                     ></nldd-menu-item>
-                    <nldd-menu-item
-                      text="Light"
-                      icon="light-mode"
-                      type="radio"
-                      [attr.selected]="themePreference() === 'light' ? '' : null"
-                      (select)="setTheme('light')"
-                    ></nldd-menu-item>
-                    <nldd-menu-item
-                      text="Dark"
-                      icon="dark-mode"
-                      type="radio"
-                      [attr.selected]="themePreference() === 'dark' ? '' : null"
-                      (select)="setTheme('dark')"
-                    ></nldd-menu-item>
-                  </nldd-menu>
-                </nldd-menu-item>
-                <nldd-menu-divider></nldd-menu-divider>
+                  }
+                </nldd-menu-group>
+              }
+              @if (consoleUrl) {
                 <nldd-menu-item
-                  text="Log out"
-                  icon="logout"
-                  (select)="handleLogout()"
+                  icon="console"
+                  text="Open the Console"
+                  [attr.href]="consoleUrl"
                 ></nldd-menu-item>
-              </nldd-menu>
-            </nldd-button>
-          }
-          @case ('signed-out') {
-            <!-- The portal's own guard sends a visitor to the login. -->
-            @if (variant === 'catalog') {
-              <app-developer-link path="/manage">
-                <nldd-button text="Sign in" appearance="neutral-tinted"></nldd-button>
-              </app-developer-link>
-            }
+              }
+              @if (developerUrl) {
+                <nldd-menu-item
+                  icon="code"
+                  text="Plugin developer portal"
+                  [attr.href]="developerUrl + '/manage'"
+                ></nldd-menu-item>
+              }
+              @if (storefrontInMenu) {
+                <nldd-menu-item
+                  icon="puzzle-piece"
+                  text="Browse the marketplace"
+                  [attr.href]="storefrontUrl"
+                ></nldd-menu-item>
+              }
+              @if (consoleUrl || developerUrl || storefrontInMenu) {
+                <nldd-menu-divider></nldd-menu-divider>
+              }
+              <nldd-menu-item text="Appearance" icon="appearance">
+                <nldd-menu>
+                  <nldd-menu-item
+                    text="System"
+                    icon="display"
+                    type="radio"
+                    [attr.selected]="themePreference() === 'system' ? '' : null"
+                    (select)="setTheme('system')"
+                  ></nldd-menu-item>
+                  <nldd-menu-item
+                    text="Light"
+                    icon="light-mode"
+                    type="radio"
+                    [attr.selected]="themePreference() === 'light' ? '' : null"
+                    (select)="setTheme('light')"
+                  ></nldd-menu-item>
+                  <nldd-menu-item
+                    text="Dark"
+                    icon="dark-mode"
+                    type="radio"
+                    [attr.selected]="themePreference() === 'dark' ? '' : null"
+                    (select)="setTheme('dark')"
+                  ></nldd-menu-item>
+                </nldd-menu>
+              </nldd-menu-item>
+              <nldd-menu-divider></nldd-menu-divider>
+              <nldd-menu-item
+                text="Log out"
+                icon="logout"
+                (select)="handleLogout()"
+              ></nldd-menu-item>
+            </nldd-menu>
+          </nldd-button>
+        }
+        @case ('signed-out') {
+          <!-- The portal's and the backoffice's own guards send a visitor to
+                 the login. -->
+          @if (variant === 'catalog') {
+            <app-developer-link path="/manage">
+              <nldd-button text="Sign in" appearance="neutral-tinted"></nldd-button>
+            </app-developer-link>
           }
         }
       }

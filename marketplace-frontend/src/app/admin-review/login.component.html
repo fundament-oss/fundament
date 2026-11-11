@@ -1,0 +1,76 @@
+<!-- One thing on the page, so it sits in a narrow column rather than stretching
+     across the shell's full width. -->
+<div class="mx-auto max-w-[480px] py-4 sm:py-12">
+  <nldd-box>
+    <!-- The inset grows with the box, as on the DCIM login. -->
+    <nldd-container padding="16" md-padding="24" lg-padding="32">
+      <nldd-title size="3">
+        <h1>Sign in to the Review Backoffice</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-rich-text spacing="flat">
+        <p>Use your Fundament staff account, the same one you use for DCIM.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="24"></nldd-spacer>
+      @if (error(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Signing in failed"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-form (submit)="$event.preventDefault(); onSubmit()">
+        <!-- No placeholders: the label already says which field this is. -->
+        <nldd-form-field label="Email address">
+          <nldd-text-field
+            #emailField
+            type="email"
+            id="email"
+            name="email"
+            autocomplete="email"
+            [value]="email()"
+            (input)="onEmailInput($event)"
+            [invalid]="!!emailError() && formSubmitted()"
+            unmet="login-email-error"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="login-email-error">{{ emailError() }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Password">
+          <nldd-password-field
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            [value]="password()"
+            (input)="onPasswordInput($event)"
+            show-button-text="Show"
+            show-button-accessible-label="Show password"
+            hide-button-text="Hide"
+            hide-button-accessible-label="Hide password"
+            [invalid]="!!passwordError() && formSubmitted()"
+            unmet="login-password-error"
+          ></nldd-password-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="login-password-error">{{
+              passwordError()
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-actions>
+          <!-- Never switched off: a button you cannot press says nothing about
+               what is missing, and the loading state already says it is busy. -->
+          <nldd-button
+            type="submit"
+            text="Sign in"
+            appearance="primary"
+            width="full"
+            [attr.loading]="isLoading() ? '' : null"
+            (click)="onSubmit()"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-container>
+  </nldd-box>
+</div>

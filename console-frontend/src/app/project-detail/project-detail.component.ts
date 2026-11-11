@@ -118,6 +118,9 @@ export default class ProjectDetailComponent implements OnInit {
 
   showDeleteModal = signal<boolean>(false);
 
+  /** True while DeleteProject runs, so a second click cannot send it twice. */
+  isDeleting = signal<boolean>(false);
+
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     await this.loadProject(projectId);
@@ -271,8 +274,9 @@ export default class ProjectDetailComponent implements OnInit {
     this.deleteAttempted.set(true);
     const currentProject = this.project();
     if (!currentProject) return;
-    if (!this.isDeleteConfirmed()) return;
+    if (!this.isDeleteConfirmed() || this.isDeleting()) return;
 
+    this.isDeleting.set(true);
     try {
       const request = create(DeleteProjectRequestSchema, {
         projectId: currentProject.id,
@@ -299,6 +303,8 @@ export default class ProjectDetailComponent implements OnInit {
             : 'Failed to delete project',
         );
       }
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 
