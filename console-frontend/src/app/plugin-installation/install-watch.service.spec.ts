@@ -249,6 +249,36 @@ describe('PluginInstallWatchService', () => {
     );
   });
 
+  // A watch can outlive the failure a retry answers: a screen's read from before
+  // the watch started does not end it.
+  it('does not announce what its own poll reads while a retry replaces the installation', async () => {
+    const { watcher, getInstallation, notifications } = build();
+    getInstallation.mockResolvedValueOnce(withPhase('Deploying'));
+    getInstallation.mockResolvedValueOnce(withPhase('Failed', 'parse manifest: bad yaml'));
+    getInstallation.mockResolvedValue(withPhase('Running'));
+    let accept = () => {};
+    const accepted = new Promise<void>((resolve) => {
+      accept = resolve;
+    });
+
+    watcher.watch(target, 'install');
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    const retry = watcher.followRetry(target, () => accepted);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(getInstallation).toHaveBeenCalledTimes(2);
+    expect(notifications.error).not.toHaveBeenCalled();
+
+    accept();
+    await retry;
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    expect(notifications.error).not.toHaveBeenCalled();
+    expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+      'Plugin Cert Manager installed on cluster production',
+    );
+  });
+
   it('follows nothing after a retry that was refused, and hears what screens read again', async () => {
     const { watcher, getInstallation, notifications } = build();
 

@@ -932,7 +932,7 @@ func TestStatusPoller_UnreachablePastStartupWindow(t *testing.T) {
 	assert.False(t, reachable)
 	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Phase)
 	assert.Contains(t, got.Message, waitingForPluginMessage+": ")
-	assert.Greater(t, len(got.Message), len(waitingForPluginMessage+": "))
+	assert.Contains(t, got.Message, "connection refused")
 }
 
 func TestMapPhase(t *testing.T) {

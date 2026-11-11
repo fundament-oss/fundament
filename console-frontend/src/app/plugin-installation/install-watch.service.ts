@@ -188,8 +188,9 @@ export default class PluginInstallWatchService {
           return; // A failed read says nothing; the next one may.
         }
         // Ended or started over while the read was out: what it read belongs
-        // to work that is no longer this watch's.
-        if (this.watches.get(key) !== watch) return;
+        // to work that is no longer this watch's. Nor does a read taken while
+        // a retry replaces the installation count; see followRetry().
+        if (this.watches.get(key) !== watch || this.retrying.has(key)) return;
 
         if (item === null) {
           if (watch.direction === 'uninstall') {
