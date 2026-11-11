@@ -45,5 +45,14 @@ dcimFrontend:
   enabled: true
   replicas: 2
 
+marketplaceRegistryApi:
+  enabled: true
+  replicas: 2
+  # Mattermost incoming webhooks told about every new plugin review request.
+  # The Secret (key "urls", comma-separated) is created by secret management;
+  # links point at externalUrls.marketplaceAdmin, which must be set.
+  reviewWebhooksSecretRef:
+    name: review-webhooks
+
 dex:
   enabled: false
