@@ -874,7 +874,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         install.clusterId === clusterId &&
         install.organizationName === organizationName &&
         install.pluginName === pluginName
-          ? { ...install, phase, ready: phase === 'Running' }
+          ? // The message belongs to the phase the poll last read; the next poll fills it in.
+            { ...install, phase, ready: phase === 'Running', message: '' }
           : install,
       ),
     );

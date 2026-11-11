@@ -354,7 +354,8 @@ export default class PluginDetailsComponent implements OnInit {
   private setPhase(clusterId: string, phase: string | null): void {
     this.localChanges += 1;
     this.clusters.update((clusters) =>
-      clusters.map((c) => (c.id === clusterId ? { ...c, phase } : c)),
+      // The message belongs to the phase the poll last read; the next poll fills it in.
+      clusters.map((c) => (c.id === clusterId ? { ...c, phase, message: '' } : c)),
     );
   }
 
