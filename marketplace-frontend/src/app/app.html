@@ -201,11 +201,14 @@
       }
       <!-- A signed-in visitor picks the theme under Appearance in the account
            menu; everyone else gets this toggle, so an anonymous first load
-           does not have to fetch the menu element for it. The portal waits for
-           authn-api: nearly everyone there is signed in, and would see the
-           toggle vanish as the account button appears. -->
+           does not have to fetch the menu element for it. The portal and the
+           backoffice wait for the session answer: nearly everyone there is
+           signed in, and would see the toggle vanish as the account button
+           appears. -->
       @if (
-        variant === 'registry' ? sessionState() === 'signed-out' : sessionState() !== 'signed-in'
+        variant === 'registry' || variant === 'admin'
+          ? sessionState() === 'signed-out'
+          : sessionState() !== 'signed-in'
       ) {
         <nldd-icon-button
           [icon]="isDarkMode() ? 'sun' : 'moon'"

@@ -172,4 +172,59 @@ describe('StaffSessionService.login', () => {
       'The sign-in service could not be reached. Try again in a moment.',
     );
   });
+
+  // Signed in, but the lookup after it failed: an outage, not a cookie that
+  // does not reach this host, so the message must not point at cookies.
+  it('tells a failed lookup apart from a session that did not arrive', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, 'unavailable');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+
+    await expect(session.login('rev@example.com', 'secret')).rejects.toThrow(
+      'You were signed in, but your account could not be looked up. Try again in a moment.',
+    );
+  });
+
+  // The login page asks for the session as it opens. If that answer is slow
+  // and lands after the one login() asked for, it must not sign the reviewer
+  // back out.
+  it('keeps the reviewer when a lookup from before signing in answers late', async () => {
+    const reviewer = { id: 'u1', name: 'Rev Iewer' };
+    const { session, getUserInfo } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    let answerEarlyLookup!: () => void;
+    getUserInfo.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          answerEarlyLookup = () => reject(new ConnectError('no session', Code.Unauthenticated));
+        }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+
+    const early = session.ensureUser();
+    await session.login('rev@example.com', 'secret');
+    answerEarlyLookup();
+
+    expect(await early).toEqual(reviewer);
+    expect(session.user()).toEqual(reviewer);
+  });
+
+  it('ignores a lookup that answers after signing out', async () => {
+    const reviewer = { id: 'u1', name: 'Rev Iewer' };
+    const { session, getUserInfo } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    let answerLookup!: () => void;
+    getUserInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerLookup = () => resolve({ user: reviewer });
+        }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+
+    const lookup = session.ensureUser();
+    await session.logout();
+    answerLookup();
+    await lookup;
+
+    expect(session.user()).toBeNull();
+  });
 });

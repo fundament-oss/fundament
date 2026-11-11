@@ -77,9 +77,7 @@ export default class LoginComponent {
     // business here: send them on to where they were going.
     this.session
       .ensureUser()
-      .then((user) => {
-        if (user) this.goOn();
-      })
+      .then((user) => (user ? this.goOn() : false))
       .catch(() => {});
 
     afterNextRender(() => {
@@ -106,15 +104,29 @@ export default class LoginComponent {
 
     try {
       await this.session.login(this.email().trim(), this.password());
-      this.goOn();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Signing in failed.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    // Still here when the page did not open (its code failed to load, or the
+    // guard sent the reviewer back): say so and let the form be used again,
+    // rather than leaving the button spinning.
+    if (!(await this.goOn())) {
+      this.error.set('You were signed in, but the page could not be opened. Try again.');
       this.isLoading.set(false);
     }
   }
 
-  private goOn() {
+  /** Goes to the page the reviewer was on their way to. Resolves to whether
+   *  that navigation happened. */
+  private async goOn(): Promise<boolean> {
     const returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
-    this.router.navigateByUrl(returnUrl, { replaceUrl: true }).catch(() => {});
+    try {
+      return await this.router.navigateByUrl(returnUrl, { replaceUrl: true });
+    } catch {
+      return false;
+    }
   }
 }

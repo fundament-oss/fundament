@@ -33,6 +33,12 @@ export default class StaffSessionService {
 
   private pending?: Promise<StaffUser | null>;
 
+  // Bumped by every lookup and by every sign-out, so an answer that a newer
+  // one overtook leaves the newer one in place. Without it, the empty answer
+  // to a lookup started before signing in could land after the one started
+  // by login(), and sign the reviewer straight back out.
+  private lookups = 0;
+
   /**
    * Whether this build has anywhere to sign in. The demo bundle and a
    * deployment without dcim-authn-api carry no URL, and are left as they were
@@ -50,9 +56,11 @@ export default class StaffSessionService {
   ensureUser(): Promise<StaffUser | null> {
     const user = this.user();
     if (user) return Promise.resolve(user);
-    this.pending ??= this.lookup().finally(() => {
-      this.pending = undefined;
-    });
+    this.pending ??= this.lookup()
+      .then((result) => result.user)
+      .finally(() => {
+        this.pending = undefined;
+      });
     return this.pending;
   }
 
@@ -78,10 +86,18 @@ export default class StaffSessionService {
       throw new Error(StaffSessionService.loginFailureMessage(response.status));
     }
 
-    const user = await this.lookup().catch(() => null);
+    const { user, failed } = await this.lookup();
+    if (failed) {
+      // Signed in, but dcim-authn-api (or its directory) did not answer the
+      // question who that is. A retry may well work.
+      throw new Error(
+        'You were signed in, but your account could not be looked up. Try again in a moment.',
+      );
+    }
     if (!user) {
-      // The cookie was set, but not one this page can send back: a cookie
-      // domain that does not cover this host, most likely.
+      // dcim-authn-api answered that there is no session, right after setting
+      // one: the cookie is not one this page can send back. A cookie domain
+      // that does not cover this host, most likely.
       throw new Error('You were signed in, but the session did not reach this site.');
     }
     return user;
@@ -101,32 +117,43 @@ export default class StaffSessionService {
     if (!response.ok) {
       throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
     }
-    this.user.set(null);
+    this.sessionEnded();
   }
 
   /** Forgets the reviewer after an API has said the session is gone. */
   sessionEnded(): void {
+    // Supersede any lookup still out, so its answer cannot sign the reviewer
+    // back in.
+    this.lookups += 1;
     this.user.set(null);
   }
 
   /**
-   * Asks dcim-authn-api who is signed in. Any failure counts as nobody: a
-   * reviewer who cannot be identified cannot use the backoffice either, and
-   * the login page is where an outage then shows, as a failed sign-in.
+   * Asks dcim-authn-api who is signed in. For the guard any failure counts as
+   * nobody: a reviewer who cannot be identified cannot use the backoffice
+   * either, and the login page is where an outage then shows. `failed` tells
+   * login() an outage apart from an answer that there is no session.
    */
-  private async lookup(): Promise<StaffUser | null> {
+  private async lookup(): Promise<{ user: StaffUser | null; failed: boolean }> {
+    this.lookups += 1;
+    const lookup = this.lookups;
     let user: StaffUser | null = null;
+    let failed = false;
     try {
       const response = await this.client.getUserInfo({});
       user = response.user ? { id: response.user.id, name: response.user.name } : null;
     } catch (err) {
       if (ConnectError.from(err).code !== Code.Unauthenticated) {
+        failed = true;
         // eslint-disable-next-line no-console
         console.warn('Could not read the staff session', err);
       }
     }
+
+    // A newer lookup or a sign-out has taken over: leave its answer standing.
+    if (lookup !== this.lookups) return { user: this.user(), failed };
     this.user.set(user);
-    return user;
+    return { user, failed };
   }
 
   // Joined under the configured URL rather than resolved against it, which

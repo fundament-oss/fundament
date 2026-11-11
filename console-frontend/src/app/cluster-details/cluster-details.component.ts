@@ -810,10 +810,16 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         }
         return;
       }
+      // rawMessage for a ConnectError: its message carries the status code as
+      // a prefix ("[not_found] ..."), which means nothing to the reader.
+      let detail: string | undefined;
+      if (error instanceof ConnectError) {
+        detail = error.rawMessage;
+      } else if (error instanceof Error) {
+        detail = error.message;
+      }
       this.deleteError.set(
-        error instanceof Error
-          ? `Failed to delete cluster: ${error.message}`
-          : 'Failed to delete cluster',
+        detail ? `Failed to delete cluster: ${detail}` : 'Failed to delete cluster',
       );
     } finally {
       this.isDeleting.set(false);
