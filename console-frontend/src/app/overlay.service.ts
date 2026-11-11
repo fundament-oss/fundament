@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 
 /**
  * The sheets the shell owns rather than the router: your account, your keys and
@@ -17,10 +17,6 @@ export class OverlayService {
 
   readonly newProject = signal(false);
 
-  /** The cluster a new project goes on by default: the one you are in when you
-   *  start it from there. Null leaves the choice to the form. */
-  readonly newProjectCluster = signal<string | null>(null);
-
   /** The hierarchy picker the breadcrumb opens: every cluster and project in
    *  the organization, to move into any of them at once. */
   readonly contextPicker = signal(false);
@@ -38,6 +34,19 @@ export class OverlayService {
 
   readonly addProjectMember = signal<string | null>(null);
 
+  /** Whether any of these sheets is open. */
+  readonly anyOpen = computed(
+    () =>
+      this.profile() ||
+      this.apiKeys() ||
+      this.newProject() ||
+      this.contextPicker() ||
+      this.newCluster() ||
+      this.inviteMember() ||
+      this.newNamespace() !== null ||
+      this.addProjectMember() !== null,
+  );
+
   /** The address a sheet was opened for. The shell takes its sheets away when
    *  you navigate, and the redirect that comes with such an address must not
    *  count as navigating away. */
@@ -51,7 +60,6 @@ export class OverlayService {
     this.profile.set(false);
     this.apiKeys.set(false);
     this.newProject.set(false);
-    this.newProjectCluster.set(null);
     this.contextPicker.set(false);
     this.newCluster.set(false);
     this.inviteMember.set(false);

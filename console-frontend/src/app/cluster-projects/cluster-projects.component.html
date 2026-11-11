@@ -1,11 +1,11 @@
-<!-- Same outer layout as the cluster's other pages: the pane owns the back
-     button, and it leads to the cluster's menu. -->
+<!-- Same outer layout as the cluster's other pages. No (back) handler: the
+     event reaches the split view, whose onPaneBack leads to the cluster's
+     menu. -->
 <nldd-page sticky-header>
   <nldd-top-title-bar
     slot="header"
     text="Projects"
     [attr.back-text]="pageNav.backText()"
-    (back)="pageNav.goTo('/clusters/' + id())"
     collapse-anchor="cluster-projects-title"
   ></nldd-top-title-bar>
   <nldd-simple-section>
@@ -47,6 +47,20 @@
         show-text
         text="Loading projects..."
       ></nldd-activity-indicator>
+    } @else if (loadFailed()) {
+      <nldd-inline-dialog
+        icon="exclamation-triangle"
+        icon-color="secondary"
+        text="The projects on this cluster could not be loaded"
+        supporting-text="The other clusters' projects did load. Try again in a moment."
+      >
+        <nldd-button
+          slot="actions"
+          text="Try again"
+          [loading]="retrying()"
+          (click)="retry()"
+        ></nldd-button>
+      </nldd-inline-dialog>
     } @else if (projects().length === 0) {
       <nldd-inline-dialog
         icon="folder"

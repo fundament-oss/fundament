@@ -1,12 +1,12 @@
-<!-- Same outer layout as the cluster's other pages: the pane owns the back
-     button, and it leads to the cluster's menu. -->
+<!-- Same outer layout as the cluster's other pages. No (back) handler: the
+     event reaches the split view, whose onPaneBack leads to the cluster's menu
+     from the address, which is there before the cluster has loaded. -->
 <nldd-page sticky-header>
   <nldd-top-title-bar
     slot="header"
     [attr.text]="clusterData.basics.name || 'Cluster'"
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="cluster-title"
-    (back)="pageNav.goTo('/clusters/' + clusterData.basics.id)"
   ></nldd-top-title-bar>
   <nldd-simple-section>
     <!-- Loading State -->

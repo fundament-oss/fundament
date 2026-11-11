@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -72,7 +73,15 @@ export default class ClusterProjectsComponent {
 
   protected cluster = computed(() => this.organizationData.getClusterById(this.id())?.cluster);
 
-  protected isLoading = computed(() => !this.organizationData.projectsLoaded());
+  /** Until the first load has finished. Settled rather than loaded: a load
+   *  where another cluster failed still has this cluster's answer. */
+  protected isLoading = computed(() => !this.organizationData.projectsSettled());
+
+  /** This cluster's list did not come back, so its projects are unknown, not
+   *  absent. */
+  protected loadFailed = computed(() => this.organizationData.projectLoadFailures().has(this.id()));
+
+  protected retrying = signal(false);
 
   protected projects = computed(() =>
     (this.cluster()?.projects ?? [])
@@ -92,13 +101,24 @@ export default class ClusterProjectsComponent {
     });
   }
 
-  /** The new-project sheet, over this page, with this cluster already chosen.
-   *  `/projects/new` stays the address, for a new tab. */
+  /** The new-project sheet, over this page. It reads the cluster from the
+   *  place it is opened in, so the project goes on this one. `/projects/new`
+   *  stays the address, for a new tab. */
   protected newProject(event: Event): void {
     if (opensElsewhere(event)) return;
 
     event.preventDefault();
-    this.overlays.newProjectCluster.set(this.id());
     this.overlays.newProject.set(true);
+  }
+
+  protected async retry(): Promise<void> {
+    this.retrying.set(true);
+    try {
+      await this.organizationData.reloadProjectsAndNamespaces();
+    } catch {
+      // The page shows the failure again; nothing more to say here.
+    } finally {
+      this.retrying.set(false);
+    }
   }
 }

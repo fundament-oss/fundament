@@ -56,11 +56,6 @@ export default class NavContextService {
     return null;
   });
 
-  readonly projectId = computed(() => {
-    const context = this.context();
-    return context.kind === 'project' ? context.projectId : null;
-  });
-
   /** Where you are. */
   readonly current = computed<ContextPlace>(() => {
     const context = this.context();
@@ -70,7 +65,11 @@ export default class NavContextService {
   /**
    * One level up, landing on the list you would have picked this place from:
    * a cluster returns to the organization's clusters, a project to its
-   * cluster's projects. Null in the organization, which has nothing above it.
+   * cluster's projects. Null in the organization, which has nothing above it,
+   * and for a project while its cluster is still being looked up. A project
+   * whose cluster stays unknown once the projects are in (its cluster's list
+   * failed, or the project is not in it) leads to the organization's clusters
+   * instead, so there is always a way up.
    */
   readonly parent = computed<ContextPlace | null>(() => {
     const context = this.context();
@@ -85,7 +84,10 @@ export default class NavContextService {
         };
       case 'project': {
         const clusterId = this.clusterId();
-        if (!clusterId) return null;
+        if (!clusterId) {
+          if (!this.organizationData.projectsSettled()) return null;
+          return { kind: 'organization', name: this.organizationName(), path: '/clusters' };
+        }
         return {
           kind: 'cluster',
           name: this.nameOf({ kind: 'cluster', clusterId }),

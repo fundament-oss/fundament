@@ -41,12 +41,14 @@ import PageNavService from '../page-nav.service';
           (click)="pageNav.navigate($event, parent.path)"
         ></nldd-icon-button>
       }
+      <!-- Bordered and as wide as its name, like a select: it reads as a
+           control, and the chevron sits at its edge rather than floating in
+           the middle of the row. A long name truncates within the pane. -->
       <nldd-button
-        class="min-w-0 flex-1"
+        class="min-w-0"
         type="button"
-        variant="neutral-transparent"
-        width="full"
-        horizontal-alignment="left"
+        variant="neutral-base"
+        max-width="100%"
         single-line
         popup-type="dialog"
         end-icon="chevron-up-chevron-down"

@@ -214,6 +214,17 @@ export class OrganizationDataService {
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
   projectsLoaded = signal(false);
 
+  /** True once a project load has finished for the current org, whether or
+   *  not every cluster answered. Unlike `projectsLoaded` it is not taken back
+   *  by a reload, so what is on screen stays while the fresh list comes in. */
+  projectsSettled = signal(false);
+
+  /** The clusters whose project list failed on the last load. Their projects
+   *  are unknown rather than absent: a page about one of them says so and
+   *  offers to try again, instead of waiting on `projectsLoaded`, which a
+   *  partial result never sets. */
+  projectLoadFailures = signal<ReadonlySet<string>>(new Set());
+
   /** True once the cluster list has come back for the current org. Anything that
    *  reads "no clusters" as a state rather than as "not fetched yet" waits on this. */
   clustersLoaded = signal(false);
@@ -228,6 +239,8 @@ export class OrganizationDataService {
     // Reset project cache so the next loadProjectsAndNamespaces() fetches fresh data.
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
+    this.projectsSettled.set(false);
+    this.projectLoadFailures.set(new Set());
     this.clustersLoaded.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
@@ -331,6 +344,13 @@ export class OrganizationDataService {
       );
 
       if (generation !== this.generation) return false;
+
+      this.projectLoadFailures.set(
+        new Set(
+          requested.filter((_, i) => results[i].status === 'rejected').map((cluster) => cluster.id),
+        ),
+      );
+      this.projectsSettled.set(true);
 
       const failures = results.filter((result) => result.status === 'rejected');
       if (failures.length > 0) {
@@ -603,5 +623,7 @@ export class OrganizationDataService {
     this.membersLoaded.set(false);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
+    this.projectsSettled.set(false);
+    this.projectLoadFailures.set(new Set());
   }
 }

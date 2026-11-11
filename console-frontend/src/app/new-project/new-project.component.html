@@ -1,7 +1,7 @@
 <nldd-sheet
   #sheet
   appSheetSync
-  [show]="show"
+  [show]="show()"
   placement="right"
   accessible-label="New project"
   (close)="onCancel()"
@@ -57,12 +57,25 @@
             hyphens.
           </nldd-form-field-help-text>
         </nldd-form-field>
-        @if (fixedCluster(); as cluster) {
-          <!-- Opened from inside a cluster: that is where the project goes. -->
+        @if (scoped()) {
+          <!-- Opened from inside a cluster or a project: that cluster is where
+               the project goes, so it is a fact here, not a field. -->
           <nldd-form-field label="Cluster">
-            <nldd-rich-text>
-              <p>{{ cluster.name }} ({{ cluster.region }})</p>
-            </nldd-rich-text>
+            @if (fixedCluster(); as cluster) {
+              <nldd-rich-text>
+                <p>{{ cluster.name }} ({{ cluster.region }})</p>
+              </nldd-rich-text>
+            } @else if (fixedClusterMissing()) {
+              <nldd-banner
+                variant="critical"
+                text="The cluster you are in could not be found. Reload the page and try again."
+              ></nldd-banner>
+            } @else {
+              <nldd-activity-indicator
+                show-text
+                text="Loading cluster..."
+              ></nldd-activity-indicator>
+            }
           </nldd-form-field>
         } @else {
           <nldd-form-field

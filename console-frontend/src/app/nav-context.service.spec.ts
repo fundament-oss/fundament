@@ -6,7 +6,13 @@ import { OrganizationDataService } from './organization-data.service';
 
 const ORG = '/organizations/acme';
 
-function contextAt(url: string, { projectsLoaded = true } = {}): NavContextService {
+function contextAt(
+  url: string,
+  {
+    projectsLoaded = true,
+    projectsSettled = projectsLoaded,
+  }: { projectsLoaded?: boolean; projectsSettled?: boolean } = {},
+): NavContextService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
@@ -25,6 +31,7 @@ function contextAt(url: string, { projectsLoaded = true } = {}): NavContextServi
                 }
               : undefined,
           clusterSummaries: () => [{ id: 'c2', name: 'staging' }],
+          projectsSettled: () => projectsSettled,
         },
       },
     ],
@@ -66,5 +73,10 @@ describe('NavContextService', () => {
     const nav = contextAt(`${ORG}/projects/p1`, { projectsLoaded: false });
     expect(nav.current().name).toBe('Project');
     expect(nav.parent()).toBeNull();
+  });
+
+  it('leads up to the organization when a project’s cluster stays unknown', () => {
+    const nav = contextAt(`${ORG}/projects/p9`, { projectsSettled: true });
+    expect(nav.parent()).toEqual({ kind: 'organization', name: 'Acme', path: '/clusters' });
   });
 });

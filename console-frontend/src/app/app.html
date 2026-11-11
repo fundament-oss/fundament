@@ -444,8 +444,7 @@
 @defer (when overlays.newProject()) {
   <app-new-project
     [show]="overlays.newProject()"
-    [preferredClusterId]="overlays.newProjectCluster()"
-    (closed)="overlays.newProject.set(false); overlays.newProjectCluster.set(null)"
+    (closed)="overlays.newProject.set(false)"
   ></app-new-project>
 }
 @defer (when overlays.contextPicker()) {

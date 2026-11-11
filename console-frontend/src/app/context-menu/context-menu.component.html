@@ -11,7 +11,7 @@
     <nldd-list
       type="navigation"
       dividers="on-touch"
-      [attr.aria-label]="kindLabel()"
+      [attr.accessible-label]="kindLabel()"
     >
       @for (item of items(); track item.path) {
         <nldd-list-item
@@ -64,7 +64,7 @@
       <nldd-list
         type="navigation"
         dividers="on-touch"
-        [attr.aria-label]="entry.group.label"
+        [attr.accessible-label]="entry.group.label"
       >
         @for (resource of entry.group.items; track resource.crdPlural) {
           <nldd-list-item

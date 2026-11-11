@@ -153,8 +153,10 @@ export default class ContextPickerComponent {
     });
   }
 
+  /** Read off the element, not the event: the field's native input event
+   *  bubbles out after its own, and that one's `detail` is a click count. */
   protected onSearch(event: Event): void {
-    this.query.set((event as CustomEvent<{ value?: string }>).detail?.value ?? '');
+    this.query.set((event.target as unknown as { value: string }).value ?? '');
   }
 
   /** Follows the row and takes the picker away. Closed here as well as by the

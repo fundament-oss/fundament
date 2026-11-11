@@ -219,7 +219,15 @@ export default class App implements OnInit {
    *  into the console instead. */
   private organizationsRequested = false;
 
-  currentUrl = signal(window.location.pathname);
+  /** The router's address, shared with the menu: one signal, so the shell and
+   *  the menu never disagree about where you are. */
+  currentUrl = this.navContext.currentUrl;
+
+  /** The address the last navigation landed on, for telling an arrival
+   *  somewhere else from a redirect back to the same place. Kept apart from
+   *  `currentUrl`, which the service has already moved on by the time the
+   *  shell hears of the navigation. */
+  private lastUrl = this.router.url;
 
   /**
    * How deep the stacked (narrow) view is: 0 shows the menu of the place you
@@ -254,12 +262,22 @@ export default class App implements OnInit {
     // empty pane asking you to pick something. Only with room for both: on a
     // narrow screen the place's own address is its menu, and the back button
     // from any page leads there. Replaces the address, so Back skips it.
+    //
+    // Not while a sheet is open: an address such as /projects/new or /profile
+    // opens its sheet over the organization's own address, and moving on from
+    // there would count as navigating away and close it. Closing the sheet
+    // runs this again. The query and fragment come along, since the
+    // walkthrough resumes from them.
     effect(() => {
       if (!this.selectedOrgId() || !this.layoutMeasured() || this.isSingleColumn()) return;
-      if (!this.isContextRoot()) return;
-      const overview = overviewOf(contextOf(this.currentUrl()));
+      if (!this.isContextRoot() || this.overlays.anyOpen()) return;
+      const overview = overviewOf(this.navContext.context());
       untracked(() => {
-        this.router.navigateByUrl(this.pageNav.path(overview), { replaceUrl: true });
+        const here = this.router.parseUrl(this.router.url);
+        const target = this.router.parseUrl(this.pageNav.path(overview));
+        target.queryParams = here.queryParams;
+        target.fragment = here.fragment;
+        this.router.navigateByUrl(target, { replaceUrl: true });
       });
     });
 
@@ -283,9 +301,10 @@ export default class App implements OnInit {
     // cut off.
     effect(() => {
       const orgId = this.selectedOrgId();
-      const projectId = this.activeProjectId();
-      const pageClusterId = this.activeClusterId();
-      const clusterId = this.activeProjectClusterId() ?? pageClusterId;
+      const context = this.navContext.context();
+      const projectId = context.kind === 'project' ? context.projectId : null;
+      const pageClusterId = context.kind === 'cluster' ? context.clusterId : null;
+      const clusterId = this.navContext.clusterId();
 
       untracked(() => {
         let key: string | null = null;
@@ -367,12 +386,10 @@ export default class App implements OnInit {
         // sheet in.
         const openedFor = this.overlays.openedFor();
         this.overlays.openedFor.set(null);
-        if (
-          event.urlAfterRedirects !== openedFor &&
-          event.urlAfterRedirects !== this.currentUrl()
-        ) {
+        if (event.urlAfterRedirects !== openedFor && event.urlAfterRedirects !== this.lastUrl) {
           this.overlays.closeAll();
         }
+        this.lastUrl = event.urlAfterRedirects;
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
         this.updateSidebarStateFromRoute();
@@ -383,6 +400,7 @@ export default class App implements OnInit {
     // Reading the router rather than the address bar we started from keeps the
     // pane behind the sheet from rendering the URL we no longer are at.
     this.isBarePage.set(isBarePageUrl(this.router.url));
+    this.lastUrl = this.router.url;
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
     // A signed-in visit to a bare page such as /login may already have been
@@ -588,7 +606,7 @@ export default class App implements OnInit {
   }
 
   /** The organization is the only selection left; a project follows from the
-   *  URL (see activeProjectId) and needs nothing stored. */
+   *  URL (see NavContextService) and needs nothing stored. */
   private updateSidebarStateFromRoute() {
     const currentOrgId = this.organizationContextService.currentOrganizationId();
     if (currentOrgId && this.selectedOrgId() !== currentOrgId) {
@@ -611,13 +629,12 @@ export default class App implements OnInit {
 
   /** Keeps `/projects/new` a real address for middle-click and "open in new
    *  tab", while a plain click opens the sheet over the page you are on. Started
-   *  inside a cluster, or a project on one, the new project goes there too
-   *  unless you pick another. */
+   *  inside a cluster, or a project on one, the new project goes there: the
+   *  sheet reads that from the place it opens in. */
   openNewProject(event: Event): void {
     if (opensElsewhere(event)) return;
 
     event.preventDefault();
-    this.overlays.newProjectCluster.set(this.navContext.clusterId());
     this.overlays.newProject.set(true);
   }
 
@@ -790,27 +807,6 @@ export default class App implements OnInit {
           : [];
         return { id: org.id, name: org.name, alias: org.alias, projects };
       });
-  });
-
-  /** The project the URL is in, or null. Derived rather than stored: the
-   *  menu follows where you are, it is not a mode you switch into. */
-  activeProjectId = computed(() => {
-    const context = contextOf(this.currentUrl());
-    return context.kind === 'project' ? context.projectId : null;
-  });
-
-  /** The cluster the URL is in, or null. `clusters/new` is the create sheet
-   *  over the list, not a cluster. */
-  activeClusterId = computed(() => {
-    const context = contextOf(this.currentUrl());
-    return context.kind === 'cluster' ? context.clusterId : null;
-  });
-
-  /** The cluster the active project runs on, or null until the organization's
-   *  projects have loaded. */
-  activeProjectClusterId = computed(() => {
-    const id = this.activeProjectId();
-    return id ? (this.organizationDataService.getProjectById(id)?.cluster.id ?? null) : null;
   });
 
   /** Every project in the organization, for the create menu in the header. */

@@ -46,7 +46,7 @@ import '@nldd/design-system/top-title-bar';
 /** Where a cluster runs and how big it is, as the row's second line. */
 function summarize(cluster: ClusterSummary): string {
   const pools = `${cluster.nodePoolCount} node pool${cluster.nodePoolCount === 1 ? '' : 's'}`;
-  return `${cluster.region || 'Unknown region'} · ${pools}`;
+  return `${cluster.region || 'Unknown'} · ${pools}`;
 }
 
 @Component({

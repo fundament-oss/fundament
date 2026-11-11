@@ -104,8 +104,12 @@ export default class ContextMenuComponent {
           item('/members', 'users', 'Members', {
             count: this.organizationData.memberCount(),
           }),
+          // Only once this organization's list is in: switching keeps the
+          // previous one's until then.
           item('/clusters', 'kubernetes', 'Clusters', {
-            count: this.organizationData.clusterSummaries().length,
+            count: this.organizationData.clustersLoaded()
+              ? this.organizationData.clusterSummaries().length
+              : null,
           }),
           item('/plugins', 'plugin', 'Plugins'),
           item('/metrics', 'analytics', 'Metrics', { metrics: true }),
