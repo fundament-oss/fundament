@@ -114,6 +114,13 @@ describe('installTransitionNotice', () => {
     );
   });
 
+  it('warns about an install that came up degraded', () => {
+    expect(installTransitionNotice('Deploying', 'Degraded', 'Ceph', 'c1')).toEqual({
+      kind: 'warning',
+      text: 'Plugin Ceph is degraded on cluster c1',
+    });
+  });
+
   it('says nothing for a change that needs no notice', () => {
     expect(installTransitionNotice('Running', 'Degraded', 'Ceph', 'c1')).toBeNull();
   });

@@ -18,7 +18,6 @@ import {
   getInstallStatusDisplay,
   isInstallInProgress,
   isInstallFailed,
-  isInstallUnhealthy,
   isInstallRunning,
   isInstallTerminating,
   reportedStatusMessage,
@@ -202,11 +201,12 @@ export default class InstallPluginModalComponent {
 
   isRemoving = isInstallTerminating;
 
-  /** The reason to show under the cluster's name: only for the states the row's
-   *  badge marks as wrong, where the reason is what tells you what to do. */
+  /** What the plugin last reported, under the cluster's name, in every phase: while
+   *  it installs this is the only sign of progress, and once it runs it can say
+   *  where to go next. */
   // eslint-disable-next-line class-methods-use-this
-  issueMessage(cluster: Cluster): string {
-    if (cluster.phase === null || !isInstallUnhealthy(cluster.phase)) return '';
+  statusMessage(cluster: Cluster): string {
+    if (cluster.phase === null) return '';
     return reportedStatusMessage(cluster.message);
   }
 
