@@ -23,7 +23,7 @@ import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal
 import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
 import { NotificationService } from '../notification.service';
-import { CLUSTER, METRICS, PLUGIN, PROJECT } from '../../connect/tokens';
+import { CLUSTER, INSTALL, METRICS, PROJECT } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -37,7 +37,13 @@ import {
 import { ListProjectsRequestSchema, type Project } from '../../generated/v1/project_pb';
 import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
-import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import {
+  ListPluginsRequestSchema,
+  ListPublishersRequestSchema,
+  type PluginSummary,
+} from '../../generated/catalog/v1/catalog_pb';
+import type { Publisher } from '../../generated/marketplace/v1/common_pb';
+import installedListings from './installed-listings';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
@@ -58,7 +64,6 @@ import {
   isTransitionalStatus,
   shouldPollStatus,
 } from '../utils/cluster-status';
-import getPluginIconName from '../utils/plugin-icon-name';
 import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -336,7 +341,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private organizationDataService = inject(OrganizationDataService);
 
-  private pluginClient = inject(PLUGIN);
+  private installClient = inject(INSTALL);
 
   private notificationService = inject(NotificationService);
 
@@ -450,8 +455,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  publish a plugin under the same name. */
   private pluginIssues = signal<ReadonlyMap<string, PluginInstallIssue>>(new Map());
 
-  /** The catalog as last read, so a status re-read does not fetch it again. */
+  /** The catalog and its publishers as last read, so a status re-read does
+   *  not fetch them again. A listing names its publisher by id only. */
   private catalogPlugins: PluginSummary[] = [];
+
+  private catalogPublishers: Publisher[] = [];
+
+  private publisherNames = new Map<string, string>();
 
   isLoadingPlugins = signal<boolean>(true);
 
@@ -859,12 +869,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     try {
       this.isLoadingPlugins.set(true);
 
-      const [pluginsResponse, installations] = await Promise.all([
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+      const [pluginsResponse, publishersResponse, installations] = await Promise.all([
+        firstValueFrom(this.installClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        firstValueFrom(this.installClient.listPublishers(create(ListPublishersRequestSchema, {}))),
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
       this.catalogPlugins = pluginsResponse.plugins;
+      this.catalogPublishers = publishersResponse.publishers;
+      this.publisherNames = new Map(publishersResponse.publishers.map((p) => [p.id, p.name]));
       this.applyInstallations(installations);
     } catch (error) {
       this.notificationService.error(
@@ -891,25 +904,20 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   /** What is wrong with an installed plugin; null when it runs as it should. */
   pluginIssue(plugin: PluginSummary): PluginInstallIssue | null {
-    return (
-      this.pluginIssues().get(pluginResourceName(plugin.organizationName, plugin.name)) ?? null
-    );
+    const publisher = this.publisherNames.get(plugin.organizationId);
+    if (publisher === undefined) return null;
+    return this.pluginIssues().get(pluginResourceName(publisher, plugin.name)) ?? null;
   }
 
   private applyInstallations(installations: PluginInstallationItem[]): void {
     const issues = new Map<string, PluginInstallIssue>();
-    const installed = new Set<string>();
     installations.forEach((item) => {
       const { organizationName, pluginName } = item.spec.definitionRef;
-      const name = pluginResourceName(organizationName, pluginName);
-      installed.add(name);
       const issue = installIssue(healthOf(item));
-      if (issue) issues.set(name, issue);
+      if (issue) issues.set(pluginResourceName(organizationName, pluginName), issue);
     });
     this.installedPlugins.set(
-      this.catalogPlugins.filter((p) =>
-        installed.has(pluginResourceName(p.organizationName, p.name)),
-      ),
+      installedListings(this.catalogPlugins, this.catalogPublishers, installations),
     );
     this.pluginIssues.set(issues);
     this.installPoller.pace(
@@ -1014,8 +1022,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getEventTypeColor = getEventTypeColor;
 
   pluginDisplayName = pluginDisplayName;
-
-  pluginIconName = getPluginIconName;
 
   getEventDetails = getEventDetails;
 

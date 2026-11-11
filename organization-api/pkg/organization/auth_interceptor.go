@@ -54,7 +54,6 @@ func (s *Server) isPublicEndpoint(procedure string) bool {
 	publicEndpoints := map[string]bool{
 		"/fundament.organization.v1.OrganizationService/HealthCheck": true,
 		// Add more public endpoints as needed
-		"/organization.v1.PluginService/GetPluginDefinition": true,
 	}
 	return publicEndpoints[procedure]
 }

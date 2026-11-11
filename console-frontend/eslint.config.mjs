@@ -41,7 +41,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/plugin-sdk/build-*.ts'],
+    files: ['src/plugin-sdk/build-*.ts', 'src/plugin-sdk/check-classic-scripts.ts'],
     rules: {
       'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }],
       'no-console': 'off',

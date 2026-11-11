@@ -1,4 +1,5 @@
-# Needs kube_api_proxy_url in the provider configuration.
+# Needs kube_api_proxy_url in the provider configuration, and marketplace_install_url
+# when plugin_version is left out.
 data "fundament_cluster" "example" {
   name = "my-cluster"
 }

@@ -3,8 +3,7 @@
 // deliberately identical, so a viewer moving from a marketplace slide to a
 // console slide sees the same catalogue rather than two unrelated ones.
 //
-// Every `name` must have a matching icon at public/img/plugins/<name>.svg: the
-// plugin card renders that path directly and has no fallback.
+// Logos come from ./plugin-logos; a name without one shows the generic plugin icon.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
@@ -30,6 +29,7 @@ import {
   type Plugin as RegistryPlugin,
   type PluginVersion as RegistryPluginVersion,
 } from '../../generated/registry/v1/common_pb';
+import demoLogo from './plugin-logos';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
 
@@ -99,6 +99,7 @@ const published = (name: string, ageDays: number) => ({
   organizationId: SYSTEM_ORG_ID,
   latestVersionId: versionId(name, VERSIONS[name]?.[0] ?? ''),
   published: daysAgo(ageDays),
+  ...demoLogo(name),
 });
 
 // --- Listings -------------------------------------------------------------
@@ -331,6 +332,8 @@ export function pluginDetails(pluginId: string): PluginDetails | undefined {
     labels: summary.labels,
     latestVersionId: summary.latestVersionId,
     published: summary.published,
+    logo: summary.logo,
+    logoDark: summary.logoDark,
     description: extra.description,
     authorName: 'Fundament',
     authorUrl: 'https://fundament.projects.digilab.network/',
@@ -434,6 +437,7 @@ export const authoredPlugins: RegistryPlugin[] = AUTHORED.map((plugin) =>
     license: 'EUPL-1.2',
     created: daysAgo(180),
     updated: daysAgo(2),
+    ...demoLogo(plugin.name),
   }),
 );
 

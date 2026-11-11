@@ -130,6 +130,11 @@ export class OrganizationDataService {
 
   loading = signal(false);
 
+  /** Why the organizations or the current organization could not be loaded, as
+   *  a line to show; null when the last load went through. Without it a failed
+   *  first load leaves the console empty with nothing to say why. */
+  loadError = signal<string | null>(null);
+
   /**
    * What the current organization is called on screen.
    *
@@ -231,6 +236,7 @@ export class OrganizationDataService {
     this.clustersLoaded.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
+    this.loadError.set(null);
 
     this.loading.set(true);
     try {
@@ -271,6 +277,11 @@ export class OrganizationDataService {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading organization data:', error);
+      // A load for an organization since switched away from has nothing to
+      // say about the one on screen.
+      if (generation === this.generation) {
+        this.loadError.set(error instanceof Error ? error.message : 'The request failed.');
+      }
     } finally {
       this.loading.set(false);
     }
@@ -601,6 +612,7 @@ export class OrganizationDataService {
     this.clustersLoaded.set(false);
     this.members.set([]);
     this.membersLoaded.set(false);
+    this.loadError.set(null);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
   }

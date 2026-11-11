@@ -142,6 +142,7 @@ BASE_URL=https://console.fundament.localhost:8443
 AUTHN_API_URL=https://authn.fundament.localhost:8443
 ORGANIZATION_API_URL=https://organization.fundament.localhost:8443
 PLUGIN_PROXY_URL=https://plugin-proxy.fundament.localhost:8443
+MARKETPLACE_CATALOG_API_URL=https://marketplace-catalog-api.fundament.localhost:8443
 NODE_EXTRA_CA_CERTS=$CAROOT_DIR/rootCA.pem
 BROWSER_PATH=/run/current-system/sw/bin/chromium
 E2E_CLUSTER_NAME=${TEST_ENV_CLUSTER:-e2e-base}

@@ -219,6 +219,18 @@ body {
   @apply bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200;
 }
 
+/* Sets a menu group apart from what follows, against the faint default between
+   items. On the group because it draws that divider itself: nldd-menu hides a
+   nldd-menu-divider placed next to one. The tokens inherit into its shadow root. */
+
+.menu-group-strong-divider {
+  --semantics-dividers-color: light-dark(
+    var(--primitives-color-neutral-200),
+    var(--primitives-color-neutral-350)
+  );
+  --semantics-dividers-thickness: var(--primitives-border-width-regular);
+}
+
 .link,
 .markdown a {
   @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;

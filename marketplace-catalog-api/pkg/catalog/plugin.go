@@ -301,10 +301,21 @@ func (s *Server) GetPluginDefinition(
 		configSchemaUnavailable = true
 	}
 
+	var definition *marketplacev1.PluginDefinition
+	if req.GetIncludeDefinition() {
+		definition, err = definitionFromManifest(row.Manifest, row.Logo, row.MenuIcons)
+		if err != nil {
+			s.logger.WarnContext(ctx, "unparseable plugin definition",
+				"plugin_id", req.GetPluginId(), "plugin", req.GetName().GetPluginName(),
+				"version", req.GetVersion(), "error", err)
+		}
+	}
+
 	return catalogv1.GetPluginDefinitionResponse_builder{
 		Manifest:                row.Manifest,
 		DefinitionHash:          row.Hash,
 		ConfigSchema:            configSchema,
 		ConfigSchemaUnavailable: configSchemaUnavailable,
+		Definition:              definition,
 	}.Build(), nil
 }

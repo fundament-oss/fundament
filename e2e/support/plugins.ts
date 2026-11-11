@@ -6,9 +6,13 @@
  */
 
 import { createServiceClient } from './api/client.ts';
-import { PluginService } from './generated/v1/plugin_pb.ts';
+import { InstallService } from './generated/install/v1/install_pb.ts';
 import type { Kubectl, UserSession } from './kube.ts';
 import { pollUntil } from './poll.ts';
+
+// install.v1 lives on the marketplace catalog host.
+const marketplaceCatalogApiUrl =
+  process.env.MARKETPLACE_CATALOG_API_URL ?? 'https://marketplace-catalog-api.fundament.localhost:8443';
 
 export interface PluginInstallation {
   metadata: { name: string; uid: string };
@@ -37,10 +41,14 @@ export async function installPlugin(
   organizationName: string,
   pluginName: string,
 ): Promise<void> {
-  const plugins = createServiceClient(PluginService, session.organizationApiUrl, session.authToken, session.organizationId);
-  const { plugins: catalog } = await plugins.listPlugins({});
-  const plugin = catalog.find((p) => p.name === pluginName && p.organizationName === organizationName);
-  if (!plugin?.pluginVersion || !plugin.definitionHash) {
+  const install = createServiceClient(InstallService, marketplaceCatalogApiUrl, session.authToken, session.organizationId);
+  const [{ plugins }, { publishers }] = await Promise.all([install.listPlugins({}), install.listPublishers({})]);
+  const publisherId = publishers.find((p) => p.name === organizationName)?.id;
+  const plugin = plugins.find((p) => p.name === pluginName && p.organizationId === publisherId);
+  const { versions } = plugin ? await install.listPluginVersions({ pluginId: plugin.id }) : { versions: [] };
+  // Versions published at the same moment have no fixed order, so the listing's latest_version_id decides.
+  const latest = versions.find((v) => v.id === plugin?.latestVersionId) ?? versions[0];
+  if (!latest?.version || !latest.definitionHash) {
     throw new Error(`the catalog publishes no installable ${organizationName}/${pluginName}; run: just test-env plugin-publish ${pluginName}`);
   }
   const manifest = {
@@ -51,8 +59,8 @@ export async function installPlugin(
       definitionRef: {
         organizationName,
         pluginName,
-        pluginVersion: plugin.pluginVersion,
-        definitionHash: plugin.definitionHash,
+        pluginVersion: latest.version,
+        definitionHash: latest.definitionHash,
       },
     },
   };

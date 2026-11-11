@@ -7,7 +7,8 @@ metadata:
   description: Gateway API implementation powered by Envoy Gateway. Manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
   author: Fundament
   license: Apache-2.0
-  icon: network
+  icon: logo.svg
+  iconDark: logo.svg
   urls:
     homepage: https://gateway.envoyproxy.io
     repository: https://github.com/envoyproxy/gateway

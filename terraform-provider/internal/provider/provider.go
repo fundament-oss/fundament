@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -30,6 +31,8 @@ type FundamentProviderModel struct {
 	AuthnEndpoint   types.String `tfsdk:"authn_endpoint"`
 	OrganizationID  types.String `tfsdk:"organization_id"`
 	KubeAPIProxyURL types.String `tfsdk:"kube_api_proxy_url"`
+
+	MarketplaceInstallURL types.String `tfsdk:"marketplace_install_url"`
 }
 
 // FundamentEnvConfig describes the environment variable configuration.
@@ -39,6 +42,8 @@ type FundamentEnvConfig struct {
 	AuthnEndpoint   string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
 	OrganizationID  string `env:"FUNDAMENT_ORGANIZATION_ID"`
 	KubeAPIProxyURL string `env:"FUNDAMENT_KUBE_API_PROXY_URL"`
+
+	MarketplaceInstallURL string `env:"FUNDAMENT_MARKETPLACE_INSTALL_URL"`
 }
 
 // New returns a function that creates a new FundamentProvider.
@@ -92,6 +97,13 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 			},
 			"kube_api_proxy_url": schema.StringAttribute{
 				Description: "The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.",
+				Optional:    true,
+				Validators: []validator.String{
+					httpURLValidator{},
+				},
+			},
+			"marketplace_install_url": schema.StringAttribute{
+				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
@@ -192,12 +204,19 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	kubeAPIProxyURL := config.KubeAPIProxyURL.ValueString()
-	if kubeAPIProxyURL == "" {
-		kubeAPIProxyURL = envConfig.KubeAPIProxyURL
+	kubeAPIProxyURL, err := resolveOptionalURL(config.KubeAPIProxyURL.ValueString(), envConfig.KubeAPIProxyURL, "FUNDAMENT_KUBE_API_PROXY_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
 	}
 
-	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL)
+	marketplaceInstallURL, err := resolveOptionalURL(config.MarketplaceInstallURL.ValueString(), envConfig.MarketplaceInstallURL, "FUNDAMENT_MARKETPLACE_INSTALL_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
+	}
+
+	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL, marketplaceInstallURL)
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 
@@ -245,4 +264,16 @@ func deriveAuthnEndpoint(organizationEndpoint string) string {
 	// Replace "organization" with "authn" in the host
 	u.Host = strings.Replace(u.Host, "organization", "authn", 1)
 	return u.String()
+}
+
+// resolveOptionalURL returns the configured URL, else the one from envName. Only
+// the env value is checked here: the schema validator covers the attribute.
+func resolveOptionalURL(configValue, envValue, envName string) (string, error) {
+	if configValue != "" || envValue == "" {
+		return configValue, nil
+	}
+	if err := checkHTTPURL(envValue); err != nil {
+		return "", fmt.Errorf("%s: %w", envName, err)
+	}
+	return envValue, nil
 }

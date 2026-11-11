@@ -158,14 +158,10 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(s, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
 
-	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(s, interceptors)
-	mux.Handle(pluginPath, pluginHandler)
-
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
 	reflector := grpcreflect.NewStaticReflector(
 		"organization.v1.OrganizationService",
 		"organization.v1.ClusterService",
-		"organization.v1.PluginService",
 		"organization.v1.MemberService",
 		"organization.v1.InviteService",
 		"organization.v1.APIKeyService",

@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file marketplace/v1/common.proto.
  */
 export const file_marketplace_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBiqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQA0JpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
+  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAki7QQKEFBsdWdpbkRlZmluaXRpb24SOgoIbWV0YWRhdGEYCiABKAsyKC5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNgoLcGVybWlzc2lvbnMYKCABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9ucxIoCgRtZW51GDIgASgLMhoubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudRIMCgRjcmRzGDwgAygJElEKEWN1c3RvbV9jb21wb25lbnRzGEYgAygLMjYubWFya2V0cGxhY2UudjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQAoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJS5tYXJrZXRwbGFjZS52MS5QbHVnaW5BbGxvd2VkUmVzb3VyY2USPwoIdWlfaGludHMYWiADKAsyLS5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uLlVpSGludHNFbnRyeRpfChVDdXN0b21Db21wb25lbnRzRW50cnkSCwoDa2V5GAEgASgJEjUKBXZhbHVlGAIgASgLMiYubWFya2V0cGxhY2UudjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTAoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIrCgV2YWx1ZRgCIAEoCzIcLm1hcmtldHBsYWNlLnYxLlBsdWdpblVJSGludDoCOAEiywEKGFBsdWdpbkRlZmluaXRpb25NZXRhZGF0YRIMCgRuYW1lGAogASgJEhQKDGRpc3BsYXlfbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEg4KBmF1dGhvchgyIAEoCRIPCgdsaWNlbnNlGDwgASgJEgwKBGljb24YRiABKAkSKAoEdXJscxhQIAEoCzIaLm1hcmtldHBsYWNlLnYxLlBsdWdpblVSTHMSDAoEdGFncxhaIAMoCSJJCgpQbHVnaW5VUkxzEhAKCGhvbWVwYWdlGAogASgJEhIKCnJlcG9zaXRvcnkYFCABKAkSFQoNZG9jdW1lbnRhdGlvbhgeIAEoCSJZChFQbHVnaW5QZXJtaXNzaW9ucxIUCgxjYXBhYmlsaXRpZXMYCiADKAkSLgoEcmJhYxgUIAMoCzIgLm1hcmtldHBsYWNlLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ1CgpQbHVnaW5NZW51EjUKDG9yZ2FuaXphdGlvbhgKIAMoCzIfLm1hcmtldHBsYWNlLnYxLlBsdWdpbk1lbnVFbnRyeRIwCgdwcm9qZWN0GBQgAygLMh8ubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudUVudHJ5InEKD1BsdWdpbk1lbnVFbnRyeRILCgNjcmQYCiABKAkSDAoEbGlzdBgUIAEoCBIOCgZkZXRhaWwYHiABKAgSDAoEaWNvbhgoIAEoCRINCgVsYWJlbBgyIAEoCRIWCg5zaW5ndWxhcl9sYWJlbBg8IAEoCSJUChZQbHVnaW5Db21wb25lbnRNYXBwaW5nEgwKBGxpc3QYCiABKAkSDgoGZGV0YWlsGBQgASgJEg4KBmNyZWF0ZRgeIAEoCRIMCgRlZGl0GCggASgJIlgKFVBsdWdpbkFsbG93ZWRSZXNvdXJjZRINCgVncm91cBgKIAEoCRIPCgd2ZXJzaW9uGBQgASgJEhAKCHJlc291cmNlGB4gASgJEg0KBXZlcmJzGCggAygJIoEBCgxQbHVnaW5VSUhpbnQSNAoLZm9ybV9ncm91cHMYCiADKAsyHy5tYXJrZXRwbGFjZS52MS5QbHVnaW5Gb3JtR3JvdXASOwoOc3RhdHVzX21hcHBpbmcYFCABKAsyIy5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNNYXBwaW5nIi8KD1BsdWdpbkZvcm1Hcm91cBIMCgRuYW1lGAogASgJEg4KBmZpZWxkcxgUIAMoCSK7AQoTUGx1Z2luU3RhdHVzTWFwcGluZxIRCglqc29uX3BhdGgYCiABKAkSPwoGdmFsdWVzGBQgAygLMi8ubWFya2V0cGxhY2UudjEuUGx1Z2luU3RhdHVzTWFwcGluZy5WYWx1ZXNFbnRyeRpQCgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSMAoFdmFsdWUYAiABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBiqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQA0JpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * appstore.categories. A curated vocabulary: a developer picks from it rather
@@ -209,6 +209,417 @@ export type DocumentationLink = Message<"marketplace.v1.DocumentationLink"> & {
  */
 export const DocumentationLinkSchema: GenMessage<DocumentationLink> = /*@__PURE__*/
   messageDesc(file_marketplace_v1_common, 5);
+
+/**
+ * A plugin manifest (definition.yaml) as the console reads it: the parsed
+ * form of a stored version's manifest.
+ *
+ * @generated from message marketplace.v1.PluginDefinition
+ */
+export type PluginDefinition = Message<"marketplace.v1.PluginDefinition"> & {
+  /**
+   * @generated from field: marketplace.v1.PluginDefinitionMetadata metadata = 10;
+   */
+  metadata?: PluginDefinitionMetadata | undefined;
+
+  /**
+   * @generated from field: string image = 20;
+   */
+  image: string;
+
+  /**
+   * @generated from field: string image_pull_policy = 30;
+   */
+  imagePullPolicy: string;
+
+  /**
+   * @generated from field: marketplace.v1.PluginPermissions permissions = 40;
+   */
+  permissions?: PluginPermissions | undefined;
+
+  /**
+   * @generated from field: marketplace.v1.PluginMenu menu = 50;
+   */
+  menu?: PluginMenu | undefined;
+
+  /**
+   * @generated from field: repeated string crds = 60;
+   */
+  crds: string[];
+
+  /**
+   * @generated from field: map<string, marketplace.v1.PluginComponentMapping> custom_components = 70;
+   */
+  customComponents: { [key: string]: PluginComponentMapping };
+
+  /**
+   * @generated from field: repeated marketplace.v1.PluginAllowedResource allowed_resources = 80;
+   */
+  allowedResources: PluginAllowedResource[];
+
+  /**
+   * @generated from field: map<string, marketplace.v1.PluginUIHint> ui_hints = 90;
+   */
+  uiHints: { [key: string]: PluginUIHint };
+};
+
+/**
+ * Describes the message marketplace.v1.PluginDefinition.
+ * Use `create(PluginDefinitionSchema)` to create a new message.
+ */
+export const PluginDefinitionSchema: GenMessage<PluginDefinition> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 6);
+
+/**
+ * @generated from message marketplace.v1.PluginDefinitionMetadata
+ */
+export type PluginDefinitionMetadata = Message<"marketplace.v1.PluginDefinitionMetadata"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 20;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string version = 30;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string description = 40;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string author = 50;
+   */
+  author: string;
+
+  /**
+   * @generated from field: string license = 60;
+   */
+  license: string;
+
+  /**
+   * @generated from field: string icon = 70;
+   */
+  icon: string;
+
+  /**
+   * @generated from field: marketplace.v1.PluginURLs urls = 80;
+   */
+  urls?: PluginURLs | undefined;
+
+  /**
+   * @generated from field: repeated string tags = 90;
+   */
+  tags: string[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginDefinitionMetadata.
+ * Use `create(PluginDefinitionMetadataSchema)` to create a new message.
+ */
+export const PluginDefinitionMetadataSchema: GenMessage<PluginDefinitionMetadata> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 7);
+
+/**
+ * @generated from message marketplace.v1.PluginURLs
+ */
+export type PluginURLs = Message<"marketplace.v1.PluginURLs"> & {
+  /**
+   * @generated from field: string homepage = 10;
+   */
+  homepage: string;
+
+  /**
+   * @generated from field: string repository = 20;
+   */
+  repository: string;
+
+  /**
+   * @generated from field: string documentation = 30;
+   */
+  documentation: string;
+};
+
+/**
+ * Describes the message marketplace.v1.PluginURLs.
+ * Use `create(PluginURLsSchema)` to create a new message.
+ */
+export const PluginURLsSchema: GenMessage<PluginURLs> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 8);
+
+/**
+ * @generated from message marketplace.v1.PluginPermissions
+ */
+export type PluginPermissions = Message<"marketplace.v1.PluginPermissions"> & {
+  /**
+   * @generated from field: repeated string capabilities = 10;
+   */
+  capabilities: string[];
+
+  /**
+   * @generated from field: repeated marketplace.v1.PluginPolicyRule rbac = 20;
+   */
+  rbac: PluginPolicyRule[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginPermissions.
+ * Use `create(PluginPermissionsSchema)` to create a new message.
+ */
+export const PluginPermissionsSchema: GenMessage<PluginPermissions> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 9);
+
+/**
+ * @generated from message marketplace.v1.PluginPolicyRule
+ */
+export type PluginPolicyRule = Message<"marketplace.v1.PluginPolicyRule"> & {
+  /**
+   * @generated from field: repeated string api_groups = 10;
+   */
+  apiGroups: string[];
+
+  /**
+   * @generated from field: repeated string resources = 20;
+   */
+  resources: string[];
+
+  /**
+   * @generated from field: repeated string verbs = 30;
+   */
+  verbs: string[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginPolicyRule.
+ * Use `create(PluginPolicyRuleSchema)` to create a new message.
+ */
+export const PluginPolicyRuleSchema: GenMessage<PluginPolicyRule> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 10);
+
+/**
+ * @generated from message marketplace.v1.PluginMenu
+ */
+export type PluginMenu = Message<"marketplace.v1.PluginMenu"> & {
+  /**
+   * @generated from field: repeated marketplace.v1.PluginMenuEntry organization = 10;
+   */
+  organization: PluginMenuEntry[];
+
+  /**
+   * @generated from field: repeated marketplace.v1.PluginMenuEntry project = 20;
+   */
+  project: PluginMenuEntry[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginMenu.
+ * Use `create(PluginMenuSchema)` to create a new message.
+ */
+export const PluginMenuSchema: GenMessage<PluginMenu> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 11);
+
+/**
+ * @generated from message marketplace.v1.PluginMenuEntry
+ */
+export type PluginMenuEntry = Message<"marketplace.v1.PluginMenuEntry"> & {
+  /**
+   * @generated from field: string crd = 10;
+   */
+  crd: string;
+
+  /**
+   * @generated from field: bool list = 20;
+   */
+  list: boolean;
+
+  /**
+   * @generated from field: bool detail = 30;
+   */
+  detail: boolean;
+
+  /**
+   * @generated from field: string icon = 40;
+   */
+  icon: string;
+
+  /**
+   * @generated from field: string label = 50;
+   */
+  label: string;
+
+  /**
+   * @generated from field: string singular_label = 60;
+   */
+  singularLabel: string;
+};
+
+/**
+ * Describes the message marketplace.v1.PluginMenuEntry.
+ * Use `create(PluginMenuEntrySchema)` to create a new message.
+ */
+export const PluginMenuEntrySchema: GenMessage<PluginMenuEntry> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 12);
+
+/**
+ * @generated from message marketplace.v1.PluginComponentMapping
+ */
+export type PluginComponentMapping = Message<"marketplace.v1.PluginComponentMapping"> & {
+  /**
+   * @generated from field: string list = 10;
+   */
+  list: string;
+
+  /**
+   * @generated from field: string detail = 20;
+   */
+  detail: string;
+
+  /**
+   * @generated from field: string create = 30;
+   */
+  create: string;
+
+  /**
+   * Opened only in a console sheet, never routed.
+   *
+   * @generated from field: string edit = 40;
+   */
+  edit: string;
+};
+
+/**
+ * Describes the message marketplace.v1.PluginComponentMapping.
+ * Use `create(PluginComponentMappingSchema)` to create a new message.
+ */
+export const PluginComponentMappingSchema: GenMessage<PluginComponentMapping> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 13);
+
+/**
+ * @generated from message marketplace.v1.PluginAllowedResource
+ */
+export type PluginAllowedResource = Message<"marketplace.v1.PluginAllowedResource"> & {
+  /**
+   * @generated from field: string group = 10;
+   */
+  group: string;
+
+  /**
+   * @generated from field: string version = 20;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string resource = 30;
+   */
+  resource: string;
+
+  /**
+   * @generated from field: repeated string verbs = 40;
+   */
+  verbs: string[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginAllowedResource.
+ * Use `create(PluginAllowedResourceSchema)` to create a new message.
+ */
+export const PluginAllowedResourceSchema: GenMessage<PluginAllowedResource> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 14);
+
+/**
+ * @generated from message marketplace.v1.PluginUIHint
+ */
+export type PluginUIHint = Message<"marketplace.v1.PluginUIHint"> & {
+  /**
+   * @generated from field: repeated marketplace.v1.PluginFormGroup form_groups = 10;
+   */
+  formGroups: PluginFormGroup[];
+
+  /**
+   * @generated from field: marketplace.v1.PluginStatusMapping status_mapping = 20;
+   */
+  statusMapping?: PluginStatusMapping | undefined;
+};
+
+/**
+ * Describes the message marketplace.v1.PluginUIHint.
+ * Use `create(PluginUIHintSchema)` to create a new message.
+ */
+export const PluginUIHintSchema: GenMessage<PluginUIHint> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 15);
+
+/**
+ * @generated from message marketplace.v1.PluginFormGroup
+ */
+export type PluginFormGroup = Message<"marketplace.v1.PluginFormGroup"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated string fields = 20;
+   */
+  fields: string[];
+};
+
+/**
+ * Describes the message marketplace.v1.PluginFormGroup.
+ * Use `create(PluginFormGroupSchema)` to create a new message.
+ */
+export const PluginFormGroupSchema: GenMessage<PluginFormGroup> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 16);
+
+/**
+ * @generated from message marketplace.v1.PluginStatusMapping
+ */
+export type PluginStatusMapping = Message<"marketplace.v1.PluginStatusMapping"> & {
+  /**
+   * @generated from field: string json_path = 10;
+   */
+  jsonPath: string;
+
+  /**
+   * @generated from field: map<string, marketplace.v1.PluginStatusValue> values = 20;
+   */
+  values: { [key: string]: PluginStatusValue };
+};
+
+/**
+ * Describes the message marketplace.v1.PluginStatusMapping.
+ * Use `create(PluginStatusMappingSchema)` to create a new message.
+ */
+export const PluginStatusMappingSchema: GenMessage<PluginStatusMapping> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 17);
+
+/**
+ * @generated from message marketplace.v1.PluginStatusValue
+ */
+export type PluginStatusValue = Message<"marketplace.v1.PluginStatusValue"> & {
+  /**
+   * @generated from field: string badge = 10;
+   */
+  badge: string;
+
+  /**
+   * @generated from field: string label = 20;
+   */
+  label: string;
+};
+
+/**
+ * Describes the message marketplace.v1.PluginStatusValue.
+ * Use `create(PluginStatusValueSchema)` to create a new message.
+ */
+export const PluginStatusValueSchema: GenMessage<PluginStatusValue> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 18);
 
 /**
  * Where a version sits in the push -> submit -> review -> publish pipeline.

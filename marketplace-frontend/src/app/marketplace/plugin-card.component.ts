@@ -18,7 +18,6 @@ import PluginLabelsComponent from './plugin-labels.component';
         <div class="flex flex-1 flex-col gap-3 p-5">
           <div class="flex items-start gap-3">
             <app-plugin-icon
-              [name]="plugin().icon"
               [logo]="plugin().logo"
               [logoDark]="plugin().logoDark"
               [label]="plugin().displayName"

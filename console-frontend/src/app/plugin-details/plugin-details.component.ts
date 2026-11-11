@@ -22,7 +22,6 @@ import InstallPluginModalComponent, {
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
 import { PluginIconComponent } from '../icons';
-import getPluginIconName from '../utils/plugin-icon-name';
 import renderMarkdown from '../markdown';
 import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import {
@@ -177,8 +176,6 @@ export default class PluginDetailsComponent implements OnInit {
   private installWatch = inject(PluginInstallWatchService);
 
   private idempotency = createIdempotencyRef();
-
-  pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
 
@@ -373,7 +370,8 @@ export default class PluginDetailsComponent implements OnInit {
   private setPhase(clusterId: string, phase: string | null): void {
     this.localChanges += 1;
     this.clusters.update((clusters) =>
-      clusters.map((c) => (c.id === clusterId ? { ...c, phase } : c)),
+      // The message belongs to the phase the poll last read; the next poll fills it in.
+      clusters.map((c) => (c.id === clusterId ? { ...c, phase, message: '' } : c)),
     );
   }
 

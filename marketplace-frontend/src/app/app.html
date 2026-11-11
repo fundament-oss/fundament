@@ -22,10 +22,10 @@
         Fundament
         @switch (variant) {
           @case ('registry') {
-            <span class="text-accent-600">Plugin Developer Portal</span>
+            <span class="text-accent-600 hidden sm:inline">Plugin Developer Portal</span>
           }
           @case ('admin') {
-            <span class="text-accent-600">Review Backoffice</span>
+            <span class="text-accent-600 hidden sm:inline">Review Backoffice</span>
           }
           @default {
             <span class="text-accent-600">Marketplace</span>
@@ -53,18 +53,48 @@
         <app-developer-link path="/manage/create">
           <nldd-button text="Build a plugin" appearance="neutral-base"></nldd-button>
         </app-developer-link>
-        <!-- The console's session, read back from authn-api (see
-             watchSession). Nothing while the answer is out, rather than a
-             "Sign in" that turns into a name a moment later. -->
+      }
+      @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
+        <!-- Which organization the portal publishes for; the account menu
+             switches it. Named from organization-api once it answers; until
+             then, or where it is not configured, a shortened id in monospace
+             so it does not pass for a name. On a narrow header the account
+             button needs the room, so the strip below the bar says it there. -->
+        <span class="hidden text-sm text-gray-500 lg:inline dark:text-gray-400" aria-hidden="true">
+          Publishing as
+        </span>
+        <span
+          class="border-dividers hidden max-w-64 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium lg:flex"
+        >
+          <nldd-icon
+            icon="apartment-building"
+            class="text-accent-600 block! h-4 w-4 shrink-0"
+          ></nldd-icon>
+          <span class="sr-only">Publishing as</span>
+          <span class="truncate" [class.font-mono]="!active.named">{{ active.label }}</span>
+        </span>
+      }
+      @if (variant !== 'catalog' && storefrontUrl) {
+        <!-- The portal's account button needs the room on a narrow header; its
+             menu carries this link there. -->
+        <a [href]="storefrontUrl" [class]="variant === 'registry' ? 'hidden md:block' : null">
+          <nldd-button text="Browse the marketplace" appearance="neutral-tinted"></nldd-button>
+        </a>
+      }
+      @if (variant !== 'admin') {
+        <!-- The console's session, read back from authn-api. Nothing while the
+             answer is out, rather than a "Sign in" that turns into a name a
+             moment later. -->
         @switch (sessionState()) {
           @case ('signed-in') {
-            <!-- Mirrors the console's account menu. Both links open in this
+            <!-- Mirrors the console's account menu. Its links open in this
                  tab, so they carry what they lead to as an icon rather than
                  an external-link glyph. -->
             <nldd-button
               expandable
               popup-type="menu"
               single-line
+              max-width="200px"
               appearance="neutral-tinted"
               start-icon="person-circle"
               [attr.text]="accountLabel()"
@@ -79,6 +109,29 @@
                     [attr.supporting-text]="user()?.id || null"
                   ></nldd-identity>
                 </nldd-container>
+                <!-- The portal acts for one organization at a time, so the
+                     account's memberships are also where it is chosen. Plain
+                     items rather than type="radio": one radio item makes
+                     nldd-menu indent every item below it for a check-mark
+                     column. So the active one says so in words. -->
+                @if (variant === 'registry' && organizationContext.organizations().length > 0) {
+                  <nldd-menu-group text="Organizations" class="menu-group-strong-divider">
+                    @for (
+                      organization of organizationContext.organizations();
+                      track organization.id
+                    ) {
+                      <nldd-menu-item
+                        icon="apartment-building"
+                        [attr.text]="organization.label"
+                        [attr.details]="
+                          organization.id === organizationContext.organizationId() ? 'Active' : null
+                        "
+                        [class.font-mono]="!organization.named"
+                        (select)="onOrganizationSelect(organization.id)"
+                      ></nldd-menu-item>
+                    }
+                  </nldd-menu-group>
+                }
                 @if (consoleUrl) {
                   <nldd-menu-item
                     icon="console"
@@ -93,7 +146,14 @@
                     [attr.href]="developerUrl + '/manage'"
                   ></nldd-menu-item>
                 }
-                @if (consoleUrl || developerUrl) {
+                @if (storefrontInMenu) {
+                  <nldd-menu-item
+                    icon="puzzle-piece"
+                    text="Browse the marketplace"
+                    [attr.href]="storefrontUrl"
+                  ></nldd-menu-item>
+                }
+                @if (consoleUrl || developerUrl || storefrontInMenu) {
                   <nldd-menu-divider></nldd-menu-divider>
                 }
                 <nldd-menu-item text="Appearance" icon="appearance">
@@ -131,64 +191,23 @@
             </nldd-button>
           }
           @case ('signed-out') {
-            <app-developer-link path="/manage">
-              <nldd-button text="Sign in" appearance="neutral-tinted"></nldd-button>
-            </app-developer-link>
+            <!-- The portal's own guard sends a visitor to the login. -->
+            @if (variant === 'catalog') {
+              <app-developer-link path="/manage">
+                <nldd-button text="Sign in" appearance="neutral-tinted"></nldd-button>
+              </app-developer-link>
+            }
           }
         }
       }
-      @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
-        <!-- Which organization the portal publishes for. Named from
-             organization-api once it answers; until then, or where it is not
-             configured, a shortened id in monospace so it does not pass for a
-             name. A switcher only when there is something to switch to. -->
-        <span class="hidden text-sm text-gray-500 md:inline dark:text-gray-400" aria-hidden="true">
-          Publishing as
-        </span>
-        @if (organizationContext.organizations().length > 1) {
-          <nldd-button
-            expandable
-            popup-type="menu"
-            single-line
-            appearance="neutral-tinted"
-            start-icon="apartment-building"
-            [attr.text]="active.label"
-            [attr.accessible-label]="'Publishing as ' + active.label + ', switch organization'"
-            [class.font-mono]="!active.named"
-          >
-            <nldd-menu slot="popup" placement="bottom-end" accessible-label="Organization">
-              @for (organization of organizationContext.organizations(); track organization.id) {
-                <nldd-menu-item
-                  type="radio"
-                  [attr.text]="organization.label"
-                  [attr.selected]="organization.id === active.id ? '' : null"
-                  (click)="onOrganizationSelect(organization.id)"
-                ></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-button>
-        } @else {
-          <span
-            class="border-dividers flex max-w-64 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
-          >
-            <nldd-icon
-              icon="apartment-building"
-              class="text-accent-600 block! h-4 w-4 shrink-0"
-            ></nldd-icon>
-            <span class="sr-only">Publishing as</span>
-            <span class="truncate" [class.font-mono]="!active.named">{{ active.label }}</span>
-          </span>
-        }
-      }
-      @if (variant !== 'catalog' && storefrontUrl) {
-        <a [href]="storefrontUrl">
-          <nldd-button text="Browse the marketplace" appearance="neutral-tinted"></nldd-button>
-        </a>
-      }
       <!-- A signed-in visitor picks the theme under Appearance in the account
            menu; everyone else gets this toggle, so an anonymous first load
-           does not have to fetch the menu element for it. -->
-      @if (!(variant === 'catalog' && sessionState() === 'signed-in')) {
+           does not have to fetch the menu element for it. The portal waits for
+           authn-api: nearly everyone there is signed in, and would see the
+           toggle vanish as the account button appears. -->
+      @if (
+        variant === 'registry' ? sessionState() === 'signed-out' : sessionState() !== 'signed-in'
+      ) {
         <nldd-icon-button
           [icon]="isDarkMode() ? 'sun' : 'moon'"
           [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -199,6 +218,22 @@
       }
     </nav>
   </div>
+  @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
+    <!-- The bar shows this from lg up. Kept in view below that as well, so a
+         developer in several organizations can see which one they publish for. -->
+    <div class="border-dividers border-t lg:hidden">
+      <p class="mx-auto flex max-w-7xl items-center gap-2 px-4 py-1.5 text-sm sm:px-6">
+        <nldd-icon
+          icon="apartment-building"
+          class="text-accent-600 block! h-4 w-4 shrink-0"
+        ></nldd-icon>
+        <span class="shrink-0 text-gray-500 dark:text-gray-400">Publishing as</span>
+        <span class="truncate font-medium" [class.font-mono]="!active.named">{{
+          active.label
+        }}</span>
+      </p>
+    </div>
+  }
 </header>
 
 <!-- Page content -->

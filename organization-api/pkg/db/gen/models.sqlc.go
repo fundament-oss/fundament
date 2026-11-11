@@ -9,17 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AppstorePreset struct {
-	ID          uuid.UUID
-	Name        string
-	Description pgtype.Text
-}
-
-type AppstorePresetPlugin struct {
-	PresetID uuid.UUID
-	PluginID uuid.UUID
-}
-
 type CatalogRegionKubernetesVersion struct {
 	RegionID            uuid.UUID
 	KubernetesVersionID uuid.UUID

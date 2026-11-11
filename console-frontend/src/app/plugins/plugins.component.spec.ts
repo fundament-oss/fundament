@@ -338,6 +338,47 @@ describe('PluginsComponent retry install', () => {
     );
   });
 
+  // The message belongs to the phase the poll read; an optimistic phase change
+  // must not carry it under a phase it no longer describes.
+  it.each([
+    ['a retry', 'Failed', 'ImagePullBackOff: image not found', 'Pending'],
+    ['an uninstall', 'Running', 'Open the dashboard at https://example.test', 'Terminating'],
+  ])(
+    'clears the status message when %s changes the phase before the next poll',
+    async (action, phase, message, next) => {
+      const installed: PluginInstallationItem = {
+        ...acmeInstall,
+        metadata: { name: 'acme--ceph-rook', uid: 'uid-3' },
+        spec: { definitionRef: { ...acmeInstall.spec.definitionRef, pluginName: 'ceph-rook' } },
+        status: { phase, ready: phase === 'Running', message },
+      };
+      const installationService = {
+        listInstallations: vi.fn().mockResolvedValue([installed]),
+        retryInstall: vi.fn().mockResolvedValue(undefined),
+        uninstallPlugin: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const component = build([], [], '', installationService);
+      await component.ngOnInit();
+      component.selectedPlugin = { ...selectedPlugin };
+      const row = () => component.installs().find((i) => i.pluginName === 'ceph-rook');
+      expect(row()?.message).toBe(message);
+
+      const acting =
+        action === 'a retry'
+          ? component.onRetryInstall({
+              clusterId: cluster.id,
+              version: 'v1.0.0',
+              hash: 'sha256:demo',
+            })
+          : component.onUninstallFromCluster(cluster.id);
+
+      expect(row()?.phase).toBe(next);
+      expect(row()?.message).toBe('');
+      await acting;
+    },
+  );
+
   it('notifies when the service aborts the retry on a failed read', async () => {
     const installationService = {
       listInstallations: () => Promise.resolve([]),

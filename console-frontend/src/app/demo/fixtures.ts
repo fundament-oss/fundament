@@ -24,17 +24,14 @@ import {
 } from '../../generated/v1/project_pb';
 import { MemberSchema } from '../../generated/v1/member_pb';
 import {
-  PluginSummarySchema,
-  PresetSchema,
-  TagSchema,
-  CategorySchema,
-  type Tag,
-  type Category,
-} from '../../generated/v1/plugin_pb';
-import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
+  ClusterStatus,
+  ContainerDefaultsSchema,
+  NodePoolStatus,
+} from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import { OrganizationOverviewSchema } from '../../generated/platform/v1/overview_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
+import demoLogo from './plugin-logos';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
 
@@ -515,14 +512,42 @@ export const nodeUsage = [
 
 // --- Plugins --------------------------------------------------------------
 
-// The catalog the walkthrough shows. Every `name` must have a matching icon at
-// public/img/plugins/<name>.svg — the plugin card renders that path directly and
-// has no fallback, so a plugin without an icon shows a broken image mid-demo.
+// The catalog the walkthrough shows. Logos come from ./plugin-logos; a name
+// without one shows the generic plugin icon.
 // cert-manager and openfsc mirror the real definitions in plugins/*/definition.yaml.
 
-const tag = (id: string, name: string) => create(TagSchema, { id, name });
+export interface DemoLabel {
+  id: string;
+  name: string;
+}
 
-const category = (id: string, name: string) => create(CategorySchema, { id, name });
+/** A demo listing: the fields the storefront, install and detail mocks derive from. */
+export interface DemoPluginSummary {
+  id: string;
+  name: string;
+  displayName: string;
+  descriptionShort: string;
+  description: string;
+  tags: DemoLabel[];
+  categories: DemoLabel[];
+  organizationName: string;
+  image: string;
+  pluginVersion: string;
+  definitionHash: string;
+  logo: string;
+  logoDark: string;
+}
+
+export interface DemoPreset {
+  id: string;
+  name: string;
+  description: string;
+  pluginIds: string[];
+}
+
+const tag = (id: string, name: string): DemoLabel => ({ id, name });
+
+const category = (id: string, name: string): DemoLabel => ({ id, name });
 
 const OFFICIAL = tag('tag-official', 'Official');
 
@@ -569,12 +594,13 @@ const published = (name: string) => ({
   image: `ghcr.io/fundament/plugins/${name}:${latestVersion(name)}`,
   pluginVersion: latestVersion(name),
   definitionHash: definitionHash(name, latestVersion(name)),
+  ...demoLogo(name),
 });
 
 // cert-manager is deliberately first: it is the card the platform-engineer tour
 // auto-installs, and the drive script targets the first card in the grid.
-export const plugins = [
-  create(PluginSummarySchema, {
+export const plugins: DemoPluginSummary[] = [
+  {
     id: 'pl-cert-manager',
     name: 'cert-manager',
     displayName: 'Cert Manager',
@@ -584,8 +610,8 @@ export const plugins = [
     tags: [OFFICIAL, tag('tag-tls', 'tls')],
     categories: [CATEGORIES.security],
     ...published('cert-manager'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-openfsc',
     name: 'openfsc',
     displayName: 'OpenFSC',
@@ -595,8 +621,8 @@ export const plugins = [
     tags: [OFFICIAL, tag('tag-fsc', 'fsc')],
     categories: [CATEGORIES.networking],
     ...published('openfsc'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-istio-gateway',
     name: 'istio-gateway',
     displayName: 'Istio Gateway',
@@ -606,8 +632,8 @@ export const plugins = [
     tags: [OFFICIAL, tag('tag-ingress', 'ingress')],
     categories: [CATEGORIES.networking],
     ...published('istio-gateway'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-sealed-secrets',
     name: 'sealed-secrets',
     displayName: 'Sealed Secrets',
@@ -617,8 +643,8 @@ export const plugins = [
     tags: [tag('tag-secrets', 'secrets')],
     categories: [CATEGORIES.security],
     ...published('sealed-secrets'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-grafana',
     name: 'grafana',
     displayName: 'Grafana',
@@ -628,8 +654,8 @@ export const plugins = [
     tags: [tag('tag-dashboards', 'dashboards')],
     categories: [CATEGORIES.observability],
     ...published('grafana'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-grafana-loki',
     name: 'grafana-loki',
     displayName: 'Grafana Loki',
@@ -639,8 +665,8 @@ export const plugins = [
     tags: [tag('tag-logs', 'logs')],
     categories: [CATEGORIES.observability],
     ...published('grafana-loki'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-cloudnativepg',
     name: 'cloudnativepg',
     displayName: 'CloudNativePG',
@@ -650,8 +676,8 @@ export const plugins = [
     tags: [tag('tag-postgres', 'postgres')],
     categories: [CATEGORIES.data],
     ...published('cloudnativepg'),
-  }),
-  create(PluginSummarySchema, {
+  },
+  {
     id: 'pl-keycloak',
     name: 'keycloak',
     displayName: 'Keycloak',
@@ -661,28 +687,28 @@ export const plugins = [
     tags: [tag('tag-sso', 'sso')],
     categories: [CATEGORIES.identity],
     ...published('keycloak'),
-  }),
+  },
 ];
 
-export const presets = [
-  create(PresetSchema, {
+export const presets: DemoPreset[] = [
+  {
     id: 'preset-basis',
     name: 'Basisdiensten',
     description: 'Wat vrijwel elk cluster nodig heeft.',
     pluginIds: ['pl-cert-manager', 'pl-istio-gateway', 'pl-sealed-secrets'],
-  }),
-  create(PresetSchema, {
+  },
+  {
     id: 'preset-observability',
     name: 'Observability',
     description: 'Zien wat je dienst doet.',
     pluginIds: ['pl-grafana', 'pl-grafana-loki'],
-  }),
-  create(PresetSchema, {
+  },
+  {
     id: 'preset-data',
     name: 'Data & identiteit',
     description: 'Opslag en inloggen voor je eigen dienst.',
     pluginIds: ['pl-cloudnativepg', 'pl-keycloak'],
-  }),
+  },
 ];
 
 export interface DemoPluginDetail {
@@ -692,13 +718,15 @@ export interface DemoPluginDetail {
   displayName: string;
   description: string;
   descriptionShort: string;
-  tags: Tag[];
-  categories: Category[];
+  tags: DemoLabel[];
+  categories: DemoLabel[];
   author?: { name: string; url: string };
   repositoryUrl: string;
   documentationLinks: { id: string; title: string; urlName: string; url: string }[];
   pluginVersion: string;
   definitionHash: string;
+  logo: string;
+  logoDark: string;
 }
 
 /** Detail view, derived from the summary so the two can never disagree. */
@@ -726,6 +754,8 @@ export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => 
     ],
     pluginVersion: summary.pluginVersion,
     definitionHash: summary.definitionHash,
+    logo: summary.logo,
+    logoDark: summary.logoDark,
   };
 };
 
@@ -734,9 +764,7 @@ export const pluginDetail = (pluginId: string): DemoPluginDetail | undefined => 
  * picker offers. An unknown plugin gets an empty list, the same "nothing published"
  * answer the real backend gives.
  */
-export const pluginDefinitionVersions = (
-  pluginId: string,
-): { version: string; hash: string }[] => {
+export const pluginDefinitionVersions = (pluginId: string): { version: string; hash: string }[] => {
   const summary = plugins.find((p) => p.id === pluginId);
   if (!summary) return [];
   return (VERSIONS[summary.name] ?? []).map((version) => ({

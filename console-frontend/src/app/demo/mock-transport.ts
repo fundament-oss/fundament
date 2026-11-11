@@ -43,11 +43,6 @@ import {
 } from '../../generated/v1/project_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
-import {
-  PluginService,
-  ListPluginsResponseSchema,
-  ListPresetsResponseSchema,
-} from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
 import {
   OverviewService,
@@ -472,19 +467,6 @@ export default function createDemoTransport(): Transport {
       },
     });
 
-    // What organization.v1 still answers: cluster-details has not moved to the
-    // catalog.
-    router.service(PluginService, {
-      listPlugins: async () => {
-        await delay();
-        return create(ListPluginsResponseSchema, { plugins: fx.plugins });
-      },
-      listPresets: async () => {
-        await delay(80);
-        return create(ListPresetsResponseSchema, { presets: fx.presets });
-      },
-    });
-
     // The storefront and install.v1 (FUN-22) share these read handlers: the
     // demo has one organization, so the installer sees the same listings.
     const catalogReads = {
@@ -501,6 +483,8 @@ export default function createDemoTransport(): Transport {
               image: p.image,
               categoryIds: p.categories.map((c) => c.id),
               tags: p.tags.map((t) => t.name),
+              logo: p.logo,
+              logoDark: p.logoDark,
             }),
           ),
         });
@@ -555,6 +539,8 @@ export default function createDemoTransport(): Transport {
             authorName: detail.author?.name ?? '',
             authorUrl: detail.author?.url ?? '',
             repositoryUrl: detail.repositoryUrl,
+            logo: detail.logo,
+            logoDark: detail.logoDark,
             documentationLinks: detail.documentationLinks.map((l) =>
               create(MarketplaceDocumentationLinkSchema, {
                 id: l.id,

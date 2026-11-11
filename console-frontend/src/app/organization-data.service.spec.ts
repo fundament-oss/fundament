@@ -1,16 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 import { create } from '@bufbuild/protobuf';
-import { of, Subject, throwError } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
+import { type Observable, of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OrganizationDataService } from './organization-data.service';
 import { CLUSTER, ORGANIZATION, PROJECT, MEMBER } from '../connect/tokens';
-import { GetOrganizationResponseSchema, OrganizationSchema } from '../generated/v1/organization_pb';
+import {
+  GetOrganizationResponseSchema,
+  OrganizationSchema,
+  type GetOrganizationResponse,
+} from '../generated/v1/organization_pb';
 import {
   ListClustersResponseSchema,
   ListClustersResponse_ClusterSummarySchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
 import { ClusterStatus } from '../generated/v1/common_pb';
+import { UNAVAILABLE_MESSAGE, readableConnectError } from '../connect/readable-errors';
 import {
   ListMembersResponseSchema,
   MemberSchema,
@@ -45,8 +51,21 @@ class PendingMembers {
   }
 }
 
+function organizationResponse(): Observable<GetOrganizationResponse> {
+  return of(
+    create(GetOrganizationResponseSchema, {
+      organization: create(OrganizationSchema, {
+        id: ORGANIZATION_ID,
+        name: 'acme',
+        alias: 'Acme',
+      }),
+    }),
+  );
+}
+
 /** The service behind a ListClusters the test drives: `listed` is what the
  *  server answers with, and `fail` makes it answer with an error instead.
+ *  `getOrganization` is what GetOrganization answers, for a test to replace.
  *  `members` is what ListMembers answers, `membersFail` makes it an error, and
  *  with `holdMembers` the answers wait in `pendingMembers` for the test. */
 function build(listed: ClusterSummary[]) {
@@ -62,6 +81,7 @@ function build(listed: ClusterSummary[]) {
     membersFail: false,
     holdMembers: false,
     pendingMembers: [] as PendingMembers[],
+    getOrganization: organizationResponse,
   };
 
   TestBed.configureTestingModule({
@@ -69,16 +89,7 @@ function build(listed: ClusterSummary[]) {
       {
         provide: ORGANIZATION,
         useValue: {
-          getOrganization: () =>
-            of(
-              create(GetOrganizationResponseSchema, {
-                organization: create(OrganizationSchema, {
-                  id: ORGANIZATION_ID,
-                  name: 'acme',
-                  alias: 'Acme',
-                }),
-              }),
-            ),
+          getOrganization: () => server.getOrganization(),
         },
       },
       {
@@ -348,5 +359,57 @@ describe('OrganizationDataService members', () => {
 
     expect(reported).not.toHaveBeenCalled();
     expect(service.memberCount()).toBeNull();
+  });
+});
+
+describe('OrganizationDataService loadError', () => {
+  // As the organization transport hands it on: already rewritten for the reader.
+  const outage = () =>
+    readableConnectError(
+      new ConnectError('authorization service is unavailable', Code.Unavailable),
+    );
+  const unavailable = () => throwError(outage);
+
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('says why the organization could not be loaded, and clears once it can', async () => {
+    const { service, server } = build([]);
+    server.getOrganization = unavailable;
+
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    expect(service.loadError()).toBe(UNAVAILABLE_MESSAGE);
+    expect(service.organizations()).toEqual([]);
+
+    server.getOrganization = organizationResponse;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    expect(service.loadError()).toBeNull();
+    expect(service.organizations()).toHaveLength(1);
+  });
+
+  it('keeps a failure of an organization since left off the one on screen', async () => {
+    const { service, server } = build([]);
+    const stale = new Subject<GetOrganizationResponse>();
+    server.getOrganization = () => stale.asObservable();
+    const leaving = service.loadOrganizationData(ORGANIZATION_ID);
+
+    server.getOrganization = organizationResponse;
+    await service.loadOrganizationData('019b4000-1000-7000-8000-000000000002');
+
+    stale.error(outage());
+    await leaving;
+    expect(service.loadError()).toBeNull();
+  });
+
+  it('forgets the failure on logout', async () => {
+    const { service, server } = build([]);
+    server.getOrganization = unavailable;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    service.clearAll();
+
+    expect(service.loadError()).toBeNull();
   });
 });

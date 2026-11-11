@@ -24,12 +24,13 @@ type OrganizationCmd struct {
 	Quota  OrganizationQuotaCmd  `cmd:"" help:"Manage what an organization may build: its cluster and node quotas."`
 }
 
-// OrganizationCreateCmd creates a new organization with its starting node
-// quotas. A cluster runs only once it has a node pool, and a pool needs a node
-// quota, so an organization is never created without one.
+// OrganizationCreateCmd creates a new organization, optionally with starting
+// node quotas. A cluster runs only once it has a node pool, and a pool needs a
+// node quota, so an organization without one can build no running cluster until
+// an operator sets one with 'quota set-nodes'.
 type OrganizationCreateCmd struct {
 	Name      string   `arg:"" help:"Organization name." required:""`
-	NodeQuota []string `name:"node-quota" required:"" placeholder:"REGION/MACHINE-TYPE=MAX" help:"Starting node quota: at most MAX nodes of MACHINE-TYPE in REGION, as the catalog offers them, for example local/local-small=3. Repeat it for more machine types; change it later with 'quota set-nodes'."`
+	NodeQuota []string `name:"node-quota" placeholder:"REGION/MACHINE-TYPE=MAX" help:"Starting node quota: at most MAX nodes of MACHINE-TYPE in REGION, as the catalog offers them, for example local/local-small=3. Repeat it for more machine types; change it later with 'quota set-nodes'."`
 }
 
 // nodeQuotaSpec is one parsed --node-quota value.
@@ -64,9 +65,6 @@ type OrganizationDeleteCmd struct {
 
 // Run executes the organization create command.
 func (c *OrganizationCreateCmd) Run(ctx *Context) error {
-	if len(c.NodeQuota) == 0 {
-		return errors.New("an organization needs a starting node quota: give at least one --node-quota REGION/MACHINE-TYPE=MAX")
-	}
 	quotas := make([]nodeQuotaSpec, 0, len(c.NodeQuota))
 	seen := make(map[string]bool, len(c.NodeQuota))
 	for _, value := range c.NodeQuota {

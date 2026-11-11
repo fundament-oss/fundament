@@ -159,7 +159,6 @@
             <nldd-card background="tinted">
               <nldd-container padding="16">
                 <app-plugin-icon
-                  [name]="getPluginIconName(plugin.name)"
                   [logo]="plugin.logo"
                   [logoDark]="plugin.logoDark"
                   class="block h-10 w-10"
@@ -349,7 +348,6 @@
         <!-- Plugin Logo, Name & Version -->
         <div class="flex items-start gap-4">
           <app-plugin-icon
-            [name]="getPluginIconName(plugin.name)"
             [logo]="plugin.logo"
             [logoDark]="plugin.logoDark"
             [label]="plugin.displayName || plugin.name"

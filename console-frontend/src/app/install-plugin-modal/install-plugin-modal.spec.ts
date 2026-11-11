@@ -263,3 +263,32 @@ describe('InstallPluginModalComponent onRetry', () => {
     expect(component.retryUnavailableVersion()).toBe('v1.0.0');
   });
 });
+
+describe('InstallPluginModalComponent statusMessage', () => {
+  const cluster = (phase: string | null, message: string) =>
+    ({
+      id: 'c1',
+      name: 'cluster',
+      phase,
+      version: '1.0.0',
+      running: true,
+      configInvalid: false,
+      message,
+    }) as Parameters<InstallPluginModalComponent['statusMessage']>[0];
+
+  it.each(['Pending', 'Deploying', 'Running', 'Degraded', 'Failed', 'Terminating'])(
+    'shows what the plugin reports while %s',
+    (phase) => {
+      const component = build(vi.fn());
+      expect(component.statusMessage(cluster(phase, 'Installing the database'))).toContain(
+        'Installing the database',
+      );
+    },
+  );
+
+  it('shows nothing when the plugin is not installed or reported nothing', () => {
+    const component = build(vi.fn());
+    expect(component.statusMessage(cluster(null, 'stale'))).toBe('');
+    expect(component.statusMessage(cluster('Deploying', ''))).toBe('');
+  });
+});

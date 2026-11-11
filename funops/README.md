@@ -7,7 +7,7 @@ See [FUN-8](../docs/funs/FUN-8.adoc) for design details.
 ## Commands
 
 ```
-funops organization create <name> --node-quota <region>/<machine-type>=<max> [--node-quota ...]
+funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
@@ -42,9 +42,9 @@ membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
 
 `funops organization quota` sets what an organization may build. A new one
-may have one cluster, and node pools within the starting node quotas that
-`organization create --node-quota` requires (a cluster runs only once it has a
-pool). A machine type without a quota row has a quota of 0 and allows no pool,
+may have one cluster, and node pools within the starting node quotas given
+with `organization create --node-quota`, if any (a cluster runs only once it has
+a pool). A machine type without a quota row has a quota of 0 and allows no pool,
 so `set-nodes` comes before a pool of a type without a starting quota, and
 `set-clusters` before a second cluster.
 The node quota is per region

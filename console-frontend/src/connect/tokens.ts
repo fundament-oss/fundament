@@ -4,7 +4,6 @@ import { ClusterService } from '../generated/v1/cluster_pb';
 import { MetricsService } from '../generated/v1/metrics_pb';
 import { LogsService } from '../generated/v1/logs_pb';
 import { NamespaceService } from '../generated/v1/namespace_pb';
-import { PluginService } from '../generated/v1/plugin_pb';
 import { ProjectService } from '../generated/v1/project_pb';
 import { MemberService } from '../generated/v1/member_pb';
 import { InviteService } from '../generated/v1/invite_pb';
@@ -35,9 +34,6 @@ export const CLUSTER = createClientToken(ClusterService, ORGANIZATION_TRANSPORT)
 
 // Create an injection token for the Namespace service client
 export const NAMESPACE = createClientToken(NamespaceService, ORGANIZATION_TRANSPORT);
-
-// Create an injection token for the Plugin service client
-export const PLUGIN = createClientToken(PluginService, ORGANIZATION_TRANSPORT);
 
 // Create an injection token for the Project service client
 export const PROJECT = createClientToken(ProjectService, ORGANIZATION_TRANSPORT);

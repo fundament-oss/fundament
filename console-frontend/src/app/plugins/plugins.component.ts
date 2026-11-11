@@ -45,7 +45,6 @@ import {
   isInstallInProgress,
   isInstallTerminating,
 } from '../utils/plugin-install-status';
-import getPluginIconName from '../utils/plugin-icon-name';
 import createInstallPoller from '../utils/install-poller';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
@@ -897,7 +896,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         install.clusterId === clusterId &&
         install.organizationName === organizationName &&
         install.pluginName === pluginName
-          ? { ...install, phase, ready: phase === 'Running' }
+          ? // The message belongs to the phase the poll last read; the next poll fills it in.
+            { ...install, phase, ready: phase === 'Running', message: '' }
           : install,
       ),
     );
@@ -1047,6 +1047,4 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
     }
   }
-
-  getPluginIconName = getPluginIconName;
 }

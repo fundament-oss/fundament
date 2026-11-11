@@ -668,6 +668,1333 @@ func (b0 DocumentationLink_builder) Build() *DocumentationLink {
 	return m0
 }
 
+// A plugin manifest (definition.yaml) as the console reads it: the parsed
+// form of a stored version's manifest.
+type PluginDefinition struct {
+	state                       protoimpl.MessageState             `protogen:"opaque.v1"`
+	xxx_hidden_Metadata         *PluginDefinitionMetadata          `protobuf:"bytes,10,opt,name=metadata"`
+	xxx_hidden_Image            string                             `protobuf:"bytes,20,opt,name=image"`
+	xxx_hidden_ImagePullPolicy  string                             `protobuf:"bytes,30,opt,name=image_pull_policy,json=imagePullPolicy"`
+	xxx_hidden_Permissions      *PluginPermissions                 `protobuf:"bytes,40,opt,name=permissions"`
+	xxx_hidden_Menu             *PluginMenu                        `protobuf:"bytes,50,opt,name=menu"`
+	xxx_hidden_Crds             []string                           `protobuf:"bytes,60,rep,name=crds"`
+	xxx_hidden_CustomComponents map[string]*PluginComponentMapping `protobuf:"bytes,70,rep,name=custom_components,json=customComponents" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_AllowedResources *[]*PluginAllowedResource          `protobuf:"bytes,80,rep,name=allowed_resources,json=allowedResources"`
+	xxx_hidden_UiHints          map[string]*PluginUIHint           `protobuf:"bytes,90,rep,name=ui_hints,json=uiHints" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *PluginDefinition) Reset() {
+	*x = PluginDefinition{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginDefinition) ProtoMessage() {}
+
+func (x *PluginDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginDefinition) GetMetadata() *PluginDefinitionMetadata {
+	if x != nil {
+		return x.xxx_hidden_Metadata
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetImage() string {
+	if x != nil {
+		return x.xxx_hidden_Image
+	}
+	return ""
+}
+
+func (x *PluginDefinition) GetImagePullPolicy() string {
+	if x != nil {
+		return x.xxx_hidden_ImagePullPolicy
+	}
+	return ""
+}
+
+func (x *PluginDefinition) GetPermissions() *PluginPermissions {
+	if x != nil {
+		return x.xxx_hidden_Permissions
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetMenu() *PluginMenu {
+	if x != nil {
+		return x.xxx_hidden_Menu
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetCrds() []string {
+	if x != nil {
+		return x.xxx_hidden_Crds
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetCustomComponents() map[string]*PluginComponentMapping {
+	if x != nil {
+		return x.xxx_hidden_CustomComponents
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetAllowedResources() []*PluginAllowedResource {
+	if x != nil {
+		if x.xxx_hidden_AllowedResources != nil {
+			return *x.xxx_hidden_AllowedResources
+		}
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetUiHints() map[string]*PluginUIHint {
+	if x != nil {
+		return x.xxx_hidden_UiHints
+	}
+	return nil
+}
+
+func (x *PluginDefinition) SetMetadata(v *PluginDefinitionMetadata) {
+	x.xxx_hidden_Metadata = v
+}
+
+func (x *PluginDefinition) SetImage(v string) {
+	x.xxx_hidden_Image = v
+}
+
+func (x *PluginDefinition) SetImagePullPolicy(v string) {
+	x.xxx_hidden_ImagePullPolicy = v
+}
+
+func (x *PluginDefinition) SetPermissions(v *PluginPermissions) {
+	x.xxx_hidden_Permissions = v
+}
+
+func (x *PluginDefinition) SetMenu(v *PluginMenu) {
+	x.xxx_hidden_Menu = v
+}
+
+func (x *PluginDefinition) SetCrds(v []string) {
+	x.xxx_hidden_Crds = v
+}
+
+func (x *PluginDefinition) SetCustomComponents(v map[string]*PluginComponentMapping) {
+	x.xxx_hidden_CustomComponents = v
+}
+
+func (x *PluginDefinition) SetAllowedResources(v []*PluginAllowedResource) {
+	x.xxx_hidden_AllowedResources = &v
+}
+
+func (x *PluginDefinition) SetUiHints(v map[string]*PluginUIHint) {
+	x.xxx_hidden_UiHints = v
+}
+
+func (x *PluginDefinition) HasMetadata() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Metadata != nil
+}
+
+func (x *PluginDefinition) HasPermissions() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Permissions != nil
+}
+
+func (x *PluginDefinition) HasMenu() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Menu != nil
+}
+
+func (x *PluginDefinition) ClearMetadata() {
+	x.xxx_hidden_Metadata = nil
+}
+
+func (x *PluginDefinition) ClearPermissions() {
+	x.xxx_hidden_Permissions = nil
+}
+
+func (x *PluginDefinition) ClearMenu() {
+	x.xxx_hidden_Menu = nil
+}
+
+type PluginDefinition_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Metadata         *PluginDefinitionMetadata
+	Image            string
+	ImagePullPolicy  string
+	Permissions      *PluginPermissions
+	Menu             *PluginMenu
+	Crds             []string
+	CustomComponents map[string]*PluginComponentMapping
+	AllowedResources []*PluginAllowedResource
+	UiHints          map[string]*PluginUIHint
+}
+
+func (b0 PluginDefinition_builder) Build() *PluginDefinition {
+	m0 := &PluginDefinition{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Metadata = b.Metadata
+	x.xxx_hidden_Image = b.Image
+	x.xxx_hidden_ImagePullPolicy = b.ImagePullPolicy
+	x.xxx_hidden_Permissions = b.Permissions
+	x.xxx_hidden_Menu = b.Menu
+	x.xxx_hidden_Crds = b.Crds
+	x.xxx_hidden_CustomComponents = b.CustomComponents
+	x.xxx_hidden_AllowedResources = &b.AllowedResources
+	x.xxx_hidden_UiHints = b.UiHints
+	return m0
+}
+
+type PluginDefinitionMetadata struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_DisplayName string                 `protobuf:"bytes,20,opt,name=display_name,json=displayName"`
+	xxx_hidden_Version     string                 `protobuf:"bytes,30,opt,name=version"`
+	xxx_hidden_Description string                 `protobuf:"bytes,40,opt,name=description"`
+	xxx_hidden_Author      string                 `protobuf:"bytes,50,opt,name=author"`
+	xxx_hidden_License     string                 `protobuf:"bytes,60,opt,name=license"`
+	xxx_hidden_Icon        string                 `protobuf:"bytes,70,opt,name=icon"`
+	xxx_hidden_Urls        *PluginURLs            `protobuf:"bytes,80,opt,name=urls"`
+	xxx_hidden_Tags        []string               `protobuf:"bytes,90,rep,name=tags"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *PluginDefinitionMetadata) Reset() {
+	*x = PluginDefinitionMetadata{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginDefinitionMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginDefinitionMetadata) ProtoMessage() {}
+
+func (x *PluginDefinitionMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginDefinitionMetadata) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetDescription() string {
+	if x != nil {
+		return x.xxx_hidden_Description
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetAuthor() string {
+	if x != nil {
+		return x.xxx_hidden_Author
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetLicense() string {
+	if x != nil {
+		return x.xxx_hidden_License
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetIcon() string {
+	if x != nil {
+		return x.xxx_hidden_Icon
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetUrls() *PluginURLs {
+	if x != nil {
+		return x.xxx_hidden_Urls
+	}
+	return nil
+}
+
+func (x *PluginDefinitionMetadata) GetTags() []string {
+	if x != nil {
+		return x.xxx_hidden_Tags
+	}
+	return nil
+}
+
+func (x *PluginDefinitionMetadata) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginDefinitionMetadata) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
+func (x *PluginDefinitionMetadata) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *PluginDefinitionMetadata) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *PluginDefinitionMetadata) SetAuthor(v string) {
+	x.xxx_hidden_Author = v
+}
+
+func (x *PluginDefinitionMetadata) SetLicense(v string) {
+	x.xxx_hidden_License = v
+}
+
+func (x *PluginDefinitionMetadata) SetIcon(v string) {
+	x.xxx_hidden_Icon = v
+}
+
+func (x *PluginDefinitionMetadata) SetUrls(v *PluginURLs) {
+	x.xxx_hidden_Urls = v
+}
+
+func (x *PluginDefinitionMetadata) SetTags(v []string) {
+	x.xxx_hidden_Tags = v
+}
+
+func (x *PluginDefinitionMetadata) HasUrls() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Urls != nil
+}
+
+func (x *PluginDefinitionMetadata) ClearUrls() {
+	x.xxx_hidden_Urls = nil
+}
+
+type PluginDefinitionMetadata_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name        string
+	DisplayName string
+	Version     string
+	Description string
+	Author      string
+	License     string
+	Icon        string
+	Urls        *PluginURLs
+	Tags        []string
+}
+
+func (b0 PluginDefinitionMetadata_builder) Build() *PluginDefinitionMetadata {
+	m0 := &PluginDefinitionMetadata{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_Author = b.Author
+	x.xxx_hidden_License = b.License
+	x.xxx_hidden_Icon = b.Icon
+	x.xxx_hidden_Urls = b.Urls
+	x.xxx_hidden_Tags = b.Tags
+	return m0
+}
+
+type PluginURLs struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Homepage      string                 `protobuf:"bytes,10,opt,name=homepage"`
+	xxx_hidden_Repository    string                 `protobuf:"bytes,20,opt,name=repository"`
+	xxx_hidden_Documentation string                 `protobuf:"bytes,30,opt,name=documentation"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PluginURLs) Reset() {
+	*x = PluginURLs{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginURLs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginURLs) ProtoMessage() {}
+
+func (x *PluginURLs) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginURLs) GetHomepage() string {
+	if x != nil {
+		return x.xxx_hidden_Homepage
+	}
+	return ""
+}
+
+func (x *PluginURLs) GetRepository() string {
+	if x != nil {
+		return x.xxx_hidden_Repository
+	}
+	return ""
+}
+
+func (x *PluginURLs) GetDocumentation() string {
+	if x != nil {
+		return x.xxx_hidden_Documentation
+	}
+	return ""
+}
+
+func (x *PluginURLs) SetHomepage(v string) {
+	x.xxx_hidden_Homepage = v
+}
+
+func (x *PluginURLs) SetRepository(v string) {
+	x.xxx_hidden_Repository = v
+}
+
+func (x *PluginURLs) SetDocumentation(v string) {
+	x.xxx_hidden_Documentation = v
+}
+
+type PluginURLs_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Homepage      string
+	Repository    string
+	Documentation string
+}
+
+func (b0 PluginURLs_builder) Build() *PluginURLs {
+	m0 := &PluginURLs{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Homepage = b.Homepage
+	x.xxx_hidden_Repository = b.Repository
+	x.xxx_hidden_Documentation = b.Documentation
+	return m0
+}
+
+type PluginPermissions struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Capabilities []string               `protobuf:"bytes,10,rep,name=capabilities"`
+	xxx_hidden_Rbac         *[]*PluginPolicyRule   `protobuf:"bytes,20,rep,name=rbac"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *PluginPermissions) Reset() {
+	*x = PluginPermissions{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginPermissions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginPermissions) ProtoMessage() {}
+
+func (x *PluginPermissions) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginPermissions) GetCapabilities() []string {
+	if x != nil {
+		return x.xxx_hidden_Capabilities
+	}
+	return nil
+}
+
+func (x *PluginPermissions) GetRbac() []*PluginPolicyRule {
+	if x != nil {
+		if x.xxx_hidden_Rbac != nil {
+			return *x.xxx_hidden_Rbac
+		}
+	}
+	return nil
+}
+
+func (x *PluginPermissions) SetCapabilities(v []string) {
+	x.xxx_hidden_Capabilities = v
+}
+
+func (x *PluginPermissions) SetRbac(v []*PluginPolicyRule) {
+	x.xxx_hidden_Rbac = &v
+}
+
+type PluginPermissions_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Capabilities []string
+	Rbac         []*PluginPolicyRule
+}
+
+func (b0 PluginPermissions_builder) Build() *PluginPermissions {
+	m0 := &PluginPermissions{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Capabilities = b.Capabilities
+	x.xxx_hidden_Rbac = &b.Rbac
+	return m0
+}
+
+type PluginPolicyRule struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiGroups []string               `protobuf:"bytes,10,rep,name=api_groups,json=apiGroups"`
+	xxx_hidden_Resources []string               `protobuf:"bytes,20,rep,name=resources"`
+	xxx_hidden_Verbs     []string               `protobuf:"bytes,30,rep,name=verbs"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *PluginPolicyRule) Reset() {
+	*x = PluginPolicyRule{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginPolicyRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginPolicyRule) ProtoMessage() {}
+
+func (x *PluginPolicyRule) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginPolicyRule) GetApiGroups() []string {
+	if x != nil {
+		return x.xxx_hidden_ApiGroups
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) GetResources() []string {
+	if x != nil {
+		return x.xxx_hidden_Resources
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) GetVerbs() []string {
+	if x != nil {
+		return x.xxx_hidden_Verbs
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) SetApiGroups(v []string) {
+	x.xxx_hidden_ApiGroups = v
+}
+
+func (x *PluginPolicyRule) SetResources(v []string) {
+	x.xxx_hidden_Resources = v
+}
+
+func (x *PluginPolicyRule) SetVerbs(v []string) {
+	x.xxx_hidden_Verbs = v
+}
+
+type PluginPolicyRule_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiGroups []string
+	Resources []string
+	Verbs     []string
+}
+
+func (b0 PluginPolicyRule_builder) Build() *PluginPolicyRule {
+	m0 := &PluginPolicyRule{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiGroups = b.ApiGroups
+	x.xxx_hidden_Resources = b.Resources
+	x.xxx_hidden_Verbs = b.Verbs
+	return m0
+}
+
+type PluginMenu struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Organization *[]*PluginMenuEntry    `protobuf:"bytes,10,rep,name=organization"`
+	xxx_hidden_Project      *[]*PluginMenuEntry    `protobuf:"bytes,20,rep,name=project"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *PluginMenu) Reset() {
+	*x = PluginMenu{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginMenu) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginMenu) ProtoMessage() {}
+
+func (x *PluginMenu) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginMenu) GetOrganization() []*PluginMenuEntry {
+	if x != nil {
+		if x.xxx_hidden_Organization != nil {
+			return *x.xxx_hidden_Organization
+		}
+	}
+	return nil
+}
+
+func (x *PluginMenu) GetProject() []*PluginMenuEntry {
+	if x != nil {
+		if x.xxx_hidden_Project != nil {
+			return *x.xxx_hidden_Project
+		}
+	}
+	return nil
+}
+
+func (x *PluginMenu) SetOrganization(v []*PluginMenuEntry) {
+	x.xxx_hidden_Organization = &v
+}
+
+func (x *PluginMenu) SetProject(v []*PluginMenuEntry) {
+	x.xxx_hidden_Project = &v
+}
+
+type PluginMenu_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Organization []*PluginMenuEntry
+	Project      []*PluginMenuEntry
+}
+
+func (b0 PluginMenu_builder) Build() *PluginMenu {
+	m0 := &PluginMenu{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Organization = &b.Organization
+	x.xxx_hidden_Project = &b.Project
+	return m0
+}
+
+type PluginMenuEntry struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Crd           string                 `protobuf:"bytes,10,opt,name=crd"`
+	xxx_hidden_List          bool                   `protobuf:"varint,20,opt,name=list"`
+	xxx_hidden_Detail        bool                   `protobuf:"varint,30,opt,name=detail"`
+	xxx_hidden_Icon          string                 `protobuf:"bytes,40,opt,name=icon"`
+	xxx_hidden_Label         string                 `protobuf:"bytes,50,opt,name=label"`
+	xxx_hidden_SingularLabel string                 `protobuf:"bytes,60,opt,name=singular_label,json=singularLabel"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PluginMenuEntry) Reset() {
+	*x = PluginMenuEntry{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginMenuEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginMenuEntry) ProtoMessage() {}
+
+func (x *PluginMenuEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginMenuEntry) GetCrd() string {
+	if x != nil {
+		return x.xxx_hidden_Crd
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) GetList() bool {
+	if x != nil {
+		return x.xxx_hidden_List
+	}
+	return false
+}
+
+func (x *PluginMenuEntry) GetDetail() bool {
+	if x != nil {
+		return x.xxx_hidden_Detail
+	}
+	return false
+}
+
+func (x *PluginMenuEntry) GetIcon() string {
+	if x != nil {
+		return x.xxx_hidden_Icon
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) GetLabel() string {
+	if x != nil {
+		return x.xxx_hidden_Label
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) GetSingularLabel() string {
+	if x != nil {
+		return x.xxx_hidden_SingularLabel
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) SetCrd(v string) {
+	x.xxx_hidden_Crd = v
+}
+
+func (x *PluginMenuEntry) SetList(v bool) {
+	x.xxx_hidden_List = v
+}
+
+func (x *PluginMenuEntry) SetDetail(v bool) {
+	x.xxx_hidden_Detail = v
+}
+
+func (x *PluginMenuEntry) SetIcon(v string) {
+	x.xxx_hidden_Icon = v
+}
+
+func (x *PluginMenuEntry) SetLabel(v string) {
+	x.xxx_hidden_Label = v
+}
+
+func (x *PluginMenuEntry) SetSingularLabel(v string) {
+	x.xxx_hidden_SingularLabel = v
+}
+
+type PluginMenuEntry_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Crd           string
+	List          bool
+	Detail        bool
+	Icon          string
+	Label         string
+	SingularLabel string
+}
+
+func (b0 PluginMenuEntry_builder) Build() *PluginMenuEntry {
+	m0 := &PluginMenuEntry{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Crd = b.Crd
+	x.xxx_hidden_List = b.List
+	x.xxx_hidden_Detail = b.Detail
+	x.xxx_hidden_Icon = b.Icon
+	x.xxx_hidden_Label = b.Label
+	x.xxx_hidden_SingularLabel = b.SingularLabel
+	return m0
+}
+
+type PluginComponentMapping struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_List   string                 `protobuf:"bytes,10,opt,name=list"`
+	xxx_hidden_Detail string                 `protobuf:"bytes,20,opt,name=detail"`
+	xxx_hidden_Create string                 `protobuf:"bytes,30,opt,name=create"`
+	xxx_hidden_Edit   string                 `protobuf:"bytes,40,opt,name=edit"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PluginComponentMapping) Reset() {
+	*x = PluginComponentMapping{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginComponentMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginComponentMapping) ProtoMessage() {}
+
+func (x *PluginComponentMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginComponentMapping) GetList() string {
+	if x != nil {
+		return x.xxx_hidden_List
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) GetDetail() string {
+	if x != nil {
+		return x.xxx_hidden_Detail
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) GetCreate() string {
+	if x != nil {
+		return x.xxx_hidden_Create
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) GetEdit() string {
+	if x != nil {
+		return x.xxx_hidden_Edit
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) SetList(v string) {
+	x.xxx_hidden_List = v
+}
+
+func (x *PluginComponentMapping) SetDetail(v string) {
+	x.xxx_hidden_Detail = v
+}
+
+func (x *PluginComponentMapping) SetCreate(v string) {
+	x.xxx_hidden_Create = v
+}
+
+func (x *PluginComponentMapping) SetEdit(v string) {
+	x.xxx_hidden_Edit = v
+}
+
+type PluginComponentMapping_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	List   string
+	Detail string
+	Create string
+	// Opened only in a console sheet, never routed.
+	Edit string
+}
+
+func (b0 PluginComponentMapping_builder) Build() *PluginComponentMapping {
+	m0 := &PluginComponentMapping{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_List = b.List
+	x.xxx_hidden_Detail = b.Detail
+	x.xxx_hidden_Create = b.Create
+	x.xxx_hidden_Edit = b.Edit
+	return m0
+}
+
+type PluginAllowedResource struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Group    string                 `protobuf:"bytes,10,opt,name=group"`
+	xxx_hidden_Version  string                 `protobuf:"bytes,20,opt,name=version"`
+	xxx_hidden_Resource string                 `protobuf:"bytes,30,opt,name=resource"`
+	xxx_hidden_Verbs    []string               `protobuf:"bytes,40,rep,name=verbs"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PluginAllowedResource) Reset() {
+	*x = PluginAllowedResource{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginAllowedResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginAllowedResource) ProtoMessage() {}
+
+func (x *PluginAllowedResource) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginAllowedResource) GetGroup() string {
+	if x != nil {
+		return x.xxx_hidden_Group
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetResource() string {
+	if x != nil {
+		return x.xxx_hidden_Resource
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetVerbs() []string {
+	if x != nil {
+		return x.xxx_hidden_Verbs
+	}
+	return nil
+}
+
+func (x *PluginAllowedResource) SetGroup(v string) {
+	x.xxx_hidden_Group = v
+}
+
+func (x *PluginAllowedResource) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *PluginAllowedResource) SetResource(v string) {
+	x.xxx_hidden_Resource = v
+}
+
+func (x *PluginAllowedResource) SetVerbs(v []string) {
+	x.xxx_hidden_Verbs = v
+}
+
+type PluginAllowedResource_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Group    string
+	Version  string
+	Resource string
+	Verbs    []string
+}
+
+func (b0 PluginAllowedResource_builder) Build() *PluginAllowedResource {
+	m0 := &PluginAllowedResource{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Group = b.Group
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_Resource = b.Resource
+	x.xxx_hidden_Verbs = b.Verbs
+	return m0
+}
+
+type PluginUIHint struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_FormGroups    *[]*PluginFormGroup    `protobuf:"bytes,10,rep,name=form_groups,json=formGroups"`
+	xxx_hidden_StatusMapping *PluginStatusMapping   `protobuf:"bytes,20,opt,name=status_mapping,json=statusMapping"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PluginUIHint) Reset() {
+	*x = PluginUIHint{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginUIHint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginUIHint) ProtoMessage() {}
+
+func (x *PluginUIHint) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginUIHint) GetFormGroups() []*PluginFormGroup {
+	if x != nil {
+		if x.xxx_hidden_FormGroups != nil {
+			return *x.xxx_hidden_FormGroups
+		}
+	}
+	return nil
+}
+
+func (x *PluginUIHint) GetStatusMapping() *PluginStatusMapping {
+	if x != nil {
+		return x.xxx_hidden_StatusMapping
+	}
+	return nil
+}
+
+func (x *PluginUIHint) SetFormGroups(v []*PluginFormGroup) {
+	x.xxx_hidden_FormGroups = &v
+}
+
+func (x *PluginUIHint) SetStatusMapping(v *PluginStatusMapping) {
+	x.xxx_hidden_StatusMapping = v
+}
+
+func (x *PluginUIHint) HasStatusMapping() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_StatusMapping != nil
+}
+
+func (x *PluginUIHint) ClearStatusMapping() {
+	x.xxx_hidden_StatusMapping = nil
+}
+
+type PluginUIHint_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	FormGroups    []*PluginFormGroup
+	StatusMapping *PluginStatusMapping
+}
+
+func (b0 PluginUIHint_builder) Build() *PluginUIHint {
+	m0 := &PluginUIHint{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_FormGroups = &b.FormGroups
+	x.xxx_hidden_StatusMapping = b.StatusMapping
+	return m0
+}
+
+type PluginFormGroup struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name   string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Fields []string               `protobuf:"bytes,20,rep,name=fields"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PluginFormGroup) Reset() {
+	*x = PluginFormGroup{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginFormGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginFormGroup) ProtoMessage() {}
+
+func (x *PluginFormGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginFormGroup) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginFormGroup) GetFields() []string {
+	if x != nil {
+		return x.xxx_hidden_Fields
+	}
+	return nil
+}
+
+func (x *PluginFormGroup) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginFormGroup) SetFields(v []string) {
+	x.xxx_hidden_Fields = v
+}
+
+type PluginFormGroup_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name   string
+	Fields []string
+}
+
+func (b0 PluginFormGroup_builder) Build() *PluginFormGroup {
+	m0 := &PluginFormGroup{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Fields = b.Fields
+	return m0
+}
+
+type PluginStatusMapping struct {
+	state               protoimpl.MessageState        `protogen:"opaque.v1"`
+	xxx_hidden_JsonPath string                        `protobuf:"bytes,10,opt,name=json_path,json=jsonPath"`
+	xxx_hidden_Values   map[string]*PluginStatusValue `protobuf:"bytes,20,rep,name=values" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PluginStatusMapping) Reset() {
+	*x = PluginStatusMapping{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginStatusMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginStatusMapping) ProtoMessage() {}
+
+func (x *PluginStatusMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginStatusMapping) GetJsonPath() string {
+	if x != nil {
+		return x.xxx_hidden_JsonPath
+	}
+	return ""
+}
+
+func (x *PluginStatusMapping) GetValues() map[string]*PluginStatusValue {
+	if x != nil {
+		return x.xxx_hidden_Values
+	}
+	return nil
+}
+
+func (x *PluginStatusMapping) SetJsonPath(v string) {
+	x.xxx_hidden_JsonPath = v
+}
+
+func (x *PluginStatusMapping) SetValues(v map[string]*PluginStatusValue) {
+	x.xxx_hidden_Values = v
+}
+
+type PluginStatusMapping_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	JsonPath string
+	Values   map[string]*PluginStatusValue
+}
+
+func (b0 PluginStatusMapping_builder) Build() *PluginStatusMapping {
+	m0 := &PluginStatusMapping{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_JsonPath = b.JsonPath
+	x.xxx_hidden_Values = b.Values
+	return m0
+}
+
+type PluginStatusValue struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Badge string                 `protobuf:"bytes,10,opt,name=badge"`
+	xxx_hidden_Label string                 `protobuf:"bytes,20,opt,name=label"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PluginStatusValue) Reset() {
+	*x = PluginStatusValue{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginStatusValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginStatusValue) ProtoMessage() {}
+
+func (x *PluginStatusValue) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginStatusValue) GetBadge() string {
+	if x != nil {
+		return x.xxx_hidden_Badge
+	}
+	return ""
+}
+
+func (x *PluginStatusValue) GetLabel() string {
+	if x != nil {
+		return x.xxx_hidden_Label
+	}
+	return ""
+}
+
+func (x *PluginStatusValue) SetBadge(v string) {
+	x.xxx_hidden_Badge = v
+}
+
+func (x *PluginStatusValue) SetLabel(v string) {
+	x.xxx_hidden_Label = v
+}
+
+type PluginStatusValue_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Badge string
+	Label string
+}
+
+func (b0 PluginStatusValue_builder) Build() *PluginStatusValue {
+	m0 := &PluginStatusValue{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Badge = b.Badge
+	x.xxx_hidden_Label = b.Label
+	return m0
+}
+
 var File_marketplace_v1_common_proto protoreflect.FileDescriptor
 
 const file_marketplace_v1_common_proto_rawDesc = "" +
@@ -703,7 +2030,98 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	" \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x02id\x12\x14\n" +
 	"\x05title\x18\x14 \x01(\tR\x05title\x12\x19\n" +
 	"\burl_name\x18\x1e \x01(\tR\aurlName\x12\x10\n" +
-	"\x03url\x18( \x01(\tR\x03url*\xfb\x01\n" +
+	"\x03url\x18( \x01(\tR\x03url\"\xed\x05\n" +
+	"\x10PluginDefinition\x12D\n" +
+	"\bmetadata\x18\n" +
+	" \x01(\v2(.marketplace.v1.PluginDefinitionMetadataR\bmetadata\x12\x14\n" +
+	"\x05image\x18\x14 \x01(\tR\x05image\x12*\n" +
+	"\x11image_pull_policy\x18\x1e \x01(\tR\x0fimagePullPolicy\x12C\n" +
+	"\vpermissions\x18( \x01(\v2!.marketplace.v1.PluginPermissionsR\vpermissions\x12.\n" +
+	"\x04menu\x182 \x01(\v2\x1a.marketplace.v1.PluginMenuR\x04menu\x12\x12\n" +
+	"\x04crds\x18< \x03(\tR\x04crds\x12c\n" +
+	"\x11custom_components\x18F \x03(\v26.marketplace.v1.PluginDefinition.CustomComponentsEntryR\x10customComponents\x12R\n" +
+	"\x11allowed_resources\x18P \x03(\v2%.marketplace.v1.PluginAllowedResourceR\x10allowedResources\x12H\n" +
+	"\bui_hints\x18Z \x03(\v2-.marketplace.v1.PluginDefinition.UiHintsEntryR\auiHints\x1ak\n" +
+	"\x15CustomComponentsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12<\n" +
+	"\x05value\x18\x02 \x01(\v2&.marketplace.v1.PluginComponentMappingR\x05value:\x028\x01\x1aX\n" +
+	"\fUiHintsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.marketplace.v1.PluginUIHintR\x05value:\x028\x01\"\x97\x02\n" +
+	"\x18PluginDefinitionMetadata\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x14 \x01(\tR\vdisplayName\x12\x18\n" +
+	"\aversion\x18\x1e \x01(\tR\aversion\x12 \n" +
+	"\vdescription\x18( \x01(\tR\vdescription\x12\x16\n" +
+	"\x06author\x182 \x01(\tR\x06author\x12\x18\n" +
+	"\alicense\x18< \x01(\tR\alicense\x12\x12\n" +
+	"\x04icon\x18F \x01(\tR\x04icon\x12.\n" +
+	"\x04urls\x18P \x01(\v2\x1a.marketplace.v1.PluginURLsR\x04urls\x12\x12\n" +
+	"\x04tags\x18Z \x03(\tR\x04tags\"n\n" +
+	"\n" +
+	"PluginURLs\x12\x1a\n" +
+	"\bhomepage\x18\n" +
+	" \x01(\tR\bhomepage\x12\x1e\n" +
+	"\n" +
+	"repository\x18\x14 \x01(\tR\n" +
+	"repository\x12$\n" +
+	"\rdocumentation\x18\x1e \x01(\tR\rdocumentation\"m\n" +
+	"\x11PluginPermissions\x12\"\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\tR\fcapabilities\x124\n" +
+	"\x04rbac\x18\x14 \x03(\v2 .marketplace.v1.PluginPolicyRuleR\x04rbac\"e\n" +
+	"\x10PluginPolicyRule\x12\x1d\n" +
+	"\n" +
+	"api_groups\x18\n" +
+	" \x03(\tR\tapiGroups\x12\x1c\n" +
+	"\tresources\x18\x14 \x03(\tR\tresources\x12\x14\n" +
+	"\x05verbs\x18\x1e \x03(\tR\x05verbs\"\x8c\x01\n" +
+	"\n" +
+	"PluginMenu\x12C\n" +
+	"\forganization\x18\n" +
+	" \x03(\v2\x1f.marketplace.v1.PluginMenuEntryR\forganization\x129\n" +
+	"\aproject\x18\x14 \x03(\v2\x1f.marketplace.v1.PluginMenuEntryR\aproject\"\xa0\x01\n" +
+	"\x0fPluginMenuEntry\x12\x10\n" +
+	"\x03crd\x18\n" +
+	" \x01(\tR\x03crd\x12\x12\n" +
+	"\x04list\x18\x14 \x01(\bR\x04list\x12\x16\n" +
+	"\x06detail\x18\x1e \x01(\bR\x06detail\x12\x12\n" +
+	"\x04icon\x18( \x01(\tR\x04icon\x12\x14\n" +
+	"\x05label\x182 \x01(\tR\x05label\x12%\n" +
+	"\x0esingular_label\x18< \x01(\tR\rsingularLabel\"p\n" +
+	"\x16PluginComponentMapping\x12\x12\n" +
+	"\x04list\x18\n" +
+	" \x01(\tR\x04list\x12\x16\n" +
+	"\x06detail\x18\x14 \x01(\tR\x06detail\x12\x16\n" +
+	"\x06create\x18\x1e \x01(\tR\x06create\x12\x12\n" +
+	"\x04edit\x18( \x01(\tR\x04edit\"y\n" +
+	"\x15PluginAllowedResource\x12\x14\n" +
+	"\x05group\x18\n" +
+	" \x01(\tR\x05group\x12\x18\n" +
+	"\aversion\x18\x14 \x01(\tR\aversion\x12\x1a\n" +
+	"\bresource\x18\x1e \x01(\tR\bresource\x12\x14\n" +
+	"\x05verbs\x18( \x03(\tR\x05verbs\"\x9c\x01\n" +
+	"\fPluginUIHint\x12@\n" +
+	"\vform_groups\x18\n" +
+	" \x03(\v2\x1f.marketplace.v1.PluginFormGroupR\n" +
+	"formGroups\x12J\n" +
+	"\x0estatus_mapping\x18\x14 \x01(\v2#.marketplace.v1.PluginStatusMappingR\rstatusMapping\"=\n" +
+	"\x0fPluginFormGroup\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12\x16\n" +
+	"\x06fields\x18\x14 \x03(\tR\x06fields\"\xd9\x01\n" +
+	"\x13PluginStatusMapping\x12\x1b\n" +
+	"\tjson_path\x18\n" +
+	" \x01(\tR\bjsonPath\x12G\n" +
+	"\x06values\x18\x14 \x03(\v2/.marketplace.v1.PluginStatusMapping.ValuesEntryR\x06values\x1a\\\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x127\n" +
+	"\x05value\x18\x02 \x01(\v2!.marketplace.v1.PluginStatusValueR\x05value:\x028\x01\"?\n" +
+	"\x11PluginStatusValue\x12\x14\n" +
+	"\x05badge\x18\n" +
+	" \x01(\tR\x05badge\x12\x14\n" +
+	"\x05label\x18\x14 \x01(\tR\x05label*\xfb\x01\n" +
 	"\x10SubmissionStatus\x12!\n" +
 	"\x1dSUBMISSION_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SUBMISSION_STATUS_DRAFT\x10\x01\x12\x1d\n" +
@@ -719,23 +2137,55 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03BiZ]github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_marketplace_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_marketplace_v1_common_proto_goTypes = []any{
-	(SubmissionStatus)(0),     // 0: marketplace.v1.SubmissionStatus
-	(PluginLabel)(0),          // 1: marketplace.v1.PluginLabel
-	(*Category)(nil),          // 2: marketplace.v1.Category
-	(*Preset)(nil),            // 3: marketplace.v1.Preset
-	(*Publisher)(nil),         // 4: marketplace.v1.Publisher
-	(*PluginPermission)(nil),  // 5: marketplace.v1.PluginPermission
-	(*FeatureBlock)(nil),      // 6: marketplace.v1.FeatureBlock
-	(*DocumentationLink)(nil), // 7: marketplace.v1.DocumentationLink
+	(SubmissionStatus)(0),            // 0: marketplace.v1.SubmissionStatus
+	(PluginLabel)(0),                 // 1: marketplace.v1.PluginLabel
+	(*Category)(nil),                 // 2: marketplace.v1.Category
+	(*Preset)(nil),                   // 3: marketplace.v1.Preset
+	(*Publisher)(nil),                // 4: marketplace.v1.Publisher
+	(*PluginPermission)(nil),         // 5: marketplace.v1.PluginPermission
+	(*FeatureBlock)(nil),             // 6: marketplace.v1.FeatureBlock
+	(*DocumentationLink)(nil),        // 7: marketplace.v1.DocumentationLink
+	(*PluginDefinition)(nil),         // 8: marketplace.v1.PluginDefinition
+	(*PluginDefinitionMetadata)(nil), // 9: marketplace.v1.PluginDefinitionMetadata
+	(*PluginURLs)(nil),               // 10: marketplace.v1.PluginURLs
+	(*PluginPermissions)(nil),        // 11: marketplace.v1.PluginPermissions
+	(*PluginPolicyRule)(nil),         // 12: marketplace.v1.PluginPolicyRule
+	(*PluginMenu)(nil),               // 13: marketplace.v1.PluginMenu
+	(*PluginMenuEntry)(nil),          // 14: marketplace.v1.PluginMenuEntry
+	(*PluginComponentMapping)(nil),   // 15: marketplace.v1.PluginComponentMapping
+	(*PluginAllowedResource)(nil),    // 16: marketplace.v1.PluginAllowedResource
+	(*PluginUIHint)(nil),             // 17: marketplace.v1.PluginUIHint
+	(*PluginFormGroup)(nil),          // 18: marketplace.v1.PluginFormGroup
+	(*PluginStatusMapping)(nil),      // 19: marketplace.v1.PluginStatusMapping
+	(*PluginStatusValue)(nil),        // 20: marketplace.v1.PluginStatusValue
+	nil,                              // 21: marketplace.v1.PluginDefinition.CustomComponentsEntry
+	nil,                              // 22: marketplace.v1.PluginDefinition.UiHintsEntry
+	nil,                              // 23: marketplace.v1.PluginStatusMapping.ValuesEntry
 }
 var file_marketplace_v1_common_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	9,  // 0: marketplace.v1.PluginDefinition.metadata:type_name -> marketplace.v1.PluginDefinitionMetadata
+	11, // 1: marketplace.v1.PluginDefinition.permissions:type_name -> marketplace.v1.PluginPermissions
+	13, // 2: marketplace.v1.PluginDefinition.menu:type_name -> marketplace.v1.PluginMenu
+	21, // 3: marketplace.v1.PluginDefinition.custom_components:type_name -> marketplace.v1.PluginDefinition.CustomComponentsEntry
+	16, // 4: marketplace.v1.PluginDefinition.allowed_resources:type_name -> marketplace.v1.PluginAllowedResource
+	22, // 5: marketplace.v1.PluginDefinition.ui_hints:type_name -> marketplace.v1.PluginDefinition.UiHintsEntry
+	10, // 6: marketplace.v1.PluginDefinitionMetadata.urls:type_name -> marketplace.v1.PluginURLs
+	12, // 7: marketplace.v1.PluginPermissions.rbac:type_name -> marketplace.v1.PluginPolicyRule
+	14, // 8: marketplace.v1.PluginMenu.organization:type_name -> marketplace.v1.PluginMenuEntry
+	14, // 9: marketplace.v1.PluginMenu.project:type_name -> marketplace.v1.PluginMenuEntry
+	18, // 10: marketplace.v1.PluginUIHint.form_groups:type_name -> marketplace.v1.PluginFormGroup
+	19, // 11: marketplace.v1.PluginUIHint.status_mapping:type_name -> marketplace.v1.PluginStatusMapping
+	23, // 12: marketplace.v1.PluginStatusMapping.values:type_name -> marketplace.v1.PluginStatusMapping.ValuesEntry
+	15, // 13: marketplace.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> marketplace.v1.PluginComponentMapping
+	17, // 14: marketplace.v1.PluginDefinition.UiHintsEntry.value:type_name -> marketplace.v1.PluginUIHint
+	20, // 15: marketplace.v1.PluginStatusMapping.ValuesEntry.value:type_name -> marketplace.v1.PluginStatusValue
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_marketplace_v1_common_proto_init() }
@@ -749,7 +2199,7 @@ func file_marketplace_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_marketplace_v1_common_proto_rawDesc), len(file_marketplace_v1_common_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   6,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

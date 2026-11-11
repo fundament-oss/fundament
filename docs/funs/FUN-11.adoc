@@ -265,12 +265,7 @@ The marketplace is implemented as an `appstore` schema in the organization-api d
 * **plugin_documentation_links**: Associated documentation links per plugin.
 * **presets**: Predefined plugin bundles (e.g. "production essentials" preset that includes cert-manager, observability, etc.).
 
-The `PluginService` API in `organization-api` provides:
-
-* `ListPlugins()` - Returns plugins with tags and categories. Deprecated in favour of `install.v1` (link:/funs/fun-20[FUN-20], link:/funs/fun-22[FUN-22]).
-* `ListPresets()` - Returns predefined plugin collections.
-
-Plugin detail is served by `install.v1` `GetPlugin` (link:/funs/fun-22[FUN-22]); organization-api's `GetPluginDetail` is removed.
+The schema is read through marketplace-catalog-api: `catalog.v1` serves the public storefront (listings, categories, presets), and `install.v1` serves what an organization may install, including plugin detail, versions and parsed definitions (link:/funs/fun-20[FUN-20], link:/funs/fun-22[FUN-22]). organization-api's `PluginService` is removed.
 
 === Installing, viewing, and deleting plugins
 
