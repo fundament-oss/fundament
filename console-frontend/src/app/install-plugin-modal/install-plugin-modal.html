@@ -113,18 +113,18 @@
                 [attr.color]="cluster.running ? null : 'secondary'"
               ></nldd-icon-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <!-- A Degraded or Failed row says why under the name; the name
-                   then takes the slack, so the reason has room to wrap. -->
+              <!-- A row with a status message shows it under the name; the name
+                   then takes the slack, so the message has room to wrap. -->
               <nldd-text-cell
-                [attr.width]="issueMessage(cluster) ? 'full' : 'fit-content'"
+                [attr.width]="statusMessage(cluster) ? 'full' : 'fit-content'"
                 [attr.color]="cluster.running ? null : 'secondary'"
                 [attr.text]="cluster.name"
-                [attr.supporting-text]="issueMessage(cluster) || null"
+                [attr.supporting-text]="statusMessage(cluster) || null"
               ></nldd-text-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <!-- The tag cell takes the slack, so the tag sits right behind the
                    name and the action stays pinned to the right. -->
-              <nldd-cell [attr.width]="issueMessage(cluster) ? 'fit-content' : 'full'">
+              <nldd-cell [attr.width]="statusMessage(cluster) ? 'fit-content' : 'full'">
                 <!-- Only for states no button can express: progress lives in the
                      button's own loading state, and "installed" is already said
                      by the version and the Uninstall button. -->
