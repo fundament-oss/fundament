@@ -1,7 +1,7 @@
 // Outside console/, which console.go embeds and serves to the browser.
 
 import { describe, expect, test } from 'bun:test';
-import { buildCluster, storageSizeError } from '../console/clusters-body.js';
+import { POSTGRES_MAJORS, buildCluster, storageSizeError } from '../console/clusters-body.js';
 import { humanizeQuantity } from '../console/quantity.js';
 
 describe('storageSizeError', () => {
@@ -49,6 +49,19 @@ describe('humanizeQuantity', () => {
     [undefined, 'Unknown'],
   ])('%p -> %p', (quantity, want) => {
     expect(humanizeQuantity(quantity)).toBe(want);
+  });
+});
+
+describe('POSTGRES_MAJORS', () => {
+  test('defaults to PostgreSQL 18', () => {
+    expect(POSTGRES_MAJORS[0].major).toBe(18);
+  });
+
+  // A Cluster on a major the catalog lacks never starts.
+  test('offers only majors in the image catalog', async () => {
+    const catalog = await Bun.file(`${import.meta.dir}/../cnpg/testdata/catalog-standard-bookworm.yaml`).text();
+    const inCatalog = [...catalog.matchAll(/^\s*- major: (\d+)$/gm)].map((m) => Number(m[1]));
+    for (const { major } of POSTGRES_MAJORS) expect(inCatalog).toContain(major);
   });
 });
 

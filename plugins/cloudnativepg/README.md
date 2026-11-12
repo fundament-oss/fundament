@@ -10,7 +10,7 @@ Installs the CloudNativePG operator and lets project members create PostgreSQL d
 
 ## Scope
 
-A database is a CNPG `Cluster` with 1 instance, no backups, and CNPG's default bootstrap: database `app`, owned by user `app`, credentials in Secret `<name>-app`. The create form sets name, namespace, storage size (1Gi to 1Ti, 5Gi by default), PostgreSQL major version (17 or 16) and StorageClass. CNPG's PodDisruptionBudget is off (`enablePDB: false`): for a single instance it allows no disruption and would block every node drain.
+A database is a CNPG `Cluster` with 1 instance, no backups, and CNPG's default bootstrap: database `app`, owned by user `app`, credentials in Secret `<name>-app`. The create form sets name, namespace, storage size (1Gi to 1Ti, 5Gi by default), PostgreSQL major version (18 by default, 17 or 16) and StorageClass. CNPG's PodDisruptionBudget is off (`enablePDB: false`): for a single instance it allows no disruption and would block every node drain.
 
 Project admins can delete a `Cluster`, from the console or with kubectl, but cannot update it. To change one, an organization admin uses kubectl. Deleting a `Cluster` deletes its PVC with it, and there are no backups, so the data is gone.
 
@@ -93,7 +93,7 @@ Connect to a database from inside the cluster:
 
 ```shell
 kubectl --context k3d-fundament-plugin -n cnpg-test get secret test-db-app -o jsonpath='{.data.password}' | base64 -d
-kubectl --context k3d-fundament-plugin -n cnpg-test run psql --rm -it --image=postgres:17 -- psql postgresql://app:<password>@test-db-rw.cnpg-test.svc/app
+kubectl --context k3d-fundament-plugin -n cnpg-test run psql --rm -it --image=postgres:18 -- psql postgresql://app:<password>@test-db-rw.cnpg-test.svc/app
 ```
 
 ## Recipes

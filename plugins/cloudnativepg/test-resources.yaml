@@ -17,7 +17,7 @@ spec:
     apiGroup: postgresql.cnpg.io
     kind: ClusterImageCatalog
     name: fundament-postgresql
-    major: 17
+    major: 18
   enablePDB: false
   resources:
     requests:
