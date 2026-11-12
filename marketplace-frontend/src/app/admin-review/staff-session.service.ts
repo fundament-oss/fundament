@@ -17,6 +17,12 @@ export interface StaffSession {
   failed: boolean;
 }
 
+/** How long a session lookup may take before it counts as an outage. The
+ *  guard waits on it before every page of the backoffice, so a dcim-authn-api
+ *  that accepts the connection but never answers must not hold the page up
+ *  for good. */
+export const SESSION_LOOKUP_TIMEOUT_MS = 5000;
+
 /**
  * The reviewer's session in the review backoffice (FUN-20).
  *
@@ -189,7 +195,9 @@ export default class StaffSessionService {
     let user: StaffUser | null = null;
     let failed = false;
     try {
-      const response = await this.client.getUserInfo({});
+      // A lookup that runs out of time throws DeadlineExceeded, which counts
+      // as an outage like any answer other than Unauthenticated.
+      const response = await this.client.getUserInfo({}, { timeoutMs: SESSION_LOOKUP_TIMEOUT_MS });
       user = response.user ? { id: response.user.id, name: response.user.name } : null;
     } catch (err) {
       if (ConnectError.from(err).code !== Code.Unauthenticated) {

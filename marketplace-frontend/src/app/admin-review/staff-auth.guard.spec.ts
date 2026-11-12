@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
-import { Code, ConnectError } from '@connectrpc/connect';
+import { Code, ConnectError, createClient, createRouterTransport } from '@connectrpc/connect';
 import staffAuthGuard, { safeReturnUrl } from './staff-auth.guard';
-import StaffSessionService from './staff-session.service';
+import StaffSessionService, { SESSION_LOOKUP_TIMEOUT_MS } from './staff-session.service';
 import {
   AppConfiguration,
   CONFIG_LOADER,
@@ -11,6 +11,7 @@ import {
   EMPTY_CONFIGURATION,
 } from '../config.service';
 import { DCIM_AUTHN_CLIENT } from '../../connect/dcim-authn';
+import { AuthnService } from '../../generated/dcimauthn/v1/dcimauthn_pb';
 
 const DCIM_AUTHN_URL = 'https://dcim-authn.fundament.localhost:8443';
 
@@ -42,6 +43,7 @@ async function runGuard(url = '/admin/submissions/42') {
 
 describe('staffAuthGuard', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -65,6 +67,36 @@ describe('staffAuthGuard', () => {
     await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, 'unavailable');
 
     expect(await runGuard('/admin')).toBe(true);
+  });
+
+  // A dcim-authn-api that takes the connection but never answers is an outage
+  // too: the guard must not hold the page up waiting for it.
+  it('lets the navigation through when dcim-authn-api never answers', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const transport = createRouterTransport(({ service }) => {
+      service(AuthnService, {
+        getUserInfo: (_req, ctx) =>
+          new Promise((_resolve, reject) => {
+            ctx.signal.addEventListener('abort', () => reject(ctx.signal.reason));
+          }),
+      });
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CONFIG_LOADER,
+          useValue: async () => ({ ...EMPTY_CONFIGURATION, dcimAuthnApiUrl: DCIM_AUTHN_URL }),
+        },
+        { provide: DCIM_AUTHN_CLIENT, useValue: createClient(AuthnService, transport) },
+      ],
+    });
+    await TestBed.inject(ConfigService).loadConfig();
+
+    const guard = runGuard('/admin');
+    await vi.advanceTimersByTimeAsync(SESSION_LOOKUP_TIMEOUT_MS);
+
+    expect(await guard).toBe(true);
   });
 
   it('lets the navigation through when there is nowhere to sign in', async () => {
