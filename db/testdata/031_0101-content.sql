@@ -15,6 +15,7 @@ INSERT INTO catalog.regions (id, name, cloud_profile, cloud_profile_region) VALU
 -- Must be versions the `local` CloudProfile of the Gardener pinned in
 -- test-env/mod.just supports; Gardener rejects a shoot with any other.
 INSERT INTO catalog.kubernetes_versions (id, version) VALUES
+    ('019b4000-5100-7000-8000-000000000006', '1.35.4'),
     ('019b4000-5100-7000-8000-000000000001', '1.34.3'),
     ('019b4000-5100-7000-8000-000000000002', '1.33.0');
 
@@ -23,6 +24,7 @@ INSERT INTO catalog.machine_types (id, name, lcpu, memory) VALUES
     ('019b4000-5200-7000-8000-000000000002', 'local-medium', 4, 8589934592);  -- 8 GiB
 
 INSERT INTO catalog.region_kubernetes_versions (region_id, kubernetes_version_id) VALUES
+    ('019b4000-5000-7000-8000-000000000001', '019b4000-5100-7000-8000-000000000006'),
     ('019b4000-5000-7000-8000-000000000001', '019b4000-5100-7000-8000-000000000001'),
     ('019b4000-5000-7000-8000-000000000001', '019b4000-5100-7000-8000-000000000002');
 
