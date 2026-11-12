@@ -90,6 +90,27 @@ export async function bootPage() {
   return fundament.init;
 }
 
+// A page reads again on every fundament:resources-changed, so two reads can
+// be in flight at once and the older can answer last. Each read takes a ticket
+// and only renders while it is still the latest one.
+//   const nextRead = latestRead();
+//   const isCurrent = nextRead(); ...await...; if (!isCurrent()) return;
+export function latestRead() {
+  let latest = 0;
+  return () => {
+    latest += 1;
+    const ticket = latest;
+    return () => ticket === latest;
+  };
+}
+
+// A DiskPool's status.selectedDiskCount is omitempty, so a pool with no disks
+// has none either. Once the operator has set a phase, absent means 0; before,
+// the pool has not been counted yet and this returns undefined.
+export function selectedDiskCount(status) {
+  return status?.selectedDiskCount ?? (status?.phase ? 0 : undefined);
+}
+
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)

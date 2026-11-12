@@ -37,10 +37,10 @@ The console draws the page around your iframe: a title bar with the back button,
 | Route | Title | Back button |
 |---|---|---|
 | list | the kind's label, e.g. "Disk Pools" | to the project or organization |
-| detail | the resource's name, with its `Ready` condition as a badge | to the list |
+| detail | the resource's name, with its primary condition as a badge (`Ready`, or else the first condition) | to the list |
 | create | "New <kind>", e.g. "New disk pool" | to the list |
 
-A sheet gets the same from the console (see [Sheets](console-integration#sheets)).
+A sheet gets its title and a `Close` button from the console instead of a back button and badge (see [Sheets](console-integration#sheets)).
 
 So a page starts with its own content. Do not draw an `<h1>` or a back button: the page would show the title twice. Headings inside the page start at `<h2>`. A form's Cancel button still posts `plugin:navigate-back`: that is an action of the form, not navigation chrome.
 
@@ -72,7 +72,7 @@ The renames from `0.8.91` to `0.15.0` that plugin pages are most likely to use:
 
 The package has a linter. Run `bunx nldd lint --fix` in a project that depends on `@nldd/design-system` to apply the renames, and `bunx nldd lint` to list what is left. For markup in JavaScript strings, check a snippet with `bunx nldd lint --stdin --filename page.html < snippet.html`.
 
-Load the bundle on every page, not only on forms: it sets the page in the console's own font (RijksSans) and colors, and draws every `<nldd-*>` element. The CloudNativePG plugin's `_shared.js:loadNlddDesignSystem()` loads it; the Ceph Rook plugin's `bootPage()` loads it beside the SDK.
+Load the bundle on every page that uses an `<nldd-*>` element, not only on forms: it sets the page in the console's own font (RijksSans) and colors, and draws every `<nldd-*>` element. A plain HTML page such as cert-manager's does without it. The CloudNativePG plugin's `_shared.js:loadNlddDesignSystem()` loads it; the Ceph Rook plugin's `bootPage()` loads it beside the SDK.
 
 The cert-manager plugin's `_shared.js:loadSdk()` is the reference implementation for the SDK: copy it as a starting point.
 

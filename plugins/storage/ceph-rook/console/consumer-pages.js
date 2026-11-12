@@ -13,6 +13,7 @@ import {
   hintHtml,
   humanizeQuantity,
   escapeHtml,
+  latestRead,
   loadingHtml,
   navigateToDetail,
   phaseBadgeHtml,
@@ -157,9 +158,10 @@ export async function consumerListPage(cfg) {
   document.getElementById('create-btn').addEventListener('click', () => {
     fundament.openSheet({ view: 'create' });
   });
-  fundament.onResourcesChanged(() => renderList(list, cfg));
+  const nextRead = latestRead();
+  fundament.onResourcesChanged(() => renderList(list, cfg, nextRead()));
 
-  await renderList(list, cfg);
+  await renderList(list, cfg, nextRead());
 }
 
 // "StorageClass ceph-default · 2 replicas · host failure domain", and why a
@@ -174,10 +176,12 @@ function summary(item) {
   return parts.join(' · ');
 }
 
-// Fills the list; again whenever a sheet over the list saved.
-async function renderList(list, cfg) {
+// Fills the list; again whenever a sheet over the list saved. Renders only
+// while isCurrent says no later read has started (see latestRead).
+async function renderList(list, cfg, isCurrent) {
   try {
     const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: cfg.resource });
+    if (!isCurrent()) return;
 
     if (!items || items.length === 0) {
       list.innerHTML = emptyStateHtml({
@@ -197,6 +201,7 @@ async function renderList(list, cfg) {
     );
     wireListRows(list, navigateToDetail);
   } catch (err) {
+    if (!isCurrent()) return;
     list.innerHTML = errorBox(err);
   }
 }
@@ -235,10 +240,23 @@ export async function consumerDetailPage(cfg) {
     );
   }
 
+  const nextRead = latestRead();
+  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
+  // #extra, outside #content, so showDetail's re-renders never touch it. It is
+  // mounted once, by the first read that renders.
+  const extra = document.getElementById('extra');
+  let extraMounted = false;
+
   async function showDetail() {
+    const isCurrent = nextRead();
     try {
       const item = await fundament.k8s.get({ ...resource, name });
+      if (!isCurrent()) return;
       content.innerHTML = renderReadOnly(item);
+      if (!extraMounted && extra && cfg.detailSection) {
+        extraMounted = true;
+        cfg.detailSection(extra, item, ctx, cfg);
+      }
       actions.hidden = false;
       // .onclick, not addEventListener: this button lives outside #content and
       // survives every re-render, so listeners would stack. (CSP restricts inline
@@ -250,18 +268,17 @@ export async function consumerDetailPage(cfg) {
       // CephCluster status carries the raw numbers.
       fetchCephCapacity().then((cap) => {
         const el = content.querySelector('[data-role="capacity"]');
-        if (!cap || !el) return;
+        if (!cap || !el || !isCurrent()) return;
         el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
           `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
           + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster; `
           + 'divide by the replica count for usable space.',
         ))}`;
       });
-      return item;
     } catch (err) {
+      if (!isCurrent()) return;
       actions.hidden = true;
       content.innerHTML = errorBox(err);
-      return undefined;
     }
   }
 
@@ -271,11 +288,7 @@ export async function consumerDetailPage(cfg) {
   }
   // The edit sheet saved: show what it saved.
   fundament.onResourcesChanged(() => showDetail());
-  const item = await showDetail();
-  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
-  // #extra, outside #content, so showDetail's re-renders never touch it.
-  const extra = document.getElementById('extra');
-  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
+  await showDetail();
 }
 
 // The edit form, which the detail page opens in a sheet (see sheet.js).

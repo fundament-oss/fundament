@@ -5,9 +5,11 @@ import {
   escapeHtml,
   hintHtml,
   humanizeQuantity,
+  latestRead,
   loadingHtml,
   renderKeyValueList,
   sectionHtml,
+  selectedDiskCount,
 } from './_shared.js';
 
 const content = document.getElementById('content');
@@ -71,7 +73,7 @@ function renderReadOnly(item, byName) {
   // The phase is the badge beside the Console's title; the message says why.
   const pairs = [
     // Labelled as contributions, not capacity: the obvious reading is wrong.
-    ['Disks contributed', String(status.selectedDiskCount ?? '—')],
+    ['Disks contributed', String(selectedDiskCount(status) ?? '—')],
     ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
   ];
   if (status.message) pairs.push(['Message', status.message]);
@@ -92,10 +94,15 @@ function renderReadOnly(item, byName) {
   `;
 }
 
+const nextRead = latestRead();
+
 async function showDetail() {
+  const isCurrent = nextRead();
   try {
     const item = await fundament.k8s.get({ ...RESOURCE, name });
-    content.innerHTML = renderReadOnly(item, await diskIndex());
+    const byName = await diskIndex();
+    if (!isCurrent()) return;
+    content.innerHTML = renderReadOnly(item, byName);
     actions.hidden = false;
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
@@ -107,13 +114,14 @@ async function showDetail() {
     };
     fetchCephCapacity().then((cap) => {
       const el = content.querySelector('[data-role="capacity"]');
-      if (!cap || !el) return;
+      if (!cap || !el || !isCurrent()) return;
       el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
         `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
         + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`,
       ))}`;
     });
   } catch (err) {
+    if (!isCurrent()) return;
     actions.hidden = true;
     content.innerHTML = errorBox(err);
   }

@@ -9,6 +9,7 @@ import {
   emptyStateHtml,
   errorBox,
   hintHtml,
+  latestRead,
   loadingHtml,
   phaseBadgeHtml,
   quantityError,
@@ -71,10 +72,12 @@ export function mountBucketsSection(container, item, ctx, cfg) {
   const body = container.querySelector('.buckets-body');
 
   // A bucket created, or a sheet replaced: the list may be out of date.
+  const nextRead = latestRead();
   fundament.onResourcesChanged(() => showList());
   showList();
 
   async function showList() {
+    const isCurrent = nextRead();
     body.innerHTML = loadingHtml('Loading buckets…');
 
     let claims;
@@ -98,9 +101,10 @@ export function mountBucketsSection(container, item, ctx, cfg) {
       }
       claims = claims.filter((c) => c.spec?.storageClassName === storageClassName);
     } catch (err) {
-      body.innerHTML = errorBox(err);
+      if (isCurrent()) body.innerHTML = errorBox(err);
       return;
     }
+    if (!isCurrent()) return;
 
     const failureNote = failedNamespaces.length === 0
       ? ''

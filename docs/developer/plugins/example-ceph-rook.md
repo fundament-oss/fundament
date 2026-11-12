@@ -143,7 +143,8 @@ no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `addEventListener`, and styling comes from `<nldd-*>` components: every page
 starts with `_shared.js`'s `bootPage()`, which loads the SDK and the NLDD
 bundle side by side. Lists are an `nldd-list` of rows, one button per
-resource, with its status as a badge; detail pages are `nldd-box` sections of
+resource, with its phase as a badge (a Disk has no phase, so its row says in
+its supporting text whether a pool claims it); detail pages are `nldd-box` sections of
 label and value rows, as the console's generated detail page draws them. The
 console draws each page's title and back button, so no page has an `<h1>` of
 its own. Navigation goes through `_shared.js`'s `navigateToDetail()`,
