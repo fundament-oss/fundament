@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
@@ -124,11 +125,6 @@ func (s *Server) GetClusterWorkloadMetrics(
 		nodeCPUUsed, nodeCPUTotal   []prom.Sample
 		nodeMemUsed, nodeMemTotal   []prom.Sample
 		nodePodsUsed, nodePodsTotal []prom.Sample
-
-		nsCPU, nsMem, nsPods []prom.Sample
-		nsCPUReq, nsCPULim   []prom.Sample
-		nsMemReq, nsMemLim   []prom.Sample
-		nsNetRx, nsNetTx     []prom.Sample
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -168,16 +164,6 @@ func (s *Server) GetClusterWorkloadMetrics(
 	qs(&nodePodsUsed, "query per-node pods used", `count(kube_pod_info) by (node)`)
 	qs(&nodePodsTotal, "query per-node pods total", `sum(kube_node_status_capacity{resource="pods"}) by (node)`)
 
-	qs(&nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
-	qs(&nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
-	qs(&nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
-	qs(&nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
-	qs(&nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
-	qs(&nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
-	qs(&nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
-	qs(&nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
-	qs(&nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
-
 	err = g.Wait()
 	if err != nil {
 		if isPromBadQuery(err) {
@@ -200,9 +186,10 @@ func (s *Server) GetClusterWorkloadMetrics(
 	}.Build()
 
 	return organizationv1.GetClusterWorkloadMetricsResponse_builder{
-		Totals:     totals,
-		Nodes:      buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
-		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
+		Totals: totals,
+		// No per-namespace breakdown: the per-shoot Prometheus only covers
+		// kube-system, never a project namespace (issue 1456).
+		Nodes: buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
 	}.Build(), nil
 }
 
@@ -288,23 +275,19 @@ func (s *Server) GetOrgWorkloadMetrics(
 	now := time.Now()
 
 	type clusterResult struct {
-		id                   string
-		name                 string
-		unavailable          bool
-		cpuUsed, cpuTotal    float64
-		memUsed, memTotal    float64
-		podsUsed, podsTotal  float64
-		nsCPU, nsMem, nsPods []prom.Sample
-		nsCPUReq, nsCPULim   []prom.Sample
-		nsMemReq, nsMemLim   []prom.Sample
-		nsNetRx, nsNetTx     []prom.Sample
+		id                  string
+		name                string
+		unavailable         bool
+		cpuUsed, cpuTotal   float64
+		memUsed, memTotal   float64
+		podsUsed, podsTotal float64
 	}
 
 	results := make([]clusterResult, len(clusters))
 	g, gctx := errgroup.WithContext(ctx)
 	// Cap concurrent clusters. In per-shoot mode each cluster has its own
 	// backend, so this bounds org-api-side fan-out (each cluster still fans
-	// out to ~15 sub-queries); with a single shared backend it also protects
+	// out to 6 sub-queries); with a single shared backend it also protects
 	// that backend's connection pool.
 	g.SetLimit(10)
 
@@ -336,33 +319,12 @@ func (s *Server) GetOrgWorkloadMetrics(
 					return nil
 				})
 			}
-			qs := func(dst *[]prom.Sample, label, query string) {
-				sub.Go(func() error {
-					samples, err := client.Query(subCtx, query, now)
-					if err != nil {
-						return fmt.Errorf("%s [%s]: %w", label, cl.Name, err)
-					}
-					*dst = samples
-					return nil
-				})
-			}
-
 			qi(&r.cpuUsed, "query cpu used", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`)
 			qi(&r.cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
 			qi(&r.memUsed, "query mem used", `sum(container_memory_working_set_bytes{container!=""})`)
 			qi(&r.memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
 			qi(&r.podsUsed, "query pods used", `count(kube_pod_info)`)
 			qi(&r.podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
-
-			qs(&r.nsCPU, "query per-namespace cpu", `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`)
-			qs(&r.nsMem, "query per-namespace mem", `sum(container_memory_working_set_bytes{container!=""}) by (namespace)`)
-			qs(&r.nsPods, "query per-namespace pods", `count(kube_pod_info) by (namespace)`)
-			qs(&r.nsCPUReq, "query per-namespace cpu requests", `sum(kube_pod_container_resource_requests{resource="cpu"}) by (namespace)`)
-			qs(&r.nsCPULim, "query per-namespace cpu limits", `sum(kube_pod_container_resource_limits{resource="cpu"}) by (namespace)`)
-			qs(&r.nsMemReq, "query per-namespace mem requests", `sum(kube_pod_container_resource_requests{resource="memory"}) by (namespace)`)
-			qs(&r.nsMemLim, "query per-namespace mem limits", `sum(kube_pod_container_resource_limits{resource="memory"}) by (namespace)`)
-			qs(&r.nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
-			qs(&r.nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
 			if err := sub.Wait(); err != nil {
 				if isPromBadQuery(err) {
@@ -382,15 +344,6 @@ func (s *Server) GetOrgWorkloadMetrics(
 	// Aggregate across clusters.
 	var cpuUsed, cpuTotal, memUsed, memTotal, podsUsed, podsTotal float64
 	clusterSummaries := make([]*organizationv1.ClusterWorkloadSummary, 0, len(results))
-	allNsCPU := make([][]prom.Sample, len(results))
-	allNsMem := make([][]prom.Sample, len(results))
-	allNsPods := make([][]prom.Sample, len(results))
-	allNsCPUReq := make([][]prom.Sample, len(results))
-	allNsCPULim := make([][]prom.Sample, len(results))
-	allNsMemReq := make([][]prom.Sample, len(results))
-	allNsMemLim := make([][]prom.Sample, len(results))
-	allNsNetRx := make([][]prom.Sample, len(results))
-	allNsNetTx := make([][]prom.Sample, len(results))
 
 	for i := range results {
 		r := &results[i]
@@ -410,15 +363,6 @@ func (s *Server) GetOrgWorkloadMetrics(
 			MetricsUnavailable: r.unavailable,
 		}.Build())
 
-		allNsCPU[i] = r.nsCPU
-		allNsMem[i] = r.nsMem
-		allNsPods[i] = r.nsPods
-		allNsCPUReq[i] = r.nsCPUReq
-		allNsCPULim[i] = r.nsCPULim
-		allNsMemReq[i] = r.nsMemReq
-		allNsMemLim[i] = r.nsMemLim
-		allNsNetRx[i] = r.nsNetRx
-		allNsNetTx[i] = r.nsNetTx
 	}
 
 	totals := organizationv1.ResourceUsageInfo_builder{
@@ -427,20 +371,10 @@ func (s *Server) GetOrgWorkloadMetrics(
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
 
-	nsCPU := mergeSamples(allNsCPU)
-	nsMem := mergeSamples(allNsMem)
-	nsPods := mergeSamples(allNsPods)
-	nsCPUReq := mergeSamples(allNsCPUReq)
-	nsCPULim := mergeSamples(allNsCPULim)
-	nsMemReq := mergeSamples(allNsMemReq)
-	nsMemLim := mergeSamples(allNsMemLim)
-	nsNetRx := mergeSamples(allNsNetRx)
-	nsNetTx := mergeSamples(allNsNetTx)
-
 	return organizationv1.GetOrgWorkloadMetricsResponse_builder{
-		Totals:     totals,
-		Clusters:   clusterSummaries,
-		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
+		Totals: totals,
+		// No per-namespace breakdown, as in GetClusterWorkloadMetrics.
+		Clusters: clusterSummaries,
 	}.Build(), nil
 }
 
@@ -913,26 +847,6 @@ func timeSeriesFirstToProto(series []prom.TimeSeries, scale float64) []*organiza
 	return result
 }
 
-// mergeSamples merges per-cluster sample sets by summing values with the same
-// namespace across clusters.
-func mergeSamples(allSamples [][]prom.Sample) []prom.Sample {
-	const labelKey = "namespace"
-	sums := make(map[string]float64)
-	for _, samples := range allSamples {
-		for _, s := range samples {
-			sums[s.Labels[labelKey]] += s.Value
-		}
-	}
-	result := make([]prom.Sample, 0, len(sums))
-	for name, val := range sums {
-		result = append(result, prom.Sample{
-			Labels: map[string]string{labelKey: name},
-			Value:  val,
-		})
-	}
-	return result
-}
-
 // sumTimeSeries sums multiple single-TimeSeries results (one per cluster) into
 // a single TimeSeries by adding values at matching timestamps.
 func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
@@ -1006,12 +920,13 @@ func resolveTimeRange(hasStart bool, start time.Time, hasEnd bool, end time.Time
 	return start, end, step
 }
 
-// namespaceNames extracts the name strings from a slice of namespace DB rows.
+// namespaceNames returns the cluster-side names (tnt-<project>--<name>) of
+// namespace DB rows: Prometheus labels carry those, not the DB name.
 func namespaceNames(rows []db.NamespaceListByProjectIDRow) []string {
 	names := make([]string, 0, len(rows))
 	for i := range rows {
 		r := &rows[i]
-		names = append(names, r.Name)
+		names = append(names, kubename.GenerateNamespace(r.ProjectName, r.Name))
 	}
 	return names
 }

@@ -92,7 +92,8 @@ message GetClusterWorkloadMetricsResponse {
   ResourceUsageInfo totals = 10;
   // Per-node breakdown
   repeated NodeWorkloadMetrics nodes = 20;
-  // Per-namespace breakdown
+  // Per-namespace breakdown. Not populated: the per-shoot Prometheus only
+  // covers kube-system, never a project namespace.
   repeated NamespaceWorkloadMetrics namespaces = 30;
   // True when the cluster's metrics backend could not be reached; the
   // usage fields are then zero and should be rendered as unavailable
@@ -129,7 +130,8 @@ message GetOrgWorkloadMetricsResponse {
   ResourceUsageInfo totals = 10;
   // Per-cluster breakdown (requires the Prometheus to expose a "cluster" label)
   repeated ClusterWorkloadSummary clusters = 20;
-  // Top namespaces across all clusters
+  // Top namespaces across all clusters. Not populated: the per-shoot
+  // Prometheus only covers kube-system, never a project namespace.
   repeated NamespaceWorkloadMetrics namespaces = 30;
 }
 
@@ -232,7 +234,7 @@ message StreamWorkloadMetricsResponse {
   repeated ClusterWorkloadSummary clusters = 20;
   // Per-node breakdown — populated in cluster view.
   repeated NodeWorkloadMetrics nodes = 30;
-  // Per-namespace breakdown — populated in all views.
+  // Per-namespace breakdown — populated in project view only.
   repeated NamespaceWorkloadMetrics namespaces = 40;
   // Time-series chart data for the requested window.
   GetWorkloadTimeSeriesResponse time_series = 50;
