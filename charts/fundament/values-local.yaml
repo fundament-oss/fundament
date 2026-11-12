@@ -7,6 +7,7 @@ development:
 jwtSecret: "local-dev-jwt-secret"
 
 externalUrls:
+  root: https://fundament.localhost:8443
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
   kubeApiProxy: https://k8s-api.fundament.localhost:8443
@@ -54,6 +55,13 @@ authnApi:
         namespace: gateway
     hostnames:
       - authn.fundament.localhost
+
+discovery:
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - fundament.localhost
 
 organizationApi:
   enabled: true

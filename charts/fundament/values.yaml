@@ -20,6 +20,7 @@ jwtSecretRef:
 
 # External URLs - must be set for your environment
 externalUrls:
+  root: "" # e.g., https://example.com (serves the discovery document that tells functl and the Terraform provider the URLs below)
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
@@ -40,6 +41,17 @@ externalUrls:
   platformPublicApi: "" # e.g., https://platform-public-api.example.com (anonymous overview the console's /platform page reads; empty hides the page's numbers)
   platformAdminApi: "" # e.g., https://platform-admin-api.example.com (staff fleet view in DCIM; restricted host)
   cookieDomain: "" # e.g., example.com
+
+# The discovery document at <externalUrls.root>/.well-known/fundament.json,
+# answered by Envoy Gateway itself (an HTTPRouteFilter direct response).
+discovery:
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - example.com
 
 # Marks a test environment (PR previews, the sandbox) as one. Each frontend
 # then shows a banner above its header saying so, linking to the same site on
