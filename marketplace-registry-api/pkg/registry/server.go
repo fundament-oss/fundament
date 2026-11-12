@@ -16,12 +16,20 @@ import (
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/notify"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
 )
 
 type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
+	// ReviewNotifier is told about every opened review round; nil disables it.
+	ReviewNotifier ReviewNotifier
+}
+
+// ReviewNotifier is implemented by notify.Webhooks.
+type ReviewNotifier interface {
+	ReviewRequested(ctx context.Context, req *notify.ReviewRequest)
 }
 
 type Server struct {
@@ -30,6 +38,7 @@ type Server struct {
 	queries       *db.Queries
 	authz         *authz.Client
 	authValidator *auth.Validator
+	notifier      ReviewNotifier
 	handler       http.Handler
 }
 
@@ -40,10 +49,11 @@ const maxRequestBytes = 3 << 20
 
 func New(logger *slog.Logger, cfg Config, database *psqldb.DB, authzClient *authz.Client) *Server {
 	s := &Server{
-		logger:  logger,
-		db:      database,
-		queries: db.New(database.Pool),
-		authz:   authzClient,
+		logger:   logger,
+		db:       database,
+		queries:  db.New(database.Pool),
+		authz:    authzClient,
+		notifier: cfg.ReviewNotifier,
 		// NewValidatorForAudience, not NewValidator: a PluginToken must not be
 		// accepted here (FUN-17).
 		authValidator: auth.NewValidatorForAudience(

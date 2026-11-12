@@ -51,6 +51,21 @@ spec:
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ }}
+            {{- with $.Values.marketplaceRegistryApi.reviewWebhooksSecretRef }}
+            {{- if .name }}
+            - name: REVIEW_WEBHOOK_URLS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+                  # A missing Secret disables notifications instead of
+                  # blocking the pod, so previews without one still start.
+                  optional: true
+            # Links in review notifications point at the review backoffice.
+            - name: MARKETPLACE_ADMIN_URL
+              value: {{ required "externalUrls.marketplaceAdmin is required with marketplaceRegistryApi.reviewWebhooksSecretRef.name" $.Values.externalUrls.marketplaceAdmin | quote }}
+            {{- end }}
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.resources" (dict "resources" $.Values.marketplaceRegistryApi.resources "indent" 10) }}

@@ -239,6 +239,9 @@ marketplaceCatalogApi:
 marketplaceRegistryApi:
   enabled: true
   replicas: 2
+  # Optional: a namespace without this Secret just sends no notifications.
+  reviewWebhooksSecretRef:
+    name: review-webhooks
 
 # Review backoffice API: validates the reviewer's DCIM token (staff IDP).
 marketplaceAdminApi:
