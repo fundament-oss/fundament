@@ -37,13 +37,31 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 
-	endpoint := os.Getenv("FUNDAMENT_ENDPOINT")
-	if endpoint == "" {
-		fmt.Fprintln(os.Stderr, "FUNDAMENT_ENDPOINT is required for ACC tests")
+	urls := serviceURLs{
+		organization: os.Getenv("FUNDAMENT_ENDPOINT"),
+		authn:        os.Getenv("FUNDAMENT_AUTHN_ENDPOINT"),
+	}
+	rootURL := os.Getenv("FUNDAMENT_URL")
+	if err := urls.discover(ctx, rootURL); err != nil {
+		fmt.Fprintf(os.Stderr, "TestMain: %v\n", err)
 		os.Exit(1)
 	}
+	if urls.authn == "" && urls.organization != "" && rootURL == "" {
+		urls.authn = deriveAuthnEndpoint(urls.organization)
+	}
+	if urls.organization == "" || urls.authn == "" {
+		fmt.Fprintln(os.Stderr, "FUNDAMENT_URL, or FUNDAMENT_ENDPOINT and FUNDAMENT_AUTHN_ENDPOINT, is required for ACC tests")
+		os.Exit(1)
+	}
+	endpoint, authnEndpoint := urls.organization, urls.authn
 
-	authnEndpoint := deriveAuthnEndpoint(endpoint)
+	// The acceptance tests read the endpoint from the environment.
+	for name, value := range map[string]string{"FUNDAMENT_ENDPOINT": endpoint, "FUNDAMENT_AUTHN_ENDPOINT": authnEndpoint} {
+		if err := os.Setenv(name, value); err != nil {
+			fmt.Fprintf(os.Stderr, "TestMain: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	login, err := passwordLogin(authnEndpoint, testUserEmail, testUserPassword)
 	if err != nil {
