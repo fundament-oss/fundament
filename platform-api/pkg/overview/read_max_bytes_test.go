@@ -13,4 +13,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	srv := overview.New(slog.New(slog.DiscardHandler), nil, overview.Config{})
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), platformv1connect.OverviewServiceGetPlatformOverviewProcedure)
+	connectlimittest.AssertReflectionRejectsGzipBomb(t, srv.Handler())
 }

@@ -14,4 +14,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	srv := catalog.New(slog.New(slog.DiscardHandler), &psqldb.DB{}, nil)
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), catalogv1connect.CatalogServiceListPluginsProcedure)
+	connectlimittest.AssertReflectionRejectsGzipBomb(t, srv.Handler())
 }

@@ -17,4 +17,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), organizationv1connect.OrganizationServiceListOrganizationsProcedure)
+	connectlimittest.AssertReflectionRejectsGzipBomb(t, srv.Handler())
 }

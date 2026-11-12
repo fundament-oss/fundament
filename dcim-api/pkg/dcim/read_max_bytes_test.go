@@ -14,4 +14,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	srv := dcim.New(slog.New(slog.DiscardHandler), &psqldb.DB{}, []byte("secret"))
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), dcimv1connect.SiteServiceListSitesProcedure)
+	connectlimittest.AssertReflectionRejectsGzipBomb(t, srv.Handler())
 }

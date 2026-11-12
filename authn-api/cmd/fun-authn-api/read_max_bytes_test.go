@@ -16,4 +16,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 
 	connectlimittest.AssertRejectsGzipBomb(t, mux, authnv1connect.AuthnServiceGetUserInfoProcedure)
 	connectlimittest.AssertRejectsGzipBomb(t, mux, authnv1connect.TokenServiceExchangeTokenProcedure)
+	connectlimittest.AssertReflectionRejectsGzipBomb(t, mux)
 }
