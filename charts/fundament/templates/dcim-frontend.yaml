@@ -12,7 +12,8 @@ data:
       "apiUrl": "{{ $.Values.externalUrls.dcimApi }}",
       "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}",
       "platformApiUrl": "{{ $.Values.externalUrls.platformAdminApi }}",
-      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "dcim") }}"
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "dcim") }}",
+      "cookieDomain": "{{ $.Values.externalUrls.cookieDomain }}"
     }
 
 ---

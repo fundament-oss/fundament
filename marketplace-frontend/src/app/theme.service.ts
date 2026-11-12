@@ -9,20 +9,15 @@ import {
 } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 
-type Theme = 'dark' | 'light';
+import { ConfigService } from './config.service';
+import {
+  type StoredTheme,
+  parseThemeCookie,
+  readStoredTheme,
+  writeThemeCookie,
+} from './theme-cookie';
 
-export type ThemePreference = Theme | 'system';
-
-const COOKIE_NAME = 'theme';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-// Pre-SSR versions of this app kept the choice in localStorage. Read it once so
-// returning visitors keep their theme, then migrate it to the cookie.
-const LEGACY_STORAGE_KEY = 'theme';
-
-function parseThemeCookie(cookieHeader: string | null | undefined): Theme | null {
-  const match = cookieHeader?.match(/(?:^|;\s*)theme=(dark|light)(?:;|$)/);
-  return match ? (match[1] as Theme) : null;
-}
+export type ThemePreference = StoredTheme | 'system';
 
 /**
  * Owns the light/dark choice for the whole app.
@@ -35,6 +30,9 @@ function parseThemeCookie(cookieHeader: string | null | undefined): Theme | null
  * `index.html` applies the OS preference before first paint, and this service
  * picks it up on hydration. The OS preference is never persisted, so it keeps
  * tracking the OS.
+ *
+ * The cookie lives on the domain shared by all Fundament frontends (see
+ * theme-cookie.ts), so the Console and DCIM read and write the same choice.
  */
 @Injectable({
   providedIn: 'root',
@@ -45,6 +43,8 @@ export default class ThemeService {
   private isServer = isPlatformServer(inject(PLATFORM_ID));
 
   private request = inject(REQUEST, { optional: true });
+
+  private config = inject(ConfigService);
 
   // The server cannot know the OS preference, so it renders the light theme
   // and leaves the rest to the pre-paint script.
@@ -67,6 +67,16 @@ export default class ThemeService {
       this.systemPrefersDark.set(e.matches);
       this.applyTheme();
     });
+
+    // Pick up a choice made in another Fundament app while this tab was in the
+    // background.
+    if (!this.isServer) {
+      this.document.addEventListener('visibilitychange', () => {
+        if (this.document.visibilityState !== 'visible') return;
+        this.preference.set(parseThemeCookie(this.document.cookie) ?? 'system');
+        this.applyTheme();
+      });
+    }
 
     this.applyTheme();
   }
@@ -94,52 +104,21 @@ export default class ThemeService {
     }, 80);
   }
 
-  private readStoredTheme(): Theme | null {
+  private readStoredTheme(): StoredTheme | null {
     if (this.isServer) {
       return parseThemeCookie(this.request?.headers.get('cookie'));
     }
-
-    const fromCookie = parseThemeCookie(this.document.cookie);
-    if (fromCookie) {
-      return fromCookie;
-    }
-
-    // No cookie yet: adopt and re-persist a pre-SSR localStorage choice.
-    try {
-      const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (legacy === 'dark' || legacy === 'light') {
-        this.writeCookie(legacy);
-        return legacy;
-      }
-    } catch {
-      // Storage can be unavailable (private mode, blocked cookies); the OS
-      // preference is a fine fallback.
-    }
-
-    return null;
+    return readStoredTheme(this.config.getConfig().cookieDomain);
   }
 
   // 'system' clears the cookie, so the server and the pre-paint script fall
-  // back to the OS preference. The legacy key goes too, or the next load would
-  // adopt it again as an explicit choice.
+  // back to the OS preference.
   private persistTheme() {
     const preference = this.preference();
-
-    if (preference === 'system') {
-      this.writeCookie('', 0);
-      try {
-        localStorage.removeItem(LEGACY_STORAGE_KEY);
-      } catch {
-        // Nothing stored that could be read back either.
-      }
-    } else {
-      this.writeCookie(preference);
-    }
-  }
-
-  private writeCookie(value: string, maxAge = COOKIE_MAX_AGE) {
-    const secure = this.document.location?.protocol === 'https:' ? '; secure' : '';
-    this.document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${maxAge}; samesite=lax${secure}`;
+    writeThemeCookie(
+      preference === 'system' ? null : preference,
+      this.config.getConfig().cookieDomain,
+    );
   }
 
   // Apply the active theme to the <html> element. Runs on the server too, which
