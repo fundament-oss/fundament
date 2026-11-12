@@ -566,6 +566,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     return hasMeasurement(this.networkRxSeriesData) || hasMeasurement(this.networkTxSeriesData);
   }
 
+  /** Namespaces only show in the project view: elsewhere the list is
+   *  kube-system and shoot-control-plane, never a project namespace. */
+  showNamespaces = computed(() => this.viewMode() === 'project');
+
   filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {
     if (!this.selectedNamespace()) return this.namespaceUsage();
     return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace());
@@ -642,7 +646,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   canExport = computed(
     () =>
       !!this.currentTotals() ||
-      this.namespaceUsage().length > 0 ||
+      (this.showNamespaces() && this.namespaceUsage().length > 0) ||
       this.clusterSummaries().length > 0 ||
       this.nodeUsage().length > 0,
   );
@@ -688,7 +692,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.nodeUsage().forEach((node) => {
       rows.push(...usageRows('Node', node.name, node, true));
     });
-    this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
+    if (this.showNamespaces()) {
+      this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
+    }
     rows.push(...this.seriesRows());
 
     downloadCsv(this.csvFilename(), rows);

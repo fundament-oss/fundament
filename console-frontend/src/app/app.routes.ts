@@ -320,8 +320,12 @@ const routes: Routes = [
       // count_over_time / sum by level) before it can be exposed; the component
       // is kept so that work has a starting point.
       {
+        // The project Metrics page is unrouted: the per-shoot Prometheus only
+        // scrapes kube-system, so the page was always empty. The component
+        // keeps its project view for when tenant namespaces have a source.
         path: 'projects/:id/metrics',
-        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
+        redirectTo: 'projects/:id/general',
+        pathMatch: 'full',
       },
       // Plugin resource routes (organization-level)
       {
