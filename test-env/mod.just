@@ -435,7 +435,7 @@ gardener-connect: _require-vm
         # It drains for about a minute before the kubelet starts it again.
         sleep 5
         for i in $(seq 1 90); do
-            docker exec "$KIND_CONTAINER" curl -sk -o /dev/null --max-time 2 https://127.0.0.1:6443/livez && break
+            docker exec "$KIND_CONTAINER" curl -skf -o /dev/null --max-time 2 https://127.0.0.1:6443/livez && break
             [ "$i" -lt 90 ] || { echo "Error: the kind API server did not come back within 3 minutes"; exit 1; }
             sleep 2
         done
