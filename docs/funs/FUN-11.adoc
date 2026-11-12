@@ -112,8 +112,8 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 ** `capabilities`: Simple string list (e.g. `internet_access`).
 ** `rbac`: Kubernetes PolicyRule structures declaring the API groups, resources, and verbs the plugin requires.
 * **menu**: How the plugin appears in the Fundament console.
-** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs), shown on the cluster page.
-** `project`: Menu entries visible to project members (namespace-scoped CRDs), shown on the project page.
+** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs), shown in the cluster's menu.
+** `project`: Menu entries visible to project members (namespace-scoped CRDs), shown in the project's menu.
 ** Each entry has: `crd` (fully-qualified CRD name), `list`, `detail`, `create` (booleans), and `icon` (a built-in icon name or the digest of an SVG menu icon file).
 * **customComponents**: Optional mapping of CRDs to custom UI component names (list/detail).
 * **uiHints**: Per-CRD form layout and status display hints.
@@ -239,8 +239,8 @@ Deletion is handled via a finalizer; the controller cleans up child resources be
 
 When a Plugin is installed in a Cluster, the Console UI displays menu items based on the plugin's `menu` definition:
 
-* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers), shown in a "Plugin resources" block on the cluster page of each cluster the plugin is installed on, at `clusters/:id/plugin-resources/...`.
-* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests), shown in the project sidebar. Lists contain only resources in the project's namespaces. The generated list has a namespace picker; custom list UIs receive the project's `namespaces`, `namespaceDisplayNames` and `projectId` and do their own filtering.
+* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers), shown under the plugin's name in the menu of each cluster the plugin is installed on, at `clusters/:id/plugin-resources/...`.
+* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests), shown under the plugin's name in the project's menu, at `projects/:id/plugin-resources/...`. Lists contain only resources in the project's namespaces. The generated list has a namespace picker; custom list UIs receive the project's `namespaces`, `namespaceDisplayNames` and `projectId` and do their own filtering.
 
 Entries whose CRD scope does not match their menu section are not shown (the console logs a warning).
 

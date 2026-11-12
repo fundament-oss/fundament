@@ -783,7 +783,7 @@ export const seededInstalls: Record<string, string[]> = {
 //
 // What the console normally reads from the cluster through kube-api-proxy: the
 // plugin definition behind an installation, its CRDs, and the objects of those
-// CRDs. Only cert-manager carries a project menu here — that is the plugin the
+// CRDs. Only cert-manager carries a menu here — that is the plugin the
 // walkthrough installs, and a plugin without a menu simply has no console UI,
 // exactly as in production.
 //
@@ -838,9 +838,36 @@ const certificateCrd: ParsedCrd = {
   },
 };
 
+// Cluster-scoped, so it shows in a cluster's menu rather than a project's.
+const clusterIssuerCrd: ParsedCrd = {
+  group: 'cert-manager.io',
+  kind: 'ClusterIssuer',
+  plural: 'clusterissuers',
+  singular: 'clusterissuer',
+  scope: 'Cluster',
+  version: 'v1',
+  additionalPrinterColumns: [
+    { name: 'Ready', type: 'string', jsonPath: '.status.conditions[?(@.type=="Ready")].status' },
+    { name: 'Age', type: 'date', jsonPath: '.metadata.creationTimestamp' },
+  ],
+  specSchema: {
+    properties: {
+      acme: {
+        type: 'object',
+        description: 'Issues certificates from an ACME server such as Let’s Encrypt.',
+        properties: {
+          server: { type: 'string', description: 'The ACME directory URL.' },
+          email: { type: 'string', description: 'Contact address for the ACME account.' },
+        },
+      },
+    },
+  },
+  statusSchema: { properties: {} },
+};
+
 /** Parsed CRDs per plugin, in place of the ones kube-api-proxy would serve. */
 export const pluginCrds: Record<string, ParsedCrd[]> = {
-  'cert-manager': [certificateCrd],
+  'cert-manager': [certificateCrd, clusterIssuerCrd],
 };
 
 /** Plugin definitions per catalog name; an installation without one has no UI. */
@@ -853,10 +880,19 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
     author: 'Fundament',
     // Menu entries reference a CRD by `plural.group`, exactly as the real
     // definition.yaml in plugins/cert-manager does.
-    menu: { project: [{ crd: 'certificates.cert-manager.io', icon: 'certificate' }] },
-    crds: ['certificates.cert-manager.io'],
+    menu: {
+      organization: [{ crd: 'clusterissuers.cert-manager.io', icon: 'rectangle-stack' }],
+      project: [{ crd: 'certificates.cert-manager.io', icon: 'certificate' }],
+    },
+    crds: ['certificates.cert-manager.io', 'clusterissuers.cert-manager.io'],
     allowedResources: [
       { group: 'cert-manager.io', version: 'v1', resource: 'certificates', verbs: ['get', 'list'] },
+      {
+        group: 'cert-manager.io',
+        version: 'v1',
+        resource: 'clusterissuers',
+        verbs: ['get', 'list'],
+      },
     ],
     installationId: 'demo-cert-manager',
     installationName: 'system--cert-manager',
@@ -919,12 +955,42 @@ const certificate = (
   },
 });
 
+const clusterIssuer = (name: string, server: string, ageDays: number): KubeResource => ({
+  apiVersion: 'cert-manager.io/v1',
+  kind: 'ClusterIssuer',
+  metadata: {
+    name,
+    uid: `demo-clusterissuer-${name}`,
+    creationTimestamp: new Date(Date.now() - ageDays * 86_400_000).toISOString(),
+  },
+  spec: { acme: { server, email: 'platform@gemeente.nl' } },
+  status: {
+    conditions: [
+      {
+        type: 'Ready',
+        status: 'True',
+        reason: 'ACMEAccountRegistered',
+        message: 'The ACME account was registered with the ACME server',
+        lastTransitionTime: new Date(Date.now() - ageDays * 86_400_000).toISOString(),
+      },
+    ],
+  },
+});
+
 /** Objects per `${pluginName}/${kind}`, in place of a live cluster's. */
 export const pluginResources: Record<string, KubeResource[]> = {
   'cert-manager/Certificate': [
     certificate('burgerzaken-portaal', 'burgerzaken-prod', 'burgerzaken.gemeente.nl', true, 90),
     certificate('burgerzaken-api', 'burgerzaken-prod', 'api.burgerzaken.gemeente.nl', true, 42),
     certificate('burgerzaken-afspraken', 'burgerzaken-prod', 'afspraken.gemeente.nl', false, 0),
+  ],
+  'cert-manager/ClusterIssuer': [
+    clusterIssuer('letsencrypt', 'https://acme-v02.api.letsencrypt.org/directory', 120),
+    clusterIssuer(
+      'letsencrypt-staging',
+      'https://acme-staging-v02.api.letsencrypt.org/directory',
+      120,
+    ),
   ],
 };
 

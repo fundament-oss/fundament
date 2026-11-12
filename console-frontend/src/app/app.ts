@@ -48,7 +48,6 @@ import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import DialogSyncDirective from './dialog-sync.directive';
 import MainPaneDirective from './main-pane.directive';
-import { PluginMenuIconComponent } from './icons';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';

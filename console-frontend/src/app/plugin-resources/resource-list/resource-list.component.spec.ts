@@ -73,7 +73,10 @@ function setup(queryParams: Record<string, string> = {}, opts: SetupOptions = {}
         },
       },
       { provide: Router, useValue: { navigate, serializeUrl: vi.fn(), createUrlTree: vi.fn() } },
-      { provide: PluginRegistryService, useValue: { getPlugin: () => undefined } },
+      {
+        provide: PluginRegistryService,
+        useValue: { getPlugin: () => undefined, installationHealth: () => undefined },
+      },
       { provide: KubePluginLoaderService, useValue: { loadCrdAndResources, loadResources } },
       {
         provide: KubeClusterContextService,

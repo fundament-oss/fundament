@@ -519,7 +519,10 @@ export default class PluginRegistryService {
       ...new Set(
         this.plugins()
           .filter((plugin) => isInstallUp(health.get(plugin.installationName)?.phase))
-          .flatMap((plugin) => [...(plugin.menu.organization ?? []), ...(plugin.menu.project ?? [])])
+          .flatMap((plugin) => [
+            ...(plugin.menu.organization ?? []),
+            ...(plugin.menu.project ?? []),
+          ])
           .map((entry) => entry.crd)
           .filter((ref) => ref && !known.has(ref)),
       ),
