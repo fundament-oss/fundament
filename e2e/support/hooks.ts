@@ -95,6 +95,12 @@ Before({ tags: '@real-gardener' }, function () {
   return process.env.E2E_GARDENER === 'real' ? undefined : 'skipped';
 });
 
+// @mock-gardener scenarios rely on clusters that exist only in the database,
+// so they skip against a real Gardener.
+Before({ tags: '@mock-gardener' }, function () {
+  return process.env.E2E_GARDENER === 'real' ? 'skipped' : undefined;
+});
+
 // @shoot-token scenarios need ServiceAccount tokens authn-api accepts: real
 // ones from a shoot (E2E_GARDENER=real), or HMAC stand-ins for an authn-api in
 // SHOOT_VERIFIER_MODE=mock (PR previews). Against any other deployment they
