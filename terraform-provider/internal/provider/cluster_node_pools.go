@@ -304,6 +304,34 @@ func newOrRetyped(current, planned []ClusterNodePoolModel) []ClusterNodePoolMode
 	return out
 }
 
+// replacedNodePools describes each running pool that the planned pools remove
+// or replace. Pools are matched by name, so a renamed pool is removed and a new
+// one created, and a pool whose machine type changes is replaced under its
+// name; either way its nodes go. Nil while a planned name is unknown: the plan
+// cannot tell yet which pools stay.
+func replacedNodePools(current, planned []ClusterNodePoolModel) []string {
+	wanted := make(map[string]ClusterNodePoolModel, len(planned))
+	for _, pool := range planned {
+		if pool.Name.IsUnknown() {
+			return nil
+		}
+		wanted[pool.Name.ValueString()] = pool
+	}
+	var out []string
+	for _, pool := range current {
+		name := pool.Name.ValueString()
+		next, ok := wanted[name]
+		switch {
+		case !ok:
+			out = append(out, fmt.Sprintf("Node pool %q is removed, and its nodes with it.", name))
+		case !next.MachineType.IsUnknown() && next.MachineType.ValueString() != pool.MachineType.ValueString():
+			out = append(out, fmt.Sprintf("Node pool %q changes machine type from %s to %s: it is replaced, and its nodes with it.",
+				name, pool.MachineType.ValueString(), next.MachineType.ValueString()))
+		}
+	}
+	return out
+}
+
 // checkMachineTypes reports every pool whose machine type the region's catalog does not offer.
 func checkMachineTypes(ctx context.Context, client *FundamentClient, region string, pools []ClusterNodePoolModel) diag.Diagnostics {
 	var diags diag.Diagnostics
