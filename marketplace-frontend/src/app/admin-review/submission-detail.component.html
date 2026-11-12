@@ -315,6 +315,8 @@
                 [attr.position]="row.position"
                 [attr.status]="row.stepStatus"
               ></nldd-step-cell>
+              <!-- Cells carry no gap of their own: the spacer keeps the version off the dot. -->
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 [attr.text]="row.version || 'Unknown version'"
                 [attr.supporting-text]="

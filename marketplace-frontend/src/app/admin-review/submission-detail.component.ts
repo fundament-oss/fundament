@@ -18,6 +18,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
 import '@nldd/design-system/step-cell';
+import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/segmented-control';
@@ -171,6 +172,8 @@ export default class SubmissionDetailComponent implements OnInit {
     const sequence = this.loadSequence;
     const isCurrent = () => sequence === this.loadSequence;
 
+    // Until this submission is in, the tab must not keep the previous one's name.
+    this.titleService.setTitle('Review queue');
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.submission.set(null);
@@ -219,8 +222,9 @@ export default class SubmissionDetailComponent implements OnInit {
     this.router.navigate(['/admin/submissions', id]);
   }
 
+  // nldd-segmented-control reports its selection in the event's detail.
   onDescriptionViewChange(event: Event) {
-    const { value } = event.target as HTMLInputElement;
+    const { value } = (event as CustomEvent<{ value: string }>).detail;
     this.descriptionView.set(value === 'source' ? 'source' : 'preview');
   }
 

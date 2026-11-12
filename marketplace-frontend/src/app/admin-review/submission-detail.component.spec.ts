@@ -160,7 +160,24 @@ describe('SubmissionDetailComponent', () => {
       description: '## Setup',
     });
 
-    expect(root.textContent).toContain('Dashboards for your clusters');
+    const metadata = Array.from(root.querySelectorAll('h2')).find(
+      (heading) => heading.textContent?.trim() === 'Submitted metadata',
+    )?.parentElement;
+    expect(metadata?.textContent).toContain('Dashboards for your clusters');
+    expect(metadata?.textContent).not.toContain('Setup');
+  });
+
+  it('switches the description between the rendered preview and its markdown', async () => {
+    const root = await render({ ...submission, description: '## Setup' });
+    const control = root.querySelector('nldd-segmented-control');
+
+    control?.dispatchEvent(new CustomEvent('change', { detail: { value: 'source' } }));
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+
+    expect(root.querySelector('pre')?.textContent).toBe('## Setup');
+    expect(root.querySelector('app-markdown')).toBeNull();
   });
 
   it('lists every review round, linking to all but the one on screen', async () => {

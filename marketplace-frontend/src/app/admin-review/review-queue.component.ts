@@ -162,13 +162,16 @@ export default class ReviewQueueComponent implements OnInit {
   }
 
   // replaceUrl: each keystroke and card click is a refinement of the same
-  // view, not a page of its own to step back through.
+  // view, not a page of its own to step back through. scroll: 'manual' keeps
+  // the router's scroll-to-top from moving the table out from under the
+  // reviewer, as the storefront's live search does (app.ts).
   private setFilters(params: { status?: SubmissionStatus | null; q?: string | null }) {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: params,
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      scroll: 'manual',
     });
   }
 }
