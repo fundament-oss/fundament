@@ -16,7 +16,7 @@ jq = "1.7.1"
 yq = "4.44.3"
 
 # Database
-"go:github.com/printeers/trek" = "0.12.1"
+"go:github.com/printeers/trek" = "0.12.6"
 
 # Kubernetes & Deployment
 mkcert = "1.4.4"

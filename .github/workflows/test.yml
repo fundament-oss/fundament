@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (organization-api)
         working-directory: organization-api
@@ -66,7 +66,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -79,7 +79,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (cluster-worker)
         working-directory: cluster-worker
@@ -100,7 +100,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -113,7 +113,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (authz-worker)
         working-directory: authz-worker
@@ -140,7 +140,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -153,7 +153,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (common)
         working-directory: common
@@ -178,7 +178,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -191,7 +191,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (funops)
         working-directory: funops
@@ -232,7 +232,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -245,7 +245,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (dcim-api)
         working-directory: dcim-api
@@ -270,7 +270,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -283,7 +283,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (marketplace-catalog-api)
         working-directory: marketplace-catalog-api
@@ -308,7 +308,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -321,7 +321,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (marketplace-registry-api)
         working-directory: marketplace-registry-api
@@ -346,7 +346,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -359,7 +359,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (authn-api)
         working-directory: authn-api
@@ -384,7 +384,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -397,7 +397,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (dcim-authn-api)
         working-directory: dcim-authn-api
@@ -422,7 +422,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -435,7 +435,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (marketplace-admin-api)
         working-directory: marketplace-admin-api
@@ -460,7 +460,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/go/bin/trek
-          key: trek-${{ runner.os }}-v0.12.1
+          key: trek-${{ runner.os }}-v0.12.6
 
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
@@ -473,7 +473,7 @@ jobs:
 
       - name: Install Trek
         if: steps.cache-trek.outputs.cache-hit != 'true'
-        run: go install github.com/printeers/trek@v0.12.1
+        run: go install github.com/printeers/trek@v0.12.6
 
       - name: Run tests (platform-api)
         working-directory: platform-api

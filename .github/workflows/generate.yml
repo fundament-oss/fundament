@@ -44,13 +44,13 @@ jobs:
           # so we need to fix this if it becomes a substantial problem.
           docker run --rm --user root \
             -v "$PROJECT_ROOT:/data" \
-            ghcr.io/printeers/trek:0.12.1-pgmodeler chown -R 1001:1001 /data
+            ghcr.io/printeers/trek:0.12.6-pgmodeler chown -R 1001:1001 /data
           # Then run trek as the default nonroot user
           docker run --rm \
             "${env_args[@]}" \
             -v "$PROJECT_ROOT:/data" \
             -w "/data/db" \
-            ghcr.io/printeers/trek:0.12.1-pgmodeler trek "$@"
+            ghcr.io/printeers/trek:0.12.6-pgmodeler trek "$@"
           EOF
           chmod +x "$HOME/.local/bin/trek"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
