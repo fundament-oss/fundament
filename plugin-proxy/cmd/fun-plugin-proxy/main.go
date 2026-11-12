@@ -19,6 +19,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	openfgaauthz "github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/gardener"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
@@ -199,7 +200,7 @@ func run() error {
 		loggingInterceptor,
 	)
 
-	internalMux.Handle(pluginproxyv1connect.NewPluginInstallationServiceHandler(s, interceptors))
+	internalMux.Handle(pluginproxyv1connect.NewPluginInstallationServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

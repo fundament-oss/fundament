@@ -16,6 +16,7 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/dcimauthn"
@@ -149,7 +150,7 @@ func run() error {
 
 	// GetUserInfo is Connect RPC, like authn-api's; the browser flow above
 	// stays plain HTTP because it is driven by redirects and cookies.
-	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(server))
+	registerRPCHandlers(mux, server)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
@@ -193,4 +194,9 @@ func readyz(logger *slog.Logger, pool *pgxpool.Pool) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	}
+}
+
+// registerRPCHandlers mounts the Connect services on mux.
+func registerRPCHandlers(mux *http.ServeMux, server *dcimauthn.Server) {
+	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(server, connectlimit.ReadMaxBytes()))
 }

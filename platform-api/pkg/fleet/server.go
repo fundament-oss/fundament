@@ -17,6 +17,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -75,13 +76,13 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
 	)
 
 	mux := http.NewServeMux()
-	mux.Handle(fleetv1connect.NewFleetServiceHandler(s, interceptors))
+	mux.Handle(fleetv1connect.NewFleetServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	// Unauthenticated, as on every other surface here: the descriptors are
 	// public and grpcurl carries no token.
 	reflector := grpcreflect.NewStaticReflector(fleetv1connect.FleetServiceName)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	// The DCIM frontend sends the dcim_auth cookie, so credentials are
 	// allowed and the origin list must be explicit.

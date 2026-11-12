@@ -11,6 +11,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/db/gen"
@@ -55,13 +56,13 @@ func New(logger *slog.Logger, database *psqldb.DB, corsAllowedOrigins []string) 
 		validate.NewInterceptor(),
 	)
 
-	mux.Handle(catalogv1connect.NewCatalogServiceHandler(s, interceptors))
+	mux.Handle(catalogv1connect.NewCatalogServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	// install.v1 is served from this binary too (see pkg/install) and shares the
 	// reflection endpoint: descriptors come from the global registry.
 	reflector := grpcreflect.NewStaticReflector("catalog.v1.CatalogService", "install.v1.InstallService")
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	// The storefront is a browser client calling this directly. Narrower than
 	// organization-api's: no credentials, so no Authorization, Fun-Organization
