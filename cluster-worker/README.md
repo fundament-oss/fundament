@@ -282,10 +282,12 @@ is new (NULL) or `progressing` stays `progressing` rather than reading ready, an
 complaint naming it is ignored; a pool stored `ready` keeps its status.
 The in-flight state is read after the pool list (a pool's INSERT commits together with
 its outbox row), so a pool inserted mid-check is never classified from a stale
-nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
-Gardener's machine deployment names, so one pool can never match another's text, nor
-the shoot's technical ID. Gardener's reason text is cleaned before it is stored
-(control characters dropped, capped at 1 KiB): it is node and provider text. A failure
+nothing-in-flight state. Gardener names a pool's machines `<technicalID>-<worker>` plus a
+provider-specific suffix, so a pool is matched on that whole name. The reason is
+cleaned before it is stored (control characters dropped, capped at 1 KiB): it is node
+and provider text. metal-stack's `no machine available` is stored in plain words, "No
+free `<machine type>` machine is available.", without the type while a change of ours
+is rolling out. Every new waiting or error message is logged with Gardener's text. A failure
 that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
 untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
 the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -14,8 +15,11 @@ import (
 // Gardener names machine deployments after the generated worker name, so the
 // fixtures must carry kubename.GenerateWorkerName(pool), never the raw pool
 // name — production text never contains the raw name.
+// fixtureTechnicalID is the technical ID the fixtures' names start with.
+const fixtureTechnicalID = "shoot--acme--tf-a"
+
 func enrMessage(pool string) string {
-	return `machine deployment "shoot--acme--tf-a-` + kubename.GenerateWorkerName(pool) + `-z1" is waiting for machines to join`
+	return `machine deployment "` + fixtureTechnicalID + `-` + kubename.GenerateWorkerName(pool) + `-z1" is waiting for machines to join`
 }
 
 func TestNextNodePoolStatuses(t *testing.T) {
@@ -26,6 +30,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           fixtureTechnicalID,
 	}
 	quietReconcile := &gardener.ShootStatus{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
@@ -48,7 +53,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			updating: true,
 			want: []nodePoolUpdate{
 				{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing},
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach, GardenerText: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
@@ -82,9 +87,10 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			observed: &gardener.ShootStatus{
 				Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
 				EveryNodeReadyMessage: enrNomach,
+				TechnicalID:           fixtureTechnicalID,
 			},
 			want: []nodePoolUpdate{
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach, GardenerText: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
@@ -94,14 +100,14 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			observed: stuck,
 			updating: true,
 			want: []nodePoolUpdate{
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach, GardenerText: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
 		{
 			name:     "raw pool name in the text does not match",
 			stored:   []storedNodePool{{Name: "nomach", Status: "ready"}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting`},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting`, TechnicalID: fixtureTechnicalID},
 			want:     nil,
 		},
 		{
@@ -154,6 +160,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				// EveryNodeReady names only the first failing machine deployment;
 				// with two stuck pools the named one must not flip the other back.
 				EveryNodeReadyMessage: enrNomach,
+				TechnicalID:           fixtureTechnicalID,
 			},
 			want: nil,
 		},
@@ -165,6 +172,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				// nomach, which says nothing about tfpool's machines.
 				Status: gardener.StatusReady, Healthy: false,
 				EveryNodeReadyMessage: enrNomach,
+				TechnicalID:           fixtureTechnicalID,
 			},
 			want: nil,
 		},
@@ -176,6 +184,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				// has not left the outbox, so this report predates it.
 				Status: gardener.StatusReady, Healthy: false,
 				EveryNodeReadyMessage: enrNomach,
+				TechnicalID:           fixtureTechnicalID,
 			},
 			syncPending: true,
 			want:        []nodePoolUpdate{{Name: "nomach", Status: dbconst.NodePoolStatus_Progressing}},
@@ -191,7 +200,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: "old reason naming " + kubename.GenerateWorkerName("nomach")}},
 			observed: stuck,
 			want: []nodePoolUpdate{
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach},
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach, GardenerText: enrNomach},
 			},
 		},
 		{
@@ -209,11 +218,12 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			observed: &gardener.ShootStatus{
 				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 				EveryNodeReadyMessage: enrMessage("my-web"),
+				TechnicalID:           fixtureTechnicalID,
 			},
 			updating: true,
 			want: []nodePoolUpdate{
 				{Name: "my-web", Status: dbconst.NodePoolStatus_Waiting,
-					Message: enrMessage("my-web"),
+					Message: enrMessage("my-web"), GardenerText: enrMessage("my-web"),
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting,
 						Message: "Node pool my-web: " + enrMessage("my-web")}}},
 			},
@@ -229,10 +239,10 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			stored: []storedNodePool{{Name: "nomach", Status: "waiting", Message: "old"}},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError,
 				Message:    "Failed to reconcile",
-				LastErrors: []string{enrMessage("nomach")}},
+				LastErrors: []string{enrMessage("nomach")}, TechnicalID: fixtureTechnicalID},
 			want: []nodePoolUpdate{
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Error,
-					Message: enrMessage("nomach"),
+					Message: enrMessage("nomach"), GardenerText: enrMessage("nomach"),
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError,
 						Message: "Node pool nomach: " + enrMessage("nomach")}}},
 			},
@@ -240,9 +250,9 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		{
 			name:     "status flips waiting to error with identical message still records nodepool_error",
 			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: enrNomach}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "Failed to reconcile", LastErrors: []string{enrNomach}},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "Failed to reconcile", LastErrors: []string{enrNomach}, TechnicalID: fixtureTechnicalID},
 			want: []nodePoolUpdate{
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Error, Message: enrNomach,
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Error, Message: enrNomach, GardenerText: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
@@ -277,6 +287,214 @@ func TestPoolComplaintSanitizes(t *testing.T) {
 	observed := &gardener.ShootStatus{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		EveryNodeReadyMessage: enrMessage("nomach") + "\x1b\x07\nsecond line",
+		TechnicalID:           fixtureTechnicalID,
 	}
-	assert.Equal(t, enrMessage("nomach")+" second line", poolComplaint("nomach", observed))
+	assert.Equal(t, enrMessage("nomach")+" second line", complaint("nomach", observed))
+}
+
+// metalTechnicalID and metalMessage are the poc's EveryNodeReady text from a
+// shoot on metal-stack whose pool "medium" got no machines (issue 1383): machine names
+// are <technicalID>-<worker>-<hash>-<id>, with no zone suffix.
+const metalTechnicalID = "shoot--systemd819--enricotef4f"
+
+func metalMessage() string {
+	return `Worker extension (` + metalTechnicalID + `/enricotef4f) reports failing health check: machine "` + metalTechnicalID + `-` + kubename.GenerateWorkerName("medium") + `-68c79-bnnvm" failed: Cloud provider message - machine codes error: code = [Internal] message = [[POST /v1/machine/allocate][422] allocateMachine default "{\"statuscode\":422,\"message\":\"no machine available\"}"].`
+}
+
+func TestPoolComplaintMetalNames(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EveryNodeReady names the pool", func(t *testing.T) {
+		t.Parallel()
+		observed := &gardener.ShootStatus{EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
+		assert.Equal(t, metalMessage(), complaint("medium", observed))
+		assert.Empty(t, complaint("small", observed))
+	})
+
+	// No lastErrors sample from metal-stack exists yet; this wraps the same
+	// machine name in a task error the way Gardener reports a failed task.
+	t.Run("lastErrors name the pool", func(t *testing.T) {
+		t.Parallel()
+		medium := "task \"Waiting until shoot worker nodes have been reconciled\" failed: " + metalMessage()
+		observed := &gardener.ShootStatus{
+			Status:      gardener.StatusError,
+			LastErrors:  []string{"task \"Deploying Shoot control plane\" failed: timeout", medium},
+			TechnicalID: metalTechnicalID,
+		}
+		assert.Equal(t, medium, complaint("medium", observed))
+	})
+}
+
+func TestPoolComplaintMatchesWholeNames(t *testing.T) {
+	t.Parallel()
+
+	worker := kubename.GenerateWorkerName("nomach")
+	tests := []struct {
+		name        string
+		text        string
+		technicalID string
+		want        bool
+	}{
+		{"local machine deployment", `machine deployment "shoot--acme--tf-a-` + worker + `-z1" is waiting`, "shoot--acme--tf-a", true},
+		{"name at the end of the text", "machine shoot--acme--tf-a-" + worker, "shoot--acme--tf-a", true},
+		{"another shoot's machine with the same worker name", `machine "shoot--other--tf-b-` + worker + `-68c79-bnnvm" failed`, "shoot--acme--tf-a", false},
+		{"a longer name that starts like the worker", `machine "shoot--acme--tf-a-` + worker + `x-z1" failed`, "shoot--acme--tf-a", false},
+		{"the worker name without the technical ID", `machine "` + worker + `-z1" failed`, "shoot--acme--tf-a", false},
+		{"a later occurrence is a whole name", "shoot--acme--tf-a-" + worker + "x and shoot--acme--tf-a-" + worker + "-z1", "shoot--acme--tf-a", true},
+		{"no technical ID yet", `machine deployment "shoot--acme--tf-a-` + worker + `-z1" is waiting`, "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			observed := &gardener.ShootStatus{EveryNodeReadyMessage: tt.text, TechnicalID: tt.technicalID}
+			assert.Equal(t, tt.want, complaint("nomach", observed) != "")
+		})
+	}
+}
+
+// complaint is the cleaned Gardener text poolReason finds for a pool alone.
+func complaint(pool string, observed *gardener.ShootStatus) string {
+	text, _ := poolReason(pool, nil, observed, "")
+	return reasonText(text)
+}
+
+func TestPoolReason(t *testing.T) {
+	t.Parallel()
+
+	metal := &gardener.ShootStatus{EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
+	text, reason := poolReason("medium", nil, metal, "c1-medium-x86")
+	assert.Equal(t, metalMessage(), text)
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", reason)
+
+	_, reason = poolReason("medium", nil, metal, "")
+	assert.Equal(t, "No free machine is available for this pool.", reason)
+
+	local := &gardener.ShootStatus{EveryNodeReadyMessage: enrMessage("nomach"), TechnicalID: fixtureTechnicalID}
+	text, reason = poolReason("nomach", nil, local, "local")
+	assert.Equal(t, enrMessage("nomach"), text)
+	assert.Equal(t, enrMessage("nomach"), reason, "unknown text is shown as Gardener wrote it")
+}
+
+func TestPoolReasonOtherPoolInSameText(t *testing.T) {
+	t.Parallel()
+
+	machine := func(pool, failure string) string {
+		return `machine "` + metalTechnicalID + `-` + kubename.GenerateWorkerName(pool) + `-68c79-bnnvm" failed: ` + failure
+	}
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusError,
+		LastErrors: []string{`task "Waiting until shoot worker nodes have been reconciled" failed: ` +
+			machine("small", "quota exceeded") + "; " + machine("medium", `{"message":"no machine available"}`)},
+		TechnicalID: metalTechnicalID,
+	}
+
+	text, reason := poolReason("small", []string{"medium"}, observed, "c1-small-x86")
+	assert.Equal(t, observed.LastErrors[0], text)
+	assert.Equal(t, observed.LastErrors[0], reason, "another pool's failure in the same text is not this pool's")
+
+	_, reason = poolReason("medium", []string{"small"}, observed, "c1-medium-x86")
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", reason)
+}
+
+// Only another pool's machine ends this pool's part of the text: an object
+// in the seed named after the technical ID, before the failure, does not.
+func TestPoolReasonSeedObjectBeforeFailure(t *testing.T) {
+	t.Parallel()
+
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusError,
+		LastErrors: []string{`machine "` + metalTechnicalID + `-` + kubename.GenerateWorkerName("medium") + `-68c79-bnnvm" failed: ` +
+			`using secret ` + metalTechnicalID + `-cloudprovider: no machine available`},
+		TechnicalID: metalTechnicalID,
+	}
+	_, reason := poolReason("medium", []string{"small"}, observed, "c1-medium-x86")
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", reason)
+}
+
+// A generic EveryNodeReady that names the pool must not hide the cause
+// lastErrors gives for it.
+func TestPoolReasonReadsEveryText(t *testing.T) {
+	t.Parallel()
+
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusError,
+		EveryNodeReadyMessage: `machine deployment "` + metalTechnicalID + `-` + kubename.GenerateWorkerName("medium") +
+			`" is waiting for machines to join`,
+		LastErrors:  []string{`task "Waiting until shoot worker nodes have been reconciled" failed: ` + metalMessage()},
+		TechnicalID: metalTechnicalID,
+	}
+	text, reason := poolReason("medium", nil, observed, "c1-medium-x86")
+	assert.Equal(t, observed.LastErrors[0], text)
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", reason)
+}
+
+// provider-local repeats the machine's own name in its message, as the name of
+// the machine's pod; that is still this pool's text. Taken from a local
+// Gardener whose machine pods for "medium" an admission policy refused.
+func TestPoolReasonOwnNameRepeated(t *testing.T) {
+	t.Parallel()
+
+	technicalID := "shoot--acmeco7ca5--pooltest49e"
+	machine := technicalID + "-" + kubename.GenerateWorkerName("medium") + "-z1-5b65b-4rpk8"
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing,
+		LastErrors: []string{`task "Waiting until shoot worker nodes have been reconciled" failed: ` +
+			`Error reconciling Worker: failed while waiting for all machine deployments to be ready: machine(s) failed: 1 error occurred: "` +
+			machine + `": Cloud provider message - machine codes error: code = [Internal] message = [error applying pod: pods "machine-` +
+			machine + `" is forbidden: denied request: no machine available]`},
+		TechnicalID: technicalID,
+	}
+
+	_, reason := poolReason("medium", []string{"small"}, observed, "local-medium")
+	assert.Equal(t, "No free local-medium machine is available.", reason)
+}
+
+func TestNextNodePoolStatusesPlainReason(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "medium", MachineType: "c1-large-x86", Status: "waiting", Message: "No free c1-medium-x86 machine is available."}}
+
+	t.Run("a pending change leaves the machine type out", func(t *testing.T) {
+		t.Parallel()
+		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
+		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool.", GardenerText: metalMessage()}},
+			nextNodePoolStatuses(stored, observed, false, true))
+	})
+
+	// The change left the outbox and reached Gardener, which has not
+	// reconciled it yet: its text still describes the old machines.
+	t.Run("a change Gardener has not reconciled leaves the machine type out", func(t *testing.T) {
+		t.Parallel()
+		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
+		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool.", GardenerText: metalMessage()}},
+			nextNodePoolStatuses(stored, observed, true, false))
+	})
+
+	t.Run("a failure past the stored text cap is still recognised", func(t *testing.T) {
+		t.Parallel()
+		long := `task "Waiting until shoot worker nodes have been reconciled" failed: ` + strings.Repeat("x", maxReasonLen) + " " + metalMessage()
+		observed := &gardener.ShootStatus{Status: gardener.StatusError, LastErrors: []string{long}, TechnicalID: metalTechnicalID}
+		updates := nextNodePoolStatuses(stored, observed, false, false)
+		require.Len(t, updates, 1)
+		assert.Equal(t, "No free c1-large-x86 machine is available.", updates[0].Message)
+	})
+}
+
+// The issue's case end to end: during the initial create, the pool metal-stack
+// has no machines for waits with the plain reason; the other pool is not named.
+func TestNextNodePoolStatusesMetalCreate(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "small", MachineType: "c1-small-x86"}, {Name: "medium", MachineType: "c1-medium-x86"}}
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		EveryNodeReadyMessage: metalMessage(),
+		TechnicalID:           metalTechnicalID,
+	}
+	reason := "No free c1-medium-x86 machine is available."
+	assert.Equal(t, []nodePoolUpdate{
+		{Name: "small", Status: dbconst.NodePoolStatus_Progressing},
+		{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: reason, GardenerText: metalMessage(),
+			Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool medium: " + reason}}},
+	}, nextNodePoolStatuses(stored, observed, false, false))
 }
