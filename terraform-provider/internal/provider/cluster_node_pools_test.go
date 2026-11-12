@@ -197,6 +197,38 @@ func TestNewOrRetyped(t *testing.T) {
 	assert.Equal(t, []string{"keep", "new"}, names)
 }
 
+// Pools are matched by name: a rename removes the old pool, a new machine type
+// replaces it, and a resize or a new pool next to it destroys nothing.
+func TestReplacedNodePools(t *testing.T) {
+	current := []ClusterNodePoolModel{
+		pool("workers", "local-small", 1, 3),
+		pool("batch", "local-small", 1, 3),
+		pool("keep", "local-small", 1, 3),
+	}
+	planned := []ClusterNodePoolModel{
+		pool("renamed", "local-small", 1, 3),
+		pool("batch", "local-medium", 1, 3),
+		pool("keep", "local-small", 2, 5),
+		pool("new", "local-small", 1, 1),
+	}
+	assert.Equal(t, []string{
+		`Node pool "workers" is removed, and its nodes with it.`,
+		`Node pool "batch" changes machine type from local-small to local-medium: it is replaced, and its nodes with it.`,
+	}, replacedNodePools(current, planned))
+
+	assert.Empty(t, replacedNodePools(current, current))
+
+	unknownName := []ClusterNodePoolModel{{
+		Name: types.StringUnknown(), MachineType: types.StringValue("local-small"),
+		AutoscaleMin: types.Int64Value(1), AutoscaleMax: types.Int64Value(3),
+	}}
+	assert.Nil(t, replacedNodePools(current, unknownName))
+
+	unknownType := pool("workers", "", 1, 3)
+	unknownType.MachineType = types.StringUnknown()
+	assert.Empty(t, replacedNodePools(current[:1], []ClusterNodePoolModel{unknownType}))
+}
+
 func TestSameNodePools(t *testing.T) {
 	a := []ClusterNodePoolModel{pool("a", "local-small", 1, 3), pool("b", "local-small", 0, 1)}
 	assert.True(t, sameNodePools(a, []ClusterNodePoolModel{pool("b", "local-small", 0, 1), pool("a", "local-small", 1, 3)}), "order does not matter")

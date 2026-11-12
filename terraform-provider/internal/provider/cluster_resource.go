@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -360,7 +361,9 @@ func (r *ClusterResource) listedCluster(ctx context.Context, clusterID string) (
 }
 
 // ModifyPlan replaces a cluster that is being deleted: the apply then waits
-// until it is gone and creates it again.
+// until it is gone and creates it again. It also warns when the plan removes
+// or replaces a node pool: Terraform shows a renamed pool as an in-place
+// change of its name, while the pool and its nodes are in fact replaced.
 func (r *ClusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // signature set by resource.ResourceWithModifyPlan
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
@@ -372,6 +375,26 @@ func (r *ClusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		// A replacement only takes effect on an attribute that changes.
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status"), types.StringUnknown())...)
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("status"))
+		return
+	}
+
+	var currentList, plannedList types.List
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("node_pool"), &currentList)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("node_pool"), &plannedList)...)
+	// A null list in state, from before the block existed, holds no pools.
+	if resp.Diagnostics.HasError() || currentList.IsNull() || plannedList.IsNull() || plannedList.IsUnknown() {
+		return
+	}
+	var current, planned []ClusterNodePoolModel
+	resp.Diagnostics.Append(currentList.ElementsAs(ctx, &current, false)...)
+	resp.Diagnostics.Append(plannedList.ElementsAs(ctx, &planned, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	replaced := replacedNodePools(current, planned)
+	if len(replaced) > 0 {
+		resp.Diagnostics.AddAttributeWarning(path.Root("node_pool"), "Node Pools Removed or Replaced",
+			strings.Join(replaced, "\n")+"\n\nA node pool is identified by its name: renaming one removes it and creates a new one, with new nodes.")
 	}
 }
 

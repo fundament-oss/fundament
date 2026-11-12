@@ -142,3 +142,85 @@ func TestClusterReadRefused(t *testing.T) {
 		assert.Contains(t, resp.Diagnostics.Errors()[0].Detail(), `Unable to read cluster "web": permission_denied: permission denied`)
 	})
 }
+
+// Terraform shows a renamed node_pool block as an in-place change of its name;
+// the plan carries a warning that the pool and its nodes are replaced.
+func TestClusterModifyPlanWarnsOnReplacedNodePools(t *testing.T) {
+	ctx := context.Background()
+	r := &ClusterResource{}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	require.False(t, schemaResp.Diagnostics.HasError())
+	s := schemaResp.Schema
+	model := func(pools ...ClusterNodePoolModel) *ClusterResourceModel {
+		return &ClusterResourceModel{
+			ID:                types.StringValue("c1"),
+			Name:              types.StringValue("web"),
+			Region:            types.StringValue("local"),
+			KubernetesVersion: types.StringValue("1.33.0"),
+			Status:            types.StringValue("running"),
+			NodePools:         pools,
+			Timeouts:          timeouts.Value{Object: types.ObjectNull(s.GetBlocks()["timeouts"].Type().(timeouts.Type).AttrTypes)},
+		}
+	}
+	modify := func(t *testing.T, current, planned *ClusterResourceModel) *resource.ModifyPlanResponse {
+		t.Helper()
+		state := tfsdk.State{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+		require.False(t, state.Set(ctx, current).HasError())
+		plan := tfsdk.Plan{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+		require.False(t, plan.Set(ctx, planned).HasError())
+		resp := &resource.ModifyPlanResponse{Plan: plan}
+		r.ModifyPlan(ctx, resource.ModifyPlanRequest{State: state, Plan: plan}, resp)
+		require.False(t, resp.Diagnostics.HasError())
+		return resp
+	}
+
+	t.Run("rename", func(t *testing.T) {
+		resp := modify(t, model(pool("workers", "local-small", 1, 3)), model(pool("renamed", "local-small", 1, 3)))
+		warnings := resp.Diagnostics.Warnings()
+		require.Len(t, warnings, 1)
+		assert.Equal(t, "Node Pools Removed or Replaced", warnings[0].Summary())
+		assert.Contains(t, warnings[0].Detail(), `Node pool "workers" is removed`)
+		assert.Contains(t, warnings[0].Detail(), "renaming one removes it and creates a new one")
+	})
+
+	t.Run("resize", func(t *testing.T) {
+		resp := modify(t, model(pool("workers", "local-small", 1, 3)), model(pool("workers", "local-small", 2, 5)))
+		assert.Empty(t, resp.Diagnostics.Warnings())
+	})
+
+	t.Run("machine type change", func(t *testing.T) {
+		resp := modify(t, model(pool("workers", "local-small", 1, 3)), model(pool("workers", "local-medium", 1, 3)))
+		warnings := resp.Diagnostics.Warnings()
+		require.Len(t, warnings, 1)
+		assert.Contains(t, warnings[0].Detail(), `Node pool "workers" changes machine type from local-small to local-medium`)
+	})
+
+	// The whole cluster is replaced: a warning about one of its pools would
+	// only distract from that.
+	t.Run("cluster being deleted", func(t *testing.T) {
+		current := model(pool("workers", "local-small", 1, 3))
+		current.Status = types.StringValue(clusterStatusToString(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING))
+		resp := modify(t, current, model(pool("renamed", "local-small", 1, 3)))
+		assert.Empty(t, resp.Diagnostics.Warnings())
+		assert.Equal(t, path.Paths{path.Root("status")}, resp.RequiresReplace)
+	})
+
+	// A state from before the node_pool block existed holds a null list.
+	t.Run("no node_pool in state", func(t *testing.T) {
+		current := model()
+		current.NodePools = nil
+		state := tfsdk.State{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+		require.False(t, state.Set(ctx, current).HasError())
+		var list types.List
+		require.False(t, state.GetAttribute(ctx, path.Root("node_pool"), &list).HasError())
+		require.True(t, list.IsNull(), "the state must hold a null node_pool for this case")
+
+		plan := tfsdk.Plan{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+		require.False(t, plan.Set(ctx, model(pool("workers", "local-small", 1, 3))).HasError())
+		resp := &resource.ModifyPlanResponse{Plan: plan}
+		r.ModifyPlan(ctx, resource.ModifyPlanRequest{State: state, Plan: plan}, resp)
+		assert.False(t, resp.Diagnostics.HasError())
+		assert.Empty(t, resp.Diagnostics.Warnings())
+	})
+}
