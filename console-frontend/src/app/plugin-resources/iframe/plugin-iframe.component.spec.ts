@@ -86,6 +86,20 @@ function sheetFrames(): HTMLIFrameElement[] {
   return Array.from(document.querySelectorAll<HTMLIFrameElement>('nldd-sheet iframe'));
 }
 
+describe('PluginIframeComponent sandbox', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('lets a plugin page open a link in a new tab, but not replace the console', async () => {
+    const { fixture } = await openPage();
+
+    const flags = (pageFrame(fixture).getAttribute('sandbox') ?? '').split(' ');
+    expect(flags).toEqual(
+      expect.arrayContaining(['allow-popups', 'allow-popups-to-escape-sandbox']),
+    );
+    expect(flags).not.toContain('allow-top-navigation');
+  });
+});
+
 describe('PluginIframeComponent sheets', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

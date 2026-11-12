@@ -69,7 +69,11 @@ function isPluginMessage(data: unknown): data is PluginMessage {
       cookie is unreachable.
 
       allow-forms remains for plugin create UIs whose submits stay in-frame.
-      allow-top-navigation and allow-popups stay ungranted.
+      allow-popups lets a plugin page open a link in a new tab, and
+      allow-popups-to-escape-sandbox lets that tab load as a normal page rather
+      than one sandboxed like this frame. The tab runs on its own origin and has
+      no access to the console. allow-top-navigation stays ungranted: a plugin
+      may not replace the console itself.
     -->
     <!--
       The negative margins undo the 4px .plugin-card keeps around plugin content
@@ -78,7 +82,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
-      sandbox="allow-scripts allow-same-origin allow-forms"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
       [style.height.px]="frameHeight()"
       [style.minHeight.px]="frameMinHeight()"
       [class]="
