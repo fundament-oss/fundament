@@ -19,6 +19,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	openfgaauthz "github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/gardener"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
@@ -186,20 +187,7 @@ func run() error {
 
 	s := service.New(logger, clusterAccess)
 
-	loggingInterceptor := logging.UnaryServerInterceptor(
-		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
-			logger.Log(ctx, slog.Level(level), msg, fields...)
-		}),
-		logging.WithLogOnEvents(logging.FinishCall),
-	)
-
-	interceptors := connect.WithInterceptors(
-		connectrecovery.NewInterceptor(logger),
-		validate.NewInterceptor(),
-		loggingInterceptor,
-	)
-
-	internalMux.Handle(pluginproxyv1connect.NewPluginInstallationServiceHandler(s, interceptors))
+	registerRPCHandlers(internalMux, s, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -284,4 +272,22 @@ func registerHealth(mux *http.ServeMux, store *openfgaauthz.Store, logger *slog.
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+}
+
+// registerRPCHandlers mounts the Connect services on mux.
+func registerRPCHandlers(mux *http.ServeMux, s *service.Service, logger *slog.Logger) {
+	loggingInterceptor := logging.UnaryServerInterceptor(
+		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
+			logger.Log(ctx, slog.Level(level), msg, fields...)
+		}),
+		logging.WithLogOnEvents(logging.FinishCall),
+	)
+
+	interceptors := connect.WithInterceptors(
+		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
+		loggingInterceptor,
+	)
+
+	mux.Handle(pluginproxyv1connect.NewPluginInstallationServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 }

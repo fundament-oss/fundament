@@ -24,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -269,35 +270,7 @@ func run() error {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	// Connect RPC handler for GetUserInfo
-	loggingInterceptor := logging.UnaryServerInterceptor(
-		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
-			logger.Log(ctx, slog.Level(level), msg, fields...)
-		}),
-		logging.WithLogOnEvents(logging.FinishCall),
-	)
-
-	interceptors := connect.WithInterceptors(
-		connectrecovery.NewInterceptor(logger),
-		validate.NewInterceptor(),
-		loggingInterceptor,
-	)
-
-	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors)
-	mux.Handle(path, handler)
-
-	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors)
-	mux.Handle(tokenPath, tokenHandler)
-
-	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
-	reflector := grpcreflect.NewStaticReflector(
-		"authn.v1.AuthnService",
-		"authn.v1.TokenService",
-	)
-	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
-	mux.Handle(reflectPath, reflectHandler)
-	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
-	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
+	registerRPCHandlers(mux, server, logger)
 
 	// HTTP endpoints for authentication flow (registers routes on mux)
 	_ = authnhttp.HandlerFromMux(server, mux)
@@ -326,4 +299,36 @@ func run() error {
 	}
 
 	return nil
+}
+
+// registerRPCHandlers mounts the Connect services and gRPC reflection on mux.
+func registerRPCHandlers(mux *http.ServeMux, server *authn.AuthnServer, logger *slog.Logger) {
+	loggingInterceptor := logging.UnaryServerInterceptor(
+		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
+			logger.Log(ctx, slog.Level(level), msg, fields...)
+		}),
+		logging.WithLogOnEvents(logging.FinishCall),
+	)
+
+	interceptors := connect.WithInterceptors(
+		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
+		loggingInterceptor,
+	)
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors, connectlimit.ReadMaxBytes())
+	mux.Handle(path, handler)
+
+	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors, connectlimit.ReadMaxBytes())
+	mux.Handle(tokenPath, tokenHandler)
+
+	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
+	reflector := grpcreflect.NewStaticReflector(
+		"authn.v1.AuthnService",
+		"authn.v1.TokenService",
+	)
+	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes())
+	mux.Handle(reflectPath, reflectHandler)
+	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes())
+	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
 }
