@@ -1,0 +1,14 @@
+---
+// Starlight's theme provider, fed from the theme cookie shared with the other
+// Fundament frontends (see public/theme-cookie.js). Starlight's own inline
+// script reads localStorage, so the cookie is copied there first. All three are
+// classic scripts, so they run in order before first paint.
+import Default from '@astrojs/starlight/components/ThemeProvider.astro';
+---
+
+<script is:inline src="/config/config.js"></script>
+<script is:inline src="/theme-cookie.js"></script>
+<script is:inline>
+  window.fundamentTheme.syncStarlight();
+</script>
+<Default />
