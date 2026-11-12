@@ -149,7 +149,7 @@ export default class NewProjectComponent {
     effect(() => {
       if (!this.show()) return;
       untracked(() => {
-        this.projectForm.patchValue({ clusterId: '' });
+        this.projectForm.patchValue({ clusterId: this.fixedCluster()?.id ?? '' });
         this.loadClusters();
       });
     });
@@ -163,23 +163,30 @@ export default class NewProjectComponent {
     });
   }
 
+  // Reopening can overlap a fetch; only the newest one applies.
+  private clusterLoad = 0;
+
   async loadClusters() {
+    this.clusterLoad += 1;
+    const current = this.clusterLoad;
     try {
       this.isLoadingClusters.set(true);
       const request = create(ListClustersRequestSchema, {});
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
+      if (current !== this.clusterLoad) return;
       this.clusters.set(response.clusters);
       if (!this.scoped() && !this.projectForm.value.clusterId && response.clusters.length > 0) {
         this.projectForm.patchValue({ clusterId: response.clusters[0].id });
       }
     } catch (error) {
+      if (current !== this.clusterLoad) return;
       this.notificationService.error(
         error instanceof Error
           ? `Failed to load clusters: ${error.message}`
           : 'Failed to load clusters',
       );
     } finally {
-      this.isLoadingClusters.set(false);
+      if (current === this.clusterLoad) this.isLoadingClusters.set(false);
     }
   }
 

@@ -93,7 +93,8 @@ interface K8sListArgs {
   version: string;
   resource: string;
   namespace?: string;
-  // Only k8s.list reads this, and only without a namespace.
+  // Only k8s.list reads this, and only without a namespace. Not for core-group
+  // resources (group ''): kube-api-proxy answers those with a 400.
   projectId?: string;
 }
 

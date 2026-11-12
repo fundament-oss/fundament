@@ -159,7 +159,7 @@ export default class ResourceCreateComponent implements OnInit {
   // arrives — the plugin SDK's init is one-shot, so a late namespace update would
   // be lost and the form would render its free-text namespace fallback for good.
   protected loading = computed(() => {
-    if (this.clusterContext.isLoadingClusters()) return true;
+    if (this.scope().clusterId === null && this.clusterContext.isLoadingClusters()) return true;
     // No cluster selected (none available or load failed): nothing left to wait for.
     if (this.clusterId() === null) return false;
     return !this.crdLoaded() || !this.namespacesReady();
@@ -190,6 +190,8 @@ export default class ResourceCreateComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // A cluster route names its cluster; only a project route needs the list.
+    if (this.scope().clusterId !== null) return;
     try {
       // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();

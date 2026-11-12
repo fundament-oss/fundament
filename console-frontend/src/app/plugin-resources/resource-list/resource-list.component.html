@@ -123,7 +123,7 @@
         </nldd-rich-text>
         <nldd-spacer size="24"></nldd-spacer>
       }
-      @if (isLoading() || clusterContext.isLoadingClusters()) {
+      @if (isLoading() || loadingClusters()) {
         <nldd-activity-indicator
           show-text
           [attr.text]="'Loading ' + kindLabelMidSentence() + '...'"
@@ -198,7 +198,7 @@
             </nldd-card>
           }
         </nldd-collection>
-      } @else if (clusterContext.clusters().length === 0) {
+      } @else if (clusterId() === null) {
         <nldd-inline-dialog
           icon="kubernetes"
           icon-color="secondary"

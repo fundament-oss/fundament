@@ -234,6 +234,8 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // A cluster route names its cluster; only a project route needs the list.
+    if (this.scope().clusterId !== null) return;
     try {
       // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();

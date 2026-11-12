@@ -108,6 +108,37 @@ describe('PluginResourceStoreService.loadResource', () => {
     expect(found?.metadata.name).toBe('b');
   });
 
+  it('lists the project even with a namespace, and matches it', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [{ metadata: { name: 'b', namespace: 'in-project' } }] }),
+    });
+    const scope = { projectId: 'p1' };
+    const outside = await store.loadResource(
+      crd('Namespaced'),
+      'c1',
+      base,
+      'p',
+      'b',
+      'other',
+      scope,
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${base}/clusters/c1/apis/db.example.io/v1/databases?fundamentProjectId=p1`,
+    );
+    expect(outside).toBeUndefined();
+    const inside = await store.loadResource(
+      crd('Namespaced'),
+      'c1',
+      base,
+      'p',
+      'b',
+      'in-project',
+      scope,
+    );
+    expect(inside?.metadata.namespace).toBe('in-project');
+  });
+
   it('falls back to an unfiltered list without a project scope', async () => {
     const found = await store.loadResource(crd('Namespaced'), 'c1', base, 'p', 'b', undefined);
     expect(fetchMock.mock.calls[0][0]).toBe(`${base}/clusters/c1/apis/db.example.io/v1/databases`);

@@ -75,11 +75,18 @@ export default class ClusterProjectsComponent {
 
   /** Until the first load has finished. Settled rather than loaded: a load
    *  where another cluster failed still has this cluster's answer. */
-  protected isLoading = computed(() => !this.organizationData.projectsSettled());
+  protected isLoading = computed(
+    () =>
+      !this.organizationData.organizationLoadFailed() && !this.organizationData.projectsSettled(),
+  );
 
-  /** This cluster's list did not come back, so its projects are unknown, not
-   *  absent. */
-  protected loadFailed = computed(() => this.organizationData.projectLoadFailures().has(this.id()));
+  /** This cluster's list did not come back, or the organization itself did
+   *  not, so its projects are unknown, not absent. */
+  protected loadFailed = computed(
+    () =>
+      this.organizationData.organizationLoadFailed() ||
+      this.organizationData.projectLoadFailures().has(this.id()),
+  );
 
   protected retrying = signal(false);
 
@@ -114,6 +121,11 @@ export default class ClusterProjectsComponent {
   protected async retry(): Promise<void> {
     this.retrying.set(true);
     try {
+      // The projects hang off the organization: without it there is nothing to reload.
+      if (this.organizationData.organizationLoadFailed()) {
+        await this.organizationData.loadOrganizationData();
+        if (this.organizationData.organizationLoadFailed()) return;
+      }
       await this.organizationData.reloadProjectsAndNamespaces();
     } catch {
       // The page shows the failure again; nothing more to say here.

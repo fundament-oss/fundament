@@ -70,6 +70,16 @@ func TestParseProjectList(t *testing.T) {
 	}
 }
 
+func TestParseProjectList_RejectsImpersonation(t *testing.T) {
+	t.Parallel()
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet,
+		"/apis/cert-manager.io/v1/certificates?fundamentProjectId="+uuid.NewString(), http.NoBody)
+	r.Header.Set("Impersonate-User", "someone-else")
+	_, ok, err := parseProjectList(r)
+	require.Error(t, err)
+	assert.False(t, ok)
+}
+
 // listForward answers every namespaced list with one item in that namespace
 // and records the forwarded requests.
 type listForward struct {
@@ -88,7 +98,7 @@ func (f *listForward) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	ns := strings.Split(r.URL.Path, "/")[5] // /apis/{g}/{v}/namespaces/{ns}/{plural}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = fmt.Fprintf(w, `{"apiVersion":"cert-manager.io/v1","kind":"CertificateList","metadata":{"resourceVersion":"9"},"items":[{"metadata":{"name":"a","namespace":%q}}]}`, ns)
+	_, _ = fmt.Fprintf(w, `{"apiVersion":"cert-manager.io/v1","kind":"CertificateList","metadata":{"resourceVersion":"9"},"items":[{"metadata":{"name":"a","namespace":%q}}]}`, ns) //nolint:gosec // test fake, ns is from the test's own request
 }
 
 func newProjectListRequest() *http.Request {

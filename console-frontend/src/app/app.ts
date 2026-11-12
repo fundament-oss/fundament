@@ -270,9 +270,13 @@ export default class App implements OnInit {
     // there would count as navigating away and close it. Closing the sheet
     // runs this again. The query and fragment come along, since the
     // walkthrough resumes from them.
+    //
+    // Nor during a navigation: the picker closes as it starts one, and the old
+    // place's root would redirect over it. Its end runs this again.
     effect(() => {
       if (!this.selectedOrgId() || !this.layoutMeasured() || this.isSingleColumn()) return;
       if (!this.isContextRoot() || this.overlays.anyOpen()) return;
+      if (this.router.currentNavigation()) return;
       const overview = overviewOf(this.navContext.context());
       untracked(() => {
         const here = this.router.parseUrl(this.router.url);

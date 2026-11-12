@@ -53,6 +53,9 @@ func parseProjectList(r *http.Request) (uuid.UUID, bool, error) {
 		return uuid.Nil, false, errors.New(projectQueryParam + " does not support watch")
 	case q.Has("limit"), q.Has("continue"):
 		return uuid.Nil, false, errors.New(projectQueryParam + " does not support limit or continue")
+	// The namespaces are the caller's; the lists would run as someone else.
+	case kube.HasClientImpersonation(r.Header):
+		return uuid.Nil, false, errors.New(projectQueryParam + " does not support impersonation")
 	}
 	return projectID, true, nil
 }

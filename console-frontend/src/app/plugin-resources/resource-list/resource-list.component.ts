@@ -120,6 +120,10 @@ export default class ResourceListComponent implements OnInit {
     () => this.scope().clusterId ?? this.clusterContext.selectedClusterId(),
   );
 
+  protected loadingClusters = computed(
+    () => this.scope().clusterId === null && this.clusterContext.isLoadingClusters(),
+  );
+
   private queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -278,6 +282,8 @@ export default class ResourceListComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // A cluster route names its cluster; only a project route needs the list.
+    if (this.scope().clusterId !== null) return;
     try {
       // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();

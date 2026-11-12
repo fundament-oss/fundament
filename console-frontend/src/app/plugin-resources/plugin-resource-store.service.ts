@@ -71,12 +71,14 @@ export default class PluginResourceStoreService {
     namespace: string | undefined,
     scope?: { projectId: string },
   ): Promise<KubeResource | undefined> {
-    // A namespaced object cannot be fetched by name alone; without a namespace
-    // (e.g. a deep link missing ?ns=) fall back to listing and matching by name,
-    // within the project on a project route.
-    if (crd.scope === 'Namespaced' && !namespace) {
+    // A namespaced object cannot be fetched by name alone, so without a
+    // namespace list and match by name. On a project route always list the
+    // project: a ?ns= outside it must not show.
+    if (crd.scope === 'Namespaced' && (!namespace || scope)) {
       const all = await this.loadResources(crd, clusterId, kubeApiProxyUrl, pluginName, scope);
-      return all.find((r) => r.metadata.name === name);
+      return all.find(
+        (r) => r.metadata.name === name && (!namespace || r.metadata.namespace === namespace),
+      );
     }
 
     // Cluster-scoped resources have no namespace segment; drop a stray ?ns=

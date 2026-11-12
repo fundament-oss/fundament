@@ -38,8 +38,15 @@ export default class FakePluginResourceStoreService implements Pick<
     scope?: ListScope,
   ): Promise<KubeResource[]> {
     const all = resourcesFor(pluginName, crd.kind);
-    const ns = scope?.namespace;
-    return ns ? all.filter((r) => r.metadata.namespace === ns) : all;
+    if (crd.scope !== 'Namespaced' || !scope) return all;
+    // The fixtures use console names; the picker passes cluster-side ones.
+    const inProject = fx.namespaces.filter((n) => n.projectId === scope.projectId);
+    const allowed = new Set(
+      inProject
+        .filter((n) => !scope.namespace || n.clusterSideName === scope.namespace)
+        .map((n) => n.name),
+    );
+    return all.filter((r) => allowed.has(r.metadata.namespace ?? ''));
   }
 
   // eslint-disable-next-line class-methods-use-this

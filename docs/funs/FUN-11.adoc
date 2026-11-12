@@ -248,7 +248,7 @@ Project lists use a kube-api-proxy filter:
 
 * A cluster-wide `GET` list under `/apis/{group}/{version}/{plural}` with `?fundamentProjectId=<uuid>` returns only items in that project's namespaces.
 * Namespaces are found by the `fundament.io/project-id` label, limited to projects the caller can view. Each namespace is fetched with the caller's own credentials (for a PluginToken: the usual per-request checks) and the items are merged.
-* JSON only; `watch`, `limit` and `continue` are rejected with 400, as is the parameter on any other cluster-wide list (such as core `/api/v1/{plural}`). The parameter is never forwarded to the cluster.
+* JSON only; `watch`, `limit`, `continue` and impersonation headers are rejected with 400, as is the parameter on any other cluster-wide list (such as core `/api/v1/{plural}`). The parameter is never forwarded to the cluster.
 
 The plugin SDK passes `projectId` in the `fundament:init` context on project pages, and `fundament.k8s.list({..., projectId})` adds `fundamentProjectId` to the request.
 

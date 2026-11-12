@@ -216,11 +216,9 @@ export class OrganizationDataService {
 
   private loadProjectsPromise: Promise<void> | null = null;
 
-  /** The same two for project loads: a reload does not wait for the load
-   *  before it, so an older answer can come back after a newer one. */
+  /** Project loads too: a reload does not wait for the load before it, so
+   *  an older answer can come back after a newer one. */
   private projectLoadRequests = 0;
-
-  private appliedProjectLoad = 0;
 
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
   projectsLoaded = signal(false);
@@ -368,20 +366,15 @@ export class OrganizationDataService {
         ),
       );
 
-      if (generation !== this.generation) return false;
+      // Only the newest answer counts: an older one would overwrite fresher
+      // projects and bring back failures a retry already cleared.
+      if (generation !== this.generation || seq !== this.projectLoadRequests) return false;
 
-      // Only the newest answer says which clusters failed: an older one that
-      // comes back late would bring back a failure a retry already cleared.
-      if (seq > this.appliedProjectLoad) {
-        this.appliedProjectLoad = seq;
-        this.projectLoadFailures.set(
-          new Set(
-            requested
-              .filter((_, i) => results[i].status === 'rejected')
-              .map((cluster) => cluster.id),
-          ),
-        );
-      }
+      this.projectLoadFailures.set(
+        new Set(
+          requested.filter((_, i) => results[i].status === 'rejected').map((cluster) => cluster.id),
+        ),
+      );
       this.projectsSettled.set(true);
 
       const failures = results.filter((result) => result.status === 'rejected');
