@@ -328,8 +328,12 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 
 // publicationClient returns the registry's publication client for apiClient.
 func publicationClient(ctx *Context, apiClient *client.Client) (registryv1connect.PublicationServiceClient, error) {
+	err := ctx.Config.ResolveRegistry(context.Background())
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already names the installation and the cause
+	}
 	if ctx.Config.RegistryURL == "" {
-		return nil, errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL")
+		return nil, errors.New("no registry endpoint: the installation publishes none; set registry_url in the functl config or FUNCTL_REGISTRY_URL")
 	}
 	return apiClient.Publications(ctx.Config.RegistryURL), nil
 }

@@ -244,8 +244,9 @@ functl org set 019b4000-0000-7000-8000-000000000000   # seeded "system" org
 just plugins publish storage/ceph-rook --create
 ```
 
-The registry endpoint comes from functl's config (`registry_url`, or
-`FUNCTL_REGISTRY_URL`, which mise sets for this repo). `--create` reserves the
+The registry endpoint comes from the installation's discovery document (mise
+sets `FUNCTL_URL` for this repo), or from `registry_url` / `FUNCTL_REGISTRY_URL`
+when set. `--create` reserves the
 listing on the first publish; versions are create-only, so republishing means
 bumping `metadata.version` in the definition.
 
