@@ -114,6 +114,8 @@ shoot-context cluster-id: _require-vm
         | jq -r '.status.kubeconfig' | base64 -d > "$dir/kubeconfig"
     KUBECONFIG="$dir/kubeconfig:$HOME/.kube/config" kubectl config view --flatten > "$dir/merged"
     ctx=$(kubectl --kubeconfig "$dir/kubeconfig" config current-context)
+    # A context of that name from an earlier up would make the rename fail.
+    kubectl --kubeconfig "$dir/merged" config delete-context "shoot-$cluster" >/dev/null 2>&1 || true
     kubectl --kubeconfig "$dir/merged" config rename-context "$ctx" "shoot-$cluster" >/dev/null
     install -m 0600 "$dir/merged" "$HOME/.kube/config"
     rm -rf "$dir"
@@ -164,7 +166,7 @@ gardener-start: _require-vm
         if ! git tag --points-at HEAD 2>/dev/null | grep -qx "{{GARDENER_VERSION}}"; then
             CURRENT_VERSION=$(git describe --tags 2>/dev/null || echo "unknown")
             echo "Error: Gardener version mismatch (have: $CURRENT_VERSION, want: {{GARDENER_VERSION}})"
-            echo "Run 'rm -rf $GARDENER_DIR' and re-run to update"
+            echo "Run 'just test-env gardener-delete' and re-run to update"
             exit 1
         fi
         cd - > /dev/null
@@ -435,7 +437,7 @@ gardener-connect: _require-vm
         # It drains for about a minute before the kubelet starts it again.
         sleep 5
         for i in $(seq 1 90); do
-            docker exec "$KIND_CONTAINER" curl -skf -o /dev/null --max-time 2 https://127.0.0.1:6443/livez && break
+            docker exec "$KIND_CONTAINER" curl -skf -o /dev/null --max-time 2 https://127.0.0.1:6443/readyz && break
             [ "$i" -lt 90 ] || { echo "Error: the kind API server did not come back within 3 minutes"; exit 1; }
             sleep 2
         done
