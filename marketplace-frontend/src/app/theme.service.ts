@@ -11,13 +11,14 @@ import { isPlatformServer } from '@angular/common';
 
 import { ConfigService } from './config.service';
 import {
-  type StoredTheme,
+  type ThemeChoice,
+  parseLegacyThemeCookie,
   parseThemeCookie,
   readStoredTheme,
   writeThemeCookie,
 } from './theme-cookie';
 
-export type ThemePreference = StoredTheme | 'system';
+export type ThemePreference = ThemeChoice;
 
 /**
  * Owns the light/dark choice for the whole app.
@@ -25,11 +26,11 @@ export type ThemePreference = StoredTheme | 'system';
  * The choice lives in a cookie rather than in localStorage because the server
  * renders the page too: a cookie is the only client state the server can read,
  * so it can emit `<html class="dark">` in the first response instead of leaving
- * a dark-mode visitor with a flash of the light theme. Visitors who never chose
- * explicitly, or chose 'system', send no cookie; for them the inline script in
- * `index.html` applies the OS preference before first paint, and this service
- * picks it up on hydration. The OS preference is never persisted, so it keeps
- * tracking the OS.
+ * a dark-mode visitor with a flash of the light theme. For visitors who never
+ * chose, or chose 'system', the server renders light and the script in
+ * `index.html` applies the OS preference before first paint; this service picks
+ * it up on hydration. The OS's current answer is never persisted, so 'system'
+ * keeps tracking the OS.
  *
  * The cookie lives on the domain shared by all Fundament frontends (see
  * theme-cookie.ts), so the Console and DCIM read and write the same choice.
@@ -69,11 +70,12 @@ export default class ThemeService {
     });
 
     // Pick up a choice made in another Fundament app while this tab was in the
-    // background.
+    // background. No readable cookie (cookies blocked) leaves this tab as is.
     if (!this.isServer) {
       this.document.addEventListener('visibilitychange', () => {
-        if (this.document.visibilityState !== 'visible') return;
-        this.preference.set(parseThemeCookie(this.document.cookie) ?? 'system');
+        const stored = parseThemeCookie(this.document.cookie);
+        if (this.document.visibilityState !== 'visible' || !stored) return;
+        this.preference.set(stored);
         this.applyTheme();
       });
     }
@@ -104,21 +106,20 @@ export default class ThemeService {
     }, 80);
   }
 
-  private readStoredTheme(): StoredTheme | null {
+  private readStoredTheme(): ThemeChoice | null {
     if (this.isServer) {
-      return parseThemeCookie(this.request?.headers.get('cookie'));
+      // The browser moves a legacy host-only cookie to the shared one after
+      // boot; until then it is the visitor's choice for this first paint.
+      const cookies = this.request?.headers.get('cookie');
+      return parseThemeCookie(cookies) ?? parseLegacyThemeCookie(cookies);
     }
     return readStoredTheme(this.config.getConfig().cookieDomain);
   }
 
-  // 'system' clears the cookie, so the server and the pre-paint script fall
-  // back to the OS preference.
+  // For 'system' the server renders light and the pre-paint script applies the
+  // OS preference.
   private persistTheme() {
-    const preference = this.preference();
-    writeThemeCookie(
-      preference === 'system' ? null : preference,
-      this.config.getConfig().cookieDomain,
-    );
+    writeThemeCookie(this.preference(), this.config.getConfig().cookieDomain);
   }
 
   // Apply the active theme to the <html> element. Runs on the server too, which

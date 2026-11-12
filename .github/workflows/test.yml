@@ -605,6 +605,19 @@ jobs:
         working-directory: plugins/cloudnativepg/console-test
         run: bun test
 
+  # theme-cookie.ts is copied into each Angular frontend rather than shared as a
+  # package. The apps read and write the same cookie, so a copy that drifts
+  # breaks the shared theme choice; only the Console's copy has tests.
+  theme-cookie-copies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compare the copies
+        run: |
+          cmp console-frontend/src/app/theme-cookie.ts dcim-frontend/src/app/theme-cookie.ts
+          cmp console-frontend/src/app/theme-cookie.ts marketplace-frontend/src/app/theme-cookie.ts
+
   # The docs image build in build.yml is gated behind `should_deploy`, so it is
   # skipped on draft PRs and on PRs labelled no-preview-env. This job runs
   # unconditionally so broken links are caught on every PR.

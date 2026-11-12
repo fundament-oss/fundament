@@ -1,6 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ConfigService } from './config.service';
-import { parseThemeCookie, readStoredTheme, writeThemeCookie } from './theme-cookie';
+import {
+  type ThemeChoice,
+  parseThemeCookie,
+  readStoredTheme,
+  writeThemeCookie,
+} from './theme-cookie';
 
 // Manages the app's light/dark theme. The active theme is reflected by a `dark`
 // class on the <html> element (driving Tailwind `dark:` variants) and by
@@ -8,10 +13,10 @@ import { parseThemeCookie, readStoredTheme, writeThemeCookie } from './theme-coo
 // design system's own scheme handling).
 //
 // Three settings, not two: light, dark, and following the operating system.
-// Only an explicit choice is persisted, so "system" is the absence of a stored
-// value and keeps tracking the OS on later visits — including a switch made
-// while the app is open. The choice is a cookie shared with the other
-// Fundament apps (see theme-cookie.ts), so it carries over between them.
+// "system" is stored as such, never as the OS's current answer, so it keeps
+// tracking the OS on later visits — including a switch made while the app is
+// open. The choice is a cookie shared with the other Fundament apps (see
+// theme-cookie.ts), so it carries over between them.
 @Injectable({ providedIn: 'root' })
 export default class ThemeService {
   private readonly config = inject(ConfigService);
@@ -20,7 +25,7 @@ export default class ThemeService {
 
   private readonly systemPrefersDark = signal(this.darkMq.matches);
 
-  readonly themePreference = signal<'system' | 'light' | 'dark'>('system');
+  readonly themePreference = signal<ThemeChoice>('system');
 
   readonly isDarkMode = computed(() =>
     this.themePreference() === 'system'
@@ -34,15 +39,16 @@ export default class ThemeService {
       this.applyTheme();
     });
     // Pick up a choice made in another Fundament app while this tab was in the
-    // background.
+    // background. No readable cookie (cookies blocked) leaves this tab as is.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
-      this.themePreference.set(parseThemeCookie(document.cookie) ?? 'system');
+      const stored = parseThemeCookie(document.cookie);
+      if (document.visibilityState !== 'visible' || !stored) return;
+      this.themePreference.set(stored);
       this.applyTheme();
     });
   }
 
-  // Initialize from an explicit saved choice; without one, follow the OS.
+  // Initialize from the saved choice; without one, follow the OS.
   initializeTheme() {
     this.themePreference.set(readStoredTheme(this.config.getConfig().cookieDomain) ?? 'system');
     this.applyTheme();
@@ -53,10 +59,7 @@ export default class ThemeService {
     const preference = value === 'dark' || value === 'light' ? value : 'system';
     this.themePreference.set(preference);
 
-    writeThemeCookie(
-      preference === 'system' ? null : preference,
-      this.config.getConfig().cookieDomain,
-    );
+    writeThemeCookie(preference, this.config.getConfig().cookieDomain);
 
     this.applyTheme();
   }

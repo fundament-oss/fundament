@@ -33,7 +33,9 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <script is:inline {...umamiScriptAttrs}></script>
-    {/* The theme choice shared with the other Fundament frontends. */}
+    {/* Runtime config (the banner's pocUrl, the theme cookie's domain), then the
+      theme choice shared with the other Fundament frontends. */}
+    <script is:inline src="/config/config.js"></script>
     <script is:inline src="/theme-cookie.js"></script>
   </head>
   <body>
