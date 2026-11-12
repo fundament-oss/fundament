@@ -566,8 +566,11 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     return hasMeasurement(this.networkRxSeriesData) || hasMeasurement(this.networkTxSeriesData);
   }
 
-  /** Namespaces only show in the project view: elsewhere the list is
-   *  kube-system and shoot-control-plane, never a project namespace. */
+  /** Namespaces only show in the project view: elsewhere the list would be
+   *  kube-system and shoot-control-plane, never a project namespace, and
+   *  organization-api no longer sends it. The project view is parked: its
+   *  route redirects (app.routes.ts) until tenant namespaces have a metrics
+   *  source, so for now this is always false. */
   showNamespaces = computed(() => this.viewMode() === 'project');
 
   filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {

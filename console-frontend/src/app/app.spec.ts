@@ -429,6 +429,30 @@ describe('isBarePageUrl', () => {
   });
 });
 
+describe('project metrics', () => {
+  // The per-shoot Prometheus only covers kube-system, so the project Metrics
+  // page was always empty (issue 1456). It stays out of the menu, and an old
+  // link lands on the project's General page.
+  it('is not in the project menu', async () => {
+    await configure();
+    const app = TestBed.createComponent(App).componentInstance;
+    app.currentUrl.set('/projects/p-1/general');
+    expect(app.projectNavItems().map((item) => item.label)).toEqual([
+      'General',
+      'Namespaces',
+      'Members',
+    ]);
+  });
+
+  it('redirects an old link to the project General page', () => {
+    const organization = routes.find((route) => route.path === 'organizations/:organizationName');
+    const metrics = organization?.children?.find((route) => route.path === 'projects/:id/metrics');
+    expect(metrics?.loadComponent).toBeUndefined();
+    expect(metrics?.redirectTo).toBe('projects/:id/general');
+    expect(metrics?.pathMatch).toBe('full');
+  });
+});
+
 describe('platform route', () => {
   it('is open to anyone and matched before the guarded addresses', () => {
     const index = routes.findIndex((route) => route.path === 'platform');

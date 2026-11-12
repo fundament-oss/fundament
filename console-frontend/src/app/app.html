@@ -639,17 +639,6 @@
                             ></nldd-text-cell>
                             <nldd-spacer-cell size="4"></nldd-spacer-cell>
                           }
-                          @if (item.path.endsWith('/metrics') && metricsHealth.state() === 'down') {
-                            <nldd-cell width="fit-content">
-                              <nldd-tooltip text="Metrics connection lost">
-                                <nldd-badge
-                                  color="warning"
-                                  accessible-label="Metrics connection lost"
-                                ></nldd-badge>
-                              </nldd-tooltip>
-                            </nldd-cell>
-                            <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                          }
                         </nldd-list-item>
                       }
                     </nldd-list>
