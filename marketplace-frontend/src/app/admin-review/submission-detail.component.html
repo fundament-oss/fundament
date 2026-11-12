@@ -209,10 +209,10 @@
         </div>
         <div>
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-            Description
+            Short description
           </dt>
           <dd class="mt-2 max-w-3xl leading-relaxed text-gray-600 dark:text-gray-300">
-            {{ submission.description }}
+            {{ submission.descriptionShort || 'None' }}
           </dd>
         </div>
         <div>
@@ -248,6 +248,97 @@
           </dd>
         </div>
       </dl>
+    </div>
+  </nldd-card>
+
+  <!-- Description: rendered as the storefront shows it, or the markdown itself -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">Description</h2>
+        @if (submission.description) {
+          <nldd-segmented-control
+            size="sm"
+            accessible-label="Show the description as"
+            [attr.value]="descriptionView()"
+            (change)="onDescriptionViewChange($event)"
+          >
+            <nldd-segmented-control-item
+              value="preview"
+              text="Preview"
+            ></nldd-segmented-control-item>
+            <nldd-segmented-control-item
+              value="source"
+              text="Markdown"
+            ></nldd-segmented-control-item>
+          </nldd-segmented-control>
+        }
+      </div>
+      @if (!submission.description) {
+        <p class="text-gray-600 dark:text-gray-300">This listing has no description.</p>
+      } @else if (descriptionView() === 'source') {
+        <pre
+          class="max-w-3xl overflow-x-auto rounded-md bg-gray-100 p-4 font-mono text-sm break-words whitespace-pre-wrap text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+          >{{ submission.description }}</pre>
+      } @else {
+        <app-markdown [source]="submission.description" />
+      }
+    </div>
+  </nldd-card>
+
+  <!-- Every review round of this plugin, each linking to its submission -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-1 text-lg font-semibold">Submission history</h2>
+      <p class="mb-4 text-gray-600 dark:text-gray-300">
+        Every version of {{ submission.title }} that was submitted for review, newest first. A
+        version that was sent back and resubmitted has a row for each round.
+      </p>
+      @if (historyError(); as error) {
+        <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+          <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+        </div>
+      } @else if (history() === null) {
+        <p class="text-gray-600 dark:text-gray-300">Loading history...</p>
+      } @else {
+        <nldd-list [attr.accessible-label]="'Submission history of ' + submission.title">
+          @for (row of historyRows(); track row.id) {
+            <!-- The round on screen is marked current and is no link to itself. -->
+            <nldd-list-item
+              [attr.current]="row.id === submission.id ? '' : null"
+              [attr.href]="row.id === submission.id ? null : row.href"
+              (click)="row.id === submission.id || openHistoryEntry($event, row.id)"
+            >
+              <nldd-step-cell
+                direction="up"
+                [attr.level]="row.level"
+                [attr.position]="row.position"
+                [attr.status]="row.stepStatus"
+              ></nldd-step-cell>
+              <nldd-text-cell
+                [attr.text]="row.version || 'Unknown version'"
+                [attr.supporting-text]="
+                  'Submitted ' +
+                  row.submittedAt +
+                  (row.reviewedAt ? ' · Reviewed ' + row.reviewedAt : '') +
+                  (row.id === submission.id ? ' · You are viewing this round' : '')
+                "
+              ></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  [color]="statusTagColor(row.status)"
+                  [text]="statusLabel(row.status)"
+                ></nldd-tag>
+              </nldd-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+        @if (historyRows().length === 1) {
+          <p class="mt-3 text-gray-600 dark:text-gray-300">
+            This is the first submission of this plugin.
+          </p>
+        }
+      }
     </div>
   </nldd-card>
 

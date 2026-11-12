@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { REVIEW_CLIENT } from '../../connect/tokens';
-import toIsoDate from '../../connect/timestamp';
+import toIsoDate, { toEpochMs } from '../../connect/timestamp';
 import { isCustomIcon } from '../utils/custom-icon';
 import {
   type SubmissionStatus,
@@ -23,7 +23,11 @@ import { type Submission, type Plugin as ReviewPlugin } from '../../generated/ad
 export interface PluginSubmission {
   id: string; // submission UUID, used in URLs
   pluginId: string;
+  pluginVersionId: string;
   title: string;
+  // Plain text, one line: what the queue shows under the title.
+  descriptionShort: string;
+  // Markdown, as the storefront renders it.
   description: string;
   categories: string[];
   // data: URIs of the submitted version; empty when it declares none.
@@ -50,6 +54,17 @@ export interface PluginSubmission {
   // Present only when status === 'rejected'.
   rejectionReason?: RejectionReasonValue;
   feedback?: string;
+}
+
+// One review round of a plugin, as the submission page's history lists it. A
+// version that was sent back and resubmitted has a round for each submission.
+export interface SubmissionHistoryEntry {
+  id: string; // submission UUID, used in URLs
+  pluginVersionId: string;
+  version: string;
+  status: SubmissionStatus;
+  submittedAt: string; // ISO date
+  reviewedAt?: string; // ISO date
 }
 
 export interface RejectDecision {
@@ -106,6 +121,39 @@ export default class AdminReviewService {
       version: version.version?.version ?? '',
       menuIcons: (version.version?.menuIcons ?? []).filter(isCustomIcon),
     };
+  }
+
+  // Every review round of a plugin, newest first.
+  //
+  // ReviewService has no per-plugin query and Submission carries no version
+  // string, so this lists the whole queue, keeps the plugin's rounds and looks
+  // up each distinct version once. The queue inlines every row's logos, so this
+  // costs as much as opening the queue; a plugin_id filter and a version field
+  // on Submission would make it one small call.
+  async listPluginHistory(pluginId: string): Promise<SubmissionHistoryEntry[]> {
+    const response = await firstValueFrom(this.client.listSubmissions({}));
+    const rounds = response.submissions
+      .filter((submission) => submission.pluginId === pluginId)
+      .sort((a, b) => toEpochMs(b.submitted) - toEpochMs(a.submitted));
+
+    const versionIds = [...new Set(rounds.map((round) => round.pluginVersionId))];
+    const versions = new Map(
+      await Promise.all(
+        versionIds.map(async (pluginVersionId) => {
+          const found = await firstValueFrom(this.client.getPluginVersion({ pluginVersionId }));
+          return [pluginVersionId, found.version?.version ?? ''] as const;
+        }),
+      ),
+    );
+
+    return rounds.map((round) => ({
+      id: round.id,
+      pluginVersionId: round.pluginVersionId,
+      version: versions.get(round.pluginVersionId) ?? '',
+      status: fromProtoStatus(round.status),
+      submittedAt: toIsoDate(round.submitted),
+      reviewedAt: toIsoDate(round.reviewed) || undefined,
+    }));
   }
 
   async approve(id: string): Promise<void> {
@@ -171,7 +219,9 @@ export default class AdminReviewService {
     return {
       id: submission.id,
       pluginId: submission.pluginId,
+      pluginVersionId: submission.pluginVersionId,
       title: plugin?.displayName ?? '',
+      descriptionShort: plugin?.descriptionShort ?? '',
       description: plugin?.description ?? '',
       categories: (plugin?.categoryIds ?? [])
         .map((categoryId) => categories.get(categoryId))
