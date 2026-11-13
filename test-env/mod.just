@@ -351,10 +351,8 @@ gardener-connect: _require-vm
 
     # Refresh the k3d-fundament kubeconfig and make it the active context.
     # Docker reassigns the serverlb's published port on every restart, leaving a
-    # stale port in the kubeconfig, and k3d writes the server as 0.0.0.0 which is
-    # an unreliable connect target on macOS. Write to the kubeconfig kubectl will
-    # actually read: the first entry of $KUBECONFIG (the repo .envrc/direnv points
-    # this at deploy/k3d/kubeconfig.yaml), else ~/.kube/config. Restore the
+    # stale port in the kubeconfig. Write to the kubeconfig kubectl will
+    # actually read: the first entry of $KUBECONFIG, else ~/.kube/config. Restore the
     # entry/certs/context with a one-shot merge, then pin the server to 127.0.0.1
     # with the *live* port read straight from docker (ground truth, not k3d's
     # cached value). Right after a Docker restart the serverlb is still

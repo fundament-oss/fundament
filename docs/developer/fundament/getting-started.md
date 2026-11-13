@@ -69,6 +69,8 @@ just dev-hotreload
 - `Ctrl-C` stops watching; the deployment keeps running.
 - It runs in mock mode: clusters exist only in the database. For real clusters, see [Test environment](./test-env.md).
 
+A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`.
+
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 
 To check the production images (the Dockerfiles CI builds), run `just dev` once and stop it with `Ctrl-C`: it rebuilds and redeploys on every file change.
