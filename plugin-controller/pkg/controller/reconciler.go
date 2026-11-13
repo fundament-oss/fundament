@@ -217,8 +217,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Ensure finalizer
 	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
+		// The finalizer write must not carry the spec: the typed struct serialises an
+		// absent definitionHash as "", which the CRD's immutability rule on
+		// definitionRef rejects.
+		orig := cr.DeepCopy()
 		controllerutil.AddFinalizer(&cr, finalizerName)
-		if err := r.client.Update(ctx, &cr); err != nil {
+		if err := r.client.Patch(ctx, &cr, client.MergeFromWithOptions(orig, client.MergeFromWithOptimisticLock{})); err != nil {
 			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
 		return ctrl.Result{}, nil // re-queue with updated resource version
@@ -429,8 +433,10 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 		return ctrl.Result{}, fmt.Errorf("delete Namespace: %w", err)
 	}
 
+	// A patch for the same reason as adding the finalizer: no spec in the write.
+	orig := cr.DeepCopy()
 	controllerutil.RemoveFinalizer(cr, finalizerName)
-	if err := r.client.Update(ctx, cr); err != nil {
+	if err := r.client.Patch(ctx, cr, client.MergeFromWithOptions(orig, client.MergeFromWithOptimisticLock{})); err != nil {
 		return ctrl.Result{}, fmt.Errorf("remove finalizer: %w", err)
 	}
 
