@@ -71,7 +71,7 @@ just dev-hotreload
 
 The cluster runs on the docker network `k3d-fundament`, subnet `172.19.0.0/16`. If another network on your machine uses that range, creating it fails; set `FUNDAMENT_K3D_SUBNET` to a free subnet, e.g. `export FUNDAMENT_K3D_SUBNET=172.29.0.0/16` in your shell profile or `$env:FUNDAMENT_K3D_SUBNET = "172.29.0.0/16"` in `$PROFILE`, and run `just cluster-start` again. It is read whenever the network is created, also after `just cluster-delete`; an existing network keeps the subnet it has.
 
-A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`.
+A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`. After recreating either, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` to connect them again.
 
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 

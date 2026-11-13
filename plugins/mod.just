@@ -42,7 +42,7 @@ cluster-start:
         if docker inspect k3d-{{ cluster }}-serverlb {{ registry }} \
             --format '{{{{ range $p, $b := .HostConfig.PortBindings }}{{{{ range $b }}[{{{{ .HostIp }}]{{{{ end }}{{{{ end }}' 2>/dev/null \
             | grep -qE '\[(0\.0\.0\.0|::)?\]'; then
-            echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just plugins cluster-delete && just plugins cluster-create && just plugins deploy" >&2
+            echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just plugins cluster-delete && just plugins cluster-create && just plugins deploy && just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
             exit 1
         fi
         k3d cluster start {{ cluster }}

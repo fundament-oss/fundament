@@ -47,7 +47,7 @@ just plugins sandbox-catalog
 - http://fundament-authn-relay.fundament.svc:8080 in the sandbox relays to NodePort 30081
 ```
 
-After restarting Docker, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` again: the containers get new addresses on the sandbox network. If `k3d-fundament-plugin-server-0` keeps restarting, its k3s cannot find its old node address; recreate the sandbox (`just plugins cluster-delete && just plugins cluster-create && just plugins deploy`), run both again and publish your plugins again.
+After restarting Docker, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` again: the containers get new addresses on the sandbox network. If `k3d-fundament-plugin-server-0` keeps restarting, its k3s cannot find its old node address; recreate the sandbox (`just plugins cluster-delete && just plugins cluster-create && just plugins deploy`) and run both again. The new sandbox has an empty registry and no installations, while the catalog keeps the published versions: push each plugin's image again with `just plugins publish <path>`, which then reports that the version already exists, and apply its installation again ([5. Install](#5-install)).
 
 ## 3. Log in with functl
 
