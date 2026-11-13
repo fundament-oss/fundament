@@ -241,13 +241,15 @@ export PLUGIN_REGISTRY=localhost:5112
 functl auth login
 functl org set 019b4000-0000-7000-8000-000000000000   # seeded "system" org
 
-just plugins publish storage/ceph-rook --create
+just plugins publish storage/ceph-rook --create --submit
+just funops plugin approve ceph-rook 0.3.0 --organization system --reviewer alice@acme-corp.com
 ```
 
 The registry endpoint comes from functl's config (`registry_url`, or
 `FUNCTL_REGISTRY_URL`, which mise sets for this repo). `--create` reserves the
 listing on the first publish; versions are create-only, so republishing means
-bumping `metadata.version` in the definition.
+bumping `metadata.version` in the definition. The sandbox installs a `system` version
+only once it is submitted (`--submit`) and approved; a draft cannot be approved.
 
 Authorization also depends on two OpenFGA tuples, written by the authz-worker from the
 database outbox. If publishing fails with a permission error while the SQL above looks
@@ -262,10 +264,11 @@ kubectl --context k3d-fundament -n fundament exec pod/db-1 -c postgres -- psql -
 
 Expect `plugin:…011 owner organization:…000` and `organization:…000 admin user:…008`.
 
-Expected last line — **copy the hash, phase 4 needs it**:
+Expected output — **copy the hash, phase 4 needs it**:
 
 ```
 published plugin=ceph-rook version=0.3.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
+submitted version_id=... status=SUBMISSION_STATUS_PENDING
 ```
 
 The registry stores versions without the `v` prefix, so `metadata.version: v0.3.0`
