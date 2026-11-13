@@ -3,6 +3,13 @@ mod e2e
 mod test-env
 mod plugins
 
+# Kubeconfig of the local k3d clusters, inside the checkout: recipes add and switch their
+# contexts there, so ~/.kube/config and its current context stay as they are. Inside the
+# test-env VM the default kubeconfig stays in use; its scripts write ~/.kube/config. The
+# VM test matches in_vm in test-env/mod.just and KUBECONFIG in mise.toml; keep the three
+# the same.
+export KUBECONFIG := if path_exists("/etc/fundament-test-env") == "true" { env("KUBECONFIG", "") } else if env("FUNDAMENT_TEST_ENV", "") == "1" { env("KUBECONFIG", "") } else { justfile_directory() / ".dev" / "kubeconfig" }
+
 _default:
     @just --list
 
@@ -28,6 +35,7 @@ cluster-create:
     # PowerShell never exports PWD, and Git Bash exports a POSIX path (/c/...) that Docker cannot mount.
     # To fix this we we pin an absolute forward-slash path `pwd -W` is a Git Bash extension; elsewhere it falls back to plain pwd.
     export PWD="$(pwd -W 2>/dev/null || pwd)"
+    mkdir -p "$(dirname "${KUBECONFIG:-.}")"
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
     just setup-gateway
@@ -51,6 +59,10 @@ cluster-start:
         exit 1
     fi
     k3d cluster start fundament
+    # k3d writes the context only at create; merge adds a missing entry and refreshes the
+    # API port, which changes on restart.
+    mkdir -p "$(dirname "${KUBECONFIG:-.}")"
+    k3d kubeconfig merge fundament --kubeconfig-merge-default --kubeconfig-switch-context > /dev/null
     kubectl --context k3d-fundament get clusterissuer mkcert-local > /dev/null 2>&1 || just setup-certs
     just setup-gateway
 
@@ -139,8 +151,8 @@ dev-debug:
     # Wait for the deployment to be ready, then keep port-forwarding 2345 in the background.
     # Restart the forward if the pod restarts (air rebuild).
     (while true; do
-        kubectl wait --for=condition=available --timeout=120s deployment/kube-api-proxy -n fundament >/dev/null 2>&1 || true
-        kubectl port-forward -n fundament deployment/kube-api-proxy 2345:2345 >/dev/null 2>&1 || true
+        kubectl --context k3d-fundament wait --for=condition=available --timeout=120s deployment/kube-api-proxy -n fundament >/dev/null 2>&1 || true
+        kubectl --context k3d-fundament port-forward -n fundament deployment/kube-api-proxy 2345:2345 >/dev/null 2>&1 || true
         sleep 2
     done) &
     PF_PID=$!
@@ -306,14 +318,14 @@ undeploy env:
 
 # View logs from all pods
 logs:
-    kubectl logs -n fundament -l app.kubernetes.io/instance=fundament --all-containers -f
+    kubectl --context k3d-fundament logs -n fundament -l app.kubernetes.io/instance=fundament --all-containers -f
 
 # Open a shell to the PostgreSQL database
 db-shell:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD=$(kubectl get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    kubectl exec -it -n fundament db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
+    PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl --context k3d-fundament exec -it -n fundament db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
 
 generate:
     cd db && trek generate --stdout

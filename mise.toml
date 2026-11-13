@@ -7,6 +7,11 @@ FUNCTL_API_ENDPOINT = "https://organization.fundament.localhost:8443"
 FUNCTL_AUTHN_URL = "https://authn.fundament.localhost:8443"
 FUNCTL_REGISTRY_URL = "https://marketplace-registry-api.fundament.localhost:8443"
 FUNCTL_DEBUG = "true"
+# In the checkout, kubectl, helm and k9s read .dev/kubeconfig ahead of the shell's own
+# kubeconfig (~/.kube/config by default), so the local clusters are the current context and
+# a context switch is written to .dev/kubeconfig only. Inside the test-env VM the shell's
+# own KUBECONFIG stays; the VM test matches the Justfile's.
+KUBECONFIG = "{% if '/etc/fundament-test-env' is exists or get_env(name='FUNDAMENT_TEST_ENV', default='') == '1' %}{{ get_env(name='KUBECONFIG', default='') }}{% else %}{{ config_root }}/.dev/kubeconfig:{{ get_env(name='KUBECONFIG', default=get_env(name='HOME') ~ '/.kube/config') }}{% endif %}"
 
 [tools]
 # Scripting & Meta
