@@ -144,6 +144,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = schema.Schema{
 		Description: "Manages a plugin installation on a Fundament cluster via the kube-api-proxy. " +
 			"Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. " +
+			"Delete waits up to 10 minutes for the plugin to be uninstalled and the installation removed. " +
 			"Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -695,7 +696,14 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	defer func() { _ = httpResp.Body.Close() }()
 
 	switch httpResp.StatusCode {
-	case http.StatusOK, http.StatusAccepted, http.StatusNoContent, http.StatusNotFound:
+	case http.StatusNotFound:
+		tflog.Info(ctx, "Plugin installation already gone", map[string]any{"name": name})
+	case http.StatusOK, http.StatusAccepted, http.StatusNoContent:
+		// Wait out the uninstall, so a replacement does not meet the old installation.
+		if err := r.waitForPluginGone(ctx, clusterID, name, 5*time.Second); err != nil {
+			resp.Diagnostics.AddError("Plugin Installation Not Removed", err.Error())
+			return
+		}
 		tflog.Info(ctx, "Deleted plugin installation", map[string]any{"name": name})
 	default:
 		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
@@ -748,6 +756,8 @@ func (r *PluginInstallationResource) resourceURL(clusterID, name string) string 
 
 // fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
 // name is the installation's metadata.name ("<organization_name>--<plugin_name>").
+var errPluginInstallationNotFound = errors.New("plugin installation not found")
+
 func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, name string) (*pluginInstallationCRD, error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, name), http.NoBody)
 	if err != nil {
@@ -760,6 +770,9 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, na
 	}
 	defer func() { _ = httpResp.Body.Close() }()
 
+	if httpResp.StatusCode == http.StatusNotFound {
+		return nil, errPluginInstallationNotFound
+	}
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		return nil, fmt.Errorf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(body))
@@ -791,6 +804,31 @@ func classifyPluginPhase(phase string) (done, terminal bool) {
 // waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
 // Returns the final phase string on success, or an error.
 // Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
+// waitForPluginGone polls until the installation is gone, which is when the
+// controller has finished uninstalling it and deleted its namespace.
+func (r *PluginInstallationResource) waitForPluginGone(ctx context.Context, clusterID, name string, interval time.Duration) error {
+	const maxConsecutiveErrors = 5
+
+	lastPhase, lastMessage := "", ""
+
+	err := pollWithBackoff(ctx, interval, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
+		crdState, err := r.fetchCRD(ctx, clusterID, name)
+		if errors.Is(err, errPluginInstallationNotFound) {
+			return true, false, nil
+		}
+		if err != nil {
+			return false, false, fmt.Errorf("polling plugin installation removal: %w", err)
+		}
+		lastPhase, lastMessage = crdState.Status.Phase, crdState.Status.Message
+		return false, false, nil
+	})
+
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return fmt.Errorf("timed out waiting for plugin %q to be removed (last phase: %q, last message: %q): %w", name, lastPhase, lastMessage, err)
+	}
+	return err
+}
+
 func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, name string) (string, error) {
 	const maxConsecutiveErrors = 5
 
