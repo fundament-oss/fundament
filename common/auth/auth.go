@@ -94,12 +94,17 @@ func NewValidatorForAudience(jwtSecret []byte, cookieName, expectedIssuer string
 	return v
 }
 
+// HasBearer reports whether header carries a bearer token. Validate reads the
+// auth cookie only when it does not.
+func HasBearer(header http.Header) bool {
+	authHeader := header.Get("Authorization")
+	return len(authHeader) >= 8 && authHeader[:7] == "Bearer "
+}
+
 // Validate validates a JWT from the Authorization header,
 // falling back to the auth cookie if no Authorization header is present.
 func (v *Validator) Validate(header http.Header) (*Claims, error) {
-	// First try Authorization header
-	authHeader := header.Get("Authorization")
-	if len(authHeader) >= 8 && authHeader[:7] == "Bearer " {
+	if HasBearer(header) {
 		return v.validateBearer(header)
 	}
 

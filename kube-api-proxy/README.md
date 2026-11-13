@@ -39,6 +39,7 @@ kubectl ──(JWT)──> kube-api-proxy ──(SA token)──> shoot API serv
 | `LISTEN_ADDR` | no | `:8081` | HTTP listen address |
 | `LOG_LEVEL` | no | `info` | Log level (debug, info, warn, error) |
 | `CORS_ALLOWED_ORIGINS` | no | | Comma-separated allowed origins |
+| `COOKIE_ALLOWED_ORIGINS` | no | | Comma-separated origins whose `fundament_auth` cookie is accepted (the console); empty refuses every cookie request |
 | `OPENFGA_API_URL` | yes | | OpenFGA API endpoint |
 | `OPENFGA_STORE_NAME` | no | `fundament` | Name of the OpenFGA store; its id is resolved at runtime |
 
