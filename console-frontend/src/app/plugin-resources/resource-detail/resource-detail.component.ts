@@ -221,11 +221,12 @@ export default class ResourceDetailComponent implements OnInit {
     // On a project page the effect fires when selectedClusterId is set by
     // loadClusters() in ngOnInit. It follows the route too: another resource's
     // detail reuses this component (a sheet that navigates to the resource it
-    // just created).
+    // just created). On a project route it waits for the project's namespaces,
+    // which the resource is checked against.
     effect(() => {
       const clusterId = this.clusterId();
       const target = this.resourceTarget();
-      if (clusterId !== null) {
+      if (clusterId !== null && this.namespacesSettled()) {
         untracked(() => this.loadCrdAndResource(clusterId, target));
       }
     });
@@ -269,7 +270,7 @@ export default class ResourceDetailComponent implements OnInit {
       );
       if (load !== this.loads) return;
       this.crdDef.set(crd);
-      this.resource.set(resource);
+      this.resource.set(this.withinProject(crd, resource));
     } catch (err) {
       if (load !== this.loads) return;
       // eslint-disable-next-line no-console
@@ -320,7 +321,7 @@ export default class ResourceDetailComponent implements OnInit {
       if (load !== this.loads || this.deleting()) return;
       if (this.resource()?.metadata.uid !== current?.metadata.uid) return;
       if (this.clusterId() !== clusterId) return;
-      this.resource.set(resource);
+      this.resource.set(this.withinProject(crd, resource));
     } catch {
       // Kept as is; see above.
     }
@@ -345,7 +346,7 @@ export default class ResourceDetailComponent implements OnInit {
       if (!crd || load !== this.loads || this.crdDef() !== undefined) return;
       if (this.clusterId() !== clusterId) return;
       this.crdDef.set(crd);
-      this.resource.set(resource);
+      this.resource.set(this.withinProject(crd, resource));
       this.errorMessage.set(null);
     } catch {
       // Kept as is; see refreshResource.
@@ -393,6 +394,19 @@ export default class ResourceDetailComponent implements OnInit {
   namespaceDisplayNames = this.projectNamespaces.displayNames;
 
   namespacesSettled = this.projectNamespaces.settled;
+
+  /** On a project route, a namespaced resource outside the project's
+   *  namespaces (a hand-written ?ns=) shows as not found. Unchecked when the
+   *  lookup failed: the cluster's RBAC still applies. */
+  private withinProject(
+    crd: ParsedCrd | undefined,
+    resource: KubeResource | undefined,
+  ): KubeResource | undefined {
+    if (!resource || crd?.scope !== 'Namespaced' || this.scope().projectId === null)
+      return resource;
+    if (this.projectNamespaces.failed()) return resource;
+    return this.namespaces().includes(resource.metadata.namespace ?? '') ? resource : undefined;
+  }
 
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears

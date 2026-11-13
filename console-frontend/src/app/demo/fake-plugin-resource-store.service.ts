@@ -19,7 +19,18 @@ import * as fx from './fixtures';
 function resourcesFor(installationName: string, kind: string): KubeResource[] {
   const pluginName = fx.catalogPluginName(installationName);
   if (!pluginName) return [];
-  return fx.pluginResources[`${pluginName}/${kind}`] ?? [];
+  // The fixtures use console names; a cluster answers with its own.
+  return (fx.pluginResources[`${pluginName}/${kind}`] ?? []).map((r) => {
+    const ns = fx.namespaces.find((n) => n.name === r.metadata.namespace);
+    return ns ? { ...r, metadata: { ...r.metadata, namespace: ns.clusterSideName } } : r;
+  });
+}
+
+/** The project's namespaces, as the cluster names them. */
+function projectNamespaces(projectId: string): Set<string> {
+  return new Set(
+    fx.namespaces.filter((n) => n.projectId === projectId).map((n) => n.clusterSideName),
+  );
 }
 
 @Injectable({ providedIn: 'root' })
@@ -39,14 +50,11 @@ export default class FakePluginResourceStoreService implements Pick<
   ): Promise<KubeResource[]> {
     const all = resourcesFor(pluginName, crd.kind);
     if (crd.scope !== 'Namespaced' || !scope) return all;
-    // The fixtures use console names; the picker passes cluster-side ones.
-    const inProject = fx.namespaces.filter((n) => n.projectId === scope.projectId);
-    const allowed = new Set(
-      inProject
-        .filter((n) => !scope.namespace || n.clusterSideName === scope.namespace)
-        .map((n) => n.name),
-    );
-    return all.filter((r) => allowed.has(r.metadata.namespace ?? ''));
+    const allowed = projectNamespaces(scope.projectId);
+    return all.filter((r) => {
+      const ns = r.metadata.namespace ?? '';
+      return allowed.has(ns) && (!scope.namespace || ns === scope.namespace);
+    });
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -57,9 +65,15 @@ export default class FakePluginResourceStoreService implements Pick<
     pluginName: string,
     name: string,
     namespace: string | undefined,
+    scope?: { projectId: string },
   ): Promise<KubeResource | undefined> {
+    const allowed =
+      crd.scope === 'Namespaced' && scope ? projectNamespaces(scope.projectId) : undefined;
     return resourcesFor(pluginName, crd.kind).find(
-      (r) => r.metadata.name === name && (!namespace || r.metadata.namespace === namespace),
+      (r) =>
+        r.metadata.name === name &&
+        (!namespace || r.metadata.namespace === namespace) &&
+        (!allowed || allowed.has(r.metadata.namespace ?? '')),
     );
   }
 
