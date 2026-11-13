@@ -2,16 +2,25 @@
   <!-- Custom list UIs (iframe) render their own "Add" affordance and request
        create navigation via the plugin:create message. Inside the section, so
        the plugin's screen gets the same page padding and column as the
-       generated list below. -->
+       generated list below. The title is the console's, as on every other
+       page: the plugin's screen starts with its content. -->
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="kindLabel()"
       [attr.back-text]="pageNav.backText()"
       (back)="pageNav.goTo(backPath())"
+      collapse-anchor="resource-list-title"
     ></nldd-top-title-bar>
     <nldd-simple-section>
       <app-plugin-status-banner [installationName]="pluginName()" />
+      <nldd-title
+        id="resource-list-title"
+        size="2"
+      >
+        <h1>{{ kindLabel() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
       @if (namespacesSettled()) {
         <app-plugin-iframe
           [src]="customUIUrl()!"
