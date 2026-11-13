@@ -61,7 +61,7 @@ just dev-hotreload
 ```
 
 - `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and the Envoy Gateway that serves every `*.fundament.localhost` host on port 8443, and adds its context `k3d-fundament` to `.dev/kubeconfig` in the checkout. The `just` recipes use that file; `~/.kube/config` is left alone.
-- In the checkout, mise puts `.dev/kubeconfig` ahead of your own kubeconfig, so `kubectl`, `helm` and k9s use the local clusters; your other contexts stay reachable with `--context`, and a context switch is written to `.dev/kubeconfig` only. Outside the checkout, `export KUBECONFIG=<checkout>/.dev/kubeconfig`.
+- In the checkout, mise puts `.dev/kubeconfig` ahead of your own kubeconfig, so `kubectl`, `helm` and k9s use the local clusters; your other contexts stay reachable with `--context`, and a context switch is written to `.dev/kubeconfig` only. Outside the checkout, put it ahead of your own: `export KUBECONFIG=<checkout>/.dev/kubeconfig:$HOME/.kube/config`, or in PowerShell `$env:KUBECONFIG = "<checkout>\.dev\kubeconfig;$HOME\.kube\config"`.
 - `dev-hotreload` builds and deploys every service, then stays attached.
   - Edits to existing files are synced into the running containers.
   - Adding, moving or deleting a file rebuilds the image and redeploys.
