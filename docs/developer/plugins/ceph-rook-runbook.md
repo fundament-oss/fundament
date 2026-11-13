@@ -242,7 +242,7 @@ functl auth login
 functl org set 019b4000-0000-7000-8000-000000000000   # seeded "system" org
 
 just plugins publish storage/ceph-rook --create --submit
-just funops plugin approve ceph-rook 0.3.0 --organization system --reviewer alice@acme-corp.com
+just funops plugin approve ceph-rook 0.5.0 --organization system --reviewer alice@acme-corp.com
 ```
 
 The registry endpoint comes from functl's config (`registry_url`, or
@@ -267,12 +267,12 @@ Expect `plugin:…011 owner organization:…000` and `organization:…000 admin 
 Expected output — **copy the hash, phase 4 needs it**:
 
 ```
-published plugin=ceph-rook version=0.3.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
+published plugin=ceph-rook version=0.5.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
 submitted version_id=... status=SUBMISSION_STATUS_PENDING
 ```
 
-The registry stores versions without the `v` prefix, so `metadata.version: v0.3.0`
-publishes as `0.3.0`, which is what a `PluginInstallation` must reference.
+The registry stores versions without the `v` prefix, so `metadata.version: v0.5.0`
+publishes as `0.5.0`, which is what a `PluginInstallation` must reference.
 
 Versions are create-only on the registry — an approved version's hash is a
 consent record — so there is no `--replace`. To publish the same content again,
@@ -290,7 +290,7 @@ quorum on a single node, and the real-disk filter would ignore the loop devices.
 Three naming rules, all enforced at apply or reconcile time: `metadata.name` must be
 `<organizationName>--<pluginName>` (`system--ceph-rook`: first-party plugins are
 published by the seeded `system` org), `organizationName` is required, and
-`pluginVersion` is the registry's form without the `v` prefix (`0.3.0`, as printed by
+`pluginVersion` is the registry's form without the `v` prefix (`0.5.0`, as printed by
 the publish in phase 3).
 
 Once the appstore install form ships (configSchema support), this config can be
@@ -306,7 +306,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: ceph-rook
-    pluginVersion: "0.3.0"
+    pluginVersion: "0.5.0"
     definitionHash: sha256:PASTE_THE_HASH_FROM_PHASE_3
   config:
     DEV_LOOP_DEVICES: "true"        # discover ONLY /dev/loopNpN; ignore the host's real disks
