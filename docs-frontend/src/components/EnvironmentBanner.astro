@@ -2,7 +2,9 @@
 // Says that this is a test environment (a PR preview, the sandbox) and links to
 // the same site on the PoC. The site is static and the same build serves every
 // environment, so whether it shows is read at runtime from /config/config.js,
-// which the deployment mounts (see the chart's docs-frontend.yaml).
+// which the deployment mounts (see the chart's docs-frontend.yaml). The layout
+// loads that file in <head> (Landing.astro, and the ThemeProvider override on
+// Starlight's pages), so it has run by the time the script below reads it.
 //
 // `fixed` is for Starlight's pages, whose header is fixed to the top of the
 // viewport: the banner is fixed above it, and starlight-custom.css moves the
@@ -14,8 +16,6 @@ interface Props {
 const { fixed = false } = Astro.props;
 ---
 
-{/* A classic script, so it has run by the time the one below reads it. */}
-<script is:inline src="/config/config.js"></script>
 <nldd-status-bar
   id="environment-banner"
   class:list={{ 'environment-banner--fixed': fixed }}

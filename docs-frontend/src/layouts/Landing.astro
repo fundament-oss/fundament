@@ -33,6 +33,10 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <script is:inline {...umamiScriptAttrs}></script>
+    {/* Runtime config (the banner's pocUrl, the theme cookie's domain), then the
+      theme choice shared with the other Fundament frontends. */}
+    <script is:inline src="/config/config.js"></script>
+    <script is:inline src="/theme-cookie.js"></script>
   </head>
   <body>
     <EnvironmentBanner />
@@ -62,7 +66,8 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
               {
                 /* The three appearance choices as radio items, the way the console
               account menu offers them. The script below marks the current one and
-              writes it to the same key Starlight reads, so the docs follow. */
+              stores it in the theme cookie the docs and the other Fundament
+              frontends share (public/theme-cookie.js). */
               }
               <nldd-menu-bar-item id="appearance-menu" text="Appearance" expandable>
                 <nldd-menu>
@@ -147,8 +152,8 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     var htmlEl = document.documentElement;
     var media = window.matchMedia('(prefers-color-scheme: dark)');
 
-    /* 'auto' rather than 'system', because Starlight reads the same key and
-       that is the word it uses. The menu says System, which is what a reader
+    /* 'auto' rather than 'system', because that is the word Starlight and
+       theme-cookie.js use. The menu says System, which is what a reader
        expects to see. */
     function paint(choice) {
       var isDark = choice === 'dark' || (choice === 'auto' && media.matches);
@@ -162,8 +167,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
       });
     }
 
-    var saved = localStorage.getItem('starlight-theme') || localStorage.getItem('fnd-scheme');
-    var choice = saved === 'dark' || saved === 'light' || saved === 'auto' ? saved : 'auto';
+    var choice = window.fundamentTheme.choice();
     paint(choice);
 
     /* Following the system means following it while the page is open, not only
@@ -176,8 +180,15 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
       var item = event.target.closest && event.target.closest('nldd-menu-item[data-scheme]');
       if (!item) return;
       choice = item.dataset.scheme;
-      localStorage.setItem('starlight-theme', choice);
-      localStorage.setItem('fnd-scheme', choice);
+      window.fundamentTheme.store(choice);
+      paint(choice);
+    });
+
+    /* Pick up a choice made in another Fundament frontend while this tab was
+       in the background. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible') return;
+      choice = window.fundamentTheme.choice();
       paint(choice);
     });
   })();

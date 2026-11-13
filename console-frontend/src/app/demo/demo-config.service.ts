@@ -8,8 +8,9 @@ export default class DemoConfigService implements Pick<ConfigService, 'loadConfi
   constructor(private config: AppConfiguration) {}
 
   /**
-   * Takes one thing from the deployment's config.json: pocUrl, so a walkthrough
-   * deployed to a test environment carries the same banner as the console there.
+   * Takes two things from the deployment's config.json: pocUrl, so a walkthrough
+   * deployed to a test environment carries the same banner as the console there,
+   * and cookieDomain, so it shares the theme choice with the other apps.
    * Everything else stays fixed. A file that is missing or unreadable (a static
    * host, `bun start`) leaves the fixed configuration as it is.
    */
@@ -17,8 +18,9 @@ export default class DemoConfigService implements Pick<ConfigService, 'loadConfi
     try {
       const response = await fetch('/assets/config/config.json');
       if (response.ok) {
-        const { pocUrl } = (await response.json()) as Partial<AppConfiguration>;
+        const { pocUrl, cookieDomain } = (await response.json()) as Partial<AppConfiguration>;
         if (pocUrl) this.config = { ...this.config, pocUrl };
+        if (cookieDomain) this.config = { ...this.config, cookieDomain };
       }
     } catch {
       // No deployment config: the walkthrough runs without the banner.

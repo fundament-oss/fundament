@@ -50,6 +50,12 @@ import { PluginMenuIconComponent } from './icons';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
+import {
+  type ThemeChoice,
+  parseThemeCookie,
+  readStoredTheme,
+  writeThemeCookie,
+} from './theme-cookie';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import { inOrganization, organizationOf, withinOrganization } from './address';
@@ -207,7 +213,7 @@ export default class App implements OnInit {
 
   private systemPrefersDark = signal(this.darkMq.matches);
 
-  themePreference = signal<'system' | 'light' | 'dark'>('system');
+  themePreference = signal<ThemeChoice>('system');
 
   isDarkMode = computed(() =>
     this.themePreference() === 'system'
@@ -683,18 +689,25 @@ export default class App implements OnInit {
     }
   }
 
-  // Initialize theme from an explicit saved choice, falling back to the OS
-  // preference. The OS preference is never persisted here, so it keeps tracking
-  // the OS on later visits until the user explicitly picks a theme.
+  // Initialize theme from the saved choice, falling back to the OS preference.
+  // 'system' is saved as such, never as the OS's current answer, so it keeps
+  // tracking the OS on later visits. The choice is a cookie shared with the
+  // other Fundament apps (see theme-cookie.ts).
   private initializeTheme() {
-    const savedTheme = localStorage.getItem('theme');
-
     this.themePreference.set(
-      savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : 'system',
+      readStoredTheme(this.configService.getConfig().cookieDomain) ?? 'system',
     );
     // Keep following the OS while the preference is 'system'.
     this.darkMq.addEventListener('change', (e) => {
       this.systemPrefersDark.set(e.matches);
+      this.applyTheme();
+    });
+    // Pick up a choice made in another Fundament app while this tab was in the
+    // background. No readable cookie (cookies blocked) leaves this tab as is.
+    document.addEventListener('visibilitychange', () => {
+      const stored = parseThemeCookie(document.cookie);
+      if (document.visibilityState !== 'visible' || !stored) return;
+      this.themePreference.set(stored);
       this.applyTheme();
     });
 
@@ -724,16 +737,10 @@ export default class App implements OnInit {
     htmlElement.dataset['scheme'] = this.isDarkMode() ? 'dark' : 'light';
   }
 
-  // Persist the user's explicit theme choice to localStorage. 'system' clears the
-  // key, so the pre-paint script in index.html falls back to the OS preference.
+  // Persist the user's theme choice. For 'system' the pre-paint script
+  // (public/theme-init.js) applies the OS preference.
   private persistTheme() {
-    const preference = this.themePreference();
-
-    if (preference === 'system') {
-      localStorage.removeItem('theme');
-    } else {
-      localStorage.setItem('theme', preference);
-    }
+    writeThemeCookie(this.themePreference(), this.configService.getConfig().cookieDomain);
   }
 
   navigateTo(path: string) {

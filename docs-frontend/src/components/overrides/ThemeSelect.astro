@@ -1,0 +1,35 @@
+---
+// Starlight's theme picker, unchanged, plus writing the choice to the theme
+// cookie shared with the other Fundament frontends (see public/theme-cookie.js).
+// Starlight keeps its own localStorage copy; the ThemeProvider override
+// refreshes that from the cookie on every page load.
+import Default from '@astrojs/starlight/components/ThemeSelect.astro';
+---
+
+<Default />
+
+<script>
+  type Theme = 'auto' | 'dark' | 'light';
+
+  const parseTheme = (theme: unknown): Theme =>
+    theme === 'dark' || theme === 'light' ? theme : 'auto';
+
+  // One listener for every picker (the header has one, the mobile menu another).
+  document.addEventListener('change', (event) => {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement && select.closest('starlight-theme-select')) {
+      window.fundamentTheme.store(parseTheme(select.value));
+    }
+  });
+
+  // Pick up a choice made in another Fundament frontend while this tab was in
+  // the background. Starlight has no hook for this, so apply it the way its
+  // own picker does.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const choice = parseTheme(window.fundamentTheme.syncStarlight());
+    const systemTheme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset['theme'] = choice === 'auto' ? systemTheme : choice;
+    StarlightThemeProvider.updatePickers(choice);
+  });
+</script>
