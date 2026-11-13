@@ -16,6 +16,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
+import { type ClusterStatus, type DriftKind } from '../../generated/fleet/v1/fleet_pb';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import opensElsewhere from '../shared/opens-elsewhere';
 import { ConfigService } from '../config.service';
@@ -41,6 +42,15 @@ import {
   platformViewOf,
   type PlatformView,
 } from './platform-views';
+import {
+  ALL,
+  clusterStatusOptions,
+  countText,
+  driftKindOptions,
+  filterClusters,
+  filterFindings,
+  filterOrganizations,
+} from './platform-filters';
 
 /** How often the page reads the fleet again while it is open. The snapshots
  *  themselves change once per collection interval. */
@@ -163,17 +173,109 @@ export default class PlatformComponent implements OnInit, OnDestroy {
     (this.api.cluster()?.projects ?? []).filter((project) => project.namespaces.length > 0),
   );
 
+  // ── Filters ────────────────────────────────────────────────────────
+  // One search per page: it is cleared on the way to another view, so a
+  // query typed for organizations never hides that organization's clusters.
+
+  protected readonly ALL = ALL;
+
+  protected readonly searchQuery = signal('');
+
+  protected readonly unhealthyOnly = signal(false);
+
+  protected readonly statusFilter = signal<ClusterStatus | typeof ALL>(ALL);
+
+  protected readonly kindFilter = signal<DriftKind | typeof ALL>(ALL);
+
+  protected readonly filteredOrganizations = computed(() =>
+    filterOrganizations(this.api.organizations(), this.searchQuery(), this.unhealthyOnly()),
+  );
+
+  protected readonly filteredClusters = computed(() =>
+    filterClusters(this.api.clusters(), this.searchQuery(), this.statusFilter()),
+  );
+
+  protected readonly filteredFindings = computed(() =>
+    filterFindings(this.api.findings(), this.searchQuery(), this.kindFilter()),
+  );
+
+  protected readonly statusOptions = computed(() =>
+    clusterStatusOptions(this.api.clusters(), this.statusFilter()),
+  );
+
+  protected readonly kindOptions = computed(() =>
+    driftKindOptions(this.api.findings(), this.kindFilter()),
+  );
+
+  protected readonly statusFilterLabel = computed(() => {
+    const status = this.statusFilter();
+    return status === ALL ? 'Status' : clusterTag({ status }).text;
+  });
+
+  protected readonly kindFilterLabel = computed(() => {
+    const kind = this.kindFilter();
+    return kind === ALL ? 'Kind' : driftKindTag(kind).text;
+  });
+
+  protected readonly organizationCount = computed(() =>
+    countText(
+      this.filteredOrganizations().length,
+      this.api.organizations().length,
+      'organization',
+      'organizations',
+    ),
+  );
+
+  protected readonly clusterCount = computed(() =>
+    countText(this.filteredClusters().length, this.api.clusters().length, 'cluster', 'clusters'),
+  );
+
+  protected readonly findingCount = computed(() =>
+    countText(this.filteredFindings().length, this.api.findings().length, 'finding', 'findings'),
+  );
+
+  /** Whether anything narrows the list the current view shows. */
+  protected readonly filtering = computed(() => {
+    if (this.searchQuery().trim()) return true;
+    const view = this.view();
+    switch (view.kind) {
+      case 'overview':
+        return this.unhealthyOnly();
+      case 'organization':
+        return this.statusFilter() !== ALL;
+      case 'drift':
+        return this.kindFilter() !== ALL;
+      case 'cluster':
+        return false;
+      default: {
+        const unhandled: never = view;
+        throw new Error(`unhandled platform view ${JSON.stringify(unhandled)}`);
+      }
+    }
+  });
+
   constructor() {
     effect(() => {
       const template = this.navTemplate();
       if (template) this.secondaryNav.set(template);
     });
 
-    // A parameter change on the same page: load what the new view shows.
+    // A parameter change on the same page: load what the new view shows,
+    // with nothing left over from the filters of the one before.
     effect(() => {
       const view = this.view();
-      untracked(() => this.loadView(view));
+      untracked(() => {
+        this.clearFilters();
+        this.loadView(view);
+      });
     });
+  }
+
+  protected clearFilters(): void {
+    this.searchQuery.set('');
+    this.unhealthyOnly.set(false);
+    this.statusFilter.set(ALL);
+    this.kindFilter.set(ALL);
   }
 
   ngOnInit(): void {
