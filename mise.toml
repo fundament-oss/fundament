@@ -1,3 +1,6 @@
+# KUBECONFIG below tests a path with `is exists`, which mise parses from 2026.7.2.
+min_version = "2026.7.2"
+
 [env]
 JUST_ONE = true
 # Local k3d registry for Skaffold image builds
