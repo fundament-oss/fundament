@@ -1,4 +1,4 @@
-@if (customUIUrl()) {
+@if (customUIUrl() && !namespaceOutsideProject()) {
   <!-- The page padding, column, title bar and title of the generated detail
        page below, around the plugin's own screen: the way back to the list and
        the resource's name are the console's to draw, so every plugin page has
@@ -306,6 +306,11 @@
     (confirm)="confirmDelete()"
     (dismiss)="closeDeleteModal()"
   />
+} @else if (!namespacesSettled() || isLoading()) {
+  <nldd-inline-dialog
+    variant="loading"
+    text="Loading..."
+  ></nldd-inline-dialog>
 } @else {
   <!-- A plugin that is not running is the likely reason nothing was found. -->
   <app-plugin-status-banner [installationName]="pluginName()" />

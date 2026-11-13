@@ -408,6 +408,15 @@ export default class ResourceDetailComponent implements OnInit {
     return this.namespaces().includes(resource.metadata.namespace ?? '') ? resource : undefined;
   }
 
+  /** withinProject for the custom UI, which reads the resource itself: the
+   *  route's ?ns= outside the project shows as not found instead. */
+  protected namespaceOutsideProject = computed(() => {
+    const ns = this.resourceNamespace();
+    if (ns === undefined || this.scope().projectId === null) return false;
+    if (!this.namespacesSettled() || this.projectNamespaces.failed()) return false;
+    return !this.namespaces().includes(ns);
+  });
+
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears
     // it too and would navigate one step further up on its own.
