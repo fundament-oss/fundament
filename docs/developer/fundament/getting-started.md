@@ -69,7 +69,7 @@ just dev-hotreload
 - `Ctrl-C` stops watching; the deployment keeps running.
 - It runs in mock mode: clusters exist only in the database. For real clusters, see [Test environment](./test-env.md).
 
-A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`.
+A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`. After recreating either, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` to connect them again.
 
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 

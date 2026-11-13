@@ -63,7 +63,7 @@ cluster-start:
     if docker inspect k3d-fundament-serverlb registry.localhost \
         --format '{{{{ range $p, $b := .HostConfig.PortBindings }}{{{{ range $b }}[{{{{ .HostIp }}]{{{{ end }}{{{{ end }}' 2>/dev/null \
         | grep -qE '\[(0\.0\.0\.0|::)?\]'; then
-        echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just cluster-delete && just cluster-create" >&2
+        echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just cluster-delete && just cluster-create; with a plugin sandbox, then just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
         exit 1
     fi
     k3d cluster start fundament
