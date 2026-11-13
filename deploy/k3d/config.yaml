@@ -4,8 +4,8 @@ metadata:
   name: fundament
 servers: 1
 agents: 0
-# Fixed, pre-created network (see `just _ensure-k3d-network`): keeps k3d off
-# 172.18.0.0/16, which Gardener's local kind cluster reserves.
+# Pre-created network (see `just _ensure-k3d-network`): keeps k3d off
+# 172.18.0.0/16, which Gardener's kind cluster reserves in the test-env VM.
 network: k3d-fundament
 ports:
   # HTTPS edge: the Envoy Gateway listener (deploy/k3d/gateway/), whose
