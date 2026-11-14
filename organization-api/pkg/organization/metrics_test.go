@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
@@ -85,32 +88,15 @@ func TestBuildNamespaceFilter_Empty(t *testing.T) {
 	}
 }
 
-// ---- mergeSamples ----
+// ---- namespaceNames ----
 
-func TestMergeSamples_SumsAcrossClusters(t *testing.T) {
-	all := [][]prom.Sample{
-		{{Labels: map[string]string{"namespace": "default"}, Value: 1.0}},
-		{{Labels: map[string]string{"namespace": "default"}, Value: 2.0}},
-		{{Labels: map[string]string{"namespace": "kube-system"}, Value: 3.0}},
+func TestNamespaceNames_UsesClusterSideNames(t *testing.T) {
+	rows := []db.NamespaceListByProjectIDRow{
+		{Name: "web", ProjectName: "shop"},
+		{Name: "api", ProjectName: "shop"},
 	}
-	got := mergeSamples(all)
-	sums := make(map[string]float64)
-	for _, s := range got {
-		sums[s.Labels["namespace"]] = s.Value
-	}
-	if sums["default"] != 3.0 {
-		t.Errorf("default: got %v, want 3.0", sums["default"])
-	}
-	if sums["kube-system"] != 3.0 {
-		t.Errorf("kube-system: got %v, want 3.0", sums["kube-system"])
-	}
-}
-
-func TestMergeSamples_Empty(t *testing.T) {
-	got := mergeSamples(nil)
-	if len(got) != 0 {
-		t.Errorf("expected empty, got %v", got)
-	}
+	assert.Equal(t, []string{"tnt-shop--web", "tnt-shop--api"}, namespaceNames(rows))
+	assert.Equal(t, `namespace=~"tnt-shop--web|tnt-shop--api"`, buildNamespaceFilter(namespaceNames(rows)))
 }
 
 // ---- sumTimeSeries ----

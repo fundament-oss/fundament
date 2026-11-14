@@ -566,6 +566,13 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     return hasMeasurement(this.networkRxSeriesData) || hasMeasurement(this.networkTxSeriesData);
   }
 
+  /** Namespaces only show in the project view: elsewhere the list would be
+   *  kube-system and shoot-control-plane, never a project namespace, and
+   *  organization-api no longer sends it. The project view is parked: its
+   *  route redirects (app.routes.ts) until tenant namespaces have a metrics
+   *  source, so for now this is always false. */
+  showNamespaces = computed(() => this.viewMode() === 'project');
+
   filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {
     if (!this.selectedNamespace()) return this.namespaceUsage();
     return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace());
@@ -642,7 +649,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   canExport = computed(
     () =>
       !!this.currentTotals() ||
-      this.namespaceUsage().length > 0 ||
+      (this.showNamespaces() && this.namespaceUsage().length > 0) ||
       this.clusterSummaries().length > 0 ||
       this.nodeUsage().length > 0,
   );
@@ -688,7 +695,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.nodeUsage().forEach((node) => {
       rows.push(...usageRows('Node', node.name, node, true));
     });
-    this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
+    if (this.showNamespaces()) {
+      this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
+    }
     rows.push(...this.seriesRows());
 
     downloadCsv(this.csvFilename(), rows);

@@ -194,7 +194,8 @@ export type GetClusterWorkloadMetricsResponse = Message<"organization.v1.GetClus
   nodes: NodeWorkloadMetrics[];
 
   /**
-   * Per-namespace breakdown
+   * Per-namespace breakdown. Not populated: the per-shoot Prometheus only
+   * covers kube-system, never a project namespace.
    *
    * @generated from field: repeated organization.v1.NamespaceWorkloadMetrics namespaces = 30;
    */
@@ -325,7 +326,8 @@ export type GetOrgWorkloadMetricsResponse = Message<"organization.v1.GetOrgWorkl
   clusters: ClusterWorkloadSummary[];
 
   /**
-   * Top namespaces across all clusters
+   * Top namespaces across all clusters. Not populated: the per-shoot
+   * Prometheus only covers kube-system, never a project namespace.
    *
    * @generated from field: repeated organization.v1.NamespaceWorkloadMetrics namespaces = 30;
    */
@@ -675,7 +677,7 @@ export type StreamWorkloadMetricsResponse = Message<"organization.v1.StreamWorkl
   nodes: NodeWorkloadMetrics[];
 
   /**
-   * Per-namespace breakdown — populated in all views.
+   * Per-namespace breakdown — populated in project view only.
    *
    * @generated from field: repeated organization.v1.NamespaceWorkloadMetrics namespaces = 40;
    */

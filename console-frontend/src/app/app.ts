@@ -878,13 +878,6 @@ export default class App implements OnInit {
         count: project?.namespaceCount ?? null,
       },
       {
-        path: `${base}/metrics`,
-        icon: 'chart-x-y-axis-line',
-        label: 'Metrics',
-        exact: false,
-        count: null,
-      },
-      {
         path: `${base}/members`,
         icon: 'person-2',
         label: 'Members',

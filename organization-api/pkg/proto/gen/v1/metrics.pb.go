@@ -578,7 +578,8 @@ type GetClusterWorkloadMetricsResponse_builder struct {
 	Totals *ResourceUsageInfo
 	// Per-node breakdown
 	Nodes []*NodeWorkloadMetrics
-	// Per-namespace breakdown
+	// Per-namespace breakdown. Not populated: the per-shoot Prometheus only
+	// covers kube-system, never a project namespace.
 	Namespaces []*NamespaceWorkloadMetrics
 	// True when the cluster's metrics backend could not be reached; the
 	// usage fields are then zero and should be rendered as unavailable
@@ -988,7 +989,8 @@ type GetOrgWorkloadMetricsResponse_builder struct {
 	Totals *ResourceUsageInfo
 	// Per-cluster breakdown (requires the Prometheus to expose a "cluster" label)
 	Clusters []*ClusterWorkloadSummary
-	// Top namespaces across all clusters
+	// Top namespaces across all clusters. Not populated: the per-shoot
+	// Prometheus only covers kube-system, never a project namespace.
 	Namespaces []*NamespaceWorkloadMetrics
 }
 
@@ -2132,7 +2134,7 @@ type StreamWorkloadMetricsResponse_builder struct {
 	Clusters []*ClusterWorkloadSummary
 	// Per-node breakdown — populated in cluster view.
 	Nodes []*NodeWorkloadMetrics
-	// Per-namespace breakdown — populated in all views.
+	// Per-namespace breakdown — populated in project view only.
 	Namespaces []*NamespaceWorkloadMetrics
 	// Time-series chart data for the requested window.
 	TimeSeries *GetWorkloadTimeSeriesResponse

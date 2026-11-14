@@ -293,6 +293,14 @@ const routes: Routes = [
         pathMatch: 'full',
       },
       {
+        // The project Metrics page is unrouted: the per-shoot Prometheus only
+        // scrapes kube-system, so the page was always empty. The component
+        // keeps its project view for when tenant namespaces have a source.
+        path: 'projects/:id/metrics',
+        redirectTo: 'projects/:id/general',
+        pathMatch: 'full',
+      },
+      {
         path: 'plugins',
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
       },
@@ -319,10 +327,6 @@ const routes: Routes = [
       // does not exist. It needs a server-side aggregation query (Vali
       // count_over_time / sum by level) before it can be exposed; the component
       // is kept so that work has a starting point.
-      {
-        path: 'projects/:id/metrics',
-        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-      },
       // Plugin resource routes (organization-level)
       {
         path: 'plugin-resources/:pluginName',
