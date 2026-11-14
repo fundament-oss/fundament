@@ -58,6 +58,14 @@ cluster-start:
         echo "This cluster predates the Envoy Gateway edge. Recreate it: just cluster-delete && just cluster-create" >&2
         exit 1
     fi
+    # Port bindings are fixed at create time. A cluster created while its ports were
+    # published on every address keeps them there until it is recreated.
+    if docker inspect k3d-fundament-serverlb registry.localhost \
+        --format '{{{{ range $p, $b := .HostConfig.PortBindings }}{{{{ range $b }}[{{{{ .HostIp }}]{{{{ end }}{{{{ end }}' 2>/dev/null \
+        | grep -qE '\[(0\.0\.0\.0|::)?\]'; then
+        echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just cluster-delete && just cluster-create; with a plugin sandbox, then just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
+        exit 1
+    fi
     k3d cluster start fundament
     # k3d writes the context only at create; merge adds a missing entry and refreshes the
     # API port, which changes on restart.
@@ -224,10 +232,12 @@ plugin-sandbox-kubeconfig:
     fi
     echo "- plugin sandbox reachable at https://${ip}:6443 from k3d-fundament pods"
 
-    # Replace the host-side server URL (https://0.0.0.0:PORT) with the
+    # Replace the host-side server URL (https://HOST:PORT) with the
     # in-network address (https://IP:6443).
-    sed -i.bak -E "s|server: https://0\\.0\\.0\\.0:[0-9]+|server: https://${ip}:6443|" "$KUBECONFIG_TMP"
+    sed -i.bak -E "s|server: https://[^/:]+:[0-9]+|server: https://${ip}:6443|" "$KUBECONFIG_TMP"
     rm -f "${KUBECONFIG_TMP}.bak"
+    grep -q "server: https://${ip}:6443" "$KUBECONFIG_TMP" \
+        || { echo "Error: the sandbox kubeconfig has no server URL to rewrite" >&2; exit 1; }
 
     # Skip TLS verification — k3d's server cert doesn't cover the in-network
     # IP. Local-dev shortcut; production uses proper cluster CAs via Gardener.
