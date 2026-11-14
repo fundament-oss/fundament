@@ -15,16 +15,20 @@ import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus, shouldPollStatus } from '../utils/cluster-status';
+import {
+  getStatusBadgeColor,
+  getStatusLabel,
+  isTransitionalStatus,
+  shouldPollStatus,
+} from '../utils/cluster-status';
 import sortByName from '../utils/sort-by-name';
 import PageNavService from '../page-nav.service';
 
 import '@nldd/design-system/badge';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
-import '@nldd/design-system/card';
-import '@nldd/design-system/collection';
-import '@nldd/design-system/container';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
@@ -38,6 +42,12 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+
+/** Where a cluster runs and how big it is, as the row's second line. */
+function summarize(cluster: ClusterSummary): string {
+  const pools = `${cluster.nodePoolCount} node pool${cluster.nodePoolCount === 1 ? '' : 's'}`;
+  return `${cluster.region || 'Unknown'} · ${pools}`;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -69,6 +79,8 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;
+
+  protected summarize = summarize;
 
   constructor() {
     this.titleService.setTitle('Clusters');

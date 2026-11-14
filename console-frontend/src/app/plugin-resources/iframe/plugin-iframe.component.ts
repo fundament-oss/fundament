@@ -158,6 +158,8 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
 
   clusterId = input.required<string>();
 
+  projectId = input<string | undefined>(undefined);
+
   resourceName = input<string | undefined>(undefined);
 
   resourceNamespace = input<string | undefined>(undefined);
@@ -518,6 +520,7 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
     const namespaces = this.namespaces();
     const namespaceDisplayNames = this.namespaceDisplayNames();
     const params = this.params();
+    const projectId = this.projectId();
     this.postToIframe(iframe, {
       type: 'fundament:init',
       protocolVersion: 1,
@@ -532,6 +535,7 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
       ...(namespaceDisplayNames ? { namespaceDisplayNames } : {}),
       kubeApiProxyUrl: this.configService.getConfig().kubeApiProxyUrl,
       clusterId: this.clusterId(),
+      ...(projectId ? { projectId } : {}),
       token: snap.token,
       tokenExpiresAt: snap.expiresAt,
     });

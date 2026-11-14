@@ -2,6 +2,8 @@ import {
   Component,
   signal,
   computed,
+  ElementRef,
+  viewChild,
   inject,
   effect,
   untracked,
@@ -46,7 +48,6 @@ import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import DialogSyncDirective from './dialog-sync.directive';
 import MainPaneDirective from './main-pane.directive';
-import { PluginMenuIconComponent } from './icons';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
@@ -67,39 +68,19 @@ import PageNavService from './page-nav.service';
 import { PRESENTATION_ENABLED } from './presentation/presentation.tokens';
 import injectBrowsePluginsUrl from './plugins/browse-plugins-url';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
-import { ClusterStatus } from '../generated/v1/common_pb';
-import { getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
-import PluginNavService from './plugin-resources/plugin-nav.service';
 import MetricsHealthService from './metrics-health.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
 import opensElsewhere from './opens-elsewhere';
+import { contextOf, depthForPath, isContextRoot, overviewOf, parentOf } from './nav-context';
+import NavContextService from './nav-context.service';
+import ContextMenuComponent from './context-menu/context-menu.component';
+import ContextPickerComponent from './context-picker/context-picker.component';
 
 const reloadApp = () => {
   window.location.reload();
 };
-
-/**
- * How deep the stacked (narrow) view is for a path: the organization's own
- * address is the menu, `/projects/:id` the project's menu, and anything below or
- * beside those is a page.
- */
-function depthForPath(url: string): number {
-  const path = withinOrganization(url.split(/[?#]/)[0]);
-  // Nothing chosen yet: the organization menu is the whole screen, not an empty
-  // pane beside it. That is what the organization's own address shows.
-  if (path === '/') return 0;
-  return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
-}
-
-/** One step up from a page: the project it belongs to, or the organization when
- *  it belongs to none. Relative to the organization, which is what goTo takes. */
-function parentOf(url: string): string {
-  const path = withinOrganization(url.split(/[?#]/)[0]);
-  const project = /^\/projects\/([^/]+)\//.exec(path);
-  return project ? `/projects/${project[1]}` : '/';
-}
 
 /** Pages that stand on their own: the login page and the public platform
  *  overview. They render without the console's shell and load no organization,
@@ -126,7 +107,8 @@ export function isBarePageUrl(url: string): boolean {
     NewNamespaceSheetComponent,
     InviteMemberSheetComponent,
     AddProjectMemberSheetComponent,
-    PluginMenuIconComponent,
+    ContextMenuComponent,
+    ContextPickerComponent,
   ],
   templateUrl: './app.html',
   // The outlet is an empty element that still counts as a flex item of
@@ -154,8 +136,6 @@ export default class App implements OnInit {
 
   private organizationContextService = inject(OrganizationContextService);
 
-  protected pluginNavService = inject(PluginNavService);
-
   private pluginRegistry = inject(PluginRegistryService);
 
   private pluginStore = inject(PluginResourceStoreService);
@@ -173,12 +153,24 @@ export default class App implements OnInit {
    *  still show the menu beside the page. */
   isSingleColumn = signal(false);
 
+  /** Whether the split view has measured itself yet. Until then
+   *  `isSingleColumn` is a guess, and a narrow screen would be taken for a
+   *  wide one. */
+  private layoutMeasured = signal(false);
+
+  private splitView =
+    viewChild<
+      ElementRef<HTMLElement & { updateComplete: Promise<unknown>; isSingleColumn: boolean }>
+    >('splitView');
+
   /** The sheets the shell owns, not routes: navigating to them would unmount
    *  the page underneath and leave an empty pane behind the sheet. Their
    *  addresses still work; a guard opens the sheet over the home pane. */
   protected overlays = inject(OverlayService);
 
   protected pageNav = inject(PageNavService);
+
+  private navContext = inject(NavContextService);
 
   /** The walkthrough build narrates its own path through the console, so a
    *  coach-mark pointing at the create button only competes with it. */
@@ -229,13 +221,21 @@ export default class App implements OnInit {
    *  into the console instead. */
   private organizationsRequested = false;
 
-  currentUrl = signal(window.location.pathname);
+  /** The router's address, shared with the menu: one signal, so the shell and
+   *  the menu never disagree about where you are. */
+  currentUrl = this.navContext.currentUrl;
+
+  /** The address the last navigation landed on, for telling an arrival
+   *  somewhere else from a redirect back to the same place. Kept apart from
+   *  `currentUrl`, which the service has already moved on by the time the
+   *  shell hears of the navigation. */
+  private lastUrl = this.router.url;
 
   /**
-   * How deep the stacked (narrow) view is: 0 shows the organization, 1 the
-   * project menu, 2 the page. The split view picks the deepest pane that
-   * carries `has-content` (main > secondary sidebar > primary sidebar), so
-   * stepping back is a matter of taking content away rather than of routing.
+   * How deep the stacked (narrow) view is: 0 shows the menu of the place you
+   * are in, 1 the page. The split view picks the deepest pane that carries
+   * `has-content` (main > sidebar), so stepping back is a matter of taking
+   * content away rather than of routing.
    * On wide screens every pane shows regardless and this is inert.
    */
   stackDepth = signal(depthForPath(window.location.pathname));
@@ -245,6 +245,48 @@ export default class App implements OnInit {
   tourUrl = signal('');
 
   constructor() {
+    // The split view only announces a change of layout, so a wide one, which
+    // starts out wide, never says so. Read where its first layout pass left
+    // it: that runs in a microtask after its first render, and a frame later
+    // is past it.
+    effect(() => {
+      const element = this.splitView()?.nativeElement;
+      if (!element) return;
+      element.updateComplete.then(() => {
+        requestAnimationFrame(() => {
+          this.isSingleColumn.set(element.isSingleColumn);
+          this.layoutMeasured.set(true);
+        });
+      });
+    });
+
+    // Moving into a place opens its overview beside the menu, rather than an
+    // empty pane asking you to pick something. Only with room for both: on a
+    // narrow screen the place's own address is its menu, and the back button
+    // from any page leads there. Replaces the address, so Back skips it.
+    //
+    // Not while a sheet is open: an address such as /projects/new or /profile
+    // opens its sheet over the organization's own address, and moving on from
+    // there would count as navigating away and close it. Closing the sheet
+    // runs this again. The query and fragment come along, since the
+    // walkthrough resumes from them.
+    //
+    // Nor during a navigation: the picker closes as it starts one, and the old
+    // place's root would redirect over it. Its end runs this again.
+    effect(() => {
+      if (!this.selectedOrgId() || !this.layoutMeasured() || this.isSingleColumn()) return;
+      if (!this.isContextRoot() || this.overlays.anyOpen()) return;
+      if (this.router.currentNavigation()) return;
+      const overview = overviewOf(this.navContext.context());
+      untracked(() => {
+        const here = this.router.parseUrl(this.router.url);
+        const target = this.router.parseUrl(this.pageNav.path(overview));
+        target.queryParams = here.queryParams;
+        target.fragment = here.fragment;
+        this.router.navigateByUrl(target, { replaceUrl: true });
+      });
+    });
+
     // The projects are part of the organization's navigation now, so they load
     // with the organization rather than when one of them is opened. A navigation
     // can select the organization before its clusters are in, so this waits for
@@ -258,17 +300,23 @@ export default class App implements OnInit {
 
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
-    // so the cluster resolves later and has to bring the plugins with it. Only
-    // what the shell loaded is torn down: a project or organization other than
-    // the one it loaded for resets, but on a refresh it has loaded nothing, so
-    // a load a resource page started meanwhile is not cut off.
+    // so the cluster resolves later and has to bring the plugins with it. Outside
+    // a project, the cluster page in view decides. Only what the shell loaded is
+    // torn down: a page other than the one it loaded for resets, but on a refresh
+    // it has loaded nothing, so a load a resource page started meanwhile is not
+    // cut off.
     effect(() => {
       const orgId = this.selectedOrgId();
-      const projectId = this.activeProjectId();
-      const clusterId = this.activeProjectClusterId();
+      const context = this.navContext.context();
+      const projectId = context.kind === 'project' ? context.projectId : null;
+      const pageClusterId = context.kind === 'cluster' ? context.clusterId : null;
+      const clusterId = this.navContext.clusterId();
 
       untracked(() => {
-        const key = projectId ? `${orgId}/${projectId}` : null;
+        let key: string | null = null;
+        if (projectId) key = `${orgId}/${projectId}`;
+        else if (pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
+
         if (key && clusterId) {
           const opened = key !== this.pluginsLoadedFor;
           this.pluginsLoadedFor = key;
@@ -281,11 +329,11 @@ export default class App implements OnInit {
     });
   }
 
-  // The organization and project the shell last loaded plugins for.
+  // The organization and project or cluster page the shell last loaded plugins for.
   private pluginsLoadedFor: string | null = null;
 
-  // Fresh only for a project just opened, so it shows plugins installed since
-  // the last poll; a rerun for the same project leaves the poll's pace alone.
+  // Fresh only for a page just opened, so it shows plugins installed since the
+  // last poll; a rerun for the same page leaves the poll's pace alone.
   private async loadPluginsForCluster(clusterId: string, fresh: boolean): Promise<void> {
     this.clusterContext.onClusterChange(clusterId);
     await this.pluginRegistry.loadPlugins(clusterId, { fresh });
@@ -344,12 +392,10 @@ export default class App implements OnInit {
         // sheet in.
         const openedFor = this.overlays.openedFor();
         this.overlays.openedFor.set(null);
-        if (
-          event.urlAfterRedirects !== openedFor &&
-          event.urlAfterRedirects !== this.currentUrl()
-        ) {
+        if (event.urlAfterRedirects !== openedFor && event.urlAfterRedirects !== this.lastUrl) {
           this.overlays.closeAll();
         }
+        this.lastUrl = event.urlAfterRedirects;
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
         this.updateSidebarStateFromRoute();
@@ -360,6 +406,7 @@ export default class App implements OnInit {
     // Reading the router rather than the address bar we started from keeps the
     // pane behind the sheet from rendering the URL we no longer are at.
     this.isBarePage.set(isBarePageUrl(this.router.url));
+    this.lastUrl = this.router.url;
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
     // A signed-in visit to a bare page such as /login may already have been
@@ -569,23 +616,12 @@ export default class App implements OnInit {
   }
 
   /** The organization is the only selection left; a project follows from the
-   *  URL (see activeProjectId) and needs nothing stored. */
+   *  URL (see NavContextService) and needs nothing stored. */
   private updateSidebarStateFromRoute() {
     const currentOrgId = this.organizationContextService.currentOrganizationId();
     if (currentOrgId && this.selectedOrgId() !== currentOrgId) {
       this.selectedOrgId.set(currentOrgId);
     }
-  }
-
-  // Update breadcrumbs based on current route data
-
-  // Check if current route is clusters or clusters/new
-  isClustersActive(): boolean {
-    if (!this.marksCurrent()) return false;
-    // Compare on the path alone: the router url also carries the query string,
-    // and the organization is the same for the link and the page.
-    const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
-    return path === '/clusters' || path.startsWith('/clusters/');
   }
 
   /** The selected row says what the pane beside it holds. Collapsed to a single
@@ -595,26 +631,16 @@ export default class App implements OnInit {
     return !this.isSingleColumn();
   }
 
-  /** The split view fires this whenever it collapses or expands, and once when
-   *  it first measures itself. */
+  /** The split view fires this whenever it collapses or expands. */
   onSingleColumnChange(event: Event): void {
     this.isSingleColumn.set((event as CustomEvent<{ singleColumn: boolean }>).detail.singleColumn);
+    this.layoutMeasured.set(true);
   }
 
-  /** Marks a sidebar item as the current page. Reads `currentUrl` so the nav
-   *  re-renders on navigation; `router.url` alone is not a reactive source. */
-  isNavActive(path: string, exact = false): boolean {
-    if (!this.marksCurrent()) return false;
-    const current = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
-    return exact ? current === path : current === path || current.startsWith(`${path}/`);
-  }
-
-  /** Routes a sidebar link client-side while leaving it a real `<a href>`, so
-   *  middle-click and "open in new tab" keep working. */
-  /** A menu item reports a plain Event; only a real click carries the modifiers
-   *  that mean "open this somewhere else". */
   /** Keeps `/projects/new` a real address for middle-click and "open in new
-   *  tab", while a plain click opens the sheet over the page you are on. */
+   *  tab", while a plain click opens the sheet over the page you are on. Started
+   *  inside a cluster, or a project on one, the new project goes there: the
+   *  sheet reads that from the place it opens in. */
   openNewProject(event: Event): void {
     if (opensElsewhere(event)) return;
 
@@ -636,18 +662,15 @@ export default class App implements OnInit {
 
     event.preventDefault();
     this.router.navigateByUrl(this.path(path));
-    // Picking a project lands on its menu, not on a page: /projects/:id has an
-    // empty main by design, so stopping at depth 1 is what the user sees.
-    // Set here too: clicking the project you are already on does not navigate,
-    // so no NavigationEnd would arrive to derive the depth from.
+    // Set here too: clicking the page you are already on does not navigate, so
+    // no NavigationEnd would arrive to derive the depth from.
     this.stackDepth.set(depthForPath(path));
   }
 
   /**
-   * A back button, bubbled up from the title bar of whichever pane it sits in.
-   * Which pane that is decides where you land: back from a page goes to the
-   * project it belongs to, or to the organization when it belongs to none, and
-   * back from a project's menu to the organization.
+   * A back button, bubbled up from the title bar of a page: it leads to the
+   * menu of the place the page is in. Only a page has one; the menu goes up a
+   * level through its breadcrumb instead.
    *
    * It navigates rather than counting the stack down a step. The depth is
    * derived from the address everywhere else, so moving it by hand left the two
@@ -655,17 +678,8 @@ export default class App implements OnInit {
    * went on rendering the page you had just left, which reads as a button that
    * does nothing.
    */
-  onPaneBack(event: Event): void {
-    const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
-    this.pageNav.goTo(
-      pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : parentOf(this.router.url),
-    );
-  }
-
-  isMembersActive(): boolean {
-    const projectId = this.activeProjectId();
-    if (!projectId) return false;
-    return withinOrganization(this.router.url).startsWith(`/projects/${projectId}/members`);
+  onPaneBack(): void {
+    this.pageNav.goTo(parentOf(this.router.url));
   }
 
   // The walkthrough resolves its narration language from `?lang`, defaulting to
@@ -772,13 +786,14 @@ export default class App implements OnInit {
     // Restore selection — recreates the router outlet, triggering ngOnInit in child components
     this.selectedOrgId.set(orgId);
 
-    // The address carries the organization, so switching rewrites it. A project
-    // belongs to the one you are leaving and has no counterpart here, so that
-    // address is dropped; every other page has the same one in both.
+    // The address carries the organization, so switching rewrites it. A
+    // cluster or a project belongs to the one you are leaving and has no
+    // counterpart here, so that address is dropped; every page of the
+    // organization itself has the same one in both.
     const within = withinOrganization(this.router.url);
-    const belongsToProject = /^\/projects\/[^/]+/.test(within);
+    const inPlace = contextOf(within).kind !== 'organization';
     this.router.navigateByUrl(
-      inOrganization(this.organizationNameOf(orgId), belongsToProject ? '/' : within),
+      inOrganization(this.organizationNameOf(orgId), inPlace ? '/' : within),
     );
   }
 
@@ -804,105 +819,18 @@ export default class App implements OnInit {
       });
   });
 
-  /** The project sidebar, as data: the markup for each row is identical, so the
-   *  rows differ only in path, icon and label. */
-  /** The project the URL is in, or null. Derived rather than stored: the
-   *  secondary sidebar follows where you are, it is not a mode you switch into. */
-  activeProjectId = computed(
-    () => withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1] ?? null,
-  );
-
-  /** The cluster the active project runs on, or null until the organization's
-   *  projects have loaded. */
-  activeProjectClusterId = computed(() => {
-    const id = this.activeProjectId();
-    return id ? (this.organizationDataService.getProjectById(id)?.cluster.id ?? null) : null;
-  });
-
-  /** Every project in the organization, for the primary sidebar. Carries the
-   *  status of the cluster it runs on, so one glance over the list tells you
-   *  what is up. */
-  organizationProjects = computed(() => {
-    const status = new Map(
-      this.organizationDataService.clusterSummaries().map((c) => [c.id, c.status]),
-    );
-
-    return this.organizationDataService.organizations().flatMap((org) =>
+  /** Every project in the organization, for the create menu in the header. */
+  organizationProjects = computed(() =>
+    this.organizationDataService.organizations().flatMap((org) =>
       org.clusters.flatMap((cluster) =>
         cluster.projects.map((project) => ({
           id: project.id,
           name: project.alias || project.name,
-          clusterName: cluster.name,
-          namespaceCount: project.namespaceCount,
-          memberCount: project.memberCount,
-          status: status.get(cluster.id) ?? ClusterStatus.UNSPECIFIED,
         })),
       ),
-    );
-  });
-
-  /** The sidebar's projects section, also with no projects yet so its "New
-   *  project" button is there for the first one. Not before the projects have
-   *  loaded, or it flashes empty, and not without a cluster to put one on. */
-  showProjectsSection = computed(
-    () =>
-      this.organizationProjects().length > 0 ||
-      (this.organizationDataService.projectsLoaded() &&
-        this.organizationDataService.clusterSummaries().length > 0),
+    ),
   );
 
-  /** The project whose menu fills the secondary sidebar. */
-  activeProject = computed(() => {
-    const id = this.activeProjectId();
-    return id ? (this.organizationProjects().find((p) => p.id === id) ?? null) : null;
-  });
-
-  getStatusBadgeColor = getStatusBadgeColor;
-
-  getStatusLabel = getStatusLabel;
-
-  /** The project menu. The counts ride along so the menu itself says how much
-   *  is behind each item; Roles has none because the project summary the API
-   *  returns does not carry one. */
-  projectNavItems = computed(() => {
-    const base = `/projects/${this.activeProjectId()}`;
-    const project = this.activeProject();
-
-    return [
-      { path: `${base}/general`, icon: 'folder', label: 'General', exact: false, count: null },
-      {
-        path: `${base}/namespaces`,
-        icon: 'brackets-ellipsis',
-        label: 'Namespaces',
-        exact: false,
-        count: project?.namespaceCount ?? null,
-      },
-      {
-        path: `${base}/metrics`,
-        icon: 'chart-x-y-axis-line',
-        label: 'Metrics',
-        exact: false,
-        count: null,
-      },
-      {
-        path: `${base}/members`,
-        icon: 'person-2',
-        label: 'Members',
-        exact: false,
-        count: project?.memberCount ?? null,
-      },
-    ];
-  });
-
-  pluginResourcePath(pluginName: string, crdPlural: string): string {
-    return `/projects/${this.activeProjectId()}/plugin-resources/${pluginName}/${crdPlural}`;
-  }
-
-  /** The project menu route carries no page of its own, so the main pane would
-   *  slot an outlet with nothing in it. */
-  /** A project with nothing open under it. `/projects/new` looks the same to a
-   *  pattern but is a page of its own, and swallowing it left the new-project
-   *  sheet unmounted behind an empty pane. */
   /** Dismissed for good once you close it, so a coach-mark never becomes
    *  furniture. Stored per browser rather than per account: it is about knowing
    *  where the button is, not about anything on the server. */
@@ -913,8 +841,8 @@ export default class App implements OnInit {
   /**
    * The first cluster is the thing everything else hangs off, and the button
    * that starts one is an icon in a corner. Only with nothing to show for it
-   * yet and nothing open: once a page is in view the coach-mark would point
-   * across whatever you came to read. Held back until the organization's data
+   * yet and on the organization's home: once you have gone somewhere the
+   * coach-mark would point across whatever you came to read. Held back until the organization's data
    * has landed, or every account with clusters gets a flash of it while the
    * list is still empty.
    */
@@ -923,7 +851,7 @@ export default class App implements OnInit {
       !this.presentationEnabled &&
       !this.educationDismissed() &&
       this.organizationDataService.clustersLoaded() &&
-      this.isProjectRoot() &&
+      this.isOrganizationHome() &&
       this.organizationDataService.clusterSummaries().length === 0,
   );
 
@@ -932,26 +860,23 @@ export default class App implements OnInit {
     this.educationDismissed.set(true);
   }
 
-  isProjectRoot = computed(() => {
-    const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
-    // The app starts with nothing open: the organization's own address is that
-    // empty pane, and it says "pick something from the menu".
-    if (path === '/') return true;
-    return path !== '/projects/new' && /^\/projects\/[^/]+$/.test(path);
+  /** A place with nothing open in it: the organization's own address, a
+   *  cluster's or a project's. The main pane says "pick something from the
+   *  menu" there, and on a narrow screen the menu is all there is. */
+  isContextRoot = computed(() => isContextRoot(this.currentUrl()));
+
+  /** The organization's own address or its overview, which is what that
+   *  address opens on a wide screen: where you are before you have gone
+   *  anywhere. */
+  private isOrganizationHome = computed(() => {
+    const url = this.currentUrl();
+    if (contextOf(url).kind !== 'organization') return false;
+    return isContextRoot(url) || withinOrganization(url.split(/[?#]/)[0]) === '/general';
   });
 
-  /** The organization the sidebar and the header button name. The project no
-   *  longer takes this over: it has its own pane. */
+  /** The organization the header button names. */
   currentOrganization = computed(() => {
     const orgId = this.organizationContextService.currentOrganizationId() ?? this.selectedOrgId();
     return orgId ? (this.organizationDataService.getOrganizationById(orgId) ?? null) : null;
   });
-
-  isOrganizationSelected(orgId: string): boolean {
-    return this.selectedOrgId() === orgId;
-  }
-
-  isProjectSelected(projectId: string): boolean {
-    return this.activeProjectId() === projectId;
-  }
 }

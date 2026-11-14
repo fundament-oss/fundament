@@ -17,6 +17,7 @@ import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import PluginStatusBannerComponent from '../plugin-status-banner.component';
 import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import PluginRegistryService from '../plugin-registry.service';
+import pluginRouteScope from '../plugin-route-scope';
 import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
@@ -107,6 +108,19 @@ export default class ResourceDetailComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
+  /** Undefined on a cluster page; the plugin UI then lists cluster-wide. */
+  protected projectId = computed(() => this.scope().projectId ?? undefined);
+
+  private scope = computed(() =>
+    pluginRouteScope(this.routeParams().get('id') ?? '', this.route.snapshot.data),
+  );
+
+  /** The route's cluster on a cluster page; on a project page, the project's
+   *  cluster as the registry follows it. */
+  protected clusterId = computed(
+    () => this.scope().clusterId ?? this.clusterContext.selectedClusterId(),
+  );
+
   private routeQuery = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -155,7 +169,7 @@ export default class ResourceDetailComponent implements OnInit {
       plugin: this.plugin(),
       kind: this.crdDef()?.kind,
       view: 'detail',
-      clusterId: this.clusterContext.selectedClusterId(),
+      clusterId: this.clusterId(),
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
@@ -202,15 +216,17 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
-    this.projectNamespaces.load(this.route.snapshot.parent?.params['id'] ?? '');
+    this.projectNamespaces.load(this.scope().projectId ?? '');
 
-    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
-    // It follows the route too: another resource's detail reuses this
-    // component (a sheet that navigates to the resource it just created).
+    // On a project page the effect fires when selectedClusterId is set by
+    // loadClusters() in ngOnInit. It follows the route too: another resource's
+    // detail reuses this component (a sheet that navigates to the resource it
+    // just created). On a project route it waits for the project's namespaces,
+    // which the resource is checked against.
     effect(() => {
-      const clusterId = this.clusterContext.selectedClusterId();
+      const clusterId = this.clusterId();
       const target = this.resourceTarget();
-      if (clusterId !== null) {
+      if (clusterId !== null && this.namespacesSettled()) {
         untracked(() => this.loadCrdAndResource(clusterId, target));
       }
     });
@@ -219,6 +235,8 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // A cluster route names its cluster; only a project route needs the list.
+    if (this.scope().clusterId !== null) return;
     try {
       // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();
@@ -239,6 +257,8 @@ export default class ResourceDetailComponent implements OnInit {
     this.crdDef.set(undefined);
     this.resource.set(undefined);
 
+    const { projectId } = this.scope();
+
     try {
       const { crd, resource } = await this.loader.loadCrdAndResource(
         target.pluginName,
@@ -246,10 +266,11 @@ export default class ResourceDetailComponent implements OnInit {
         clusterId,
         target.name,
         target.namespace,
+        projectId ? { projectId } : undefined,
       );
       if (load !== this.loads) return;
       this.crdDef.set(crd);
-      this.resource.set(resource);
+      this.resource.set(this.withinProject(crd, resource));
     } catch (err) {
       if (load !== this.loads) return;
       // eslint-disable-next-line no-console
@@ -278,8 +299,9 @@ export default class ResourceDetailComponent implements OnInit {
    */
   private async refreshResource(): Promise<void> {
     const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
+    const clusterId = this.clusterId();
     const current = this.resource();
+    const { projectId } = this.scope();
     const load = this.loads;
     if (clusterId === null || this.isLoading() || this.deleting()) return;
     if (!crd) {
@@ -293,12 +315,13 @@ export default class ResourceDetailComponent implements OnInit {
         clusterId,
         current?.metadata.name ?? this.resourceId(),
         current ? current.metadata.namespace : this.resourceNamespace(),
+        projectId ? { projectId } : undefined,
       );
       // Moved on to another resource or cluster, or deleting, while this was out.
       if (load !== this.loads || this.deleting()) return;
       if (this.resource()?.metadata.uid !== current?.metadata.uid) return;
-      if (this.clusterContext.selectedClusterId() !== clusterId) return;
-      this.resource.set(resource);
+      if (this.clusterId() !== clusterId) return;
+      this.resource.set(this.withinProject(crd, resource));
     } catch {
       // Kept as is; see above.
     }
@@ -309,6 +332,7 @@ export default class ResourceDetailComponent implements OnInit {
   private async retryLoad(clusterId: string): Promise<void> {
     const load = this.loads;
     const target = this.resourceTarget();
+    const { projectId } = this.scope();
     try {
       const { crd, resource } = await this.loader.loadCrdAndResource(
         target.pluginName,
@@ -316,12 +340,13 @@ export default class ResourceDetailComponent implements OnInit {
         clusterId,
         target.name,
         target.namespace,
+        projectId ? { projectId } : undefined,
       );
       // A full load started, for this resource or another, while this was out.
       if (!crd || load !== this.loads || this.crdDef() !== undefined) return;
-      if (this.clusterContext.selectedClusterId() !== clusterId) return;
+      if (this.clusterId() !== clusterId) return;
       this.crdDef.set(crd);
-      this.resource.set(resource);
+      this.resource.set(this.withinProject(crd, resource));
       this.errorMessage.set(null);
     } catch {
       // Kept as is; see refreshResource.
@@ -341,7 +366,7 @@ export default class ResourceDetailComponent implements OnInit {
    *  own title, so the button says where it goes. */
   kindLabel = computed(() =>
     resourceListLabel(
-      this.plugin()?.menu.project?.find((i) => i.crd === this.resourceKind()),
+      this.plugin()?.menu[this.scope().menuSection]?.find((i) => i.crd === this.resourceKind()),
       this.crdDef()?.kind,
       this.resourceKind(),
     ),
@@ -351,13 +376,9 @@ export default class ResourceDetailComponent implements OnInit {
    *  page has its title before the console has read the resource. */
   resourceName = computed(() => this.resource()?.metadata.name ?? this.resourceId());
 
-  /** Where the title bar's back button leads: the project this resource belongs
-   *  to, or the organization when the plugin is installed there. The way back to
-   *  the list is a link in the page itself. */
-  backPath = computed(() => {
-    const projectId = this.route.snapshot.parent?.params['id'];
-    return projectId ? `/projects/${projectId}` : '/';
-  });
+  /** Where the title bar's back button leads: the cluster or project page the
+   *  resource is listed on. The way back to the list is a link in the page itself. */
+  backPath = computed(() => this.scope().backPath);
 
   // The project's namespaces, forwarded to the plugin iframe: custom detail
   // UIs embed create flows (the ceph-rook Buckets section), which need the
@@ -373,6 +394,28 @@ export default class ResourceDetailComponent implements OnInit {
   namespaceDisplayNames = this.projectNamespaces.displayNames;
 
   namespacesSettled = this.projectNamespaces.settled;
+
+  /** On a project route, a namespaced resource outside the project's
+   *  namespaces (a hand-written ?ns=) shows as not found. Unchecked when the
+   *  lookup failed: the cluster's RBAC still applies. */
+  private withinProject(
+    crd: ParsedCrd | undefined,
+    resource: KubeResource | undefined,
+  ): KubeResource | undefined {
+    if (!resource || crd?.scope !== 'Namespaced' || this.scope().projectId === null)
+      return resource;
+    if (this.projectNamespaces.failed()) return resource;
+    return this.namespaces().includes(resource.metadata.namespace ?? '') ? resource : undefined;
+  }
+
+  /** withinProject for the custom UI, which reads the resource itself: the
+   *  route's ?ns= outside the project shows as not found instead. */
+  protected namespaceOutsideProject = computed(() => {
+    const ns = this.resourceNamespace();
+    if (ns === undefined || this.scope().projectId === null) return false;
+    if (!this.namespacesSettled() || this.projectNamespaces.failed()) return false;
+    return !this.namespaces().includes(ns);
+  });
 
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears
@@ -408,7 +451,7 @@ export default class ResourceDetailComponent implements OnInit {
 
   async confirmDelete(): Promise<void> {
     const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
+    const clusterId = this.clusterId();
     const resource = this.resource();
     if (!crd || !clusterId || !resource) return;
 

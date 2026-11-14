@@ -1,0 +1,129 @@
+<nldd-modal-dialog
+  appDialogSync
+  [show]="show()"
+  text="Go to"
+  accessible-label="Go to a cluster or project"
+  horizontal-alignment="left"
+  (close)="closed.emit()"
+>
+  <nldd-search-field
+    appAutofocus
+    width="full"
+    placeholder="Search clusters and projects"
+    accessible-label="Search clusters and projects"
+    [attr.value]="query()"
+    (input)="onSearch($event)"
+  ></nldd-search-field>
+  <nldd-spacer size="12"></nldd-spacer>
+  <!-- A tree, so the arrows walk it and Left and Right fold a cluster: the
+       nesting is the hierarchy, and assistive technology reads the levels from
+       it. Indentation is ours to draw: a cluster's chevron sits under the
+       organization's icon, and a project's icon under its cluster's name.
+       Each branch is two segments, the chevron that folds it and the link
+       that goes there, since a row that is a link cannot also be the toggle.
+       A segment runs to the row's edge and pads itself, where a bare cell
+       starts inside the row's 8px of padding: hence the odd-looking sizes. -->
+  <nldd-list
+    type="tree"
+    dividers="never"
+    accessible-label="Organization"
+  >
+    <nldd-list-item [expanded]="true">
+      <nldd-list-item-segment
+        width="full"
+        [attr.href]="pageNav.path(organizationPath)"
+        [attr.current]="currentPath() === organizationPath ? '' : null"
+        (click)="go($event, organizationPath)"
+      >
+        <nldd-icon-cell
+          icon="apartment-building"
+          size="20"
+        ></nldd-icon-cell>
+        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+        <nldd-text-cell [attr.text]="organizationName()"></nldd-text-cell>
+      </nldd-list-item-segment>
+      @for (cluster of clusters(); track cluster.id) {
+        <nldd-list-item
+          slot="children"
+          [expanded]="cluster.projects.length > 0 ? isExpanded(cluster.id) : undefined"
+        >
+          <!-- Only a cluster with projects is a branch; one without is a leaf,
+               and a chevron that folds nothing would say otherwise. -->
+          @if (cluster.projects.length > 0) {
+            <nldd-list-item-segment
+              button
+              disclosure
+              [attr.accessible-label]="
+                (isExpanded(cluster.id) ? 'Collapse ' : 'Expand ') + cluster.name
+              "
+              [attr.disabled]="searching() ? '' : null"
+              (click)="toggle(cluster.id)"
+            >
+              <nldd-icon-cell
+                disclosure
+                icon="chevron-right"
+                size="16"
+              ></nldd-icon-cell>
+            </nldd-list-item-segment>
+          } @else {
+            <!-- Where the chevron's segment ends, so every cluster's icon
+                 lines up: 36, which the spacer has no size for. -->
+            <nldd-spacer-cell size="32"></nldd-spacer-cell>
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
+          }
+          <nldd-list-item-segment
+            width="full"
+            [attr.href]="pageNav.path(cluster.path)"
+            [attr.current]="currentPath() === cluster.path ? '' : null"
+            (click)="go($event, cluster.path)"
+          >
+            <nldd-icon-cell
+              icon="kubernetes"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="cluster.name"></nldd-text-cell>
+            <nldd-cell width="fit-content">
+              <nldd-tooltip [attr.text]="getStatusLabel(cluster.status)">
+                <nldd-badge
+                  [attr.color]="getStatusBadgeColor(cluster.status)"
+                  [attr.accessible-label]="getStatusLabel(cluster.status)"
+                ></nldd-badge>
+              </nldd-tooltip>
+            </nldd-cell>
+          </nldd-list-item-segment>
+          @for (project of cluster.projects; track project.id) {
+            <nldd-list-item
+              slot="children"
+              [attr.href]="pageNav.path(project.path)"
+              [attr.current]="currentPath() === project.path ? '' : null"
+              (click)="go($event, project.path)"
+            >
+              <!-- Under the cluster's name: 72, which the spacer has no size
+                   for. -->
+              <nldd-spacer-cell size="64"></nldd-spacer-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell
+                icon="folder"
+                size="20"
+              ></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell [attr.text]="project.name"></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list-item>
+      }
+    </nldd-list-item>
+  </nldd-list>
+  @if (searching() && clusters().length === 0) {
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-text color="secondary">No cluster or project matches “{{ query() }}”.</nldd-text>
+  }
+  <nldd-button
+    slot="actions"
+    type="button"
+    text="Close"
+    appearance="secondary"
+    (click)="closed.emit()"
+  ></nldd-button>
+</nldd-modal-dialog>

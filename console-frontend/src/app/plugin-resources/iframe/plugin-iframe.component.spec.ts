@@ -20,7 +20,7 @@ const plugin = {
   },
 };
 
-async function openPage() {
+async function openPage(extraInputs: Record<string, unknown> = {}) {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => Promise.reject(new Error('no network in tests'))),
@@ -60,7 +60,9 @@ async function openPage() {
     view: 'list',
     clusterId: 'c1',
   };
-  Object.entries(inputs).forEach(([name, value]) => fixture.componentRef.setInput(name, value));
+  Object.entries({ ...inputs, ...extraInputs }).forEach(([name, value]) =>
+    fixture.componentRef.setInput(name, value),
+  );
   fixture.detectChanges();
   return { fixture, navigate };
 }
@@ -147,5 +149,32 @@ describe('PluginIframeComponent sheets', () => {
     const bar = document.querySelector('nldd-sheet nldd-top-title-bar')!;
     expect(bar.getAttribute('text')).toBe('New disk pool');
     expect(bar.getAttribute('supporting-text')).toBe('From the Ceph Storage plugin');
+  });
+});
+
+describe('PluginIframeComponent init message', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function sendInit(extraInputs: Record<string, unknown>) {
+    const { fixture } = await openPage(extraInputs);
+    const postMessage = vi.fn();
+    const iframe = { contentWindow: { postMessage } } as unknown as HTMLIFrameElement;
+    const instance = fixture.componentInstance as unknown as {
+      sendInit: (frame: HTMLIFrameElement) => Promise<void>;
+    };
+    await instance.sendInit(iframe);
+    return postMessage.mock.calls[0][0];
+  }
+
+  it('sends projectId and namespaces when given', async () => {
+    const msg = await sendInit({ projectId: 'p1', namespaces: ['a', 'b'] });
+    expect(msg.type).toBe('fundament:init');
+    expect(msg.projectId).toBe('p1');
+    expect(msg.namespaces).toEqual(['a', 'b']);
+  });
+
+  it('omits projectId when not given', async () => {
+    const msg = await sendInit({});
+    expect('projectId' in msg).toBe(false);
   });
 });
