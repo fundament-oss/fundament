@@ -46,7 +46,7 @@ terraform {
 
 # The API key comes from the FUNDAMENT_API_KEY environment variable.
 provider "fundament" {
-  endpoint        = "https://organization.fundament.localhost:8443"
+  url             = "https://fundament.localhost:8443"
   organization_id = "019b4000-0000-7000-8000-000000000001"
 }
 ```
@@ -105,8 +105,9 @@ resource "fundament_project_member" "viewer" {
 ### Optional
 
 - `api_key` (String, Sensitive) The API key the provider authenticates with. Required: set it here or, to keep it out of the configuration, in the FUNDAMENT_API_KEY environment variable.
-- `authn_endpoint` (String) The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, derived from endpoint by replacing 'organization' with 'authn' in the subdomain.
-- `endpoint` (String) The URL of the Fundament organization API, for example https://organization.fundament.example. Required: set it here or in the FUNDAMENT_ENDPOINT environment variable.
-- `kube_api_proxy_url` (String) The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.
-- `marketplace_install_url` (String) The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.
+- `authn_endpoint` (String) The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, discovered from url. Deprecated: without url it is derived from endpoint by replacing 'organization' with 'authn' in the host.
+- `endpoint` (String) The URL of the Fundament organization API, for example https://organization.fundament.example. Can also be set via the FUNDAMENT_ENDPOINT environment variable. If not provided, discovered from url.
+- `kube_api_proxy_url` (String) The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable. If not provided, discovered from url.
+- `marketplace_install_url` (String) The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable. If not provided, discovered from url.
 - `organization_id` (String) The ID of the organization to manage, shown in the console under General. Required: set it here or in the FUNDAMENT_ORGANIZATION_ID environment variable.
+- `url` (String) The root URL of the Fundament installation, for example https://fundament.example. The provider reads the URLs of the installation's APIs from its discovery document at /.well-known/fundament.json. Can also be set via the FUNDAMENT_URL environment variable. Required unless endpoint and authn_endpoint are both set (setting only endpoint is deprecated: authn_endpoint is then derived from it).

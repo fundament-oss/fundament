@@ -25,7 +25,7 @@ test:
 
 # Run terraform provider acceptance tests
 test-acc:
-    FUNDAMENT_ENDPOINT=https://organization.fundament.localhost:8443 \
+    FUNDAMENT_URL=https://fundament.localhost:8443 \
     TF_ACC=1 \
     TF_ACC_TERRAFORM_PATH=$(which tofu) \
     TF_ACC_PROVIDER_HOST=registry.opentofu.org \

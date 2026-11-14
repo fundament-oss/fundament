@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -78,6 +79,11 @@ func NewClientFromConfig(opts ...ClientOpt) (*client.Client, error) {
 	creds, err := config.LoadCredentials()
 	if err != nil {
 		return nil, err //nolint:wrapcheck // ErrNotAuthenticated is shown to the user as-is
+	}
+
+	err = cfg.Resolve(context.Background())
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already names the installation and the cause
 	}
 
 	orgID := o.organizationID

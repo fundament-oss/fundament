@@ -48,6 +48,10 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+	err = cfg.Resolve(context.Background())
+	if err != nil {
+		return err //nolint:wrapcheck // already names the installation and the cause
+	}
 
 	testClient := client.New(apiKey, cfg.APIEndpoint, cfg.AuthnURL, "")
 	resp, err := testClient.Authn().GetUserInfo(context.Background(), authnv1.GetUserInfoRequest_builder{}.Build())
@@ -87,6 +91,10 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
+	}
+	err = cfg.Resolve(context.Background())
+	if err != nil {
+		return err //nolint:wrapcheck // already names the installation and the cause
 	}
 
 	apiClient := client.New(creds.APIKey, cfg.APIEndpoint, cfg.AuthnURL, "")

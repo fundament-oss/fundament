@@ -561,6 +561,7 @@ jobs:
         run: |
           cd terraform-provider
           FUNDAMENT_ENDPOINT="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          FUNDAMENT_AUTHN_ENDPOINT="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           TF_ACC=1 \
           TF_ACC_TERRAFORM_PATH="$(which tofu)" \
           TF_ACC_PROVIDER_HOST=registry.opentofu.org \

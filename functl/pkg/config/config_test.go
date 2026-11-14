@@ -1,13 +1,19 @@
 package config
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/common/discovery"
 )
 
 // absDir returns a platform-appropriate absolute path to use as a config dir.
@@ -125,11 +131,13 @@ func TestConfigDir_Default(t *testing.T) {
 
 func TestLoadConfig_EnvOverrides_NoConfigFile(t *testing.T) {
 	t.Setenv("FUNCTL_CONFIG_DIR", t.TempDir())
+	t.Setenv(EnvURL, "https://fundament.env.example")
 	t.Setenv(EnvAPIEndpoint, "https://api.env.example")
 	t.Setenv(EnvAuthnURL, "https://authn.env.example")
 
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
+	assert.Equal(t, "https://fundament.env.example", cfg.URL, "URL should come from the env override")
 	assert.Equal(t, "https://api.env.example", cfg.APIEndpoint, "APIEndpoint should come from the env override")
 	assert.Equal(t, "https://authn.env.example", cfg.AuthnURL, "AuthnURL should come from the env override")
 }
@@ -150,4 +158,201 @@ func TestLoadConfig_EnvOverrides_ConfigFile(t *testing.T) {
 	assert.Equal(t, "https://api.env.example", cfg.APIEndpoint, "APIEndpoint should come from the env override")
 	assert.Equal(t, "https://authn.file.example", cfg.AuthnURL, "AuthnURL should come from the config file")
 	assert.Equal(t, "json", cfg.Output, "Output should come from the config file")
+}
+
+// discoveryServer serves a discovery document naming itself as issuer.
+func discoveryServer(t *testing.T, fields string) *httptest.Server {
+	t.Helper()
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != discovery.Path {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"issuer": %q%s}`, server.URL, fields)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func TestResolve_Discovers(t *testing.T) {
+	server := discoveryServer(t, `,
+		"organization_api": "https://organization.example.com",
+		"authn_api": "https://authn.example.com",
+		"marketplace_registry_api": "https://registry.example.com"`)
+
+	cfg := &Config{URL: server.URL}
+	require.NoError(t, cfg.Resolve(t.Context()))
+
+	assert.Equal(t, "https://organization.example.com", cfg.APIEndpoint)
+	assert.Equal(t, "https://authn.example.com", cfg.AuthnURL)
+	assert.Equal(t, "https://registry.example.com", cfg.RegistryURL)
+}
+
+func TestResolve_ExplicitEndpointWins(t *testing.T) {
+	server := discoveryServer(t, `,
+		"organization_api": "https://organization.example.com",
+		"authn_api": "https://authn.example.com"`)
+
+	cfg := &Config{URL: server.URL, AuthnURL: "https://authn.override.example"}
+	require.NoError(t, cfg.Resolve(t.Context()))
+
+	assert.Equal(t, "https://organization.example.com", cfg.APIEndpoint)
+	assert.Equal(t, "https://authn.override.example", cfg.AuthnURL)
+}
+
+func TestResolve_ExplicitEndpointsNeedNoDiscovery(t *testing.T) {
+	cfg := &Config{
+		URL:         "https://unreachable.invalid",
+		APIEndpoint: "https://organization.example.com",
+		AuthnURL:    "https://authn.example.com",
+	}
+	require.NoError(t, cfg.Resolve(t.Context()))
+	assert.Empty(t, cfg.RegistryURL)
+}
+
+// One explicit endpoint without a URL must not fall back to the default
+// installation: the API key would go to an installation it is not for.
+func TestResolve_PartialEndpointsWithoutURL(t *testing.T) {
+	cfg := &Config{APIEndpoint: "https://organization.example.com"}
+	require.ErrorContains(t, cfg.Resolve(t.Context()), "no installation URL")
+}
+
+func TestResolve_IncompleteDocument(t *testing.T) {
+	server := discoveryServer(t, `, "organization_api": "https://organization.example.com"`)
+
+	cfg := &Config{URL: server.URL}
+	require.ErrorContains(t, cfg.Resolve(t.Context()), "names no organization or authn API")
+}
+
+func TestResolveRegistry(t *testing.T) {
+	server := discoveryServer(t, `, "marketplace_registry_api": "https://registry.example.com"`)
+
+	cfg := &Config{
+		URL:         server.URL,
+		APIEndpoint: "https://organization.example.com",
+		AuthnURL:    "https://authn.example.com",
+	}
+	require.NoError(t, cfg.ResolveRegistry(t.Context()))
+	assert.Equal(t, "https://registry.example.com", cfg.RegistryURL)
+}
+
+// Until the default installation serves a discovery document, an unconfigured
+// functl keeps its former endpoints there.
+func TestResolve_DefaultInstallationWithoutDocument(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(server.Close)
+	defaultURL = server.URL
+	t.Cleanup(func() { defaultURL = DefaultURL })
+
+	cfg := &Config{}
+	require.NoError(t, cfg.Resolve(t.Context()))
+	require.NoError(t, (&Config{}).ResolveRegistry(t.Context()))
+	assert.Equal(t, int32(1), requests.Load(), "the legacy fallback is fetched once, too")
+
+	assert.Equal(t, legacyDefaultAPIEndpoint, cfg.APIEndpoint)
+	assert.Equal(t, legacyDefaultAuthnURL, cfg.AuthnURL)
+}
+
+func TestResolve_ConfiguredInstallationWithoutDocument(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	t.Cleanup(server.Close)
+
+	cfg := &Config{URL: server.URL}
+	require.ErrorIs(t, cfg.Resolve(t.Context()), discovery.ErrNotFound)
+}
+
+func TestResolve_DefaultInstallationFailingIsNotPaperedOver(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "boom", http.StatusBadGateway)
+	}))
+	t.Cleanup(server.Close)
+	defaultURL = server.URL
+	t.Cleanup(func() { defaultURL = DefaultURL })
+
+	cfg := &Config{}
+	require.ErrorContains(t, cfg.Resolve(t.Context()), "502")
+	assert.Empty(t, cfg.APIEndpoint, "no fallback to the legacy endpoints")
+}
+
+func TestResolve_FetchesEachInstallationOnce(t *testing.T) {
+	var requests atomic.Int32
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"issuer": %q, "organization_api": "https://organization.example.com", "authn_api": "https://authn.example.com", "marketplace_registry_api": "https://registry.example.com"}`, server.URL)
+	}))
+	t.Cleanup(server.Close)
+
+	first := &Config{URL: server.URL}
+	require.NoError(t, first.Resolve(t.Context()))
+	second := &Config{URL: server.URL, APIEndpoint: "https://organization.example.com", AuthnURL: "https://authn.example.com"}
+	require.NoError(t, second.ResolveRegistry(t.Context()))
+
+	assert.Equal(t, "https://registry.example.com", second.RegistryURL)
+	assert.Equal(t, int32(1), requests.Load())
+}
+
+func TestLoadConfig_DropsEndpointsSavedAsOldDefaults(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("FUNCTL_CONFIG_DIR", dir)
+	t.Setenv(EnvURL, "")
+	t.Setenv(EnvAPIEndpoint, "")
+	t.Setenv(EnvAuthnURL, "")
+	content := "url: https://fundament.file.example\napi_endpoint: " + legacyDefaultAPIEndpoint + "\nauthn_url: " + legacyDefaultAuthnURL + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(content), 0o600))
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "https://fundament.file.example", cfg.URL)
+	assert.Empty(t, cfg.APIEndpoint, "the old default must not pin the PoC")
+	assert.Empty(t, cfg.AuthnURL)
+}
+
+func TestLoadConfig_KeepsEndpointsSetOnPurpose(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("FUNCTL_CONFIG_DIR", dir)
+	t.Setenv(EnvURL, "")
+	t.Setenv(EnvAPIEndpoint, "")
+	t.Setenv(EnvAuthnURL, "")
+	content := "api_endpoint: https://organization.other.example\nauthn_url: " + legacyDefaultAuthnURL + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(content), 0o600))
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "https://organization.other.example", cfg.APIEndpoint)
+	assert.Equal(t, legacyDefaultAuthnURL, cfg.AuthnURL)
+}
+
+func TestLoadFileConfig_IgnoresEnvOverrides(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("FUNCTL_CONFIG_DIR", dir)
+	t.Setenv(EnvURL, "https://fundament.env.example")
+	t.Setenv(EnvAPIEndpoint, "https://api.env.example")
+	content := "url: https://fundament.file.example\norganization: org-1\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(content), 0o600))
+
+	cfg, err := LoadFileConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "https://fundament.file.example", cfg.URL)
+	assert.Empty(t, cfg.APIEndpoint)
+	assert.Equal(t, "org-1", cfg.Organization)
+
+	cfg.Organization = "org-2"
+	require.NoError(t, SaveConfig(cfg))
+
+	saved, err := os.ReadFile(filepath.Join(dir, "config.yaml")) //nolint:gosec // a file in the test's own temp dir
+	require.NoError(t, err)
+	assert.NotContains(t, string(saved), "env.example", "environment values must not reach the file")
+}
+
+func TestResolveRegistry_ExplicitEndpointsNameRegistryURL(t *testing.T) {
+	cfg := &Config{APIEndpoint: "https://organization.example.com", AuthnURL: "https://authn.example.com"}
+	require.ErrorContains(t, cfg.ResolveRegistry(t.Context()), "set registry_url")
 }
