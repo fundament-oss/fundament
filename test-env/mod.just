@@ -238,11 +238,14 @@ gardener-delete:
     done
     TARGET_KC="${KUBECONFIG:-}"
     TARGET_KC="${TARGET_KC%%:*}"
-    TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
-    for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}" kind-gardener-operator-local; do
-        kubectl config --kubeconfig "$TARGET_KC" delete-context "$name" >/dev/null 2>&1 || true
-        kubectl config --kubeconfig "$TARGET_KC" delete-cluster "$name" >/dev/null 2>&1 || true
-        kubectl config --kubeconfig "$TARGET_KC" delete-user "$name" >/dev/null 2>&1 || true
+    # On a host KUBECONFIG points into the checkout, while a Gardener running there keeps
+    # its contexts in ~/.kube/config: clean both.
+    for kc in ${TARGET_KC:+"$TARGET_KC"} "$HOME/.kube/config"; do
+        for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}" kind-gardener-operator-local; do
+            kubectl config --kubeconfig "$kc" delete-context "$name" >/dev/null 2>&1 || true
+            kubectl config --kubeconfig "$kc" delete-cluster "$name" >/dev/null 2>&1 || true
+            kubectl config --kubeconfig "$kc" delete-user "$name" >/dev/null 2>&1 || true
+        done
     done
     for dir in "${dirs[@]}"; do
         [ -d "$dir" ] || continue

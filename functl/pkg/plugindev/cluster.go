@@ -47,7 +47,7 @@ func NewCluster(t Target) (Cluster, error) {
 	if _, ok := raw.Contexts[t.KubeContext]; !ok {
 		return nil, &CheckError{
 			Problem: fmt.Sprintf("kube context %q not found in your kubeconfig", t.KubeContext),
-			Fix:     "create the sandbox cluster with `just plugins cluster-create`",
+			Fix:     "create the sandbox cluster with `just plugins cluster-create`; outside the fundament checkout, put its .dev/kubeconfig on KUBECONFIG",
 			DocsURL: t.DocsURL,
 		}
 	}

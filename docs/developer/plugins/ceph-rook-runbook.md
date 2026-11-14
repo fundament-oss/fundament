@@ -42,10 +42,9 @@ nothing you learn in phases 4–8 means anything.
 - **The management cluster (`k3d-fundament`) must be up**, because publishing goes through
   organization-api. The sandbox cluster (`k3d-fundament-plugin`) is where the plugin runs.
 
-:::caution[Check your kubectl context]
-`just dev` and skaffold deploy to the *current* context, and they do not switch for you.
-Every command below passes `--context` explicitly for that reason. If you drop the flag,
-confirm your context first.
+:::caution[Run from the checkout]
+Every command below passes `--context` explicitly. The contexts of the local clusters are in
+`.dev/kubeconfig`, which mise puts on `KUBECONFIG` in the checkout.
 :::
 
 ## Phase 0 · Clean slate
@@ -192,7 +191,6 @@ category, so **the seed must be re-applied** — it is idempotent (`ON CONFLICT 
 and the `db-migrations` Job runs it:
 
 ```bash
-kubectl config use-context k3d-fundament
 just dev                            # or: just deploy — re-runs db-migrations
 ```
 
