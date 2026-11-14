@@ -58,10 +58,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "marketplace-frontend" "replicas" $.Values.marketplaceFrontend.replicas) }}
       containers:
         - name: marketplace-frontend
           image: {{ $.Values.images.marketplaceFrontend }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           env:
             # Substituted into the CSP connect-src directive by the server
             # (see marketplace-frontend/src/server.ts). These are the origins the
@@ -130,4 +132,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "marketplace-frontend" "component" "frontend" "replicas" $.Values.marketplaceFrontend.replicas) }}
 {{- end }}
