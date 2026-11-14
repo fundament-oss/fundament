@@ -40,7 +40,7 @@ func clusterNodePoolBlock() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"name": schema.StringAttribute{
-					Description: "The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter.",
+					Description: "The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter. Changing it replaces the node pool and its nodes.",
 					Required:    true,
 					Validators: []validator.String{
 						stringvalidator.LengthBetween(1, 63),
@@ -299,6 +299,34 @@ func newOrRetyped(current, planned []ClusterNodePoolModel) []ClusterNodePoolMode
 	for _, pool := range planned {
 		if machineType, ok := running[pool.Name.ValueString()]; !ok || machineType != pool.MachineType.ValueString() {
 			out = append(out, pool)
+		}
+	}
+	return out
+}
+
+// replacedNodePools describes each running pool that the planned pools remove
+// or replace. Pools are matched by name, so a renamed pool is removed and a new
+// one created, and a pool whose machine type changes is replaced under its
+// name; either way its nodes go. Nil while a planned name is unknown: the plan
+// cannot tell yet which pools stay.
+func replacedNodePools(current, planned []ClusterNodePoolModel) []string {
+	wanted := make(map[string]ClusterNodePoolModel, len(planned))
+	for _, pool := range planned {
+		if pool.Name.IsUnknown() {
+			return nil
+		}
+		wanted[pool.Name.ValueString()] = pool
+	}
+	var out []string
+	for _, pool := range current {
+		name := pool.Name.ValueString()
+		next, ok := wanted[name]
+		switch {
+		case !ok:
+			out = append(out, fmt.Sprintf("Node pool %q is removed, and its nodes with it.", name))
+		case !next.MachineType.IsUnknown() && next.MachineType.ValueString() != pool.MachineType.ValueString():
+			out = append(out, fmt.Sprintf("Node pool %q changes machine type from %s to %s: it is replaced, and its nodes with it.",
+				name, pool.MachineType.ValueString(), next.MachineType.ValueString()))
 		}
 	}
 	return out

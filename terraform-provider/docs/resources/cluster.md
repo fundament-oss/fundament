@@ -60,7 +60,7 @@ Required:
 - `autoscale_max` (Number) The maximum number of nodes. Must be at least autoscale_min.
 - `autoscale_min` (Number) The minimum number of nodes.
 - `machine_type` (String) The machine type of the nodes, one the cluster's region offers. Changing it replaces the node pool and its nodes.
-- `name` (String) The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter.
+- `name` (String) The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter. Changing it replaces the node pool and its nodes.
 
 
 <a id="nestedblock--timeouts"></a>
