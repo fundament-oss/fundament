@@ -1,9 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import type App from './app';
 import SessionService from './session.service';
+import StaffSessionService from './admin-review/staff-session.service';
 import OrganizationContextService from './organization-context.service';
 import { ToastService } from './toast.service';
 import { CONFIG_LOADER, ConfigService, EMPTY_CONFIGURATION } from './config.service';
@@ -79,6 +80,38 @@ describe('App', () => {
     expect(error).toHaveBeenCalledOnce();
     expect(forget).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  describe('in the review backoffice', () => {
+    function stubStaffLogout(outcome: 'ok' | 'fails') {
+      const staffSession = TestBed.inject(StaffSessionService);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      vi.spyOn(staffSession, 'logout').mockImplementation(async () => {
+        if (outcome === 'fails') throw new Error('dcim-authn said no');
+      });
+      const consoleLogout = vi.spyOn(session, 'logout');
+      Object.assign(app, { variant: 'admin', staffSession });
+      return { navigate, consoleLogout };
+    }
+
+    it('ends the staff session and goes to the login', async () => {
+      const { navigate, consoleLogout } = stubStaffLogout('ok');
+
+      await app.handleLogout();
+
+      expect(navigate).toHaveBeenCalledWith('/login', { replaceUrl: true });
+      expect(consoleLogout).not.toHaveBeenCalled();
+    });
+
+    it('stays on the page and says so when logging out fails', async () => {
+      const { navigate } = stubStaffLogout('fails');
+      const error = vi.spyOn(toast, 'error');
+
+      await app.handleLogout();
+
+      expect(error).toHaveBeenCalledOnce();
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps the storefront visitor on the page after logging out', async () => {

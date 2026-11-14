@@ -118,6 +118,12 @@ export default class ProjectDetailComponent implements OnInit {
 
   showDeleteModal = signal<boolean>(false);
 
+  /** True while DeleteProject runs, so a second click cannot send it twice. */
+  isDeleting = signal<boolean>(false);
+
+  /** Separate from errorMessage, which belongs to the page behind the dialog. */
+  deleteError = signal<string | null>(null);
+
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     await this.loadProject(projectId);
@@ -271,8 +277,10 @@ export default class ProjectDetailComponent implements OnInit {
     this.deleteAttempted.set(true);
     const currentProject = this.project();
     if (!currentProject) return;
-    if (!this.isDeleteConfirmed()) return;
+    if (!this.isDeleteConfirmed() || this.isDeleting()) return;
 
+    this.isDeleting.set(true);
+    this.deleteError.set(null);
     try {
       const request = create(DeleteProjectRequestSchema, {
         projectId: currentProject.id,
@@ -289,22 +297,37 @@ export default class ProjectDetailComponent implements OnInit {
 
       this.pageNav.goTo('/');
     } catch (err) {
-      this.showDeleteModal.set(false);
       if (err instanceof ConnectError && err.code === Code.FailedPrecondition) {
-        this.errorMessage.set('Delete all namespaces in this project before deleting the project.');
+        this.showDeleteError('Delete all namespaces in this project before deleting the project.');
       } else {
-        this.errorMessage.set(
+        // The transport's readableErrors interceptor has already made the
+        // message one for the reader, without Connect's "[code]" prefix.
+        this.showDeleteError(
           err instanceof Error
             ? `Failed to delete project: ${err.message}`
             : 'Failed to delete project',
         );
       }
+    } finally {
+      this.isDeleting.set(false);
+    }
+  }
+
+  /** In the dialog while it is open, as the cluster's delete dialog does. The
+   *  dialog can be closed (Escape) while the call runs, and a failure must not
+   *  then land in a dialog nobody sees: the page shows it instead. */
+  private showDeleteError(message: string): void {
+    if (this.showDeleteModal()) {
+      this.deleteError.set(message);
+    } else {
+      this.errorMessage.set(message);
     }
   }
 
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
+    this.deleteError.set(null);
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
     const el = this.deleteDialogRef()?.nativeElement;

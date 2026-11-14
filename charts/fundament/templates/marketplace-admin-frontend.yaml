@@ -17,6 +17,7 @@ data:
       "registryApiUrl": "",
       "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}",
       "storefrontUrl": "{{ $.Values.externalUrls.marketplace }}",
+      "dcimAuthnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}",
       "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "marketplace-admin") }}"
     }
 
@@ -48,7 +49,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-                checksum/config: {{ printf "%s|%s|%s" $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.marketplace (include "fundament.pocUrl" (dict "root" $ "site" "marketplace-admin")) | sha256sum }}
+                checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.marketplace $.Values.externalUrls.dcimAuthn (include "fundament.pocUrl" (dict "root" $ "site" "marketplace-admin")) | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 8 }}
     spec:
@@ -61,8 +62,9 @@ spec:
             # (see marketplace-frontend/src/server.ts). These are the origins the
             # browser calls; a server render uses the internal URLs below. Unset
             # URLs collapse to extra whitespace, leaving connect-src 'self'.
+            # dcim-authn-api is where reviewers sign in (the staff session).
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.marketplaceAdminApi }}"
+              value: "{{ $.Values.externalUrls.marketplaceAdminApi }} {{ $.Values.externalUrls.dcimAuthn }}"
             {{- if $allowedHosts }}
             - name: NG_ALLOWED_HOSTS
               value: "{{ join "," $allowedHosts }}"

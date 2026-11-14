@@ -770,6 +770,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  clicked a second time, and the second DeleteCluster comes back not found. */
   isDeleting = signal(false);
 
+  /** Separate from errorMessage, which belongs to the page behind the dialog. */
+  deleteError = signal<string | null>(null);
+
   deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
 
   /**
@@ -798,6 +801,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       return;
     }
     this.isDeleting.set(true);
+    this.deleteError.set(null);
     try {
       const request = create(DeleteClusterRequestSchema, {
         clusterId: this.clusterData.basics.id,
@@ -832,19 +836,30 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
           this.showDeleteBlockedModal.set(true);
         } else {
           // Its projects were deleted in the meantime, so a retry can succeed.
-          this.errorMessage.set(
-            `This cluster could not be deleted: ${error.rawMessage}. Try again.`,
-          );
+          this.showDeleteError(`This cluster could not be deleted: ${error.message}. Try again.`);
         }
         return;
       }
-      this.errorMessage.set(
+      // The transport's readableErrors interceptor has already made the
+      // message one for the reader, without Connect's "[code]" prefix.
+      this.showDeleteError(
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
           : 'Failed to delete cluster',
       );
     } finally {
       this.isDeleting.set(false);
+    }
+  }
+
+  /** In the dialog while it is open, so a retry is one click away. The dialog
+   *  can be closed (Escape) while the call runs, and a failure must not then
+   *  land in a dialog nobody sees: the page shows it instead. */
+  private showDeleteError(message: string): void {
+    if (this.showDeleteModal()) {
+      this.deleteError.set(message);
+    } else {
+      this.errorMessage.set(message);
     }
   }
 
@@ -1030,7 +1045,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
-    this.errorMessage.set(null);
+    this.deleteError.set(null);
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
     this.isDeleting.set(false);
