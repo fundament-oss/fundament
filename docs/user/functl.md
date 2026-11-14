@@ -69,6 +69,12 @@ The key is stored in `credentials` in the config directory. Setting
 `FUNDAMENT_API_KEY` in the environment takes precedence over the stored key,
 which is what you want in CI.
 
+`functl auth status` exits 0 only when the key authenticates, so a script can
+check it before it starts. With `-o json` it prints JSON for every outcome of that
+check; when you are not authenticated, `reason` is `not_logged_in`, `rejected`
+(invalid or expired key), `unreachable` (the platform did not answer) or `error`.
+The message for a failure goes to stderr.
+
 ## Select an organization
 
 Most commands work within one organization. Select it by its ID, which
