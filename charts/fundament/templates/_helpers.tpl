@@ -34,6 +34,16 @@ Database host (CNPG read-write service)
 {{- end }}
 
 {{/*
+Pool settings appended to each service's database URI (db.pool). Only the
+services read these URIs, through pgx; psql and libpq refuse pool_* parameters.
+*/}}
+{{- define "fundament.db.poolParams" -}}
+{{- with .Values.db.pool -}}
+?pool_max_conns={{ int .maxConns }}&pool_max_conn_idle_time={{ .maxConnIdleTime }}
+{{- end -}}
+{{- end }}
+
+{{/*
 Database secret name (app user)
 */}}
 {{- define "fundament.db.secretName" -}}

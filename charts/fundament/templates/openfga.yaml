@@ -105,6 +105,14 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+            {{- with $.Values.openfga.datastore }}
+            - name: OPENFGA_DATASTORE_MAX_OPEN_CONNS
+              value: {{ .maxOpenConns | quote }}
+            - name: OPENFGA_DATASTORE_MAX_IDLE_CONNS
+              value: {{ .maxIdleConns | quote }}
+            - name: OPENFGA_DATASTORE_CONN_MAX_IDLE_TIME
+              value: {{ .connMaxIdleTime | quote }}
+            {{- end }}
             - name: OPENFGA_PLAYGROUND_ENABLED
               value: {{ $.Values.openfga.playground.enabled | quote }}
             - name: OPENFGA_HTTP_ADDR

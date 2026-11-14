@@ -137,6 +137,16 @@ db:
   # a PodDisruptionBudget blocks every node drain. With 2 or more, it stops a
   # drain from evicting all instances at the same time.
   # enablePDB: false
+  # Each service's connection pool. Unbounded, a pool grows to the node's core
+  # count and keeps idle connections for 30 minutes; a few busy services then
+  # fill max_connections and every new pod, from a rollout, a restart or a
+  # drain, fails to connect. Only the busiest services fill their pool, so at
+  # one replica the default max_connections of 100 holds. Each extra replica
+  # adds up to maxConns per service: raise max_connections with it, via
+  # db.postgresql.parameters (two replicas need about 300).
+  pool:
+    maxConns: 10
+    maxConnIdleTime: 5m
   storageSize: 1Gi
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
   # Changing this restarts Postgres: CNPG rolls the instances.
@@ -421,6 +431,12 @@ openfga:
   image: openfga/openfga:v1.22.1
   replicas: 1
   resources: {}
+  # OpenFGA's own connection pool, per replica; counts against the same
+  # max_connections as db.pool.
+  datastore:
+    maxOpenConns: 20
+    maxIdleConns: 5
+    connMaxIdleTime: 5m
   playground:
     enabled: false
   # The bootstrap Job: its migrate init container and the bootstrap itself.
