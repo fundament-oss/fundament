@@ -25,8 +25,10 @@ type config struct {
 	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8081"`
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode      string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
-	GardenerKubeconfig string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
+	// The console origin; a cookie request from any other origin is refused.
+	CookieAllowedOrigins []string `env:"COOKIE_ALLOWED_ORIGINS"`
+	KubeProxyMode        string   `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	GardenerKubeconfig   string   `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 
 	// PluginSandboxKubeconfig is a filesystem path to a kubeconfig for a
 	// locally-running plugin sandbox cluster (typically the same secret
@@ -89,9 +91,14 @@ func run() error {
 		}
 	}
 
+	if len(cfg.CookieAllowedOrigins) == 0 {
+		logger.Warn("COOKIE_ALLOWED_ORIGINS is empty: cookie-authenticated requests are refused, only bearer tokens work")
+	}
+
 	server, err := proxy.New(logger, &proxy.Config{
 		JWTSecret:               []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
+		CookieAllowedOrigins:    cfg.CookieAllowedOrigins,
 		Mode:                    cfg.KubeProxyMode,
 		GardenerClient:          gardenerClient,
 		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,

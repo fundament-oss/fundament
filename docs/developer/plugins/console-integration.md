@@ -264,7 +264,7 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 
 - `/clusters/<cluster-id>/{api|apis|openapi|version}/…` is forwarded to the cluster handler; other roots return 404.
 - A PluginToken takes the gateway path above.
-- A UserToken or the console's cookie takes the user path: token validation, OpenFGA `can_view` on the cluster, then the call is forwarded.
+- A UserToken or the console's cookie takes the user path: token validation, OpenFGA `can_view` on the cluster, then the call is forwarded. The cookie counts only when `Origin` is in `COOKIE_ALLOWED_ORIGINS` (the console), WebSocket upgrades included, so a plugin page cannot ride the user's session.
 - Plugin pages are never served here, in any mode: plugin-proxy serves them (see [URL construction](#url-construction)).
 
 ### Mock mode

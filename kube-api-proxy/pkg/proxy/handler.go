@@ -26,7 +26,8 @@ var allowedPathRoots = []string{"api", "apis", "openapi", "version", "healthz", 
 //
 //	/clusters/{clusterID}/{path...}
 //
-// Authentication: JWT from Authorization header or fundament_auth cookie.
+// Authentication: JWT from Authorization header, or the fundament_auth cookie
+// from an allowed Origin.
 // Authorization: user must have can_view on the cluster (via OpenFGA).
 func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// --- Extract cluster ID from path ---
@@ -65,6 +66,14 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 // handleUserClusterProxy is the unchanged pre-FUN-17 UserToken path.
 func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, clusterID uuid.UUID) {
 	// --- Authentication ---
+
+	// The cookie rides along on any same-site request, plugin pages included,
+	// so it only counts when the console sent it. Browsers always set Origin on
+	// cross-origin requests and WebSocket upgrades.
+	if !auth.HasBearer(r.Header) && !slices.Contains(s.cookieAllowedOrigins, r.Header.Get("Origin")) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	claims, err := s.authValidator.Validate(r.Header)
 	if err != nil {

@@ -39,6 +39,12 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: "{{ $.Values.externalUrls.corsAllowedOrigins }}"
             {{- end }}
+            {{- if $.Values.externalUrls.console }}
+            # Only the console may use the session cookie; plugin pages on the
+            # same site present a PluginToken.
+            - name: COOKIE_ALLOWED_ORIGINS
+              value: {{ $.Values.externalUrls.console | quote }}
+            {{- end }}
             - name: KUBE_API_PROXY_MODE
               value: "{{ .Values.kubeApiProxy.mode }}"
             {{- if $.Values.kubeApiProxy.gardenerKubeconfigSecret }}
