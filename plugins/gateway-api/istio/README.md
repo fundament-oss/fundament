@@ -19,7 +19,7 @@ Installs Istio as a Gateway API implementation and a default Gateway.
 After steps 1–3 of [Testing plugins locally](../../../docs/developer/plugins/testing-plugins-locally.md) and gateway-api-envoy installed, from the repository root:
 
 1. `just plugins envoy-gateway test-cleanup`: the install waits for the `istio-ingressgateway` address, which it gets only while ports 80 and 443 are free.
-2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish gateway-api/istio --create`
+2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish gateway-api/istio --create --submit`, then approve it ([step 5](../../../docs/developer/plugins/testing-plugins-locally.md#5-install)): the sandbox installs a `system` version only once it is approved.
 3. Install `system--gateway-api-istio` (step 5) with the printed version and hash.
 4. `just plugins status`: Running.
 

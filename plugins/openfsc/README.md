@@ -77,7 +77,7 @@ test enforces this); bump the two together.
 After steps 1–3 of [Testing plugins locally](../../docs/developer/plugins/testing-plugins-locally.md), from the repository root:
 
 1. `just plugins openfsc operator-push`: builds `openfsc-operator/` and prints `OPERATOR_IMAGE: <ref>`. The published operator image is amd64 only.
-2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish openfsc`
+2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish openfsc --submit`, then approve it ([step 5](../../docs/developer/plugins/testing-plugins-locally.md#5-install)): the sandbox installs a `system` version only once it is approved.
 3. Install `system--openfsc` (step 5) with `spec.config` `OPERATOR_IMAGE: <ref>`. The plugin deploys the operator only when its release is absent: a new ref needs uninstall and install.
 4. `just plugins openfsc test`: sample FSCInstallation `demo` in `fsc-demo` reaches Active; the one-per-namespace guard holds.
 5. `just plugins openfsc console-preview` or `console-dev`: the console pages against the sandbox, without publishing. Both need an FSCInstallation.

@@ -15,7 +15,7 @@ export MISE_DATA_DIR=$CACHE/mise GOCACHE=$CACHE/go/build GOMODCACHE=$CACHE/go/mo
   SKAFFOLD_CACHE_FILE=$CACHE/skaffold/cache BUN_INSTALL_CACHE_DIR=$CACHE/bun \
   GARDENER_REGISTRY_CACHE=$CACHE/gardener-registry
 mkdir -p "$CACHE/skaffold"
-SEED_CONTEXT=kind-gardener-operator-local
+SEED_CONTEXT=kind-gardener-local
 
 log() { printf '>> %s\n' "$*"; }
 die() { printf '!! %s\n' "$*" >&2; exit 1; }

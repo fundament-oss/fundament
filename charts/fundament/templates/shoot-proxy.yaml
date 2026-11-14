@@ -1,8 +1,8 @@
 {{- if $.Values.shootProxy.enabled }}
 # Gardener proxy: forwards TLS traffic from k3d to the Gardener kind cluster's Istio ingresses.
-# Gardener-operator exposes two separate Istio ingresses on different NodePorts:
-#   - Seed ingress (port 30443): routes to shoot kube-apiservers
-#   - Virtual garden ingress (port 31443): routes to the virtual garden kube-apiserver
+# Gardener-operator exposes two separate Istio ingresses as LoadBalancer Services:
+#   - Seed ingress: routes to shoot kube-apiservers
+#   - Virtual garden ingress: routes to the virtual garden kube-apiserver
 # Both use SNI passthrough, so the socat TCP proxy preserves the TLS handshake.
 # CoreDNS resolves *.local.gardener.cloud to the appropriate proxy ClusterIP.
 # Only deployed with the local-gardener profile.
@@ -30,7 +30,7 @@ spec:
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - TCP-LISTEN:443,fork,reuseaddr
-            - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.seedNodePort }}
+            - TCP:{{ required "shootProxy.seedIngressIP is required" $.Values.shootProxy.seedIngressIP }}:443
           ports:
             - containerPort: 443
               name: https
@@ -76,7 +76,7 @@ spec:
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
           args:
             - TCP-LISTEN:443,fork,reuseaddr
-            - TCP:{{ $.Values.shootProxy.gardenerNodeIP }}:{{ $.Values.shootProxy.gardenNodePort }}
+            - TCP:{{ required "shootProxy.gardenIngressIP is required" $.Values.shootProxy.gardenIngressIP }}:443
           ports:
             - containerPort: 443
               name: https
@@ -101,7 +101,7 @@ spec:
 
 # CoreDNS custom config: resolves *.local.gardener.cloud to the proxy Service ClusterIPs.
 # The virtual garden API gets its own ClusterIP (garden-proxy) since it uses a different
-# Istio ingress NodePort. All other *.local.gardener.cloud traffic goes to the shoot-proxy.
+# Istio ingress. All other *.local.gardener.cloud traffic goes to the shoot-proxy.
 apiVersion: v1
 kind: ConfigMap
 metadata:

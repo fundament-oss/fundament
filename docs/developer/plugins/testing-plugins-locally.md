@@ -153,7 +153,7 @@ spec:
 YAML
 ```
 
-- Draft and pending versions install this way.
+- A draft or pending version installs this way only when the sandbox's organization, `acme-corp`, published it: plugin-controller reads the catalog as that organization. A version of another organization, such as `system` for the first-party plugins, must be approved first, or the installation fails with `GetPluginDefinition RPC: not_found`. Publish it with `--submit`, then approve it: `just funops plugin approve <pluginName> <version> --organization <organizationName> --reviewer alice@acme-corp.com`. A draft cannot be approved; only a submitted version can. The [Marketplace route](#marketplace-route) approves through the admin console instead.
 - The image comes from the published definition; the CR carries none. Field reference: [PluginInstallation CRD](/docs/developer/plugins#plugininstallation-crd).
 - `spec.config` sets the plugin's `FUNP_` values without the prefix, e.g. `OPERATOR_IMAGE: <ref>`.
 - `definitionRef` is immutable: to change the version, uninstall and install again.
@@ -190,7 +190,7 @@ Every platform deploy resets its databases: API keys, published definitions and 
 
 1. `just plugin-sandbox-kubeconfig`
 2. step 3 with a new API key
-3. step 4. The hash stays the same while the image content is unchanged. If it differs from the installation's `definitionHash`, uninstall and repeat step 5.
+3. step 4, and for a version of another organization than `acme-corp` the approval from step 5. The hash stays the same while the image content is unchanged. If it differs from the installation's `definitionHash`, uninstall and repeat step 5.
 
 ## Remove
 
@@ -214,7 +214,8 @@ just plugins sandbox-catalog
 just functl auth login <API_KEY>
 just functl org set 019b4000-0000-7000-8000-000000000000
 
-PLUGIN_REGISTRY=localhost:5112 just plugins publish cert-manager
+PLUGIN_REGISTRY=localhost:5112 just plugins publish cert-manager --submit
+just funops plugin approve cert-manager 1.21.3 --organization system --reviewer alice@acme-corp.com
 
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
 apiVersion: plugins.fundament.io/v1
@@ -233,7 +234,8 @@ just plugins status
 just plugins cert-manager test
 ```
 
-- `publish` prints `published plugin=cert-manager version=1.21.3 hash=sha256:…`; the listing exists, so no `--create`.
+- `publish` prints `published plugin=cert-manager version=1.21.3 hash=sha256:… id=… version_id=… status=SUBMISSION_STATUS_DRAFT`, then `submitted … status=SUBMISSION_STATUS_PENDING`; the listing exists, so no `--create`.
+- `system` is not the sandbox's organization, so the version is submitted and approved before the install.
 - `status` shows `system--cert-manager   cert-manager   system   Running   true`; `test` ends with `test-cert   True   test-cert-tls`.
 - `just plugins logs system--cert-manager` streams the plugin log: `cert-manager is running`.
 - In the console as `alice@acme-corp.com`: **acme-project** → **Cert Manager** → **Certificates** lists `test-cert` in `fundament`, Ready.

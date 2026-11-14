@@ -18,7 +18,7 @@ Installs Envoy Gateway and the Gateway API CRDs, and serves create forms for Gat
 After steps 1–3 of [Testing plugins locally](../../../docs/developer/plugins/testing-plugins-locally.md), from the repository root:
 
 1. After changes in `console-ui/`: `just plugins envoy-gateway typecheck` and `ui-test`.
-2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish gateway-api/envoy-gateway`
+2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish gateway-api/envoy-gateway --submit`, then approve it ([step 5](../../../docs/developer/plugins/testing-plugins-locally.md#5-install)): the sandbox installs a `system` version only once it is approved.
 3. Install `system--gateway-api-envoy` (step 5) with the printed version and hash.
 4. `just plugins envoy-gateway test`
 5. `just plugins envoy-gateway test-cleanup`

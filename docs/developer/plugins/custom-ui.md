@@ -28,7 +28,21 @@ console/
 - An edit page only ever opens in a [sheet](console-integration#sheets), with `fundament.openSheet({ view: 'edit', resource })`, and only when `customComponents.<Kind>.edit` names it.
 
 - Each HTML page loads its logic from a `.js` module: the page CSP blocks inline scripts and styles.
-- Working example: [`plugins/cert-manager/console/`](https://github.com/fundament-oss/fundament/tree/master/plugins/cert-manager/console).
+- Working examples: [`plugins/storage/ceph-rook/console/`](https://github.com/fundament-oss/fundament/tree/master/plugins/storage/ceph-rook/console) for pages built from NLDD components, and [`plugins/cert-manager/console/`](https://github.com/fundament-oss/fundament/tree/master/plugins/cert-manager/console) for the bare minimum.
+
+## Page title and navigation
+
+The console draws the page around your iframe: a title bar with the back button, and the page title as the `<h1>`.
+
+| Route | Title | Back button |
+|---|---|---|
+| list | the kind's label, e.g. "Disk Pools" | to the project or organization |
+| detail | the resource's name, with its primary condition as a badge (`Ready`, or else the first condition) | to the list |
+| create | "New <kind>", e.g. "New disk pool" | to the list |
+
+A sheet gets its title and a `Close` button from the console instead of a back button and badge (see [Sheets](console-integration#sheets)).
+
+So a page starts with its own content. Do not draw an `<h1>` or a back button: the page would show the title twice. Headings inside the page start at `<h2>`. A form's Cancel button still posts `plugin:navigate-back`: that is an action of the form, not navigation chrome.
 
 ## SDK files
 
@@ -58,7 +72,9 @@ The renames from `0.8.91` to `0.15.0` that plugin pages are most likely to use:
 
 The package has a linter. Run `bunx nldd lint --fix` in a project that depends on `@nldd/design-system` to apply the renames, and `bunx nldd lint` to list what is left. For markup in JavaScript strings, check a snippet with `bunx nldd lint --stdin --filename page.html < snippet.html`.
 
-The cert-manager plugin's `_shared.js:loadSdk()` is the reference implementation: copy it as a starting point.
+Load the bundle on every page that uses an `<nldd-*>` element, not only on forms: it sets the page in the console's own font (RijksSans) and colors, and draws every `<nldd-*>` element. A plain HTML page such as cert-manager's does without it. The CloudNativePG plugin's `_shared.js:loadNlddDesignSystem()` loads it; the Ceph Rook plugin's `bootPage()` loads it beside the SDK.
+
+The cert-manager plugin's `_shared.js:loadSdk()` is the reference implementation for the SDK: copy it as a starting point.
 
 ```js
 export function loadSdk() {
@@ -132,7 +148,7 @@ The full message reference lives in [Console integration](console-integration#th
 | Class | Description |
 |-------|-------------|
 | `.plugin-card` | Page container. It draws no frame of its own, since the Console page around the iframe already is one |
-| `.plugin-heading` | Primary heading (`h1`) |
+| `.plugin-heading` | Section heading (`h2`). The page's `h1` is the console's: see [Page title and navigation](#page-title-and-navigation) |
 | `.plugin-text` | Body / paragraph text |
 | `.plugin-table` | Full-width data table with row dividers |
 
@@ -170,8 +186,8 @@ frame-ancestors <console>; base-uri 'none'; object-src 'none'
     <title>MyResources</title>
   </head>
   <body>
+    <!-- No title: the console's page around the frame has it. -->
     <div class="plugin-card">
-      <h1 class="plugin-heading">MyResources</h1>
       <table class="plugin-table">
         <thead>
           <tr><th>Name</th><th>Namespace</th></tr>

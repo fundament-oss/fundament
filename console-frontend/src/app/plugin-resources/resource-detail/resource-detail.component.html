@@ -1,11 +1,38 @@
 @if (customUIUrl()) {
-  <!-- The page padding and column of the generated detail page below, around
-       the plugin's own screen. -->
-  <nldd-page>
+  <!-- The page padding, column, title bar and title of the generated detail
+       page below, around the plugin's own screen: the way back to the list and
+       the resource's name are the console's to draw, so every plugin page has
+       them, and in the same place. -->
+  <nldd-page
+    sticky-header
+    style="--context-back-button-display: flex"
+  >
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="resourceName()"
+      [attr.back-text]="kindLabel()"
+      (back)="goToList($event)"
+      collapse-anchor="resource-detail-title"
+    ></nldd-top-title-bar>
     <nldd-simple-section>
       <!-- Outside the namespace wait: why the plugin is not working is worth
            saying before its own screen can load. -->
       <app-plugin-status-banner [installationName]="pluginName()" />
+      <nldd-title
+        id="resource-detail-title"
+        size="2"
+      >
+        <h1>
+          {{ resourceName() }}
+          @if (primaryCondition(); as condition) {
+            <nldd-badge
+              [attr.color]="condition.color"
+              [attr.text]="condition.text"
+            ></nldd-badge>
+          }
+        </h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
       @if (namespacesSettled()) {
         <!-- One iteration, keyed on the resource: the frame gets it once, in
              fundament:init, so a route to another resource that reuses this

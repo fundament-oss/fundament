@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-`just dev` runs the platform in mock mode: a cluster you create exists only as a row in the database. The test environment runs the platform against a real Gardener, inside a VM, so cluster lifecycle, node pools, shoot status and cluster RBAC behave as in an installation. The whole e2e suite runs there, including the scenarios that need a real Gardener (`@real-gardener`).
+`just dev` runs the platform in mock mode: a cluster you create exists only as a row in the database. The test environment runs the platform against a real Gardener, inside a VM, so cluster lifecycle, node pools, shoot status and cluster RBAC behave as in an installation. The whole e2e suite runs there, including the scenarios that need a real Gardener (`@real-gardener`); the ones that need clusters to exist only in the database (`@mock-gardener`) skip.
 
 ```
  your machine: Linux on x86_64 with KVM, or macOS on Apple silicon
@@ -14,7 +14,7 @@ sidebar:
         ▼
  VM: NixOS, 24 GiB, up to 16 vCPU, 200 GB disk for containers
  ┌──────────────────────────────────────────────────────────────────────────┐
- │ k3d-fundament: the platform        kind gardener-operator-local: Gardener │
+ │ k3d-fundament: the platform        kind gardener-local: Gardener          │
  │   organization-api                   virtual garden  projects, shoots     │
  │   cluster-worker  ─── kubeconfig ──► seed            shoot control planes │
  │   kube-api-proxy                     shoot nodes     run as pods too      │
@@ -96,7 +96,7 @@ The shell starts in the VM's checkout, with the repository's tools. Its kube con
 |---|---|
 | `k3d-fundament` | the platform |
 | `kind-gardener-local-garden` | virtual garden: projects and shoots |
-| `kind-gardener-operator-local` | the kind cluster, with one `shoot--<project>--<name>` namespace per shoot |
+| `kind-gardener-local` | the kind cluster, with one `shoot--<project>--<name>` namespace per shoot |
 | `shoot-e2e-base` | the baseline cluster |
 
 `just test-env shoots`, `just test-env logs`, `just test-env gardener-status` and `just test-env shoot-context <cluster-id>` work in the VM only, as do the other `gardener-*` recipes.
@@ -129,7 +129,8 @@ This removes the VM and its disks, and the VM's CA if `just test-env trust` adde
 
 ## Remove a Gardener from your machine
 
-A local Gardener that runs directly on your machine (the kind cluster `gardener-operator-local`) is removed with:
+A local Gardener that runs directly on your machine (the kind cluster `gardener-local`, or
+`gardener-operator-local` from a Gardener before v1.142) is removed with:
 
 ```shell
 just test-env gardener-delete

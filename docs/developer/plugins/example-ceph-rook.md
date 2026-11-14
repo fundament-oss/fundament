@@ -102,9 +102,9 @@ a test file of their own.
 **Create and edit** open in a console sheet over the list and detail pages,
 with `fundament.openSheet()` (see [Sheets](console-integration#sheets)). Every
 `create` and `edit` in `customComponents` names the same `sheet.html`, whose
-`sheet.js` picks the form from the kind and view the console opens it with. The forms
-are built from the shared NLDD Design System bundle the console serves per
-FUN-18. The create pages work on their routed create page too. The Buckets
+`sheet.js` picks the form from the kind and view the console opens it with. Every
+page, forms included, is built from the shared NLDD Design System bundle the
+console serves per FUN-18. The create pages work on their routed create page too. The Buckets
 section opens the `ObjectBucketClaim` create and detail pages the same way,
 handing the create page the store's StorageClass in `params`. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
@@ -140,8 +140,14 @@ file exists, and every `.html` file is referenced.
 Pages are served under the plugin CSP (`script-src 'self'; style-src 'self'`,
 no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `style` attributes** — both are blocked. Events are wired with
-`addEventListener` and styling comes from the `.plugin-*` classes in
-`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()`,
+`addEventListener`, and styling comes from `<nldd-*>` components: every page
+starts with `_shared.js`'s `bootPage()`, which loads the SDK and the NLDD
+bundle side by side. Lists are an `nldd-list` of rows, one button per
+resource, with its phase as a badge (a Disk has no phase, so its row says in
+its supporting text whether a pool claims it); detail pages are `nldd-box` sections of
+label and value rows, as the console's generated detail page draws them. The
+console draws each page's title and back button, so no page has an `<h1>` of
+its own. Navigation goes through `_shared.js`'s `navigateToDetail()`,
 which posts to `window.fundament.parentOrigin` rather than `*`; from a
 consumer or DiskPool create sheet the console closes the sheet and opens the
 new resource. A bucket create sheet instead opens the new claim's detail sheet
@@ -328,7 +334,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: ceph-rook
-    pluginVersion: "0.3.0"
+    pluginVersion: "0.5.0"
     definitionHash: sha256:<hash printed by `just plugins publish storage/ceph-rook`>
 ```
 

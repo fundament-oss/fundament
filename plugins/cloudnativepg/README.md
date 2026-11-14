@@ -84,7 +84,7 @@ plugin-controller skips the plugin's uninstall when its pod is unreachable, so t
 
 After steps 1–3 of [Testing plugins locally](../../docs/developer/plugins/testing-plugins-locally.md), from the repository root:
 
-1. `PLUGIN_REGISTRY=localhost:5112 just plugins publish cloudnativepg`
+1. `PLUGIN_REGISTRY=localhost:5112 just plugins publish cloudnativepg --submit`, then approve it ([step 5](../../docs/developer/plugins/testing-plugins-locally.md#5-install)): the sandbox installs a `system` version only once it is approved.
 2. Install `system--cloudnativepg` (step 5) with the printed version and hash.
 3. `just plugins cloudnativepg test`
 4. `just plugins cloudnativepg test-cleanup`

@@ -6,16 +6,21 @@
 // each page file reduces to a factory call with its kind's config.
 
 import {
-  loadSdk,
+  bootPage,
+  emptyStateHtml,
   errorBox,
   fetchCephCapacity,
+  hintHtml,
   humanizeQuantity,
   escapeHtml,
-  emptyRow,
-  errorRow,
-  wireRowLinks,
+  latestRead,
+  loadingHtml,
   navigateToDetail,
-  renderDefList,
+  phaseBadgeHtml,
+  renderKeyValueList,
+  resourceListHtml,
+  sectionHtml,
+  wireListRows,
   replicasFieldHtml,
   replicasValue,
   defaultFieldHtml,
@@ -39,7 +44,6 @@ const METADATA_SERVERS = {
   name: 'metadataServers',
   id: 'mds-count',
   label: 'Metadata servers',
-  column: 'MDS',
   hint: 'Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.',
   min: 1,
   max: 5,
@@ -50,7 +54,6 @@ const GATEWAY_INSTANCES = {
   name: 'gatewayInstances',
   id: 'rgw-count',
   label: 'Gateway instances',
-  column: 'Gateways',
   hint: 'Gateway pods serving the S3 API. 1 is right unless request throughput demands more.',
   min: 1,
   max: 5,
@@ -61,7 +64,8 @@ export const BLOCKSTORAGE = {
   resource: 'blockstorages',
   kind: 'BlockStorage',
   label: 'Block Storage',
-  emptyMessage: 'No block storage.',
+  labelMidSentence: 'block storage',
+  emptyMessage: 'No block storage yet',
   noneSelected: 'No block storage selected.',
   storageClassPrefix: 'ceph-',
   detailHint: "Volumes are placed across all of the shared Ceph cluster's disks.",
@@ -77,7 +81,8 @@ export const FILESTORAGE = {
   resource: 'filestorages',
   kind: 'FileStorage',
   label: 'File Storage',
-  emptyMessage: 'No file storage.',
+  labelMidSentence: 'file storage',
+  emptyMessage: 'No file storage yet',
   noneSelected: 'No file storage selected.',
   storageClassPrefix: 'cephfs-',
   detailHint: 'Volumes can be mounted by many pods across nodes.',
@@ -95,7 +100,8 @@ export const OBJECTSTORAGE = {
   resource: 'objectstorages',
   kind: 'ObjectStorage',
   label: 'Object Storage',
-  emptyMessage: 'No object storage.',
+  labelMidSentence: 'object storage',
+  emptyMessage: 'No object storage yet',
   noneSelected: 'No object storage selected.',
   storageClassPrefix: 'cephobj-',
   detailHint: `Create buckets below; each bucket's endpoint and credentials are
@@ -144,107 +150,113 @@ function specFrom(cfg, form) {
 }
 
 export async function consumerListPage(cfg) {
-  // The header row comes from the same cfg.intFields the body cells do, so
-  // the two cannot drift; the HTML ships an empty table shell. Rendered
-  // before the SDK loads so the table never shows headerless.
-  const headers = [
-    'Name', 'Phase', 'Storage Class', 'Replicas',
-    ...cfg.intFields.map((field) => field.column),
-    'Failure Domain', 'Message',
-  ];
-  // Null-guarded: a stale cached pre-0.3.0 page has a static <thead> without
-  // id="head", and throwing here would kill the whole module.
-  const head = document.getElementById('head');
-  if (head) {
-    head.innerHTML = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
-  }
-  const colspan = headers.length;
-  const tbody = document.getElementById('rows');
-  tbody.innerHTML = emptyRow(colspan, 'Loading…');
+  const list = document.getElementById('list');
+  list.innerHTML = loadingHtml(`Loading ${cfg.labelMidSentence}…`);
 
-  await loadSdk();
-  await fundament.init;
+  await bootPage();
 
   document.getElementById('create-btn').addEventListener('click', () => {
     fundament.openSheet({ view: 'create' });
   });
-  fundament.onResourcesChanged(() => renderRows(tbody, cfg, colspan));
+  const nextRead = latestRead();
+  fundament.onResourcesChanged(() => renderList(list, cfg, nextRead()));
 
-  await renderRows(tbody, cfg, colspan);
+  await renderList(list, cfg, nextRead());
 }
 
-// Fills the list's rows; again whenever a sheet over the list saved.
-async function renderRows(tbody, cfg, colspan) {
+// "StorageClass ceph-default · 2 replicas · host failure domain", and why a
+// resource is not Ready when its status says so.
+function summary(item) {
+  const status = item.status ?? {};
+  const parts = [`StorageClass ${status.storageClassName ?? '—'}`];
+  if (status.replicas) parts.push(`${status.replicas} ${status.replicas === 1 ? 'replica' : 'replicas'}`);
+  if (status.failureDomain) parts.push(`${status.failureDomain} failure domain`);
+  if (item.spec?.default) parts.push('default');
+  if (status.message) parts.push(status.message);
+  return parts.join(' · ');
+}
+
+// Fills the list; again whenever a sheet over the list saved. Renders only
+// while isCurrent says no later read has started (see latestRead).
+async function renderList(list, cfg, isCurrent) {
   try {
     const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: cfg.resource });
+    if (!isCurrent()) return;
 
     if (!items || items.length === 0) {
-      tbody.innerHTML = emptyRow(colspan, cfg.emptyMessage);
+      list.innerHTML = emptyStateHtml({
+        icon: 'cylinder-split-slash',
+        text: cfg.emptyMessage,
+        supportingText: 'It needs a disk pool contributing disks first.',
+      });
       return;
     }
-    tbody.innerHTML = items
-      .map((item) => {
-        const status = item.status ?? {};
-        const name = item.metadata?.name ?? '';
-        const intFieldCells = cfg.intFields
-          .map((field) => `<td>${escapeHtml(String(item.spec?.[field.name] ?? field.default))}</td>`)
-          .join('');
-        return `
-          <tr data-name="${escapeHtml(name)}">
-            <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
-            <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
-            <td>${escapeHtml(status.storageClassName ?? '—')}</td>
-            <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
-            ${intFieldCells}
-            <td>${escapeHtml(status.failureDomain ?? '—')}</td>
-            <td>${escapeHtml(status.message ?? '')}</td>
-          </tr>`;
-      })
-      .join('');
-    wireRowLinks(tbody);
+    list.innerHTML = resourceListHtml(
+      items.map((item) => ({
+        name: item.metadata?.name ?? '',
+        supportingText: summary(item),
+        badge: phaseBadgeHtml(item.status?.phase),
+      })),
+      cfg.label,
+    );
+    wireListRows(list, navigateToDetail);
   } catch (err) {
-    tbody.innerHTML = errorRow(colspan, err);
+    if (!isCurrent()) return;
+    list.innerHTML = errorBox(err);
   }
 }
 
 export async function consumerDetailPage(cfg) {
-  await loadSdk();
-  const ctx = await fundament.init;
-
   const content = document.getElementById('content');
-  const heading = document.getElementById('heading');
   const actions = document.getElementById('actions');
+  content.innerHTML = loadingHtml();
+
+  const ctx = await bootPage();
+
   const resource = { ...GROUP_VERSION, resource: cfg.resource };
   const name = ctx.resource?.name;
 
   function renderReadOnly(item) {
     const status = item.status ?? {};
 
+    // The phase is the badge beside the Console's title; the message says why.
     const pairs = [
-      ['Phase', status.phase ?? 'Unknown'],
-      ['Storage Class', status.storageClassName ?? '—'],
+      ['StorageClass', status.storageClassName ?? '—'],
       ['Replicas', String(status.replicas ?? '—')],
     ];
     for (const field of cfg.intFields) {
       pairs.push([field.label, String(item.spec?.[field.name] ?? field.default)]);
     }
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
-    pairs.push(['Failure Domain', status.failureDomain ?? '—']);
+    pairs.push(['Failure domain', status.failureDomain ?? '—']);
     if (status.message) pairs.push(['Message', status.message]);
 
-    return `
-      <h2 class="plugin-heading">Status</h2>
-      ${renderDefList(pairs)}
-      <p class="plugin-hint">${cfg.detailHint}</p>
-      <p class="plugin-hint" data-role="capacity"></p>
-    `;
+    return sectionHtml(
+      'Status',
+      `${renderKeyValueList(pairs, 'Status')}
+      <nldd-spacer size="12"></nldd-spacer>
+      ${hintHtml(cfg.detailHint)}
+      <div data-role="capacity"></div>`,
+    );
   }
 
+  const nextRead = latestRead();
+  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
+  // #extra, outside #content, so showDetail's re-renders never touch it. It is
+  // mounted once, by the first read that renders.
+  const extra = document.getElementById('extra');
+  let extraMounted = false;
+
   async function showDetail() {
+    const isCurrent = nextRead();
     try {
       const item = await fundament.k8s.get({ ...resource, name });
-      heading.textContent = `${cfg.label} · ${item.metadata?.name ?? name}`;
+      if (!isCurrent()) return;
       content.innerHTML = renderReadOnly(item);
+      if (!extraMounted && extra && cfg.detailSection) {
+        extraMounted = true;
+        cfg.detailSection(extra, item, ctx, cfg);
+      }
       actions.hidden = false;
       // .onclick, not addEventListener: this button lives outside #content and
       // survives every re-render, so listeners would stack. (CSP restricts inline
@@ -256,30 +268,27 @@ export async function consumerDetailPage(cfg) {
       // CephCluster status carries the raw numbers.
       fetchCephCapacity().then((cap) => {
         const el = content.querySelector('[data-role="capacity"]');
-        if (!cap || !el) return;
-        el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+        if (!cap || !el || !isCurrent()) return;
+        el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
+          `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
           + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster; `
-          + 'divide by the replica count for usable space.';
+          + 'divide by the replica count for usable space.',
+        ))}`;
       });
-      return item;
     } catch (err) {
+      if (!isCurrent()) return;
       actions.hidden = true;
       content.innerHTML = errorBox(err);
-      return undefined;
     }
   }
 
   if (!name) {
-    content.textContent = cfg.noneSelected;
+    content.innerHTML = errorBox(cfg.noneSelected, 'Cannot show this page');
     return;
   }
   // The edit sheet saved: show what it saved.
   fundament.onResourcesChanged(() => showDetail());
-  const item = await showDetail();
-  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
-  // #extra, outside #content, so showDetail's re-renders never touch it.
-  const extra = document.getElementById('extra');
-  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
+  await showDetail();
 }
 
 // The edit form, which the detail page opens in a sheet (see sheet.js).
@@ -290,7 +299,7 @@ export async function consumerEditPage(cfg, ctx) {
   const resource = { ...GROUP_VERSION, resource: cfg.resource };
   const name = ctx.resource?.name;
   if (!name) {
-    body.textContent = cfg.noneSelected;
+    body.innerHTML = errorBox(cfg.noneSelected, 'Cannot edit');
     return;
   }
 
@@ -365,7 +374,7 @@ export function consumerCreatePage(cfg) {
 
         ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
-        ${formActionsHtml({ submitId: 'submit-btn', submitText: `Create ${cfg.label}`, cancelId: 'cancel-btn' })}
+        ${formActionsHtml({ submitId: 'submit-btn', submitText: `Create ${cfg.labelMidSentence}`, cancelId: 'cancel-btn' })}
       </form>
     </nldd-form>
   `;
@@ -378,7 +387,7 @@ export function consumerCreatePage(cfg) {
   wireSubmit(form, {
     button: body.querySelector('#submit-btn'),
     errorBanner: body.querySelector('#error-banner'),
-    failPrefix: `Failed to create ${cfg.label}`,
+    failPrefix: `Failed to create ${cfg.labelMidSentence}`,
     checks: [
       [nameInput, (value) => resourceNameError(value, cfg.nameMaxLength)],
       ...intFieldChecks(cfg, form),

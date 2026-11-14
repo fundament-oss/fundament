@@ -4,6 +4,8 @@ import {
   kindToLabel,
   kindToSingularLabel,
   labelMidSentence,
+  resourceListLabel,
+  resourceSingularLabelMidSentence,
 } from './crd-schema.utils';
 
 describe('kindToLabel', () => {
@@ -118,5 +120,36 @@ describe('fieldNameToLabel', () => {
 
   it('returns an empty string for an empty name', () => {
     expect(fieldNameToLabel('')).toBe('');
+  });
+});
+
+describe('resourceListLabel', () => {
+  it('prefers the menu label', () => {
+    expect(
+      resourceListLabel({ label: 'Databases' }, 'Cluster', 'clusters.postgresql.cnpg.io'),
+    ).toBe('Databases');
+  });
+
+  it('falls back to the kind', () => {
+    expect(resourceListLabel({}, 'DiskPool', 'diskpools.ceph.fundament.io')).toBe('Disk Pools');
+  });
+
+  it('falls back to the CRD reference without pluralizing it', () => {
+    expect(resourceListLabel(undefined, undefined, 'certificates.cert-manager.io')).toBe(
+      'Certificates',
+    );
+  });
+});
+
+describe('resourceSingularLabelMidSentence', () => {
+  it('prefers the singular menu label', () => {
+    expect(resourceSingularLabelMidSentence({ singularLabel: 'Database' }, 'Cluster')).toBe(
+      'database',
+    );
+  });
+
+  it('falls back to the kind, keeping acronyms', () => {
+    expect(resourceSingularLabelMidSentence(undefined, 'DiskPool')).toBe('disk pool');
+    expect(resourceSingularLabelMidSentence(undefined, 'FSCInstallation')).toBe('FSC installation');
   });
 });

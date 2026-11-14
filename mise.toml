@@ -1,7 +1,7 @@
 [env]
 JUST_ONE = true
 # Local k3d registry for Skaffold image builds
-SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
+SKAFFOLD_DEFAULT_REPO = "localhost:5111"
 # Point functl at the local dev installation, and log at debug level.
 FUNCTL_URL = "https://fundament.localhost:8443"
 FUNCTL_DEBUG = "true"
