@@ -331,7 +331,7 @@ func TestWaitForPluginGone_PollsUntilNotFound(t *testing.T) {
 	defer srv.Close()
 
 	r := &PluginInstallationResource{client: &FundamentClient{KubeProxyURL: srv.URL, KubeProxyHTTPClient: srv.Client()}}
-	require.NoError(t, r.waitForPluginGone(context.Background(), "cluster-abc", "acme--grafana", time.Millisecond))
+	require.NoError(t, r.waitForPluginGone(context.Background(), "cluster-abc", "acme--grafana", time.Millisecond, time.Minute))
 	assert.Equal(t, int32(3), gets.Load())
 }
 
@@ -345,7 +345,7 @@ func TestWaitForPluginGone_TimesOutWithLastPhase(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	err := r.waitForPluginGone(ctx, "cluster-abc", "acme--grafana", time.Millisecond)
+	err := r.waitForPluginGone(ctx, "cluster-abc", "acme--grafana", time.Millisecond, time.Minute)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.ErrorContains(t, err, "Terminating")
 	assert.ErrorContains(t, err, "uninstalling plugin")

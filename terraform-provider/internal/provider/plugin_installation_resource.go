@@ -145,6 +145,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 		Description: "Manages a plugin installation on a Fundament cluster via the kube-api-proxy. " +
 			"Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. " +
 			"Delete waits up to 10 minutes for the plugin to be uninstalled and the installation removed. " +
+			"If plugin-controller has not started uninstalling within 2 minutes, Delete warns and leaves the installation for the controller to remove when it runs again. " +
 			"Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -524,35 +525,14 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	getURL := r.resourceURL(clusterID, name)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, http.NoBody)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
-		return
-	}
-
-	httpResp, err := r.client.KubeProxyHTTPClient.Do(httpReq)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read Plugin Installation", err.Error())
-		return
-	}
-	defer func() { _ = httpResp.Body.Close() }()
-
-	if httpResp.StatusCode == http.StatusNotFound {
+	crd, err := r.fetchCRD(ctx, clusterID, name)
+	if errors.Is(err, errPluginInstallationNotFound) {
 		tflog.Info(ctx, "Plugin installation not found, removing from state", map[string]any{"name": name})
 		resp.State.RemoveResource(ctx)
 		return
 	}
-
-	if httpResp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
-		resp.Diagnostics.AddError("Unable to Read Plugin Installation", fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(respBody)))
-		return
-	}
-
-	var crd pluginInstallationCRD
-	if err := json.NewDecoder(httpResp.Body).Decode(&crd); err != nil {
-		resp.Diagnostics.AddError("Unable to Parse Plugin Installation Response", err.Error())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Plugin Installation", err.Error())
 		return
 	}
 
@@ -700,7 +680,13 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		tflog.Info(ctx, "Plugin installation already gone", map[string]any{"name": name})
 	case http.StatusOK, http.StatusAccepted, http.StatusNoContent:
 		// Wait out the uninstall, so a replacement does not meet the old installation.
-		if err := r.waitForPluginGone(ctx, clusterID, name, 5*time.Second); err != nil {
+		err := r.waitForPluginGone(ctx, clusterID, name, 5*time.Second, 2*time.Minute)
+		if errors.Is(err, errControllerIdle) {
+			resp.Diagnostics.AddWarning("Plugin Installation Not Removed",
+				err.Error()+". It is removed from state, but stays on the cluster until plugin-controller runs again.")
+			return
+		}
+		if err != nil {
 			resp.Diagnostics.AddError("Plugin Installation Not Removed", err.Error())
 			return
 		}
@@ -754,10 +740,10 @@ func (r *PluginInstallationResource) resourceURL(clusterID, name string) string 
 	return r.listURL(clusterID) + "/" + url.PathEscape(name)
 }
 
-// fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
-// name is the installation's metadata.name ("<organization_name>--<plugin_name>").
 var errPluginInstallationNotFound = errors.New("plugin installation not found")
 
+// fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
+// name is the installation's metadata.name ("<organization_name>--<plugin_name>").
 func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, name string) (*pluginInstallationCRD, error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, name), http.NoBody)
 	if err != nil {
@@ -801,15 +787,18 @@ func classifyPluginPhase(phase string) (done, terminal bool) {
 	}
 }
 
-// waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
-// Returns the final phase string on success, or an error.
-// Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
+// errControllerIdle means plugin-controller has not picked up a deletion.
+var errControllerIdle = errors.New("plugin-controller has not started uninstalling")
+
 // waitForPluginGone polls until the installation is gone, which is when the
-// controller has finished uninstalling it and deleted its namespace.
-func (r *PluginInstallationResource) waitForPluginGone(ctx context.Context, clusterID, name string, interval time.Duration) error {
+// controller has finished uninstalling it and deleted its namespace. If the
+// phase is still not Terminating after idleAfter, the controller is not
+// acting on the deletion and the wait ends with errControllerIdle.
+func (r *PluginInstallationResource) waitForPluginGone(ctx context.Context, clusterID, name string, interval, idleAfter time.Duration) error {
 	const maxConsecutiveErrors = 5
 
 	lastPhase, lastMessage := "", ""
+	idleDeadline := time.Now().Add(idleAfter)
 
 	err := pollWithBackoff(ctx, interval, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
 		crdState, err := r.fetchCRD(ctx, clusterID, name)
@@ -820,15 +809,33 @@ func (r *PluginInstallationResource) waitForPluginGone(ctx context.Context, clus
 			return false, false, fmt.Errorf("polling plugin installation removal: %w", err)
 		}
 		lastPhase, lastMessage = crdState.Status.Phase, crdState.Status.Message
+		if lastPhase != "Terminating" && time.Now().After(idleDeadline) {
+			return false, true, fmt.Errorf("%w: plugin %q is still in phase %q after %s", errControllerIdle, name, lastPhase, idleAfter)
+		}
 		return false, false, nil
 	})
 
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return fmt.Errorf("timed out waiting for plugin %q to be removed (last phase: %q, last message: %q): %w", name, lastPhase, lastMessage, err)
-	}
-	return err
+	return pluginWaitError(ctx, err, name, "to be removed", lastPhase, lastMessage)
 }
 
+// pluginWaitError says why a plugin wait ended: its deadline or an
+// interruption, with the installation's last phase and message.
+func pluginWaitError(ctx context.Context, err error, name, goal, lastPhase, lastMessage string) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(ctx.Err(), context.Canceled):
+		return fmt.Errorf("interrupted while waiting for plugin %q %s (last phase: %q, last message: %q): %w", name, goal, lastPhase, lastMessage, ctx.Err())
+	case errors.Is(ctx.Err(), context.DeadlineExceeded):
+		return fmt.Errorf("timed out waiting for plugin %q %s (last phase: %q, last message: %q): %w", name, goal, lastPhase, lastMessage, ctx.Err())
+	default:
+		return err
+	}
+}
+
+// waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
+// Returns the final phase string on success, or an error.
+// Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
 func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, name string) (string, error) {
 	const maxConsecutiveErrors = 5
 
@@ -857,10 +864,7 @@ func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, c
 		}
 	})
 
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q, last message: %q): %w", name, lastPhase, lastMessage, err)
-	}
-	if err != nil {
+	if err := pluginWaitError(ctx, err, name, "to reach Running", lastPhase, lastMessage); err != nil {
 		return "", err
 	}
 	return lastPhase, nil
