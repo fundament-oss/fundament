@@ -20,10 +20,9 @@ just e2e load-seed 60 5       # 300 participants, the margin a 100-participant e
 just e2e load agents -e DURATION=5m
 just e2e load browse
 MAX_OUTAGE=10 just e2e load probe -e DURATION=3m -e RATE=5
-just e2e load-clean           # delete the load-NN organizations
 ```
 
-`just deploy local` resets the databases, so seed again after each deploy. Seeding
+`just deploy local` resets the databases and with them the participants, so seed again after each deploy. Seeding
 again without a deploy reuses the organizations and issues new API keys. `agents`
 refuses more agents than seeded participants: two agents on one participant would
 share its key and rows, which no real participant does.
@@ -37,14 +36,14 @@ next row only show on such a table.
 A run passes when all of these hold:
 
 - **k6 thresholds**:
-  - `agents` and `browse`: no failed request, and p95 latency per call under `P95_MS` (500 ms).
+  - `agents` and `browse`: no failed request, and p95 latency per call under `P95_MS` (500 ms). A `browse` stress phase has neither: it is meant to find where the stack gives out.
   - `agents` and `probe`: no failed content check, and the checks actually ran: a run whose requests all fail cannot pass on zero content failures.
-  - `probe`: no dropped iterations.
-- **The database**, sampled every 2 s by the recipe:
-  - connections stay under 90 % of `max_connections` (`MAX_CONN`);
+  - `probe`: no dropped iterations, and without `MAX_OUTAGE` no failed request.
+- **The database**, sampled every 2 s by the recipe, with no gap over 10 s:
+  - client connections to the instance stay under 90 % of `max_connections` (`MAX_CONN`);
   - the oldest unprocessed authz outbox row stays under 5 s (`MAX_LAG`). Beyond that, organization-api's circuit breaker refuses every request.
 - **The end state**, after authz-worker has caught up: no unprocessed or failed outbox rows, and no project of this run left undeleted.
-- **`probe` only**: no call fails for longer than `MAX_OUTAGE` seconds. A disruption may refuse requests for a while, but must not leave anything in a wrong state.
+- **`probe` with `MAX_OUTAGE`**: no call fails for longer than `MAX_OUTAGE` seconds. A disruption may refuse requests for a while, but must not leave anything in a wrong state.
 
 After k6's summary, `report.ts` prints:
 - the failures per call and status, with an example;
@@ -73,7 +72,8 @@ Pass these to k6 with `-e NAME=value`; `MAX_OUTAGE`, `MAX_LAG` and `MAX_CONN` go
 | Variable | Scenario | Default |
 |---|---|---|
 | `AGENTS`, `CONSOLES` | agents | one per participant |
-| `DURATION`, `RAMP` | agents, probe | `10m` and `2m`; probe `5m`. Use minutes or seconds, not both |
+| `DURATION` | agents, probe | agents `10m`, probe `5m`; for probe one unit, such as `90s`, `5m` or `1h` |
+| `RAMP` | agents | `2m` |
 | `THINK_MIN`, `THINK_MAX` | agents | 0.5 s and 3 s between an agent's steps, shorter than an LLM turn |
 | `REUSE=1` | agents | keep connections open instead of one per request |
 | `PHASES`, `STRESS_MAX` | browse | `storm,browse`; add `stress` to ramp page views to `STRESS_MAX` (400/s) until the stack gives out |

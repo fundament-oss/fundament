@@ -14,9 +14,10 @@
 //   browser  one per 2 s: the console's login through authn /login, Dex's
 //            form and /callback, then GetUserInfo on the cookie alone.
 //
-// Refused requests are judged by report.ts, against MAX_OUTAGE: a disruption
-// may refuse requests for a while, but every content check must hold, and
-// enough of them must run.
+// Without MAX_OUTAGE every request must succeed. With it, refused requests are
+// judged by report.ts: a disruption may refuse requests for up to MAX_OUTAGE
+// seconds per call. Either way every content check must hold, and enough of
+// them must run.
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { Trend } from 'k6/metrics';
@@ -30,16 +31,20 @@ const duration = __ENV.DURATION || '5m';
 const rate = Number(__ENV.RATE || 1);
 const grantVisible = new Trend('grant_visible_ms', true);
 
-// Half of the read cycles' checks, so a run where most cycles end early on a
-// failed request does not pass on the few checks that ran.
-const seconds = Number(/^(\d+)m$/.exec(duration)?.[1] || 0) * 60 + Number(/^(\d+)s$/.exec(duration)?.[1] || 0);
-const minChecks = Math.floor((seconds * rate) / 2);
+// Half of the read cycles' checks (three per cycle), counted in reads alone, so
+// a run where most read cycles end early on a failed request does not pass on
+// the checks the writes and browser logins made.
+const unit = /^(\d+)(s|m|h)$/.exec(duration);
+if (!unit) throw new Error(`DURATION=${duration}: use one unit, such as 90s, 5m or 1h`);
+const seconds = Number(unit[1]) * { s: 1, m: 60, h: 3600 }[unit[2]];
+const minChecks = Math.floor((seconds * rate * 3) / 2);
 
 export const options = {
   ...baseOptions,
   thresholds: {
+    ...(__ENV.MAX_OUTAGE ? {} : { http_req_failed: ['rate==0'] }),
     content_failures: ['count==0'],
-    content_checks: [`count>=${minChecks}`],
+    [`content_checks{scenario:reads}`]: [`count>=${minChecks}`],
     dropped_iterations: ['count==0'],
     ...latency(['login', 'console', 'userinfo', 'clusters', 'projects', 'b:submit'], Number(__ENV.P95_MS || 500)),
   },
@@ -80,8 +85,9 @@ export function reads() {
   }
   const d = session('david@globex.com');
   if (d) {
+    // A 200 is another organization's data: a failed check, not a refusal.
     const r = keep('david@globex.com', rpc('deny', URLS.org, 'organization.v1.ClusterService/ListClusters', d.token, ACME, {}, [403, 401]));
-    if (r.status === 403) check('deny', bodyOf(r).code === 'permission_denied', r.body);
+    if (r.status === 200 || r.status === 403) check('deny', r.status === 403 && bodyOf(r).code === 'permission_denied', `david got ${r.status} on acme-corp`);
   }
 }
 

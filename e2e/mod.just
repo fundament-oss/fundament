@@ -37,18 +37,11 @@ load-seed teams="20" per="5": _load-funops
     export FUNOPS="$PWD/reports/load/funops" FUNOPS_DB_HOST=localhost:54328
     export FUNOPS_DB_PASSWORD=$(kubectl --context {{ load_ctx }} get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' | {{ load_base64 }})
     export JWT_SECRET=$(kubectl --context {{ load_ctx }} get deploy -n fundament authn-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="JWT_SECRET")].value}')
-    NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" bun load/seed.ts seed {{ teams }} {{ per }} reports/load/participants.json
-
-# Delete the organizations load-seed created
-load-clean: _load-funops
-    #!/usr/bin/env bash
-    set -euo pipefail
-    export FUNOPS="$PWD/reports/load/funops" FUNOPS_DB_HOST=localhost:54328 JWT_SECRET=unused
-    export FUNOPS_DB_PASSWORD=$(kubectl --context {{ load_ctx }} get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' | {{ load_base64 }})
-    bun load/seed.ts clean
+    NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" bun load/seed.ts {{ teams }} {{ per }} reports/load/participants.json
 
 # Add ROWS processed rows to the authz outbox: the history of an installation that has run for a while
 load-volume rows="2000000":
+    @case "{{ rows }}" in "" | *[!0-9]*) echo "rows must be a whole number" >&2; exit 1 ;; esac
     @just e2e _load-sql "insert into authz.outbox (project_id, created, processed, status) select (select id from tenant.projects where deleted is null order by created limit 1), now() - interval '30 days' + g * interval '1 second', now() - interval '30 days' + g * interval '1 second', 'completed' from generate_series(1, {{ rows }}) g"
 
 # Run a load scenario (agents, browse, probe); extra args go to k6, e.g. -e AGENTS=300. Samples the database meanwhile, then checks the end state
@@ -63,12 +56,14 @@ load scenario *args:
     sql() { just e2e _load-sql "$1"; }
     unprocessed="select count(*) from authz.outbox where processed is null and status in ('pending', 'retrying')"
 
-    # Every 2 s: connections, max_connections, unprocessed outbox rows, the
-    # oldest one's age in seconds (what organization-api's breaker reads),
-    # failed rows, and connections per database user.
+    # Every 2 s: client connections to the instance (OpenFGA's database too),
+    # max_connections, unprocessed outbox rows, the oldest one's age in seconds
+    # (what organization-api's breaker reads), failed rows, and connections per
+    # database user. A sample is lost when the query fails; report.ts fails on
+    # the gap.
     while :; do
-        row=$(sql "select (select count(*) from pg_stat_activity where datname = 'fundament'), current_setting('max_connections'), ($unprocessed), (select coalesce(extract(epoch from now() - min(created)), 0)::numeric(10, 1) from authz.outbox where processed is null and status in ('pending', 'retrying')), (select count(*) from authz.outbox where status = 'failed'), (select string_agg(u || '=' || n, ' ' order by n desc) from (select usename u, count(*) n from pg_stat_activity where datname = 'fundament' group by usename) x)" 2>/dev/null) \
-            && echo "$(date +%s%3N),$row" >> "$out/{{ scenario }}-db.csv"
+        row=$(sql "select (select count(*) from pg_stat_activity where backend_type = 'client backend'), current_setting('max_connections'), ($unprocessed), (select coalesce(extract(epoch from now() - min(created)), 0)::numeric(10, 1) from authz.outbox where processed is null and status in ('pending', 'retrying')), (select count(*) from authz.outbox where status = 'failed'), (select string_agg(u || '=' || n, ' ' order by n desc) from (select usename u, count(*) n from pg_stat_activity where backend_type = 'client backend' group by usename) x)" 2>/dev/null) \
+            && echo "$(date +%s),$row" >> "$out/{{ scenario }}-db.csv"
         sleep 2
     done &
     sampler=$!
@@ -76,7 +71,7 @@ load scenario *args:
 
     edge=$(docker inspect -f '{{{{(index .NetworkSettings.Networks "k3d-fundament").IPAddress}}' k3d-fundament-server-0)
     docker run --rm --network k3d-fundament -u "$(id -u)" \
-        -e EDGE="$edge" -e INSECURE=1 -e RUN="$run" -e PEOPLE=/reports/participants.json \
+        -e EDGE="$edge" -e INSECURE=1 -e RUN="$run" -e MAX_OUTAGE="${MAX_OUTAGE:-}" -e PEOPLE=/reports/participants.json \
         -v "$PWD/load:/scripts:ro" -v "$out:/reports" grafana/k6:1.4.2 \
         run --log-format raw --log-output "file=/reports/{{ scenario }}-events.jsonl" \
         --summary-export "/reports/{{ scenario }}.summary.json" {{ args }} "/scripts/{{ scenario }}.js"

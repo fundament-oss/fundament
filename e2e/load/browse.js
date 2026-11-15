@@ -6,7 +6,7 @@
 //           once, polls ListClusters every 5 s and views a page every fourth
 //           poll
 //   stress  page views without pauses, ramping to STRESS_MAX per second, to
-//           find where the stack gives out. It has no threshold: it is
+//           find where the stack gives out. It has no thresholds: it is
 //           expected to fail at the top.
 import { sleep } from 'k6';
 import { URLS, baseOptions, latency, login, pageView, rpc } from './lib.js';
@@ -48,22 +48,17 @@ const all = {
 
 const scenarios = {};
 const thresholds = {};
+const p95 = Number(__ENV.P95_MS || 500);
 let offset = 0;
 for (const p of phases) {
   const { seconds, ...scenario } = all[p];
   scenarios[p] = { ...scenario, startTime: `${offset}s` };
   offset += seconds + 15;
-  if (p !== 'stress') thresholds[`http_req_failed{scenario:${p}}`] = ['rate==0'];
+  if (p === 'stress') continue;
+  thresholds[`http_req_failed{scenario:${p}}`] = ['rate==0'];
+  Object.assign(thresholds, latency(['login', 'console', 'userinfo', 'orgs', 'clusters', 'projects', 'poll'], p95, p));
 }
-export const options = {
-  ...baseOptions,
-  scenarios,
-  // Latency is summed over all phases, so a stress phase leaves it out.
-  thresholds: {
-    ...thresholds,
-    ...(phases.includes('stress') ? {} : latency(['login', 'console', 'userinfo', 'orgs', 'clusters', 'projects', 'poll'], Number(__ENV.P95_MS || 500))),
-  },
-};
+export const options = { ...baseOptions, scenarios, thresholds };
 
 export function storm() {
   const s = login(USERS[Math.floor(Math.random() * USERS.length)]);

@@ -1,11 +1,10 @@
 /**
  * Participants for agents.js on the local deployment: organizations load-NN,
  * each with PER admins (load-NN-K@fieldlab.test), one cluster with a node pool,
- * and an API key per participant. Run it through `just e2e load-seed` and
- * `just e2e load-clean`, which set the environment below.
+ * and an API key per participant. Run it through `just e2e load-seed`, which
+ * sets the environment below.
  *
- *   bun load/seed.ts seed <teams> <per-team> <out.json>
- *   bun load/seed.ts clean
+ *   bun load/seed.ts <teams> <per-team> <out.json>
  *
  *   FUNOPS                  path of a built funops binary
  *   FUNOPS_DB_HOST          host:port of the database funops connects to
@@ -130,15 +129,6 @@ async function seed(teams: number, perTeam: number, out: string) {
   console.log(`${people.length} participants in ${out}; their API keys and sessions expire in 24 h`);
 }
 
-function clean() {
-  for (const o of funops('organization', 'list') ?? []) {
-    if (!o.name.startsWith(prefix)) continue;
-    funops('organization', 'delete', o.name);
-    console.log(`deleted ${o.name}`);
-  }
-}
-
-const [mode, ...args] = process.argv.slice(2);
-if (mode === 'seed') await seed(Number(args[0]), Number(args[1]), args[2]);
-else if (mode === 'clean') clean();
-else throw new Error('usage: seed.ts seed <teams> <per-team> <out.json> | seed.ts clean');
+const [teams, perTeam, out] = process.argv.slice(2);
+if (!out) throw new Error('usage: seed.ts <teams> <per-team> <out.json>');
+await seed(Number(teams), Number(perTeam), out);

@@ -15,7 +15,7 @@ export const URLS = {
 };
 
 // Tags names this run creates, so a rerun does not collide with what an
-// aborted run left behind, and `just e2e load-verify` finds them.
+// aborted run left behind, and the recipe's end-state check finds them.
 export const RUN = __ENV.RUN || 'r0';
 
 // EDGE, when set, sends every request to that address. Locally it is the k3d
@@ -123,7 +123,9 @@ export function pageView(s) {
   if (id) rpc('projects', URLS.org, 'organization.v1.ProjectService/ListProjects', s.token, s.org, { clusterId: id });
 }
 
-// p95 per call name; the names also make k6 print each call's latency.
-export function latency(names, p95ms) {
-  return Object.fromEntries(names.map((n) => [`http_req_duration{name:${n}}`, [`p(95)<${p95ms}`]]));
+// p95 per call name, within one scenario when given; the names also make k6
+// print each call's latency.
+export function latency(names, p95ms, scenario) {
+  const tag = scenario ? `,scenario:${scenario}` : '';
+  return Object.fromEntries(names.map((n) => [`http_req_duration{name:${n}${tag}}`, [`p(95)<${p95ms}`]]));
 }

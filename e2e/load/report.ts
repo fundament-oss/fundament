@@ -19,9 +19,18 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const [dir, scenario] = process.argv.slice(2);
-const maxOutage = process.env.MAX_OUTAGE ? Number(process.env.MAX_OUTAGE) : undefined;
-const maxLag = Number(process.env.MAX_LAG ?? 5);
-const maxConn = Number(process.env.MAX_CONN ?? 0.9);
+
+// A limit that is not a number would make every comparison false and pass.
+function limit(name: string, fallback?: number): number | undefined {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${name}=${raw} is not a number`);
+  return value;
+}
+const maxOutage = limit('MAX_OUTAGE');
+const maxLag = limit('MAX_LAG', 5)!;
+const maxConn = limit('MAX_CONN', 0.9)!;
 const breaches: string[] = [];
 
 type Event = { t: number; kind: 'fail' | 'ok' | 'check'; name: string; status: number | string; detail?: string };
@@ -42,23 +51,24 @@ const events: Event[] = lines(`${scenario}-events.jsonl`).flatMap((l) => {
 });
 
 // Failures per call and status, with one example each.
-const failures = new Map<string, { count: number; detail?: string }>();
+const failures = new Map<string, { name: string; status: Event['status']; count: number; detail?: string }>();
 for (const e of events.filter((e) => e.kind !== 'ok')) {
-  const key = `${e.name}\t${e.status}`;
-  const f = failures.get(key) ?? { count: 0, detail: e.detail };
+  const key = JSON.stringify([e.name, e.status]);
+  const f = failures.get(key) ?? { name: e.name, status: e.status, count: 0, detail: e.detail };
   f.count++;
   failures.set(key, f);
 }
 console.log('\n== failures by call and status');
 if (failures.size === 0) console.log('none');
-for (const [key, f] of [...failures].sort((a, b) => b[1].count - a[1].count)) {
-  console.log(`${String(f.count).padStart(8)}  ${key.replace('\t', '  ')}  ${(f.detail ?? '').replace(/\s+/g, ' ').slice(0, 100)}`);
+for (const f of [...failures.values()].sort((a, b) => b.count - a.count)) {
+  console.log(`${String(f.count).padStart(8)}  ${f.name}  ${f.status}  ${(f.detail ?? '').replace(/\s+/g, ' ').slice(0, 100)}`);
 }
 
 // Longest outage per call: from a failure to the next success of that call
-// by any VU. Successes are logged once a second per VU (HEARTBEAT=1), so the
-// bound is about a second coarse.
+// by any VU. A scenario that calls heartbeat() logs successes once a second
+// per VU, so the bound is about a second coarse.
 if (maxOutage !== undefined) {
+  if (!events.some((e) => e.kind === 'ok')) breaches.push('no successful request was logged, so no outage can be measured');
   const byName = new Map<string, Event[]>();
   for (const e of events.filter((e) => e.kind === 'fail' || e.kind === 'ok')) {
     byName.set(e.name, [...(byName.get(e.name) ?? []), e]);
@@ -85,9 +95,14 @@ if (maxOutage !== undefined) {
   }
 }
 
-// Database peaks from the samples.
+// Database peaks from the samples. Without them the limits cannot be checked.
 const samples = lines(`${scenario}-db.csv`).map((l) => l.split(','));
-if (samples.length > 0) {
+if (samples.length === 0) breaches.push(`no database samples in ${scenario}-db.csv`);
+else {
+  // A failed sample query leaves a gap, most likely while Postgres is full.
+  const times = samples.map((s) => Number(s[0])).sort((a, b) => a - b);
+  const gap = Math.max(0, ...times.slice(1).map((t, i) => t - times[i]));
+  if (gap > 10) breaches.push(`no database sample for ${gap} s`);
   const num = (i: number) => samples.map((s) => Number(s[i])).filter((n) => !Number.isNaN(n));
   const peak = (i: number) => Math.max(...num(i));
   const conns = peak(1);
@@ -102,15 +117,16 @@ if (samples.length > 0) {
   if (lag > maxLag) breaches.push(`oldest unprocessed authz outbox row reached ${lag.toFixed(1)} s`);
 }
 
-// End state after the run has settled.
+// End state after the run has settled; each field must be there and a number.
 const verify = Object.fromEntries(lines(`${scenario}-verify.txt`).map((l) => l.split('=', 2)));
-if (Object.keys(verify).length > 0) {
-  console.log('\n== end state');
-  for (const [k, v] of Object.entries(verify)) console.log(`${k.padEnd(28)} ${v}`);
-  if (Number(verify.outbox_unprocessed) > 0) breaches.push(`${verify.outbox_unprocessed} authz outbox rows still unprocessed`);
-  if (Number(verify.outbox_failed) > 0) breaches.push(`${verify.outbox_failed} authz outbox rows failed during the run`);
-  if (Number(verify.projects_left) > 0) breaches.push(`${verify.projects_left} projects of this run were not deleted`);
+console.log('\n== end state');
+for (const [k, v] of Object.entries(verify)) console.log(`${k.padEnd(28)} ${v}`);
+for (const k of ['outbox_unprocessed', 'outbox_failed', 'projects_left']) {
+  if (verify[k] === undefined || verify[k] === '' || !Number.isFinite(Number(verify[k]))) breaches.push(`end state ${k} is missing or not a number`);
 }
+if (Number(verify.outbox_unprocessed) > 0) breaches.push(`${verify.outbox_unprocessed} authz outbox rows still unprocessed`);
+if (Number(verify.outbox_failed) > 0) breaches.push(`${verify.outbox_failed} authz outbox rows failed during the run`);
+if (Number(verify.projects_left) > 0) breaches.push(`${verify.projects_left} projects of this run were not deleted`);
 
 if (breaches.length > 0) {
   console.log(`\n== FAILED\n${breaches.map((b) => `- ${b}`).join('\n')}`);
