@@ -1,6 +1,6 @@
 {{- if and $.Values.authzWorker.enabled }}
 {{- if gt (int $.Values.authzWorker.replicas) 1 }}
-{{- fail "authzWorker.replicas must be 1: two workers apply one subject's outbox rows out of order and can leave a stale grant in OpenFGA" }}
+{{- fail "authzWorker.replicas must be 0 or 1: two workers apply one subject's outbox rows out of order and can leave a stale grant in OpenFGA" }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -12,10 +12,11 @@ metadata:
   annotations:
     reloader.stakater.com/auto: "true"
 spec:
-  replicas: 1
-  # A rollout stops the old worker before it starts the new one. Not Recreate:
-  # an existing Deployment keeps the rollingUpdate the API server defaulted, and
-  # server-side apply refuses Recreate next to it.
+  replicas: {{ $.Values.authzWorker.replicas }}
+  # A rollout starts stopping the old worker before it creates the new one, so
+  # the two overlap only while the old one finishes its current row. Not
+  # Recreate: an existing Deployment keeps the rollingUpdate the API server
+  # defaulted, and server-side apply refuses Recreate next to it.
   strategy:
     type: RollingUpdate
     rollingUpdate:
