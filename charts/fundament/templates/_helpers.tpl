@@ -58,9 +58,9 @@ lifecycle:
 
 {{/*
 PodDisruptionBudget for a Deployment with more than one replica: a node drain
-evicts one pod at a time. A single replica gets none, because a budget on one
-pod blocks every drain. AlwaysAllow lets a drain evict a pod that is not Ready,
-so a crash-looping pod does not hold up node maintenance.
+evicts one pod at a time. A single replica gets none: with maxUnavailable 1 a
+budget on one pod protects nothing. AlwaysAllow lets a drain evict a pod that
+is not Ready, so a crash-looping pod does not hold up node maintenance.
 Usage: include "fundament.podDisruptionBudget" (dict "root" $ "name" "authn-api" "component" "backend" "replicas" $.Values.authnApi.replicas)
 */}}
 {{- define "fundament.podDisruptionBudget" -}}
