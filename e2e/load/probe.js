@@ -85,8 +85,10 @@ export function reads() {
   }
   const d = session('david@globex.com');
   if (d) {
-    // A 200 is another organization's data: a failed check, not a refusal.
-    const r = keep('david@globex.com', rpc('deny', URLS.org, 'organization.v1.ClusterService/ListClusters', d.token, ACME, {}, [403, 401]));
+    // A 200 is another organization's data: a failed check, not a refusal. A
+    // 401 is a failed request, so a session that stays broken cannot skip the
+    // check; keep() logs in again for the next cycle.
+    const r = keep('david@globex.com', rpc('deny', URLS.org, 'organization.v1.ClusterService/ListClusters', d.token, ACME, {}, 403));
     if (r.status === 200 || r.status === 403) check('deny', r.status === 403 && bodyOf(r).code === 'permission_denied', `david got ${r.status} on acme-corp`);
   }
 }

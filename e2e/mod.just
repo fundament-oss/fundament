@@ -76,6 +76,7 @@ load scenario *args:
         run --log-format raw --log-output "file=/reports/{{ scenario }}-events.jsonl" \
         --summary-export "/reports/{{ scenario }}.summary.json" {{ args }} "/scripts/{{ scenario }}.js"
     k6=$?
+    end=$(date +%s)
     kill $sampler 2>/dev/null
 
     # Let authz-worker finish what the run queued, then record the end state.
@@ -85,6 +86,8 @@ load scenario *args:
         sleep 2
     done
     {
+        echo "run_start=$start"
+        echo "run_end=$end"
         echo "outbox_unprocessed=$left"
         echo "outbox_failed=$(sql "select count(*) from authz.outbox where status = 'failed' and created >= to_timestamp($start)")"
         echo "projects_left=$(sql "select count(*) from tenant.projects where deleted is null and (name like 'l$run-%' or name like 'p$run-%')")"

@@ -95,13 +95,18 @@ if (maxOutage !== undefined) {
   }
 }
 
+// The end state and the run's start and end, key=value per line.
+const verify = Object.fromEntries(lines(`${scenario}-verify.txt`).map((l) => l.split('=', 2)));
+
 // Database peaks from the samples. Without them the limits cannot be checked.
 const samples = lines(`${scenario}-db.csv`).map((l) => l.split(','));
 if (samples.length === 0) breaches.push(`no database samples in ${scenario}-db.csv`);
 else {
-  // A failed sample query leaves a gap, most likely while Postgres is full.
+  // A failed sample query leaves a gap, most likely while Postgres is full,
+  // also before the first sample or after the last one.
   const times = samples.map((s) => Number(s[0])).sort((a, b) => a - b);
-  const gap = Math.max(0, ...times.slice(1).map((t, i) => t - times[i]));
+  const bounds = [Number(verify.run_start) || times[0], ...times, Number(verify.run_end) || times[times.length - 1]];
+  const gap = Math.max(0, ...bounds.slice(1).map((t, i) => t - bounds[i]));
   if (gap > 10) breaches.push(`no database sample for ${gap} s`);
   const num = (i: number) => samples.map((s) => Number(s[i])).filter((n) => !Number.isNaN(n));
   const peak = (i: number) => Math.max(...num(i));
@@ -118,10 +123,9 @@ else {
 }
 
 // End state after the run has settled; each field must be there and a number.
-const verify = Object.fromEntries(lines(`${scenario}-verify.txt`).map((l) => l.split('=', 2)));
 console.log('\n== end state');
 for (const [k, v] of Object.entries(verify)) console.log(`${k.padEnd(28)} ${v}`);
-for (const k of ['outbox_unprocessed', 'outbox_failed', 'projects_left']) {
+for (const k of ['run_start', 'run_end', 'outbox_unprocessed', 'outbox_failed', 'projects_left']) {
   if (verify[k] === undefined || verify[k] === '' || !Number.isFinite(Number(verify[k]))) breaches.push(`end state ${k} is missing or not a number`);
 }
 if (Number(verify.outbox_unprocessed) > 0) breaches.push(`${verify.outbox_unprocessed} authz outbox rows still unprocessed`);
