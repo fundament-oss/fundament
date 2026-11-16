@@ -10,6 +10,7 @@ spec:
   secretName: fundament-local-tls
   dnsNames:
     - "*.fundament.localhost"
+    - fundament.localhost
   issuerRef:
     kind: ClusterIssuer
     name: mkcert-local

@@ -73,6 +73,7 @@ func newFakeAPI(t *testing.T) (orgHeaders func() []string) {
 	t.Cleanup(server.Close)
 
 	t.Setenv("FUNCTL_CONFIG_DIR", t.TempDir())
+	t.Setenv(config.EnvURL, "")
 	t.Setenv(config.EnvAPIEndpoint, server.URL)
 	t.Setenv(config.EnvAuthnURL, server.URL)
 	t.Setenv("FUNDAMENT_API_KEY", "fun_test")

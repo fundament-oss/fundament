@@ -62,12 +62,10 @@ just functl auth login <API_KEY>
 just functl org set <organization-id>
 ```
 
-**Plugin in its own project**: point functl at the local endpoints; without them it talks to `fundament-poc.nl`.
+**Plugin in its own project**: point functl at the local installation; without it functl talks to `fundament-poc.nl`. The local installation serves its discovery document through the local gateway, so on a cluster created before that existed run `just setup-gateway` once from the Fundament repository root and redeploy.
 
 ```shell
-export FUNCTL_API_ENDPOINT=https://organization.fundament.localhost:8443
-export FUNCTL_AUTHN_URL=https://authn.fundament.localhost:8443
-export FUNCTL_REGISTRY_URL=https://marketplace-registry-api.fundament.localhost:8443
+export FUNCTL_URL=https://fundament.localhost:8443
 functl auth login <API_KEY>
 functl org set <organization-id>
 ```
