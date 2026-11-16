@@ -111,6 +111,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
               [crdKind]="open.kind"
               [view]="open.view"
               [clusterId]="clusterId()"
+              [projectId]="projectId()"
               [resourceName]="open.resource?.name"
               [resourceNamespace]="open.resource?.namespace"
               [params]="open.params"

@@ -120,10 +120,14 @@ export default class ContextMenuComponent {
       case 'cluster': {
         const base = `/clusters/${context.clusterId}`;
         const cluster = this.organizationData.getClusterById(context.clusterId)?.cluster;
-        // Not before the projects are in: a 0 that turns into 3 a moment later
-        // says something about the cluster that was never true.
+        // Not before the projects are in, nor for a cluster whose list failed:
+        // a 0 there says something about the cluster that was never true.
         const projectCount =
-          cluster && this.organizationData.projectsLoaded() ? cluster.projects.length : null;
+          cluster &&
+          this.organizationData.projectsSettled() &&
+          !this.organizationData.projectLoadFailures().has(context.clusterId)
+            ? cluster.projects.length
+            : null;
         return [
           item(`${base}/general`, 'kubernetes', 'Cluster overview'),
           item(`${base}/projects`, 'folder', 'Projects', { count: projectCount }),

@@ -222,21 +222,30 @@ describe('PluginRegistryService', () => {
       of({
         definition: {
           metadata: { name: 'cert-manager', displayName: 'Cert Manager', version: 'v1.0.0' },
-          menu: { organization: [{ crd: 'issuers.cert-manager.io', label: '', icon: '' }] },
-          crds: ['issuers.cert-manager.io'],
+          menu: { organization: [{ crd: 'clusterissuers.cert-manager.io', label: '', icon: '' }] },
+          crds: ['clusterissuers.cert-manager.io'],
           customComponents: {},
           allowedResources: [],
         },
       }),
+    );
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      isCrdRead(url)
+        ? new Response(
+            JSON.stringify({ spec: { names: { kind: 'ClusterIssuer' }, scope: 'Cluster' } }),
+            { status: 200 },
+          )
+        : new Response(JSON.stringify({ items }), { status: 200 }),
     );
 
     await registry.loadPlugins('cl-1');
     await vi.advanceTimersByTimeAsync(0);
 
     expect(registry.allPlugins()[0].menu.organization?.map((e) => e.crd)).toEqual([
-      'issuers.cert-manager.io',
+      'clusterissuers.cert-manager.io',
     ]);
-    expect(registry.crdKind('issuers.cert-manager.io')).toBe('Certificate');
+    expect(registry.crdKind('clusterissuers.cert-manager.io')).toBe('ClusterIssuer');
+    expect(registry.crdScope('clusterissuers.cert-manager.io')).toBe('Cluster');
   });
 
   it('leaves the kind unknown when the CRD cannot be read', async () => {

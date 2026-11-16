@@ -145,12 +145,12 @@ export default class NewProjectComponent {
     // Each opening starts over: the component outlives the sheet (the shell
     // defers it once and keeps it), so the cluster list is fetched again, as a
     // cluster may have been added since, and the choice made last time does
-    // not carry over.
+    // not carry over. A scoped sheet has nothing to choose, so no list.
     effect(() => {
       if (!this.show()) return;
       untracked(() => {
         this.projectForm.patchValue({ clusterId: this.fixedCluster()?.id ?? '' });
-        this.loadClusters();
+        if (!this.scoped()) this.loadClusters();
       });
     });
 

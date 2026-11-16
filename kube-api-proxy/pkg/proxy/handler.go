@@ -98,6 +98,18 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 		}
 	}
 
+	// Store cluster ID in context for the multi-cluster proxy. A request the
+	// cluster answers with 401 runs again with a fresh SA token.
+	forward := func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
+		if s.tokenCache != nil {
+			ctx = kube.WithTokenRetry(ctx, func(w http.ResponseWriter) {
+				s.retryUserRequest(w, r.WithContext(userCtx), claims.UserID(), clusterID)
+			})
+		}
+		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
+	}
+
 	// --- Project list (console) ---
 
 	projectID, isProjectList, err := parseProjectList(r)
@@ -112,8 +124,8 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 			writeProjectNamespacesError(w, err)
 			return
 		}
-		ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
-		serveProjectList(w, r.WithContext(ctx), namespaces, s.kubeHandler.ServeHTTP)
+		// Per namespace, so each sub-request gets the token retry.
+		serveProjectList(w, r.WithContext(ctx), namespaces, forward)
 		return
 	}
 
@@ -130,16 +142,7 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 
 	// --- Proxy to Kubernetes API ---
 
-	// Store cluster ID in context for the multi-cluster proxy.
-	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
-	if s.tokenCache != nil {
-		ctx = kube.WithTokenRetry(ctx, func(w http.ResponseWriter) {
-			s.retryUserRequest(w, r.WithContext(userCtx), claims.UserID(), clusterID)
-		})
-	}
-	r = r.WithContext(ctx)
-
-	s.kubeHandler.ServeHTTP(w, r)
+	forward(w, r.WithContext(ctx))
 }
 
 // servesNamespaceList and servesAccessReview report whether the proxy answers r

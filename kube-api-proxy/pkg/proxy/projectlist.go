@@ -34,8 +34,9 @@ func parseProjectList(r *http.Request) (uuid.UUID, bool, error) {
 	q.Del(projectQueryParam)
 	r.URL.RawQuery = q.Encode()
 
+	// Dropped from a write it would leave a delete or patch unscoped.
 	if r.Method != http.MethodGet {
-		return uuid.Nil, false, nil
+		return uuid.Nil, false, errors.New(projectQueryParam + " is only supported on GET")
 	}
 	if clusterCollectionPath(r.URL.Path) == nil {
 		if unsupportedClusterList(r.URL.Path) {
@@ -62,14 +63,15 @@ func parseProjectList(r *http.Request) (uuid.UUID, bool, error) {
 
 // unsupportedClusterList reports whether path is a cluster-wide collection
 // (no namespace, no object name) other than /apis/{g}/{v}/{plural}: core
-// /api/v1/{plural} or group discovery /apis/{g}/{v}.
+// /api/v1/{plural}, or discovery such as /api/v1 and /apis/{g}/{v}.
 func unsupportedClusterList(path string) bool {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if slices.Contains(parts, "") {
+		return false
+	}
 	switch parts[0] {
-	case "api":
-		return len(parts) == 3
-	case "apis":
-		return len(parts) == 3 && !slices.Contains(parts, "")
+	case "api", "apis":
+		return len(parts) <= 3
 	}
 	return false
 }

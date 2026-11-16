@@ -216,13 +216,17 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
-    this.projectNamespaces.load(this.scope().projectId ?? '');
+    // Another project's detail reuses this component, so follow the route.
+    effect(() => {
+      const projectId = this.scope().projectId ?? '';
+      untracked(() => this.projectNamespaces.load(projectId));
+    });
 
     // On a project page the effect fires when selectedClusterId is set by
     // loadClusters() in ngOnInit. It follows the route too: another resource's
     // detail reuses this component (a sheet that navigates to the resource it
     // just created). On a project route it waits for the project's namespaces,
-    // which the resource is checked against.
+    // which the resource is checked against, and loads again when they do.
     effect(() => {
       const clusterId = this.clusterId();
       const target = this.resourceTarget();
