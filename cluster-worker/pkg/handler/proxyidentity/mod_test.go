@@ -69,6 +69,14 @@ func TestSync_ProvisionsExactIdentity(t *testing.T) {
 	listerCRB := mock.ClusterRoleBindings[clusterID]["fundament:namespace-lister"]
 	assert.Equal(t, []rbacv1.Subject{{Kind: "Group", APIGroup: rbacv1.GroupName, Name: "fundament:namespace-listers"}}, listerCRB.Subjects)
 
+	scReader, ok := mock.ClusterRoles[clusterID]["fundament:storageclass-reader"]
+	require.True(t, ok, "storageclass-reader cluster role")
+	assert.Equal(t, []rbacv1.PolicyRule{{APIGroups: []string{"storage.k8s.io"}, Resources: []string{"storageclasses"}, Verbs: []string{"get", "list", "watch"}}}, scReader.Rules)
+	scReaderCRB, ok := mock.ClusterRoleBindings[clusterID]["fundament:storageclass-reader"]
+	require.True(t, ok, "storageclass-reader binding")
+	assert.Equal(t, rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "fundament:storageclass-reader"}, scReaderCRB.RoleRef)
+	assert.Equal(t, []rbacv1.Subject{{Kind: "Group", APIGroup: rbacv1.GroupName, Name: "system:serviceaccounts:fundament-system"}}, scReaderCRB.Subjects)
+
 	// None of these objects carry the user-id label, so usersync's and the
 	// project-RBAC converger's orphan cleanup never touch them.
 	_, labelled := rb.Labels[shoot.LabelUserID]

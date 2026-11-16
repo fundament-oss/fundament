@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 
 /**
  * The sheets the shell owns rather than the router: your account, your keys and
@@ -17,6 +17,10 @@ export class OverlayService {
 
   readonly newProject = signal(false);
 
+  /** The hierarchy picker the breadcrumb opens: every cluster and project in
+   *  the organization, to move into any of them at once. */
+  readonly contextPicker = signal(false);
+
   /** The create flows from the toolbar. They belong to no page, so opening one
    *  from there must not send you to a page first: the sheet floats over
    *  whatever you were reading. Their addresses still exist, and a guard sends
@@ -29,6 +33,19 @@ export class OverlayService {
   readonly newNamespace = signal<string | null>(null);
 
   readonly addProjectMember = signal<string | null>(null);
+
+  /** Whether any of these sheets is open. */
+  readonly anyOpen = computed(
+    () =>
+      this.profile() ||
+      this.apiKeys() ||
+      this.newProject() ||
+      this.contextPicker() ||
+      this.newCluster() ||
+      this.inviteMember() ||
+      this.newNamespace() !== null ||
+      this.addProjectMember() !== null,
+  );
 
   /** The address a sheet was opened for. The shell takes its sheets away when
    *  you navigate, and the redirect that comes with such an address must not
@@ -43,6 +60,7 @@ export class OverlayService {
     this.profile.set(false);
     this.apiKeys.set(false);
     this.newProject.set(false);
+    this.contextPicker.set(false);
     this.newCluster.set(false);
     this.inviteMember.set(false);
     this.newNamespace.set(null);
