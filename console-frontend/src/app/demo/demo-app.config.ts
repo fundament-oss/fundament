@@ -27,7 +27,7 @@ import FakePluginResourceStoreService from './fake-plugin-resource-store.service
 // `marketplaceUrl` is the exception: it is a link, not a transport, and the
 // marketplace's demo bundle really is served from this origin under
 // /marketplace/ (see scripts/build-marketplace-demo.ts), so the plugin sheet's
-// "View full details" reaches the storefront instead of falling back to the
+// "View on Marketplace" reaches the storefront instead of falling back to the
 // console's own plugin page. The trailing '#' is what makes that bundle's hash
 // routes resolve: `marketplacePluginUrl` appends /plugins/<id> to this, and the
 // demo build uses `withHashLocation()` because it is static files with no
