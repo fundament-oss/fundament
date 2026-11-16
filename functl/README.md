@@ -62,35 +62,44 @@ Use `functl config dir` to see the resolved directory, or `functl config path` f
 
 ### Configuration file
 
-functl works without a config file: the built-in defaults point at the
-`fundament-poc.nl` installation (`https://organization-api.fundament-poc.nl` and
-`https://authn.fundament-poc.nl`). An API key only works on the installation it
-was created on, so create `~/.config/fundament/config.yaml` to point at another
-installation or change other settings:
+functl works without a config file: by default it talks to the
+`https://fundament-poc.nl` installation (falling back to its former endpoints,
+`https://organization-api.fundament-poc.nl` and `https://authn.fundament-poc.nl`,
+while that installation serves no discovery document). An API key only works on the
+installation it was created on, so create `~/.config/fundament/config.yaml` to
+point at another installation or change other settings:
 
 ```yaml
-api_endpoint: https://organization-api.my-own-fundament.example
-authn_url: https://authn.my-own-fundament.example
-registry_url: https://marketplace-registry-api.my-own-fundament.example
+url: https://my-own-fundament.example
 output: table
 ```
 
-For the sandbox the documentation site belongs to, the endpoints are
-`https://organization.fundament.projects.digilab.network`,
-`https://authn.fundament.projects.digilab.network` and
-`https://marketplace-registry-api.fundament.projects.digilab.network`.
+`url` is the root URL of the installation. functl reads the installation's
+discovery document at `<url>/.well-known/fundament.json` to find its APIs, so
+no other endpoint needs configuring. The document is only accepted over HTTPS
+(or from localhost), from the configured host itself.
 
-`registry_url` has no default; only `functl plugin publish` needs it.
+With `url` set, each endpoint can still be set on its own, which overrides the
+discovered value. Without `url`, `api_endpoint` and `authn_url` must both be set;
+that skips discovery, for an installation that serves no discovery document:
 
-For local development the repo's `mise.toml` sets `FUNCTL_API_ENDPOINT`,
-`FUNCTL_AUTHN_URL` and `FUNCTL_REGISTRY_URL` to the local skaffold endpoints, which override both the
-defaults and the config file.
+```yaml
+api_endpoint: https://organization.my-own-fundament.example
+authn_url: https://authn.my-own-fundament.example
+registry_url: https://marketplace-registry-api.my-own-fundament.example
+```
+
+Only `functl plugin publish` needs `registry_url`.
+
+For local development the repo's `mise.toml` sets `FUNCTL_URL` to the local
+skaffold installation, which overrides the default and the config file.
 
 ### Environment variables
 
 | Variable | Description |
 |----------|-------------|
 | `FUNCTL_CONFIG_DIR` | Override the configuration directory path (must be absolute) |
+| `FUNCTL_URL` | Root URL of the installation, whose discovery document names the endpoints below (takes precedence over config file) |
 | `FUNCTL_API_ENDPOINT` | Override the organization API endpoint (takes precedence over config file) |
 | `FUNCTL_AUTHN_URL` | Override the authn API endpoint (takes precedence over config file) |
 | `FUNCTL_REGISTRY_URL` | Override the marketplace registry API endpoint used by `plugin publish` (takes precedence over config file) |

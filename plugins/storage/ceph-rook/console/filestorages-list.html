@@ -5,17 +5,12 @@
     <title>File Storage</title>
   </head>
   <body class="light">
+    <!-- No title: the Console's page around this frame has it. -->
     <div class="plugin-card">
-      <h1 class="plugin-heading">File Storage</h1>
-      <div class="plugin-actions">
-        <button type="button" class="plugin-button" id="create-btn">
-          Create file storage
-        </button>
-      </div>
-      <table class="plugin-table">
-        <thead id="head"></thead>
-        <tbody id="rows"></tbody>
-      </table>
+      <nldd-button id="create-btn" type="button" appearance="primary" start-icon="plus-small"
+                   text="New file storage…"></nldd-button>
+      <nldd-spacer size="16"></nldd-spacer>
+      <div id="list"></div>
     </div>
     <script type="module" src="./filestorages-list.js"></script>
   </body>

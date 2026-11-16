@@ -14,11 +14,16 @@ fmt:
 
 # --- Cluster commands ---
 
-# Ensure the k3d docker network exists with a fixed subnet: 172.19.0.0/16 keeps it off
-# 172.18.0.0/16, which Gardener's local kind cluster reserves (auto-allocation would
-# grab it). Fails loudly on subnet conflict.
+# Subnet of the k3d-fundament docker network. The default keeps it off 172.18.0.0/16,
+# which Gardener's kind cluster reserves where both run, in the test-env VM
+# (auto-allocation would grab it).
+k3d_subnet := env("FUNDAMENT_K3D_SUBNET", "172.19.0.0/16")
+
+# Ensure the k3d docker network exists with the k3d_subnet subnet; an existing network
+# keeps the subnet it was created with.
 _ensure-k3d-network:
-    @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet=172.19.0.0/16 k3d-fundament > /dev/null
+    @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet={{ k3d_subnet }} k3d-fundament > /dev/null \
+        || { echo "Could not create the k3d-fundament network on {{ k3d_subnet }}. If another network uses that range, set FUNDAMENT_K3D_SUBNET to a free subnet, e.g. 172.29.0.0/16." >&2; exit 1; }
 
 # Create a local k3d cluster for development with local registry
 cluster-create:

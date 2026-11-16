@@ -27,7 +27,12 @@ import { ConfigService } from '../../config.service';
 import ProjectNamespacesService from '../project-namespaces.service';
 import ProjectNamespacesLoader from '../project-namespaces-loader';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
-import { toDateValue, toSimpleValue, fieldNameToLabel, kindToLabel } from '../crd-schema.utils';
+import {
+  toDateValue,
+  toSimpleValue,
+  fieldNameToLabel,
+  resourceListLabel,
+} from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -258,8 +263,10 @@ export default class ResourceDetailComponent implements OnInit {
   /**
    * The poll's refresh, so the status and conditions follow the cluster.
    * Re-reads the resource only, without the loading state, which would blank
-   * the page every few seconds. Only for the generated view; a custom detail UI
-   * reads its own. Read by the loaded resource's own name and namespace, as the
+   * the page every few seconds. A custom detail UI reads its own, but the title
+   * above it carries the condition badge, so it is read for that page too; the
+   * frame is keyed on the route, not on this value, so it stays as it is. Read
+   * by the loaded resource's own name and namespace, as the
    * delete is. Held back while a delete is out: the resource vanishing under
    * the modal would swap the page for "not found" before the delete returns.
    * A resource that is gone does show as gone, and keeps being read by the
@@ -279,7 +286,6 @@ export default class ResourceDetailComponent implements OnInit {
       await this.retryLoad(clusterId);
       return;
     }
-    if (this.customUIUrl()) return;
     try {
       const resource = await this.loader.loadResource(
         this.pluginName(),
@@ -331,18 +337,19 @@ export default class ResourceDetailComponent implements OnInit {
     return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
   }
 
-  /** Names the list the back button returns to: the plugin's menu label, else
-   *  the CRD's kind, so the button says where it goes. Built from the kind, not
-   *  its plural: the plural is lowercase by Kubernetes' rules, which capitalized
-   *  gave "Dnsendpoints". */
-  kindLabel = computed(() => {
-    const resourceKind = this.resourceKind();
-    const item = this.plugin()?.menu.project?.find((i) => i.crd === resourceKind);
-    if (item?.label) return item.label;
+  /** Names the list the back button returns to: the same label as the list's
+   *  own title, so the button says where it goes. */
+  kindLabel = computed(() =>
+    resourceListLabel(
+      this.plugin()?.menu.project?.find((i) => i.crd === this.resourceKind()),
+      this.crdDef()?.kind,
+      this.resourceKind(),
+    ),
+  );
 
-    const kind = this.crdDef()?.kind;
-    return kind ? kindToLabel(kind) : this.kind() || 'list';
-  });
+  /** The title: the loaded resource's own name, else the route's, so a custom
+   *  page has its title before the console has read the resource. */
+  resourceName = computed(() => this.resource()?.metadata.name ?? this.resourceId());
 
   /** Where the title bar's back button leads: the project this resource belongs
    *  to, or the organization when the plugin is installed there. The way back to

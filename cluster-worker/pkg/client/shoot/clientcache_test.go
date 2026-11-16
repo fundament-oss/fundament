@@ -5,10 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
@@ -106,4 +108,49 @@ func TestClientCache_OptInOnly(t *testing.T) {
 
 	assert.Equal(t, 3, g.calls)
 	assert.False(t, HasClientCache(ctx))
+}
+
+// Node reads reuse a shoot's credentials across status checks for
+// nodeCredentialTTL, well inside the credentials' own 600 seconds, and then
+// request a fresh set.
+func TestClientCache_NodeCredentialsExpire(t *testing.T) {
+	t.Parallel()
+	r, g := countingAccess(t)
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	r.nodeCredentials.now = func() time.Time { return now }
+	clusterID := uuid.New()
+
+	for range 3 {
+		_, err := r.newClient(withClientCache(context.Background(), r.nodeCredentials), clusterID)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 1, g.calls)
+
+	now = now.Add(nodeCredentialTTL)
+	_, err := r.newClient(withClientCache(context.Background(), r.nodeCredentials), clusterID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, g.calls)
+
+	r.nodeCredentials.drop(clusterID)
+	_, err = r.newClient(withClientCache(context.Background(), r.nodeCredentials), clusterID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, g.calls)
+}
+
+// Expired entries are pruned when another goes in, so clusters read once do
+// not stay in the cache.
+func TestClientCache_PrunesExpired(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	c := newTTLClientCache(time.Minute)
+	c.now = func() time.Time { return now }
+
+	old := uuid.New()
+	c.put(old, &rest.Config{})
+	now = now.Add(time.Minute)
+	c.put(uuid.New(), &rest.Config{})
+
+	assert.Len(t, c.configs, 1)
+	_, ok := c.get(old)
+	assert.False(t, ok)
 }

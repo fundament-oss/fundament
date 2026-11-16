@@ -196,7 +196,7 @@
 >
   <!-- One wrapper on purpose: nldd-button-group hides any action that is the
        fourth child of this dialog or later, and it counts every child. -->
-  <nldd-container layout="stack">
+  <nldd-container>
     <nldd-text
       size="sm"
       line-height="tight"
@@ -220,6 +220,13 @@
         >
       </nldd-validation-list>
     </nldd-form-field>
+    @if (deleteError()) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="deleteError()"
+      ></nldd-banner>
+    }
   </nldd-container>
   <nldd-button
     slot="actions"
@@ -227,12 +234,14 @@
     (click)="showDeleteModal.set(false)"
     text="Keep project"
     appearance="primary"
+    [disabled]="isDeleting()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="deleteProject()"
     text="Delete project"
+    [loading]="isDeleting()"
     appearance="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
