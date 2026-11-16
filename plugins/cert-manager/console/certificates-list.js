@@ -16,6 +16,7 @@
         const { items } = await fundament.k8s.list({
           group: 'cert-manager.io',
           version: 'v1',
+          // Set on project pages; without it the list is cluster-wide, still limited by RBAC.
           projectId: ctx.projectId,
           resource: 'certificates',
         });

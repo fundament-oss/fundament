@@ -35,6 +35,7 @@ try {
     group: 'openfsc.fundament.io',
     version: 'v1',
     resource: 'fscinstallations',
+    // Set on project pages; without it the list is cluster-wide, still limited by RBAC.
     projectId: ctx.projectId,
   });
   if (!items || items.length === 0) {

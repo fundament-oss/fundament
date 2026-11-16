@@ -105,10 +105,14 @@ describe('claimListHtml', () => {
     expect(html).toContain('text="Bound"');
     expect(html).not.toContain('cephobj-s3');
   });
-  test('shows the namespace display name and the storage class on request', () => {
-    const html = claimListHtml([claim], { displayNames: { 'tnt-acme--web': 'web' }, storageClass: true });
+  test('shows the namespace display name and the store on request', () => {
+    const html = claimListHtml([claim], { displayNames: { 'tnt-acme--web': 'web' }, store: true });
     expect(html).toContain('data-namespace="tnt-acme--web"');
-    expect(html).toContain('supporting-text="Namespace web · bucket logs-… · class cephobj-s3"');
+    expect(html).toContain('supporting-text="Namespace web · bucket logs-… · object storage s3"');
+  });
+  test('keeps a class not named like an object storage', () => {
+    const other = { ...claim, spec: { ...claim.spec, storageClassName: 'custom' } };
+    expect(claimListHtml([other], { store: true })).toContain('· class custom"');
   });
   test('escapes claim fields', () => {
     expect(claimListHtml([{ metadata: { name: '<x>' } }])).toContain('&lt;x&gt;');

@@ -32,7 +32,7 @@ async function showList() {
     }
     list.innerHTML = claimListHtml(items, {
       displayNames: ctx.namespaceDisplayNames ?? {},
-      storageClass: true,
+      store: true,
     });
     wireClaimLinks(list);
   } catch (err) {
