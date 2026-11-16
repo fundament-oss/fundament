@@ -274,3 +274,32 @@ export function labelMidSentence(label: string): string {
     .map((word) => (isAcronym(word) ? word : word.toLowerCase()))
     .join(' ');
 }
+
+/**
+ * The name the Console gives a plugin's resource list: the plugin's own menu
+ * label first, so the page title matches the nav item (CloudNativePG calls its
+ * Clusters "Databases"), then the CRD's kind, and the CRD reference only while
+ * the CRD has not loaded.
+ */
+export function resourceListLabel(
+  menuItem: { label?: string } | undefined,
+  kind: string | undefined,
+  crdRef: string,
+): string {
+  if (menuItem?.label) return menuItem.label;
+  if (kind) return kindToLabel(kind);
+  // The reference is "certificates.cert-manager.io", not a kind, so it must not
+  // go through kindToLabel: that would pluralize the group.
+  return crdRefToLabel(crdRef);
+}
+
+/**
+ * One item of that list, as it reads mid-sentence ("New database…", not "New
+ * databases…"): the plugin's singular label, else the CRD's kind.
+ */
+export function resourceSingularLabelMidSentence(
+  menuItem: { singularLabel?: string } | undefined,
+  kind: string | undefined,
+): string {
+  return labelMidSentence(menuItem?.singularLabel ?? kindToSingularLabel(kind ?? ''));
+}

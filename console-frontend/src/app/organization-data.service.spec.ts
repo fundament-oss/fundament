@@ -82,6 +82,8 @@ function build(listed: ClusterSummary[]) {
     holdMembers: false,
     pendingMembers: [] as PendingMembers[],
     getOrganization: organizationResponse,
+    /** Answers ListProjects; a test swaps it to hold or fail the answers. */
+    listProjects: (): Observable<{ projects: [] }> => of({ projects: [] }),
   };
 
   TestBed.configureTestingModule({
@@ -101,7 +103,7 @@ function build(listed: ClusterSummary[]) {
               : of(create(ListClustersResponseSchema, { clusters: server.listed })),
         },
       },
-      { provide: PROJECT, useValue: { listProjects: () => of({ projects: [] }) } },
+      { provide: PROJECT, useValue: { listProjects: () => server.listProjects() } },
       {
         provide: MEMBER,
         useValue: {
@@ -411,5 +413,40 @@ describe('OrganizationDataService loadError', () => {
     service.clearAll();
 
     expect(service.loadError()).toBeNull();
+  });
+});
+
+describe('OrganizationDataService project loads', () => {
+  const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the failures of the newest load when an older one answers last', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    // The first load hangs and then fails; the retry after it succeeds.
+    const first = new Subject<{ projects: [] }>();
+    server.listProjects = () => first.asObservable();
+    const before = service.loadProjectsAndNamespaces();
+    server.listProjects = () => of({ projects: [] });
+    await service.reloadProjectsAndNamespaces();
+    expect(service.projectLoadFailures().size).toBe(0);
+
+    first.error(new Error('unreachable'));
+    await before.catch(() => {});
+
+    expect(service.projectLoadFailures().size).toBe(0);
+  });
+
+  it('reports an organization that could not be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { service, server } = build([alpha]);
+    server.fail = true;
+    await service.loadOrganizationData(ORGANIZATION_ID);
+
+    expect(service.clustersLoaded()).toBe(false);
+    expect(service.organizationLoadFailed()).toBe(true);
   });
 });

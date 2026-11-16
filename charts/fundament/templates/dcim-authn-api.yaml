@@ -48,8 +48,11 @@ spec:
               value: "{{ hasPrefix "https://" .Values.externalUrls.dcimAuthn }}"
             - name: LOG_LEVEL
               value: {{ .Values.dcimAuthnApi.logLevel }}
+            # DCIM, and the review backoffice, whose reviewers sign in here
+            # with the same staff session (marketplace-frontend's
+            # StaffSessionService).
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.dcim }}
+              value: {{ include "fundament.corsOrigins" (dict "root" $ "frontends" (list .Values.externalUrls.dcim .Values.externalUrls.marketplaceAdmin)) | quote }}
             # ROPC (resource-owner-password-credentials) login. Keep disabled in
             # production; enable only for local/dev against dex static passwords.
             - name: PASSWORD_LOGIN_ENABLED

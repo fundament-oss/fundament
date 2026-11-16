@@ -16,15 +16,15 @@ in_vm := if path_exists("/etc/fundament-test-env") == "true" { "true" } else if 
 host := source_directory() / "host" / "cli.sh"
 box := source_directory() / "box"
 
-# Pin Gardener version for team consistency
-GARDENER_VERSION := "v1.138.0"
+# The Gardener of fire, the fundament-poc partition: metal-stack v1.2.0 ships v1.147.5.
+GARDENER_VERSION := "v1.147.5"
 
 # Gardener clone, outside the repository: Gardener keeps its registry cache and backup
 # buckets inside the clone, written as root by its containers.
 GARDENER_DIR := env_var_or_default("GARDENER_DIR", cache_directory() / "fundament" / "gardener")
 
 # KinD cluster name used by the operator path
-KIND_CLUSTER := "gardener-operator-local"
+KIND_CLUSTER := "gardener-local"
 KIND_CONTAINER := KIND_CLUSTER + "-control-plane"
 # kubeconfig context gardener-connect adds for the virtual garden
 GARDEN_CONTEXT := "kind-gardener-local-garden"
@@ -114,6 +114,8 @@ shoot-context cluster-id: _require-vm
         | jq -r '.status.kubeconfig' | base64 -d > "$dir/kubeconfig"
     KUBECONFIG="$dir/kubeconfig:$HOME/.kube/config" kubectl config view --flatten > "$dir/merged"
     ctx=$(kubectl --kubeconfig "$dir/kubeconfig" config current-context)
+    # A context of that name from an earlier up would make the rename fail.
+    kubectl --kubeconfig "$dir/merged" config delete-context "shoot-$cluster" >/dev/null 2>&1 || true
     kubectl --kubeconfig "$dir/merged" config rename-context "$ctx" "shoot-$cluster" >/dev/null
     install -m 0600 "$dir/merged" "$HOME/.kube/config"
     rm -rf "$dir"
@@ -164,7 +166,7 @@ gardener-start: _require-vm
         if ! git tag --points-at HEAD 2>/dev/null | grep -qx "{{GARDENER_VERSION}}"; then
             CURRENT_VERSION=$(git describe --tags 2>/dev/null || echo "unknown")
             echo "Error: Gardener version mismatch (have: $CURRENT_VERSION, want: {{GARDENER_VERSION}})"
-            echo "Run 'rm -rf $GARDENER_DIR' and re-run to update"
+            echo "Run 'just test-env gardener-delete' and re-run to update"
             exit 1
         fi
         cd - > /dev/null
@@ -180,6 +182,11 @@ gardener-start: _require-vm
     echo "Starting Gardener via operator (this takes 10-15 minutes on first run)..."
     cd "$GARDENER_DIR"
 
+    # Build Gardener with the Go its go.mod names. Built with a newer Go, the
+    # gardener-apiserver serves an OpenAPI schema the virtual garden cannot convert,
+    # and every kubectl apply against it fails with a 503.
+    export GOTOOLCHAIN="go$(sed -n 's/^go //p' go.mod)"
+
     # Pre-install helm into Gardener's tools directory if not present.
     # Gardener's Makefile downloads helm via a script that can fail on checksum
     # verification for certain versions. Using a direct binary download is more reliable.
@@ -193,10 +200,6 @@ gardener-start: _require-vm
         chmod +x "$HELM_DIR/helm"
     fi
 
-    # Publish the shoot bastion on host port 2222 instead of 22, where a local
-    # sshd would make the kind node fail to start.
-    sed -i 's/hostPort: 22$/hostPort: 2222/' example/gardener-local/kind/cluster/templates/_extra_port_mappings.tpl
-
     # Unset SKAFFOLD_DEFAULT_REPO so Gardener uses its own registry
     # (registry.local.gardener.cloud:5001), not the fundament k3d registry.
     # mise.toml exports the fundament registry, which would override the ?=
@@ -207,8 +210,7 @@ gardener-start: _require-vm
     if [ "$KIND_EXISTS" = false ]; then
         make kind-single-node-up
     fi
-    make operator-up
-    make operator-seed-up
+    make gardener-up
 
     echo ""
     (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just test-env gardener-connect)
@@ -219,10 +221,13 @@ gardener-start: _require-vm
 gardener-delete:
     #!/usr/bin/env bash
     set -e
-    if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
-        echo "Deleting {{KIND_CLUSTER}} cluster..."
-        kind delete cluster --name "{{KIND_CLUSTER}}"
-    fi
+    # Gardener before v1.142 named the cluster gardener-operator-local.
+    for cluster in "{{KIND_CLUSTER}}" gardener-operator-local; do
+        if kind get clusters 2>/dev/null | grep -qx "$cluster"; then
+            echo "Deleting $cluster cluster..."
+            kind delete cluster --name "$cluster"
+        fi
+    done
     GARDENER_DIR="{{GARDENER_DIR}}"
     dirs=("${GARDENER_DIR/#\~/$HOME}")
     # Older versions cloned Gardener into .dev/gardener.
@@ -234,7 +239,7 @@ gardener-delete:
     TARGET_KC="${KUBECONFIG:-}"
     TARGET_KC="${TARGET_KC%%:*}"
     TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
-    for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}"; do
+    for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}" kind-gardener-operator-local; do
         kubectl config --kubeconfig "$TARGET_KC" delete-context "$name" >/dev/null 2>&1 || true
         kubectl config --kubeconfig "$TARGET_KC" delete-cluster "$name" >/dev/null 2>&1 || true
         kubectl config --kubeconfig "$TARGET_KC" delete-user "$name" >/dev/null 2>&1 || true
@@ -429,7 +434,13 @@ gardener-connect: _require-vm
         # so we suppress that exit code.
         docker exec "$KIND_CONTAINER" pkill -f 'kube-apiserver' || true
         echo "- Waiting for API server to restart..."
+        # It drains for about a minute before the kubelet starts it again.
         sleep 5
+        for i in $(seq 1 90); do
+            docker exec "$KIND_CONTAINER" curl -skf -o /dev/null --max-time 2 https://127.0.0.1:6443/readyz && break
+            [ "$i" -lt 90 ] || { echo "Error: the kind API server did not come back within 3 minutes"; exit 1; }
+            sleep 2
+        done
         echo "- API server cert updated with SANs: $KIND_IP, $K3D_IP"
     else
         echo "- k3d IP ($K3D_IP) already in API server cert SANs"
@@ -439,10 +450,27 @@ gardener-connect: _require-vm
     echo ""
     echo "Gardener API: https://$API_IP:6443"
 
+    # The seed's and the virtual garden's Istio ingresses are LoadBalancer Services.
+    # cloud-controller-manager-local publishes each on a host loopback IP, which the
+    # k3d pods reach through the Docker host.
+    ingress_ip() { # namespace pattern
+        docker exec "$KIND_CONTAINER" kubectl get svc -A --field-selector metadata.name=istio-ingressgateway \
+            -o jsonpath='{range .items[*]}{.metadata.namespace} {.status.loadBalancer.ingress[0].ip}{"\n"}{end}' \
+            | awk -v ns="$1" '$1 ~ ns && $2 != "" {print $2; exit}'
+    }
+    SEED_INGRESS_IP=$(ingress_ip '^istio-ingress$')
+    GARDEN_INGRESS_IP=$(ingress_ip '^virtual-garden-istio-ingress$')
+    if [ -z "$SEED_INGRESS_IP" ] || [ -z "$GARDEN_INGRESS_IP" ]; then
+        echo "Error: no load balancer IP on the Istio ingresses (seed: '$SEED_INGRESS_IP', virtual garden: '$GARDEN_INGRESS_IP')"
+        echo "  Check them: docker exec $KIND_CONTAINER kubectl get svc -A --field-selector metadata.name=istio-ingressgateway"
+        exit 1
+    fi
+
     # Write discovered IPs to generated values file (used by local-gardener Skaffold profile)
     GARDENER_VALUES="{{source_directory()}}/../charts/fundament/values-gardener-local.yaml"
-    printf '# Generated by: just test-env gardener-connect\ngardener:\n  apiServerIP: "%s"\nshootProxy:\n  gardenerNodeIP: "%s"\n' "$API_IP" "$K3D_IP" > "$GARDENER_VALUES"
-    echo "- Wrote gardener values: apiServerIP=$API_IP, shootProxy.gardenerNodeIP=$K3D_IP"
+    printf '# Generated by: just test-env gardener-connect\ngardener:\n  apiServerIP: "%s"\nshootProxy:\n  seedIngressIP: "%s"\n  gardenIngressIP: "%s"\n' \
+        "$API_IP" "$SEED_INGRESS_IP" "$GARDEN_INGRESS_IP" > "$GARDENER_VALUES"
+    echo "- Wrote gardener values: apiServerIP=$API_IP, shootProxy.seedIngressIP=$SEED_INGRESS_IP, shootProxy.gardenIngressIP=$GARDEN_INGRESS_IP"
 
     # Annotate CoreDNS so Reloader restarts it when coredns-custom ConfigMap changes
     if kubectl --context k3d-fundament -n kube-system get deploy coredns &>/dev/null; then
@@ -457,7 +485,9 @@ gardener-connect: _require-vm
     add_context() {
         local name="$1" dir path
         dir=$(mktemp -d)
-        cat > "$dir/kubeconfig"
+        cat > "$dir/full"
+        # Gardener's virtual garden kubeconfig also holds the kind cluster; keep the current context.
+        kubectl --kubeconfig "$dir/full" config view --minify --raw > "$dir/kubeconfig"
         for path in clusters[0].cluster.certificate-authority-data users[0].user.client-certificate-data users[0].user.client-key-data; do
             kubectl --kubeconfig "$dir/kubeconfig" config view --raw -o jsonpath="{.$path}" | base64 -d > "$dir/${path##*.}"
         done
@@ -484,7 +514,7 @@ gardener-secret: gardener-connect
     # The cluster-worker needs the virtual garden kubeconfig (not the runtime one)
     # because shoots, projects, and other Gardener resources live there.
     # The server URL (api.virtual-garden.local.gardener.cloud) is routed from k3d
-    # via the shoot-proxy's CoreDNS + socat -> Istio NodePort on the kind node.
+    # via the garden-proxy's CoreDNS entry + socat -> the virtual garden Istio load balancer.
     if [ ! -f "$VIRTUAL_KC" ]; then
         echo "Error: Virtual garden kubeconfig not found at $VIRTUAL_KC"
         echo "Is Gardener fully started? Run: just test-env gardener-start"

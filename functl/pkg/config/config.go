@@ -2,21 +2,29 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/fundament-oss/fundament/common/discovery"
 )
 
 // Config holds the Fundament CLI configuration.
 type Config struct {
-	APIEndpoint string `yaml:"api_endpoint"`
-	AuthnURL    string `yaml:"authn_url"`
+	// Root URL of the installation. Its discovery document
+	// (/.well-known/fundament.json) names the endpoints below, so those only
+	// need setting to override it.
+	URL         string `yaml:"url,omitempty"`
+	APIEndpoint string `yaml:"api_endpoint,omitempty"`
+	AuthnURL    string `yaml:"authn_url,omitempty"`
 	// Base URL of marketplace-registry-api, the plugin publishing surface
-	// (FUN-20). Empty means publishing commands refuse to run.
+	// (FUN-20). Empty after Resolve means publishing commands refuse to run.
 	RegistryURL  string `yaml:"registry_url,omitempty"`
 	Output       string `yaml:"output"`
 	Organization string `yaml:"organization,omitempty"`
@@ -27,27 +35,59 @@ type Credentials struct {
 	APIKey string `yaml:"api_key"`
 }
 
+// DefaultURL is the installation functl talks to when nothing is configured.
+const DefaultURL = "https://fundament-poc.nl"
+
+// The default installation's endpoints from before it served a discovery
+// document. To be removed once it serves one:
+// https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1480
+const (
+	legacyDefaultAPIEndpoint = "https://organization-api.fundament-poc.nl"
+	legacyDefaultAuthnURL    = "https://authn.fundament-poc.nl"
+)
+
+// defaultURL is DefaultURL, replaceable in tests.
+var defaultURL = DefaultURL
+
+// documents holds the discovery documents fetched by this process, by
+// installation URL, so one command fetches each at most once.
+var documents struct {
+	sync.Mutex
+	byURL map[string]*discovery.Document
+}
+
 // DefaultConfig returns the default configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		APIEndpoint: "https://organization-api.fundament-poc.nl",
-		AuthnURL:    "https://authn.fundament-poc.nl",
-		Output:      "table",
+		Output: "table",
 	}
 }
 
 // Environment variables that override the endpoint configuration.
 const (
+	EnvURL         = "FUNCTL_URL"
 	EnvAPIEndpoint = "FUNCTL_API_ENDPOINT"
 	EnvAuthnURL    = "FUNCTL_AUTHN_URL"
 	EnvRegistryURL = "FUNCTL_REGISTRY_URL"
 )
 
-// applyEnvOverrides overrides endpoint settings from the environment.
-// EnvAPIEndpoint and EnvAuthnURL take precedence over both the config file
-// and the built-in defaults; the fundament repo sets them via mise so a
-// checkout talks to the local dev endpoints.
+// dropLegacyDefaults forgets endpoints that older versions of functl wrote into
+// the config file as their defaults (`functl org set` saved them). Left in
+// place they would pin the PoC and make a configured url a no-op.
+func dropLegacyDefaults(cfg *Config) {
+	if cfg.APIEndpoint == legacyDefaultAPIEndpoint && cfg.AuthnURL == legacyDefaultAuthnURL {
+		cfg.APIEndpoint = ""
+		cfg.AuthnURL = ""
+	}
+}
+
+// applyEnvOverrides overrides endpoint settings from the environment. They
+// take precedence over the config file; the fundament repo sets EnvURL via
+// mise so a checkout talks to the local dev installation.
 func applyEnvOverrides(cfg *Config) {
+	if v := os.Getenv(EnvURL); v != "" {
+		cfg.URL = v
+	}
 	if v := os.Getenv(EnvAPIEndpoint); v != "" {
 		cfg.APIEndpoint = v
 	}
@@ -57,6 +97,89 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv(EnvRegistryURL); v != "" {
 		cfg.RegistryURL = v
 	}
+}
+
+// Resolve fills the API and authn endpoints that are not set explicitly from
+// the installation's discovery document. It makes no request when both are set.
+func (c *Config) Resolve(ctx context.Context) error {
+	if c.APIEndpoint != "" && c.AuthnURL != "" {
+		return nil
+	}
+
+	doc, baseURL, err := c.discover(ctx)
+	if err != nil {
+		return err
+	}
+
+	if c.APIEndpoint == "" {
+		c.APIEndpoint = doc.OrganizationAPI
+	}
+	if c.AuthnURL == "" {
+		c.AuthnURL = doc.AuthnAPI
+	}
+	if c.RegistryURL == "" {
+		c.RegistryURL = doc.MarketplaceRegistryAPI
+	}
+
+	if c.APIEndpoint == "" || c.AuthnURL == "" {
+		return fmt.Errorf("the discovery document of %s names no organization or authn API", baseURL)
+	}
+	return nil
+}
+
+// ResolveRegistry fills RegistryURL from the discovery document when it is not
+// set explicitly. It stays empty when the installation has no registry.
+func (c *Config) ResolveRegistry(ctx context.Context) error {
+	if c.RegistryURL != "" {
+		return nil
+	}
+	if c.URL == "" && (c.APIEndpoint != "" || c.AuthnURL != "") {
+		return errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL, or set url to discover it")
+	}
+
+	doc, _, err := c.discover(ctx)
+	if err != nil {
+		return err
+	}
+	c.RegistryURL = doc.MarketplaceRegistryAPI
+	return nil
+}
+
+func (c *Config) discover(ctx context.Context) (*discovery.Document, string, error) {
+	baseURL := c.URL
+	if baseURL == "" {
+		// An explicit endpoint points at some installation; the default URL
+		// would send the API key to another one.
+		if c.APIEndpoint != "" || c.AuthnURL != "" {
+			return nil, "", errors.New("no installation URL: set url in the functl config or FUNCTL_URL, or set every endpoint explicitly")
+		}
+		baseURL = defaultURL
+	}
+
+	documents.Lock()
+	defer documents.Unlock()
+	if doc, ok := documents.byURL[baseURL]; ok {
+		return doc, baseURL, nil
+	}
+
+	doc, err := discovery.Fetch(ctx, nil, baseURL)
+	if err != nil {
+		// Only a missing document means the default installation predates
+		// discovery; a failing or invalid one must not be papered over.
+		if c.URL != "" || !errors.Is(err, discovery.ErrNotFound) {
+			return nil, "", fmt.Errorf("discovering the endpoints of %s: %w", baseURL, err)
+		}
+		doc = &discovery.Document{
+			OrganizationAPI: legacyDefaultAPIEndpoint,
+			AuthnAPI:        legacyDefaultAuthnURL,
+		}
+	}
+
+	if documents.byURL == nil {
+		documents.byURL = make(map[string]*discovery.Document)
+	}
+	documents.byURL[baseURL] = doc
+	return doc, baseURL, nil
 }
 
 // ConfigDir returns the path to the configuration directory.
@@ -120,9 +243,22 @@ func EnsureConfigDir() error {
 
 // LoadConfig loads the configuration from the config file.
 // If the file doesn't exist, it returns the default configuration.
-// FUNCTL_API_ENDPOINT and FUNCTL_AUTHN_URL environment variables override
-// the endpoints from either source.
+// The FUNCTL_URL, FUNCTL_API_ENDPOINT, FUNCTL_AUTHN_URL and
+// FUNCTL_REGISTRY_URL environment variables override the file. Endpoints left
+// empty are filled by Resolve.
 func LoadConfig() (*Config, error) {
+	return loadConfig(true)
+}
+
+// LoadFileConfig loads the configuration as it is in the config file, without
+// the environment overrides. Commands that change the file start from this, so
+// that a value from the environment (such as the repo's FUNCTL_URL from mise)
+// is not saved into it.
+func LoadFileConfig() (*Config, error) {
+	return loadConfig(false)
+}
+
+func loadConfig(withEnv bool) (*Config, error) {
 	path, err := ConfigPath()
 	if err != nil {
 		return nil, err
@@ -132,17 +268,23 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			cfg := DefaultConfig()
-			applyEnvOverrides(cfg)
+			if withEnv {
+				applyEnvOverrides(cfg)
+			}
 			return cfg, nil
 		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	cfg := DefaultConfig()
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	err = yaml.Unmarshal(data, cfg)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
-	applyEnvOverrides(cfg)
+	dropLegacyDefaults(cfg)
+	if withEnv {
+		applyEnvOverrides(cfg)
+	}
 
 	return cfg, nil
 }

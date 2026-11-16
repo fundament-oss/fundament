@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -41,7 +42,7 @@ func (s *Server) ListNodePools(
 	result := make([]*organizationv1.NodePool, 0, len(nodePools))
 	for i := range nodePools {
 		pool := &nodePools[i]
-		result = append(result, nodePoolFromRow(pool, runtimeForPool(runtimes, pool.Name)))
+		result = append(result, nodePoolFromRow(pool, runtimeForPool(runtimes, pool, time.Now())))
 	}
 
 	return organizationv1.ListNodePoolsResponse_builder{

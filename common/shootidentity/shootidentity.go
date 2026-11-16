@@ -7,12 +7,12 @@ const (
 	// Namespace holds the fundament ServiceAccounts on every shoot.
 	Namespace = "fundament-system"
 
-	// ProxyServiceAccount is kube-api-proxy's own identity on a shoot. Its only
-	// rights are to impersonate ServiceAccounts in Namespace and the
-	// NamespaceListerGroup. RBAC can't match a name prefix, so that covers
-	// every ServiceAccount in Namespace, including org admins' cluster-admin
-	// ones; it grants the proxy nothing new, since it already holds the
-	// shoot's admin kubeconfig.
+	// ProxyServiceAccount is kube-api-proxy's own identity on a shoot. Besides
+	// the StorageClass read every SA in Namespace has, its only rights are to
+	// impersonate ServiceAccounts in Namespace and the NamespaceListerGroup.
+	// RBAC can't match a name prefix, so that covers every ServiceAccount in
+	// Namespace, including org admins' cluster-admin ones; it grants the proxy
+	// nothing new, since it already holds the shoot's admin kubeconfig.
 	ProxyServiceAccount = "fundament-kube-api-proxy"
 
 	// NamespaceListerGroup is added by kube-api-proxy when it serves a user's
@@ -21,6 +21,14 @@ const (
 
 	// NamespaceListerClusterRole is the ClusterRole bound to NamespaceListerGroup.
 	NamespaceListerClusterRole = "fundament:namespace-lister"
+
+	// ServiceAccountsGroup is the apiserver group of every ServiceAccount in
+	// Namespace, so it covers all per-user SAs (and fundament's own SAs).
+	ServiceAccountsGroup = "system:serviceaccounts:" + Namespace
+
+	// StorageClassReaderClusterRole grants ServiceAccountsGroup read access to
+	// StorageClasses, which plugin create forms offer as a picker.
+	StorageClassReaderClusterRole = "fundament:storageclass-reader"
 
 	// LabelProjectID is the label cluster-worker puts on every tenant
 	// namespace naming its project; kube-api-proxy filters listings on it,

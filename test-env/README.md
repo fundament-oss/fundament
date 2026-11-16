@@ -41,5 +41,4 @@ The image is built for the host's architecture, x86_64 or aarch64, and boots wit
 UEFI on both. On macOS, Docker builds it in an arm64 nixos/nix container, and
 Homebrew's qemu (`brew install qemu xorriso`) boots it under Apple's hypervisor
 (HVF) with the same `nixos/run-vm.sh` as on Linux. Apple's Virtualization.framework
-(vfkit, Lima) would run the x86_64 images under Rosetta instead of qemu-user, at
-the cost of a second boot path and raw disks instead of qcow2 overlays.
+(vfkit, Lima) would need a second boot path and raw disks instead of qcow2 overlays.

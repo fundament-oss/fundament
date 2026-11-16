@@ -8,7 +8,6 @@
       await loadSdk();
       const ctx = await fundament.init;
       const content = document.getElementById('content');
-      const heading = document.getElementById('heading');
 
       if (!ctx.resource?.name) {
         content.textContent = 'No certificate request selected.';
@@ -21,7 +20,6 @@
             name: ctx.resource.name,
             namespace: ctx.resource.namespace,
           });
-          heading.textContent = `Certificate Request · ${item.metadata?.name ?? ctx.resource.name}`;
           const meta = {
             Name: item.metadata?.name,
             Namespace: item.metadata?.namespace,

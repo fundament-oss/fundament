@@ -1,13 +1,20 @@
-import { loadSdk, escapeHtml, humanizeQuantity, renderDefList } from './_shared.js';
-
-await loadSdk();
-const ctx = await fundament.init;
+import {
+  bootPage,
+  errorBox,
+  hintHtml,
+  humanizeQuantity,
+  loadingHtml,
+  renderKeyValueList,
+  sectionHtml,
+} from './_shared.js';
 
 const content = document.getElementById('content');
-const heading = document.getElementById('heading');
+content.innerHTML = loadingHtml();
+
+const ctx = await bootPage();
 
 if (!ctx.resource?.name) {
-  content.textContent = 'No disk selected.';
+  content.innerHTML = errorBox('no disk selected', 'Cannot show the disk');
 } else {
   try {
     const item = await fundament.k8s.get({
@@ -17,7 +24,6 @@ if (!ctx.resource?.name) {
       name: ctx.resource.name,
     });
 
-    heading.textContent = `Disk · ${item.metadata?.name ?? ctx.resource.name}`;
     const s = item.status ?? {};
 
     // Both paths: the kernel one matches lsblk, the stable one is what the pool
@@ -47,19 +53,18 @@ if (!ctx.resource?.name) {
     ];
 
     content.innerHTML = `
-      <h2 class="plugin-heading">Device</h2>
-      ${renderDefList(device)}
-      <h2 class="plugin-heading">Allocation</h2>
-      ${renderDefList(allocation)}
-      <p class="plugin-text">
-        “Claimed by” is set by Fundament: the DiskPool this disk belongs to. “Filesystem
-        found” and “Reported empty” come from the node's last probe, which can lag. Confirm
-        on the node before repurposing or removing a disk.
-      </p>
+      ${sectionHtml('Device', renderKeyValueList(device, 'Device'))}
+      <nldd-spacer size="24"></nldd-spacer>
+      ${sectionHtml(
+        'Allocation',
+        `${renderKeyValueList(allocation, 'Allocation')}
+        <nldd-spacer size="12"></nldd-spacer>
+        ${hintHtml(`“Claimed by” is set by Fundament: the DiskPool this disk belongs to.
+          “Filesystem found” and “Reported empty” come from the node's last probe, which can
+          lag. Confirm on the node before repurposing or removing a disk.`)}`,
+      )}
     `;
   } catch (err) {
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load: ${err?.message ?? err}`,
-    )}</div>`;
+    content.innerHTML = errorBox(err);
   }
 }

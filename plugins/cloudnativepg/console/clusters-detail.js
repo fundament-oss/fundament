@@ -13,10 +13,6 @@ await Promise.all([loadSdk(), loadNlddDesignSystem()]);
 const ctx = await fundament.init;
 
 const content = document.getElementById('content');
-const heading = document.getElementById('heading');
-
-document.getElementById('back-btn').addEventListener('click', () => navigateBack());
-
 const name = ctx.resource?.name;
 const namespace = ctx.resource?.namespace;
 
@@ -223,7 +219,6 @@ if (!name) {
 } else {
   try {
     const item = await fundament.k8s.get({ ...CLUSTER_RESOURCE, namespace, name });
-    heading.textContent = item.metadata?.name ?? name;
     content.innerHTML = render(item);
     wireDelete(item);
     // Select the whole command on focus, so one copy takes all of it. The native

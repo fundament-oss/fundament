@@ -64,7 +64,7 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint        = "https://organization.fundament.localhost:8443"
+  url             = "https://fundament.localhost:8443"
   organization_id = "019b4000-0000-7000-8000-000000000001"
   api_key         = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
 }
@@ -74,12 +74,13 @@ provider "fundament" {
 
 | Name | Description | Required |
 |------|-------------|----------|
-| `endpoint` | The URL of the Fundament organization API. Can also be set via the `FUNDAMENT_ENDPOINT` environment variable. | Yes |
+| `url` | The root URL of the Fundament installation. The provider reads the URLs of the installation's APIs from its discovery document at `/.well-known/fundament.json`. Can also be set via the `FUNDAMENT_URL` environment variable. | Yes, unless `endpoint` and `authn_endpoint` are both set (only `endpoint` is deprecated: `authn_endpoint` is then derived from it) |
+| `endpoint` | The URL of the Fundament organization API. Can also be set via the `FUNDAMENT_ENDPOINT` environment variable. If not provided, it's discovered from `url`. | No |
 | `organization_id` | The ID of the organization to manage, shown in the console under **General**. Can also be set via the `FUNDAMENT_ORGANIZATION_ID` environment variable. | Yes |
 | `api_key` | API key for authentication. Can also be set via the `FUNDAMENT_API_KEY` environment variable. | Yes |
-| `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via the `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's derived from `endpoint` by replacing `organization` with `authn`. | No |
-| `kube_api_proxy_url` | The URL of the Kubernetes API proxy, needed only for `fundament_plugin_installation`. Can also be set via the `FUNDAMENT_KUBE_API_PROXY_URL` environment variable. | No |
-| `marketplace_install_url` | The URL of the marketplace install API (`install.v1`), needed only for a `fundament_plugin_installation` without a pinned `plugin_version`. Can also be set via the `FUNDAMENT_MARKETPLACE_INSTALL_URL` environment variable. | No |
+| `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via the `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's discovered from `url`. Deprecated: without `url` it's derived from `endpoint` by replacing `organization` with `authn`. | No |
+| `kube_api_proxy_url` | The URL of the Kubernetes API proxy, needed only for `fundament_plugin_installation`. Can also be set via the `FUNDAMENT_KUBE_API_PROXY_URL` environment variable. If not provided, it's discovered from `url`. | No |
+| `marketplace_install_url` | The URL of the marketplace install API (`install.v1`), needed only for a `fundament_plugin_installation` without a pinned `plugin_version`. Can also be set via the `FUNDAMENT_MARKETPLACE_INSTALL_URL` environment variable. If not provided, it's discovered from `url`. | No |
 
 ### Authentication
 
@@ -89,7 +90,7 @@ API keys provide a convenient authentication method that automatically handles t
 
 ```hcl
 provider "fundament" {
-  endpoint        = "https://organization.fundament.localhost:8443"
+  url             = "https://fundament.localhost:8443"
   organization_id = "019b4000-0000-7000-8000-000000000001"
   api_key         = var.fundament_api_key
 }

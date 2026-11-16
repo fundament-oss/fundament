@@ -48,11 +48,20 @@
   box-sizing: border-box;
 }
 
+/* Once a page loads nldd-design-system.css: the Console's own body font, and the
+   surface and content colors of the page or sheet the frame sits on, so the
+   frame does not show as a box of another gray. Without the bundle, the
+   Tailwind colors the fallbacks name. */
 body {
-  @apply m-0 bg-white text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
-  /* The NLDD Design System's body font once a page loads nldd-design-system.css,
-     so <nldd-*> components are set in the same face as the Console around them. */
+  @apply m-0 transition-colors duration-200;
+  background-color: var(--semantics-surfaces-base-background-color, --theme(--color-white));
+  color: var(--semantics-content-color, --theme(--color-gray-900));
   font-family: var(--primitives-font-family-body, --theme(--font-sans));
+}
+
+body.dark {
+  background-color: var(--semantics-surfaces-base-background-color, --theme(--color-gray-800));
+  color: var(--semantics-content-color, --theme(--color-gray-50));
 }
 
 /* ── Components ───────────────────────────────────────────────────────────── */

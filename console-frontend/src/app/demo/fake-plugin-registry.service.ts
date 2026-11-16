@@ -25,6 +25,7 @@ export default class FakePluginRegistryService implements Pick<
   | 'getCrd'
   | 'crdKind'
   | 'installationHealth'
+  | 'crdScope'
   | 'allPlugins'
 > {
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
@@ -146,6 +147,14 @@ export default class FakePluginRegistryService implements Pick<
     return Object.values(fx.pluginCrds)
       .flat()
       .find((crd) => crdRef === `${crd.plural}.${crd.group}`)?.kind;
+  }
+
+  /** The scope of the CRD a menu entry points at, from the fixtures. */
+  // eslint-disable-next-line class-methods-use-this
+  crdScope(crdRef: string): ParsedCrd['scope'] | undefined {
+    return Object.values(fx.pluginCrds)
+      .flat()
+      .find((crd) => crdRef === `${crd.plural}.${crd.group}`)?.scope;
   }
 
   allPlugins = this.plugins.asReadonly();

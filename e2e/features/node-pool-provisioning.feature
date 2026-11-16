@@ -1,7 +1,7 @@
 # Runs only against a real Gardener, in the test-env VM: just test-env test @real-gardener
 # Requires: a running cluster (E2E_CLUSTER_NAME, default "e2e-base"; test-env sets it) owned by the
 # API key's organization, kubectl access to the seed kind cluster
-# (E2E_SEED_CONTEXT, default "kind-gardener-operator-local"), and patience: Gardener
+# (E2E_SEED_CONTEXT, default "kind-gardener-local"), and patience: Gardener
 # reports a pool without machines only when its wait for them times out, about
 # 10 minutes in, so this is a 15-35 minute test.
 @real-gardener

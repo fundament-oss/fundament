@@ -1,0 +1,72 @@
+{{/*
+The discovery document functl and the Terraform provider read to find the
+installation's APIs (common/discovery): /.well-known/fundament.json on the root
+host. No pod serves it; Envoy Gateway answers from the ConfigMap through an
+HTTPRouteFilter direct response, so this needs Envoy Gateway as the gateway.
+*/}}
+{{- if $.Values.discovery.httproute.enabled }}
+{{- if not $.Values.discovery.httproute.parentRefs }}{{ fail "discovery.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+{{- if not $.Values.discovery.httproute.hostnames }}{{ fail "discovery.httproute.hostnames is required when httproute is enabled: a route without hostnames answers on every host of the gateway" }}{{ end }}
+{{- $document := dict
+  "issuer" (required "externalUrls.root must be set when discovery.httproute is enabled" $.Values.externalUrls.root)
+  "organization_api" $.Values.externalUrls.organization
+  "authn_api" $.Values.externalUrls.authn
+  "kube_api_proxy" $.Values.externalUrls.kubeApiProxy
+  "marketplace_catalog_api" $.Values.externalUrls.marketplaceCatalogApi
+  "marketplace_registry_api" $.Values.externalUrls.marketplaceRegistryApi
+}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-discovery
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "discovery" "component" "gateway") | nindent 4 }}
+data:
+  # A "%" is written as the JSON escape \u0025: Envoy may expand %...% command
+  # operators in a direct response body, and whether it does is not worth
+  # depending on. JSON parsers read it back as "%".
+  response.body: {{ $document | toJson | replace "%" "\\u0025" | quote }}
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: {{ $.Release.Name }}-discovery
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "discovery" "component" "gateway") | nindent 4 }}
+spec:
+  directResponse:
+    contentType: application/json
+    statusCode: 200
+    body:
+      type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: {{ $.Release.Name }}-discovery
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-discovery
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "discovery" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.discovery.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.discovery.httproute.hostnames | nindent 4 }}
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /.well-known/fundament.json
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: {{ $.Release.Name }}-discovery
+{{- end }}

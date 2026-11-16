@@ -10,7 +10,7 @@ import { OrganizationService } from '../support/generated/v1/organization_pb.ts'
 // The only region the fixtures seed with Gardener's local provider, and the
 // newest Kubernetes version they offer in it (db/testdata/031_0101-content.sql).
 const REGION = 'local';
-const KUBERNETES_VERSION = '1.34.3';
+const KUBERNETES_VERSION = '1.35.4';
 // The pool the cluster is created with, which the scenarios lower or leave.
 const EXISTING_POOL = 'workers';
 
@@ -220,10 +220,13 @@ Then(
   'the existing node pool has maximum {int}',
   async function (this: ICustomWorld, max: number) {
     const s = state(this);
-    // Saving goes back to the cluster's page.
-    await this.page!.waitForURL(new RegExp(`/clusters/${s.clusterId}$`), {
-      timeout: 10000,
-    });
+    // Saving goes back to the cluster's overview.
+    await this.page!.waitForURL(
+      new RegExp(`/clusters/${s.clusterId}/general$`),
+      {
+        timeout: 10000,
+      },
+    );
     const { nodePools } = await s.clusters.listNodePools({
       clusterId: s.clusterId,
     });

@@ -363,356 +363,32 @@
           <nldd-navigation-split-view
             #splitView
             primary-sidebar-accessible-label="Navigation"
-            (back)="onPaneBack($event)"
+            (back)="onPaneBack()"
             (nldd-single-column-change)="onSingleColumnChange($event)"
           >
             <!-- Every pane opens with its own h1. Collapsed to one column each
                  pane is a view of its own, so each needs a heading of its own;
-                 side by side they are three regions, not nested sections, and
-                 several h1s say exactly that. A pane out of the stack is not
+                 side by side they are two regions, not nested sections, and
+                 two h1s say exactly that. A pane out of the stack is not
                  slotted, so it draws no box and stays out of the reading order
-                 either way. -->
-            @if (true) {
-              <nldd-split-view-pane
-                slot="sidebar"
-                background="base"
-                has-content
-              >
-                <!-- The page owns the scroll region: a pane clips what does not fit, so a
-                   menu longer than the pane would be cut off without one. Named,
-                   because a page beside others is a region and only a name
-                   makes it a landmark. -->
-                <nldd-page accessible-label="Organization">
-                  <nldd-simple-section>
-                    @if (currentOrganization(); as org) {
-                      <nldd-title size="3">
-                        <h1>{{ org.alias || org.name }}</h1>
-                      </nldd-title>
-                      <nldd-spacer size="4"></nldd-spacer>
-                    }
-                    <nldd-list
-                      type="navigation"
-                      dividers="on-touch"
-                      aria-label="Organization"
-                    >
-                      <nldd-list-item
-                        [attr.href]="path('/general')"
-                        [attr.current]="isNavActive('/general', true) ? '' : null"
-                        (click)="navigateFromSidebar($event, '/general')"
-                      >
-                        <nldd-icon-cell
-                          icon="apartment-building"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="General"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/members')"
-                        [attr.current]="isNavActive('/members') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/members')"
-                      >
-                        <nldd-icon-cell
-                          icon="users"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Members"></nldd-text-cell>
-                        @if (organizationDataService.memberCount() !== null) {
-                          <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                          <nldd-text-cell
-                            width="fit-content"
-                            horizontal-alignment="right"
-                            color="secondary"
-                            [attr.text]="organizationDataService.memberCount()"
-                          ></nldd-text-cell>
-                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                        }
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/clusters')"
-                        [attr.current]="isClustersActive() ? '' : null"
-                        (click)="navigateFromSidebar($event, '/clusters')"
-                      >
-                        <nldd-icon-cell
-                          icon="kubernetes"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Clusters"></nldd-text-cell>
-                        <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                        <nldd-text-cell
-                          width="fit-content"
-                          horizontal-alignment="right"
-                          color="secondary"
-                          [attr.text]="organizationDataService.clusterSummaries().length"
-                        ></nldd-text-cell>
-                        <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/plugins')"
-                        [attr.current]="isNavActive('/plugins') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/plugins')"
-                      >
-                        <nldd-icon-cell
-                          icon="plugin"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Plugins"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/metrics')"
-                        [attr.current]="isNavActive('/metrics') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/metrics')"
-                      >
-                        <nldd-icon-cell
-                          icon="analytics"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Metrics"></nldd-text-cell>
-                        <!-- Only when it is unreachable: a dot that is always on
-                           says nothing, and the count column next to it is
-                           information rather than alarm. -->
-                        @if (metricsHealth.state() === 'down') {
-                          <nldd-cell width="fit-content">
-                            <nldd-tooltip text="Metrics connection lost">
-                              <nldd-badge
-                                color="warning"
-                                accessible-label="Metrics connection lost"
-                              ></nldd-badge>
-                            </nldd-tooltip>
-                          </nldd-cell>
-                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                        }
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/logs')"
-                        [attr.current]="isNavActive('/logs') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/logs')"
-                      >
-                        <nldd-icon-cell
-                          icon="bullet-list"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Logs"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/quotas')"
-                        [attr.current]="isNavActive('/quotas') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/quotas')"
-                      >
-                        <nldd-icon-cell
-                          icon="score-meter"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Quotas"></nldd-text-cell>
-                      </nldd-list-item>
-                    </nldd-list>
-                    <!-- The projects themselves, not a link to a list of them: this
-                       is where you pick one, and the status dot makes the whole
-                       organization readable in one glance. -->
-                    @if (showProjectsSection()) {
-                      <nldd-spacer size="24"></nldd-spacer>
-                      <nldd-title size="5">
-                        <h2>Projects</h2>
-                      </nldd-title>
-                      <nldd-spacer size="8"></nldd-spacer>
-                      <!-- Under the heading rather than beside it: a named button
-                         says what it makes, where an icon in the corner only
-                         says "plus". -->
-                      <nldd-toolbar
-                        accessible-label="Project actions"
-                        size="sm"
-                      >
-                        <nldd-toolbar-item slot="start">
-                          <nldd-button
-                            text="New project…"
-                            start-icon="plus-small"
-                            [attr.href]="path('/projects/new')"
-                            (click)="openNewProject($event)"
-                          ></nldd-button>
-                          <nldd-menu-item
-                            slot="overflow"
-                            icon="plus-small"
-                            text="New project…"
-                            [attr.href]="path('/projects/new')"
-                            (select)="openNewProject($event)"
-                          ></nldd-menu-item>
-                        </nldd-toolbar-item>
-                      </nldd-toolbar>
-                      @if (organizationProjects().length > 0) {
-                        <nldd-spacer size="8"></nldd-spacer>
-                        <nldd-list
-                          type="navigation"
-                          dividers="on-touch"
-                          aria-label="Projects"
-                        >
-                          @for (project of organizationProjects(); track project.id) {
-                            <nldd-list-item
-                              [attr.href]="path('/projects/' + project.id)"
-                              [attr.current]="
-                                marksCurrent() && activeProjectId() === project.id ? '' : null
-                              "
-                              (click)="navigateFromSidebar($event, '/projects/' + project.id)"
-                            >
-                              <nldd-icon-cell
-                                icon="folder"
-                                size="20"
-                              ></nldd-icon-cell>
-                              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                              <nldd-text-cell [attr.text]="project.name"></nldd-text-cell>
-                              <nldd-cell width="fit-content">
-                                <nldd-tooltip [attr.text]="getStatusLabel(project.status)">
-                                  <nldd-badge
-                                    [attr.color]="getStatusBadgeColor(project.status)"
-                                    [attr.accessible-label]="getStatusLabel(project.status)"
-                                  ></nldd-badge>
-                                </nldd-tooltip>
-                              </nldd-cell>
-                              <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                            </nldd-list-item>
-                          }
-                        </nldd-list>
-                      }
-                    }
-                  </nldd-simple-section>
-                </nldd-page>
-              </nldd-split-view-pane>
-            }
-            @if (activeProject(); as project) {
-              <nldd-split-view-pane
-                slot="secondary-sidebar"
-                background="base"
-                [attr.has-content]="stackDepth() >= 1 ? '' : null"
-              >
-                <!-- A page with a title bar, like any other pane: the bar is what
-                   carries the back button, and the split view shows or hides it
-                   per pane depending on whether the organization is visible
-                   alongside. -->
-                <nldd-page
-                  sticky-header
-                  accessible-label="Project"
-                >
-                  <!-- No (back) of its own: the event bubbles, and the split
-                       view above already listens for it. Bound in both places
-                       one press was handled twice and the stack fell two steps. -->
-                  <nldd-top-title-bar
-                    slot="header"
-                    [attr.back-text]="currentOrganization()?.alias || 'Menu'"
-                  ></nldd-top-title-bar>
-                  <nldd-simple-section>
-                    <!-- The cluster sits under the name rather than in a list of
-                       its own: it is what the project is, not something you can
-                       open. The counts moved into the menu items they describe. -->
-                    <nldd-title size="3">
-                      <h1>{{ project.name }}</h1>
-                      <span slot="supporting-text">Cluster {{ project.clusterName }}</span>
-                    </nldd-title>
-                    <nldd-spacer size="16"></nldd-spacer>
-                    <nldd-list
-                      type="navigation"
-                      dividers="on-touch"
-                      aria-label="Project"
-                    >
-                      @for (item of projectNavItems(); track item.path) {
-                        <nldd-list-item
-                          [attr.href]="path(item.path)"
-                          [attr.current]="isNavActive(item.path, item.exact) ? '' : null"
-                          (click)="navigateFromSidebar($event, item.path)"
-                        >
-                          <nldd-icon-cell
-                            [attr.icon]="item.icon"
-                            size="20"
-                          ></nldd-icon-cell>
-                          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                          <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
-                          @if (item.count !== null) {
-                            <nldd-text-cell
-                              width="fit-content"
-                              horizontal-alignment="right"
-                              color="secondary"
-                              [attr.text]="item.count"
-                            ></nldd-text-cell>
-                            <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                          }
-                          @if (item.path.endsWith('/metrics') && metricsHealth.state() === 'down') {
-                            <nldd-cell width="fit-content">
-                              <nldd-tooltip text="Metrics connection lost">
-                                <nldd-badge
-                                  color="warning"
-                                  accessible-label="Metrics connection lost"
-                                ></nldd-badge>
-                              </nldd-tooltip>
-                            </nldd-cell>
-                            <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                          }
-                        </nldd-list-item>
-                      }
-                    </nldd-list>
-                    <!-- A plugin's screens under the plugin's own name, as a
-                       heading rather than as a row: it names where the items
-                       below come from, and it is not somewhere you can go. Same
-                       heading as "Projects" one pane to the left. -->
-                    @for (group of pluginNavService.projectNav(); track group.installationName) {
-                      <nldd-spacer size="24"></nldd-spacer>
-                      <!-- A plugin that is not running as it should keeps its
-                           screens, with its state next to its name: the reason
-                           is in the tooltip and on the plugin's own pages. -->
-                      <div class="flex items-center gap-2">
-                        <nldd-title size="5">
-                          <h2>{{ group.label }}</h2>
-                        </nldd-title>
-                        @if (group.issue; as issue) {
-                          <nldd-tooltip [attr.text]="issue.message || issue.label">
-                            <nldd-badge
-                              size="sm"
-                              [attr.color]="issue.badgeColor"
-                              [attr.text]="issue.label"
-                              [attr.pulse]="issue.inProgress ? '' : null"
-                            ></nldd-badge>
-                          </nldd-tooltip>
-                        }
-                      </div>
-                      <nldd-spacer size="8"></nldd-spacer>
-                      <nldd-list
-                        type="navigation"
-                        dividers="on-touch"
-                        [attr.aria-label]="group.label"
-                      >
-                        @for (item of group.items; track item.crdPlural) {
-                          <nldd-list-item
-                            [attr.href]="
-                              path(pluginResourcePath(group.installationName, item.crdPlural))
-                            "
-                            [attr.current]="
-                              isNavActive(
-                                pluginResourcePath(group.installationName, item.crdPlural)
-                              )
-                                ? ''
-                                : null
-                            "
-                            (click)="
-                              navigateFromSidebar(
-                                $event,
-                                pluginResourcePath(group.installationName, item.crdPlural)
-                              )
-                            "
-                          >
-                            <app-plugin-menu-icon [icon]="item.icon" />
-                            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                            <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
-                          </nldd-list-item>
-                        }
-                      </nldd-list>
-                    }
-                  </nldd-simple-section>
-                </nldd-page>
-              </nldd-split-view-pane>
-            }
+                 either way.
+
+                 One menu, for the place you are in: the organization, one of
+                 its clusters, or one of their projects. Moving into a cluster
+                 or a project replaces it rather than opening a second pane
+                 beside it, so the menu is the same width and in the same spot
+                 wherever you are, and the breadcrumb on top says where. -->
+            <nldd-split-view-pane
+              slot="sidebar"
+              background="base"
+              has-content
+            >
+              <app-context-menu
+                [marksCurrent]="marksCurrent()"
+                [pickerOpen]="overlays.contextPicker()"
+                (openPicker)="overlays.contextPicker.set(true)"
+              />
+            </nldd-split-view-pane>
             <!-- Only the router outlet: each page brings its own nldd-page, which
                owns the scrolling and the sticky nldd-top-title-bar. A pane
                flex-grows everything it slots, so a second child here would
@@ -720,10 +396,10 @@
             <nldd-split-view-pane
               slot="main"
               appMainPane
-              [attr.has-content]="stackDepth() >= 2 ? '' : null"
+              [attr.has-content]="stackDepth() >= 1 ? '' : null"
             >
               @if (selectedOrgId()) {
-                @if (isProjectRoot()) {
+                @if (isContextRoot()) {
                   <nldd-page landmarks="page">
                     <nldd-simple-section width="full">
                       <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
@@ -786,6 +462,12 @@
     [show]="overlays.newProject()"
     (closed)="overlays.newProject.set(false)"
   ></app-new-project>
+}
+@defer (when overlays.contextPicker()) {
+  <app-context-picker
+    [show]="overlays.contextPicker()"
+    (closed)="overlays.contextPicker.set(false)"
+  ></app-context-picker>
 }
 <nldd-modal-dialog
   appDialogSync

@@ -13,6 +13,12 @@ export interface AppConfiguration {
    * this is the real thing and there is no banner.
    */
   pocUrl?: string;
+  /**
+   * Parent domain shared by the Fundament frontends (the session cookies'
+   * domain). The theme choice is stored in a cookie on it, so every app shows
+   * the same theme. Empty keeps the cookie on this host only.
+   */
+  cookieDomain?: string;
 }
 
 @Injectable({

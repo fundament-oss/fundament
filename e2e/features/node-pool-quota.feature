@@ -1,3 +1,4 @@
+@mock-gardener
 Feature: Node pool quota
   As an organization admin
   I want the node pool form to bound a pool by the organization's node quota
@@ -15,7 +16,9 @@ Feature: Node pool quota
   # already use some, so the steps read the room from GetOrganizationQuotas
   # instead of assuming it. No cluster is seeded in region "local", so the
   # scenarios create their own and remove them afterwards. Node pools are rows in the
-  # database here: no Gardener is needed.
+  # database here: no Gardener is needed. Against a real Gardener each of those
+  # clusters would become a shoot, and a removed one counts against the quota
+  # until its shoot is gone, so the feature skips there (@mock-gardener).
 
   Background:
     Given I am authenticated as "alice@acme-corp.com"

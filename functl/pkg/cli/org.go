@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/fundament-oss/fundament/functl/pkg/config"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -94,7 +95,7 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 		return fmt.Errorf("organization %q not found or not accessible: run 'functl org list' to see your organizations", c.OrgID)
 	}
 
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadFileConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -104,6 +105,13 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Printf("Now using organization: %s (%s)\n", match.GetAlias(), match.GetId())
+	if ctx.Config.URL != cfg.URL {
+		saved := cfg.URL
+		if saved == "" {
+			saved = config.DefaultURL
+		}
+		fmt.Fprintf(os.Stderr, "Warning: the organization was checked against %s (from the environment), but it is saved in the config file, whose installation is %s.\n", ctx.Config.URL, saved)
+	}
 	return nil
 }
 
@@ -112,7 +120,7 @@ type OrgUnsetCmd struct{}
 
 // Run executes the org unset command.
 func (c *OrgUnsetCmd) Run(ctx *Context) error {
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadFileConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
