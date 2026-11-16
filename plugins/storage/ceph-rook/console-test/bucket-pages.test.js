@@ -73,7 +73,10 @@ describe('objectStorageClasses', () => {
     ]);
   });
   test('drops block and file classes', () => {
-    expect(objectStorageClasses([owned('ceph-fast', 'fast', { kind: 'BlockStorage' })])).toEqual([]);
+    expect(objectStorageClasses([
+      owned('ceph-fast', 'fast', { kind: 'BlockStorage' }),
+      owned('cephfs-shared', 'shared', { kind: 'FileStorage' }),
+    ])).toEqual([]);
   });
   test('drops a class merely named like one', () => {
     expect(objectStorageClasses([{ metadata: { name: 'cephobj-x' }, provisioner: 'rook-ceph.ceph.rook.io/bucket' }]))

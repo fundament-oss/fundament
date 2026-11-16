@@ -21,7 +21,11 @@ func TestDefinition_MenuScope(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Empty(t, def.Spec.Menu.Organization)
-	assert.NotEmpty(t, def.Spec.Menu.Project)
+	crds := make([]string, 0, len(def.Spec.Menu.Project))
+	for _, e := range def.Spec.Menu.Project {
+		crds = append(crds, e.CRD)
+	}
+	assert.Contains(t, crds, "gateways.gateway.networking.k8s.io")
 }
 
 // The console loads a menu entry's schema only when spec.crds lists its CRD.
