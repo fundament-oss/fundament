@@ -1,12 +1,16 @@
 package proxy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -84,24 +88,54 @@ func TestParseProjectList_RejectsImpersonation(t *testing.T) {
 }
 
 // listForward answers every namespaced list with one item in that namespace
-// and records the forwarded requests.
+// and records the forwarded requests. It is called concurrently.
 type listForward struct {
+	mu   sync.Mutex
 	reqs []*http.Request
-	// failAt, when > 0, makes the failAt-th call answer 403.
-	failAt int
+	// fail maps a namespace to the status it answers instead.
+	fail map[string]int
 }
 
 func (f *listForward) serve(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
 	f.reqs = append(f.reqs, r)
-	if len(f.reqs) == f.failAt {
+	f.mu.Unlock()
+	ns := strings.Split(r.URL.Path, "/")[5] // /apis/{g}/{v}/namespaces/{ns}/{plural}
+	if status, ok := f.fail[ns]; ok {
 		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = w.Write([]byte("forbidden"))
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(http.StatusText(status)))
 		return
 	}
-	ns := strings.Split(r.URL.Path, "/")[5] // /apis/{g}/{v}/namespaces/{ns}/{plural}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = fmt.Fprintf(w, `{"apiVersion":"cert-manager.io/v1","kind":"CertificateList","metadata":{"resourceVersion":"9"},"items":[{"metadata":{"name":"a","namespace":%q}}]}`, ns) //nolint:gosec // test fake, ns is from the test's own request
+}
+
+// sorted returns the forwarded requests by path: they arrive in any order.
+func (f *listForward) sorted() []*http.Request {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.SortedFunc(slices.Values(f.reqs), func(a, b *http.Request) int {
+		return strings.Compare(a.URL.Path, b.URL.Path)
+	})
+}
+
+// itemNamespaces decodes a merged list into its items' namespaces, in order.
+func itemNamespaces(t *testing.T, body []byte) []string {
+	t.Helper()
+	var got struct {
+		Items []struct {
+			Metadata struct {
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+		} `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(body, &got))
+	out := make([]string, 0, len(got.Items))
+	for _, item := range got.Items {
+		out = append(out, item.Metadata.Namespace)
+	}
+	return out
 }
 
 func newProjectListRequest() *http.Request {
@@ -116,10 +150,11 @@ func TestServeProjectList_Merges(t *testing.T) {
 	rec := httptest.NewRecorder()
 	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2"}, f.serve)
 
-	require.Len(t, f.reqs, 2)
-	assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/ns1/certificates", f.reqs[0].URL.Path)
-	assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/ns2/certificates", f.reqs[1].URL.Path)
-	for _, r := range f.reqs {
+	reqs := f.sorted()
+	require.Len(t, reqs, 2)
+	assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/ns1/certificates", reqs[0].URL.Path)
+	assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/ns2/certificates", reqs[1].URL.Path)
+	for _, r := range reqs {
 		assert.NotContains(t, r.URL.RawQuery, projectQueryParam)
 		assert.Equal(t, "labelSelector=a%3Db", r.URL.RawQuery)
 		assert.Equal(t, "application/json", r.Header.Get("Accept"))
@@ -155,15 +190,86 @@ func TestProjectList_NoNamespaces(t *testing.T) {
 	assert.JSONEq(t, `{}`, string(got["metadata"]))
 }
 
+func TestServeProjectList_KeepsNamespaceOrder(t *testing.T) {
+	t.Parallel()
+	namespaces := []string{"ns5", "ns1", "ns4", "ns2", "ns3", "ns6"}
+	f := &listForward{}
+	rec := httptest.NewRecorder()
+	serveProjectList(rec, newProjectListRequest(), namespaces, f.serve)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, namespaces, itemNamespaces(t, rec.Body.Bytes()))
+}
+
 func TestServeProjectList_SubrequestError(t *testing.T) {
 	t.Parallel()
-	f := &listForward{failAt: 2}
+	f := &listForward{fail: map[string]int{"ns2": http.StatusInternalServerError}}
 	rec := httptest.NewRecorder()
 	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2", "ns3"}, f.serve)
 
-	assert.Len(t, f.reqs, 2, "stops at the first failure")
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, "Internal Server Error", rec.Body.String())
+}
+
+func TestServeProjectList_LeavesOutForbiddenNamespaces(t *testing.T) {
+	t.Parallel()
+	f := &listForward{fail: map[string]int{"ns2": http.StatusForbidden}}
+	rec := httptest.NewRecorder()
+	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2", "ns3"}, f.serve)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, []string{"ns1", "ns3"}, itemNamespaces(t, rec.Body.Bytes()))
+	assert.Equal(t, []string{`299 - "namespace ns2 left out: forbidden"`}, rec.Header().Values("Warning"))
+}
+
+func TestServeProjectList_AllForbidden(t *testing.T) {
+	t.Parallel()
+	f := &listForward{fail: map[string]int{"ns1": http.StatusForbidden, "ns2": http.StatusForbidden}}
+	rec := httptest.NewRecorder()
+	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2"}, f.serve)
+
 	assert.Equal(t, http.StatusForbidden, rec.Code)
-	assert.Equal(t, "forbidden", rec.Body.String())
+	assert.Empty(t, rec.Header().Values("Warning"))
+}
+
+func TestServeProjectList_TooLarge(t *testing.T) {
+	t.Parallel()
+	chunk := bytes.Repeat([]byte(" "), 1<<20)
+	var calls atomic.Int32
+	rec := httptest.NewRecorder()
+	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2", "ns3", "ns4", "ns5", "ns6"}, func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		for range 16 {
+			if _, err := w.Write(chunk); err != nil {
+				return
+			}
+		}
+	})
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "larger than 32 MiB")
+	assert.Less(t, calls.Load(), int32(6), "the namespaces not yet asked are skipped")
+}
+
+func TestServeProjectList_AbortedSubrequest(t *testing.T) {
+	t.Parallel()
+	rec := httptest.NewRecorder()
+	serveProjectList(rec, newProjectListRequest(), []string{"ns1", "ns2"}, func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/ns2/") {
+			panic(http.ErrAbortHandler)
+		}
+		_, _ = w.Write([]byte(`{"items":[]}`))
+	})
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+}
+
+func TestServeProjectList_PanicReachesHandler(t *testing.T) {
+	t.Parallel()
+	assert.PanicsWithValue(t, "boom", func() {
+		serveProjectList(httptest.NewRecorder(), newProjectListRequest(), []string{"ns1"}, func(http.ResponseWriter, *http.Request) {
+			panic("boom")
+		})
+	})
 }
 
 func TestServeProjectList_InvalidJSON(t *testing.T) {
@@ -191,10 +297,16 @@ func TestServeProjectList_RejectsNonJSONAccept(t *testing.T) {
 	}
 }
 
-// recordingUserSAR allows everything and records what it reviewed.
-type recordingUserSAR struct{ attrs []kubereq.Attributes }
+// recordingUserSAR allows everything and records what it reviewed. It is
+// called concurrently.
+type recordingUserSAR struct {
+	mu    sync.Mutex
+	attrs []kubereq.Attributes
+}
 
 func (s *recordingUserSAR) Check(_ context.Context, _ string, attrs *kubereq.Attributes, _ string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.attrs = append(s.attrs, *attrs)
 	return true, nil
 }
@@ -227,10 +339,14 @@ func TestPluginGateway_ProjectList(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code, "body: %s", w.Body.String())
 	require.Len(t, sar.attrs, 2, "one user SAR per namespace")
+	attrs := slices.SortedFunc(slices.Values(sar.attrs), func(a, b kubereq.Attributes) int {
+		return strings.Compare(a.Namespace, b.Namespace)
+	})
+	reqs := f.sorted()
 	for i, ns := range []string{"ns1", "ns2"} {
-		assert.Equal(t, kubereq.Attributes{APIGroup: "cert-manager.io", Namespace: ns, Resource: "certificates", Verb: "list"}, sar.attrs[i])
-		assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/"+ns+"/certificates", f.reqs[i].URL.Path)
-		assert.Equal(t, "plugin-sa-token", SATokenFrom(f.reqs[i].Context()))
+		assert.Equal(t, kubereq.Attributes{APIGroup: "cert-manager.io", Namespace: ns, Resource: "certificates", Verb: "list"}, attrs[i])
+		assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/"+ns+"/certificates", reqs[i].URL.Path)
+		assert.Equal(t, "plugin-sa-token", SATokenFrom(reqs[i].Context()))
 	}
 	assert.Contains(t, w.Body.String(), `"namespace":"ns2"`)
 }
@@ -314,13 +430,14 @@ func TestUserPath_ProjectList(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code, "body: %s", w.Body.String())
 	assert.Contains(t, nsUp.req.URL.Query().Get("labelSelector"), "fundament.io/project-id="+pid.String())
-	require.Len(t, f.reqs, 2)
+	reqs := f.sorted()
+	require.Len(t, reqs, 2)
 	for i, ns := range []string{"ns1", "ns2"} {
-		assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/"+ns+"/certificates", f.reqs[i].URL.Path)
-		assert.Equal(t, clusterID.String(), f.reqs[i].Context().Value(kube.ClusterIDContextKey{}))
-		_, impersonated := kube.ImpersonationFrom(f.reqs[i].Context())
+		assert.Equal(t, "/apis/cert-manager.io/v1/namespaces/"+ns+"/certificates", reqs[i].URL.Path)
+		assert.Equal(t, clusterID.String(), reqs[i].Context().Value(kube.ClusterIDContextKey{}))
+		_, impersonated := kube.ImpersonationFrom(reqs[i].Context())
 		assert.False(t, impersonated, "items are read as the user, not the namespace lister")
-		assert.Equal(t, "user-sa-token", SATokenFrom(f.reqs[i].Context()))
+		assert.Equal(t, "user-sa-token", SATokenFrom(reqs[i].Context()))
 	}
 }
 
