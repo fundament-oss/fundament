@@ -3,12 +3,15 @@ import {
   inject,
   signal,
   computed,
+  effect,
+  untracked,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -33,6 +36,8 @@ import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+
+type LoadState = 'loading' | 'found' | 'missing' | 'failed';
 
 /**
  * Everything about one namespace. Who may work in it is not decided here: access
@@ -65,10 +70,35 @@ export default class NamespaceSheetComponent implements OnInit {
 
   created = signal('');
 
-  isLoading = signal(true);
+  /** How the call for the namespace ended. "missing" is the server saying it
+   *  does not exist; "failed" is anything else, which says nothing about the
+   *  namespace and can be tried again. */
+  private fetchState = signal<LoadState>('loading');
 
-  /** Null while loading, and again when this namespace turns out not to exist. */
-  found = signal<boolean | null>(null);
+  /** The namespace is asked for by cluster, project and namespace name, and the
+   *  first two come with the organization data. Compared by value, so a reload
+   *  that brings back the same names is not a reason to ask again. */
+  private target = computed(
+    () => {
+      const entry = this.organizationData.getProjectById(this.projectId());
+      return entry ? { clusterName: entry.cluster.name, projectName: entry.project.name } : null;
+    },
+    {
+      equal: (a, b) => a?.clusterName === b?.clusterName && a?.projectName === b?.projectName,
+    },
+  );
+
+  /** What the sheet shows. Without the project there is nothing to ask for
+   *  yet: that is loading until the projects are in, failed when their list
+   *  did not come back, and only then a namespace that cannot exist. */
+  state = computed<LoadState>(() => {
+    if (this.target()) return this.fetchState();
+    if (this.organizationData.organizationLoadFailed()) return 'failed';
+    if (!this.organizationData.projectsSettled()) return 'loading';
+    return this.organizationData.projectLoadFailures().size > 0 ? 'failed' : 'missing';
+  });
+
+  retrying = signal(false);
 
   showDeleteModal = signal(false);
 
@@ -81,23 +111,61 @@ export default class NamespaceSheetComponent implements OnInit {
     // The project id lives on the parent route: this sheet is its child.
     this.projectId.set(this.route.snapshot.parent?.params['id'] ?? '');
     this.namespaceName.set(this.route.snapshot.params['name'] ?? '');
-    this.load();
   }
 
+  /** Asks once the project is known, which on a direct link is after the
+   *  sheet opened. Not again once the namespace is in: deleting it reloads the
+   *  projects, and asking for it then would say "not found" on the way out. */
+  private readonly loadOnTarget = effect(() => {
+    if (!this.target()) return;
+    untracked(() => {
+      if (this.fetchState() !== 'found') this.load();
+    });
+  });
+
   async load() {
-    this.isLoading.set(true);
+    const target = this.target();
+    if (!target) return;
+
+    this.fetchState.set('loading');
     try {
       const response = await firstValueFrom(
-        this.namespaceClient.listProjectNamespaces({ projectId: this.projectId() }),
+        this.namespaceClient.getNamespaceByProjectAndName({
+          ...target,
+          namespaceName: this.namespaceName(),
+        }),
       );
-      const namespace = response.namespaces.find((entry) => entry.name === this.namespaceName());
-      this.found.set(!!namespace);
-      this.namespaceId.set(namespace?.id ?? '');
-      this.created.set(namespace?.created ? formatDate(namespace.created) : 'unknown');
+      this.namespaceId.set(response.namespace?.id ?? '');
+      this.created.set(
+        response.namespace?.created ? formatDate(response.namespace.created) : 'unknown',
+      );
+      this.fetchState.set(response.namespace ? 'found' : 'missing');
+    } catch (err) {
+      this.fetchState.set(
+        err instanceof ConnectError && err.code === Code.NotFound ? 'missing' : 'failed',
+      );
+    }
+  }
+
+  /** The button reports the retry: the failure it answers may come straight
+   *  back, and the sheet would otherwise look untouched. */
+  async retry() {
+    this.retrying.set(true);
+    try {
+      if (this.target()) {
+        await this.load();
+        return;
+      }
+      // The project is what is missing, and it hangs off the organization.
+      if (this.organizationData.organizationLoadFailed()) {
+        await this.organizationData.loadOrganizationData();
+        if (this.organizationData.organizationLoadFailed()) return;
+      }
+      await this.organizationData.reloadProjectsAndNamespaces();
     } catch {
-      this.found.set(false);
+      // The sheet shows the failure again; nothing more to say here.
     } finally {
-      this.isLoading.set(false);
+      this.retrying.set(false);
     }
   }
 

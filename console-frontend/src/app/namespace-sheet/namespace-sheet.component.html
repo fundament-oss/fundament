@@ -15,12 +15,37 @@
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
-      @if (isLoading()) {
+      @if (state() === 'loading' && !retrying()) {
         <nldd-activity-indicator
           show-text
           text="Loading namespace..."
         ></nldd-activity-indicator>
-      } @else if (found() === false) {
+      } @else if (state() === 'failed' || retrying()) {
+        <!-- Not "not found": the call failed, which says nothing about whether
+             the namespace exists. Stays up while the retry runs, so the button
+             can show it. -->
+        <nldd-inline-dialog
+          variant="alert"
+          text="Namespace not loaded"
+          supporting-text="Something went wrong while loading this namespace."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="retry()"
+            [attr.loading]="retrying() ? '' : null"
+            text="Try again"
+            appearance="primary"
+          ></nldd-button>
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="onClose()"
+            text="Close"
+            appearance="secondary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else if (state() === 'missing') {
         <nldd-inline-dialog
           variant="alert"
           text="Namespace not found"

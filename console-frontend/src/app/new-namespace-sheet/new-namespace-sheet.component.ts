@@ -135,6 +135,7 @@ export default class NewNamespaceSheetComponent {
       if (!this.show()) return;
       this.namespaceForm.reset();
       this.createErrorMessage.set(null);
+      this.createAttempted.set(false);
     });
   }
 
@@ -143,12 +144,13 @@ export default class NewNamespaceSheetComponent {
   }
 
   async createNamespace(event?: Event) {
-    // A control that acts on Enter itself marks the event handled. Submitting
-    // on that Enter would put the form in error while the user is still filling
-    // it in.
-    if (event?.defaultPrevented) return;
-
+    // No defaultPrevented guard: Enter in the name field arrives twice, as the
+    // submit it requests and as the keydown itself, and both are already marked
+    // handled by the time they get here, so a guard would drop them both. The
+    // second one finds the first already out.
     event?.preventDefault();
+    if (this.isCreatingNamespace()) return;
+
     this.createErrorMessage.set(null);
     this.createAttempted.set(true);
 
