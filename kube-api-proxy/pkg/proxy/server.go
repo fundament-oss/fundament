@@ -38,8 +38,8 @@ type Server struct {
 	kubeHandler   http.Handler
 	handler       http.Handler
 	pluginGateway *pluginGateway
-	// namespaces serves filtered namespace listings in real mode; nil in mock
-	// mode, where user requests reach the mock or sandbox API unfiltered.
+	// namespaces serves filtered namespace listings and project lists; nil in
+	// pure mock mode, where user requests reach MockClient unfiltered.
 	namespaces *namespaceLister
 }
 
@@ -79,15 +79,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 		kubeHandler:   kubeHandler,
 	}
 
-	if tokenCache != nil && authzClient != nil {
-		s.namespaces = &namespaceLister{
-			logger:           logger,
-			visibility:       newVisibilityResolver(authzClient),
-			proxyToken:       tokenCache.GetProxyToken,
-			forgetProxyToken: tokenCache.ForgetProxyToken,
-			upstream:         kubeHandler,
-		}
-	}
+	s.namespaces = newNamespaceLister(cfg, tokenCache, authzClient, kubeHandler, logger)
 
 	pluginSA, err := newPluginSAResolver(cfg, logger)
 	if err != nil {
@@ -106,6 +98,9 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 		pluginSA:    pluginSA,
 		canView:     authzClient.CanViewCluster,
 		kubeHandler: kubeHandler,
+	}
+	if s.namespaces != nil {
+		s.pluginGateway.projectNamespaces = s.namespaces.projectNamespaces
 	}
 
 	mux := http.NewServeMux()
@@ -167,6 +162,30 @@ func (r *statusRecorder) WriteHeader(code int) {
 // event sits in the server's buffer until the next one pushes it out.
 func (r *statusRecorder) Unwrap() http.ResponseWriter {
 	return r.ResponseWriter
+}
+
+// newNamespaceLister returns nil in pure mock mode, which has no cluster to list.
+func newNamespaceLister(cfg *Config, tokenCache *tokenpkg.Cache, authzClient *authz.Client, upstream http.Handler, logger *slog.Logger) *namespaceLister {
+	if authzClient == nil {
+		return nil
+	}
+	n := &namespaceLister{
+		logger:     logger,
+		visibility: newVisibilityResolver(authzClient),
+		upstream:   upstream,
+	}
+	switch {
+	case tokenCache != nil:
+		n.proxyToken = tokenCache.GetProxyToken
+		n.forgetProxyToken = tokenCache.ForgetProxyToken
+	case cfg.Mode == "mock" && cfg.PluginSandboxKubeconfig != "":
+		// No token: SandboxProxy then sends the kubeconfig's credentials.
+		n.proxyToken = func(context.Context, string) (string, error) { return "", nil }
+		n.forgetProxyToken = func(string, string) {}
+	default:
+		return nil
+	}
+	return n
 }
 
 func newUserAccessChecker(cfg *Config, logger *slog.Logger) (useraccess.Checker, error) {

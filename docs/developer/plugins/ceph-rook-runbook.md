@@ -245,8 +245,9 @@ just plugins publish storage/ceph-rook --create --submit
 just funops plugin approve ceph-rook 0.5.0 --organization system --reviewer alice@acme-corp.com
 ```
 
-The registry endpoint comes from functl's config (`registry_url`, or
-`FUNCTL_REGISTRY_URL`, which mise sets for this repo). `--create` reserves the
+The registry endpoint comes from the installation's discovery document (mise
+sets `FUNCTL_URL` for this repo), or from `registry_url` / `FUNCTL_REGISTRY_URL`
+when set. `--create` reserves the
 listing on the first publish; versions are create-only, so republishing means
 bumping `metadata.version` in the definition. The sandbox installs a `system` version
 only once it is submitted (`--submit`) and approved; a draft cannot be approved.

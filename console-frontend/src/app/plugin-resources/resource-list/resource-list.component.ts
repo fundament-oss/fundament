@@ -20,6 +20,9 @@ import PluginRegistryService from '../plugin-registry.service';
 import ProjectNamespacesService from '../project-namespaces.service';
 import ProjectNamespacesLoader from '../project-namespaces-loader';
 import pollResources from '../resource-poll';
+import type { ListScope } from '../plugin-resource-store.service';
+import DropdownSyncDirective from '../../dropdown-sync.directive';
+import pluginRouteScope from '../plugin-route-scope';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
@@ -43,6 +46,7 @@ import '@nldd/design-system/button';
 import '@nldd/design-system/card';
 import '@nldd/design-system/collection';
 import '@nldd/design-system/container';
+import '@nldd/design-system/dropdown';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
@@ -77,7 +81,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent, PluginStatusBannerComponent],
+  imports: [RouterLink, PluginIframeComponent, PluginStatusBannerComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -103,12 +107,52 @@ export default class ResourceListComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap,
   });
 
+  /** Undefined on a cluster page; the plugin UI then lists cluster-wide. */
+  protected projectId = computed(() => this.scope().projectId ?? undefined);
+
+  private scope = computed(() =>
+    pluginRouteScope(this.routeParams().get('id') ?? '', this.route.snapshot.data),
+  );
+
+  /** The route's cluster on a cluster page; on a project page, the project's
+   *  cluster as the registry follows it. */
+  protected clusterId = computed(
+    () => this.scope().clusterId ?? this.clusterContext.selectedClusterId(),
+  );
+
+  protected loadingClusters = computed(
+    () => this.scope().clusterId === null && this.clusterContext.isLoadingClusters(),
+  );
+
+  private queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+
+  /** The picker only applies to a namespaced kind on a project page. */
+  protected showNamespacePicker = computed(
+    () =>
+      this.scope().projectId !== null &&
+      this.crdDef()?.scope === 'Namespaced' &&
+      this.namespaces().length > 0,
+  );
+
+  /** The ?namespace= choice; one outside the project counts as no choice. */
+  protected selectedNamespace = computed(() => {
+    const ns = this.queryParams().get('namespace');
+    return ns && this.namespaces().includes(ns) ? ns : '';
+  });
+
+  /** Narrows the list to the project, or to the namespace picked; none on a cluster page. */
+  private listScope = computed<ListScope | undefined>(() => {
+    const { projectId } = this.scope();
+    if (projectId === null) return undefined;
+    const namespace = this.selectedNamespace();
+    return namespace ? { projectId, namespace } : { projectId };
+  });
+
   protected pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
-
-  /** '' on the organization-level route, which has no project. */
-  private projectId = computed(() => this.routeParams().get('id') ?? '');
 
   plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
@@ -125,7 +169,7 @@ export default class ResourceListComponent implements OnInit {
       plugin: this.plugin(),
       kind: this.crdDef()?.kind,
       view: 'list',
-      clusterId: this.clusterContext.selectedClusterId(),
+      clusterId: this.clusterId(),
       pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
     }),
   );
@@ -157,12 +201,9 @@ export default class ResourceListComponent implements OnInit {
 
   readonly createLink = ['create'];
 
-  /** Where the back button leads: the project these resources belong to, or the
-   *  organization when the plugin is installed there rather than in a project. */
-  backPath = computed(() => {
-    const projectId = this.route.snapshot.parent?.params['id'];
-    return projectId ? `/projects/${projectId}` : '/';
-  });
+  /** Where the back button leads: the cluster or project page these resources
+   *  are listed on. */
+  backPath = computed(() => this.scope().backPath);
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();
@@ -179,7 +220,7 @@ export default class ResourceListComponent implements OnInit {
   protected readonly isDroppedWhenNarrow = isDroppedWhenNarrow;
 
   private menuItem = computed(() =>
-    this.plugin()?.menu.project?.find((i) => i.crd === this.resourceKind()),
+    this.plugin()?.menu[this.scope().menuSection]?.find((i) => i.crd === this.resourceKind()),
   );
 
   /** The plugin's own menu label wins, so the page title matches the nav item. */
@@ -198,6 +239,11 @@ export default class ResourceListComponent implements OnInit {
     resourceSingularLabelMidSentence(this.menuItem(), this.crdDef()?.kind),
   );
 
+  // The latest load wins: results and loading state of a superseded one are dropped.
+  private loadToken = 0;
+
+  private loadedKey = '';
+
   constructor() {
     effect(() => {
       this.titleService.setTitle(this.kindLabel());
@@ -205,18 +251,29 @@ export default class ResourceListComponent implements OnInit {
 
     // Another project's list reuses this component, so follow the route.
     effect(() => {
-      const projectId = this.projectId();
+      const projectId = this.scope().projectId ?? '';
       untracked(() => this.projectNamespaces.load(projectId));
     });
 
-    // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
+    // On a project page the effect fires when selectedClusterId is set by
+    // loadClusters() in ngOnInit.
     effect(() => {
       const pluginName = this.pluginName();
       const resourceKind = this.resourceKind();
-      const clusterId = this.clusterContext.selectedClusterId();
-      if (pluginName && resourceKind && clusterId !== null) {
+      const clusterId = this.clusterId();
+      const listScope = this.listScope();
+      if (pluginName && resourceKind && clusterId !== null && this.namespacesSettled()) {
         untracked(() => {
-          this.loadCrdsAndResources(pluginName, resourceKind, clusterId);
+          const loadedKey = `${pluginName}/${resourceKind}/${clusterId}`;
+          const crd = this.crdDef();
+          // Only the namespace changed: re-list without resetting the CRD, so the
+          // picker stays mounted and keeps focus.
+          if (crd && loadedKey === this.loadedKey) {
+            this.reloadResources(crd, clusterId, listScope);
+          } else {
+            this.loadedKey = loadedKey;
+            this.loadCrdsAndResources(pluginName, resourceKind, clusterId, listScope);
+          }
         });
       }
     });
@@ -225,6 +282,8 @@ export default class ResourceListComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // A cluster route names its cluster; only a project route needs the list.
+    if (this.scope().clusterId !== null) return;
     try {
       // Sets selectedClusterId on completion, triggering the effect above.
       await this.clusterContext.loadClusters();
@@ -233,11 +292,23 @@ export default class ResourceListComponent implements OnInit {
     }
   }
 
+  protected onNamespaceChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { namespace: value || null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   private async loadCrdsAndResources(
     pluginName: string,
     resourceKind: string,
     clusterId: string,
+    listScope: ListScope | undefined,
   ): Promise<void> {
+    this.loadToken += 1;
+    const token = this.loadToken;
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.crdDef.set(undefined);
@@ -248,15 +319,18 @@ export default class ResourceListComponent implements OnInit {
         pluginName,
         resourceKind,
         clusterId,
+        listScope,
       );
+      if (token !== this.loadToken) return;
       this.crdDef.set(crd);
       this.resources.set(resources);
     } catch (err) {
+      if (token !== this.loadToken) return;
       // eslint-disable-next-line no-console
       console.error('[ResourceList] Failed to load resources:', err);
       this.errorMessage.set('Failed to load resources. Please try again.');
     } finally {
-      this.isLoading.set(false);
+      if (token === this.loadToken) this.isLoading.set(false);
     }
   }
 
@@ -331,7 +405,8 @@ export default class ResourceListComponent implements OnInit {
    */
   private async refreshResources(): Promise<void> {
     const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
+    const clusterId = this.clusterId();
+    const listScope = this.listScope();
     if (clusterId === null || this.isLoading()) return;
     if (!crd) {
       await this.retryLoad(clusterId);
@@ -339,9 +414,20 @@ export default class ResourceListComponent implements OnInit {
     }
     if (this.customUIUrl()) return;
     try {
-      const resources = await this.loader.loadResources(this.pluginName(), crd, clusterId);
+      const resources = await this.loader.loadResources(
+        this.pluginName(),
+        crd,
+        clusterId,
+        listScope,
+      );
       // Moved on to another kind or cluster while this was out.
-      if (this.crdDef() !== crd || this.clusterContext.selectedClusterId() !== clusterId) return;
+      if (
+        this.crdDef() !== crd ||
+        this.clusterId() !== clusterId ||
+        this.listScope() !== listScope
+      ) {
+        return;
+      }
       this.resources.set(resources);
     } catch {
       // Kept as is; see above.
@@ -353,12 +439,14 @@ export default class ResourceListComponent implements OnInit {
   private async retryLoad(clusterId: string): Promise<void> {
     const pluginName = this.pluginName();
     const resourceKind = this.resourceKind();
+    const listScope = this.listScope();
     if (!pluginName || !resourceKind) return;
     try {
       const { crd, resources } = await this.loader.loadCrdAndResources(
         pluginName,
         resourceKind,
         clusterId,
+        listScope,
       );
       // Moved on, or a full load started, while this was out.
       if (
@@ -367,7 +455,8 @@ export default class ResourceListComponent implements OnInit {
         this.isLoading() ||
         this.pluginName() !== pluginName ||
         this.resourceKind() !== resourceKind ||
-        this.clusterContext.selectedClusterId() !== clusterId
+        this.clusterId() !== clusterId ||
+        this.listScope() !== listScope
       ) {
         return;
       }
@@ -376,6 +465,35 @@ export default class ResourceListComponent implements OnInit {
       this.errorMessage.set(null);
     } catch {
       // Kept as is; see above.
+    }
+  }
+
+  // Re-lists resources only (after a namespace change); the CRD schema and
+  // plugin registry are unchanged, so the schema is not re-fetched.
+  private async reloadResources(
+    crd: ParsedCrd,
+    clusterId: string,
+    listScope: ListScope | undefined,
+  ): Promise<void> {
+    this.loadToken += 1;
+    const token = this.loadToken;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const resources = await this.loader.loadResources(
+        this.pluginName(),
+        crd,
+        clusterId,
+        listScope,
+      );
+      if (token === this.loadToken) this.resources.set(resources);
+    } catch (err) {
+      if (token !== this.loadToken) return;
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to reload resources:', err);
+      this.errorMessage.set('Failed to load resources. Please try again.');
+    } finally {
+      if (token === this.loadToken) this.isLoading.set(false);
     }
   }
 }

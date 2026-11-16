@@ -220,10 +220,13 @@ Then(
   'the existing node pool has maximum {int}',
   async function (this: ICustomWorld, max: number) {
     const s = state(this);
-    // Saving goes back to the cluster's page.
-    await this.page!.waitForURL(new RegExp(`/clusters/${s.clusterId}$`), {
-      timeout: 10000,
-    });
+    // Saving goes back to the cluster's overview.
+    await this.page!.waitForURL(
+      new RegExp(`/clusters/${s.clusterId}/general$`),
+      {
+        timeout: 10000,
+      },
+    );
     const { nodePools } = await s.clusters.listNodePools({
       clusterId: s.clusterId,
     });

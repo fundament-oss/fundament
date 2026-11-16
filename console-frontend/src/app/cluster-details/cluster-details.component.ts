@@ -563,13 +563,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  them, so a slow response can land after a newer one; each request takes a
    *  number and only the latest may write. */
   private nodePoolsRequest = 0;
+
   private eventsRequest = 0;
 
   /** What the node pool cards show. Its own method because the sheet that edits
    *  the pools stands over this page rather than replacing it, so this page has
    *  to fetch them again on its own. */
   private async loadNodePools(clusterId: string): Promise<void> {
-    const request = ++this.nodePoolsRequest;
+    this.nodePoolsRequest += 1;
+    const request = this.nodePoolsRequest;
     try {
       const response = await firstValueFrom(
         this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
@@ -620,7 +622,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // a status that moves on its own. On a cluster sitting still they only
       // refresh every 6th tick — listNodePools fans out to Prometheus server
       // side, and an idle tab must not fire that every 5 seconds.
-      this.pollTick++;
+      this.pollTick += 1;
       if (statusChanged || shouldPollStatus(response.cluster.status) || this.pollTick % 6 === 0) {
         this.loadNodePools(clusterId).catch(() => {});
         this.loadClusterEvents(clusterId).catch(() => {});
@@ -770,6 +772,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  clicked a second time, and the second DeleteCluster comes back not found. */
   isDeleting = signal(false);
 
+  /** Separate from errorMessage, which belongs to the page behind the dialog. */
+  deleteError = signal<string | null>(null);
+
   deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
 
   /**
@@ -798,6 +803,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       return;
     }
     this.isDeleting.set(true);
+    this.deleteError.set(null);
     try {
       const request = create(DeleteClusterRequestSchema, {
         clusterId: this.clusterData.basics.id,
@@ -832,19 +838,30 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
           this.showDeleteBlockedModal.set(true);
         } else {
           // Its projects were deleted in the meantime, so a retry can succeed.
-          this.errorMessage.set(
-            `This cluster could not be deleted: ${error.rawMessage}. Try again.`,
-          );
+          this.showDeleteError(`This cluster could not be deleted: ${error.message}. Try again.`);
         }
         return;
       }
-      this.errorMessage.set(
+      // The transport's readableErrors interceptor has already made the
+      // message one for the reader, without Connect's "[code]" prefix.
+      this.showDeleteError(
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
           : 'Failed to delete cluster',
       );
     } finally {
       this.isDeleting.set(false);
+    }
+  }
+
+  /** In the dialog while it is open, so a retry is one click away. The dialog
+   *  can be closed (Escape) while the call runs, and a failure must not then
+   *  land in a dialog nobody sees: the page shows it instead. */
+  private showDeleteError(message: string): void {
+    if (this.showDeleteModal()) {
+      this.deleteError.set(message);
+    } else {
+      this.errorMessage.set(message);
     }
   }
 
@@ -997,7 +1014,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async loadClusterEvents(clusterId: string): Promise<void> {
-    const requestNumber = ++this.eventsRequest;
+    this.eventsRequest += 1;
+    const requestNumber = this.eventsRequest;
     try {
       this.isLoadingEvents.set(true);
       const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });
@@ -1030,10 +1048,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
-    this.errorMessage.set(null);
+    this.deleteError.set(null);
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
-    this.isDeleting.set(false);
+    // isDeleting is deliberately left alone: a DeleteCluster still out from
+    // before the dialog was closed (Escape) must keep the button disabled, or a
+    // second one goes out and comes back not found.
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

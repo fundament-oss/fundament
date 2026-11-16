@@ -7,12 +7,13 @@ import createTransferCacheInterceptor from './transfer-cache';
 import { ConfigService } from '../app/config.service';
 import { CatalogService } from '../generated/catalog/v1/catalog_pb';
 import { PublicationService } from '../generated/registry/v1/publication_pb';
-import { ReviewService } from '../generated/admin/v1/review_pb';
 import OrganizationContextService from '../app/organization-context.service';
 import { credentialedFetch } from './credentialed-fetch';
 
 // One transport per deployable (FUN-20): the storefront, the developer's
 // publishing API and the backoffice are three services behind three hosts.
+// The backoffice's lives in admin.ts, so that the storefront and the portal,
+// which share this file, do not carry the staff session's code.
 
 // The catalog is anonymous and internet-facing, so it deliberately sends no
 // credentials: `credentials: 'include'` would force the server into
@@ -48,16 +49,7 @@ export const REGISTRY_TRANSPORT = new InjectionToken<Transport>('registry-transp
     }),
 });
 
-export const ADMIN_TRANSPORT = new InjectionToken<Transport>('admin-transport', {
-  providedIn: 'root',
-  factory: () =>
-    createConnectTransport({
-      baseUrl: inject(ConfigService).getConfig().adminApiUrl,
-      fetch: credentialedFetch(),
-    }),
-});
-
-function createClientToken<T extends DescService>(
+export function createClientToken<T extends DescService>(
   service: T,
   transportToken: InjectionToken<Transport>,
 ): InjectionToken<ObservableClient<T>> {
@@ -70,4 +62,3 @@ function createClientToken<T extends DescService>(
 
 export const CATALOG_CLIENT = createClientToken(CatalogService, CATALOG_TRANSPORT);
 export const PUBLICATION_CLIENT = createClientToken(PublicationService, REGISTRY_TRANSPORT);
-export const REVIEW_CLIENT = createClientToken(ReviewService, ADMIN_TRANSPORT);
