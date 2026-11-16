@@ -11,14 +11,18 @@ import { isPlatformServer } from '@angular/common';
 
 import { ConfigService } from './config.service';
 import {
+  type LegacyThemeSources,
   type ThemeChoice,
   parseLegacyThemeCookie,
   parseThemeCookie,
   readStoredTheme,
-  writeThemeCookie,
+  storeThemeChoice,
 } from './theme-cookie';
 
 export type ThemePreference = ThemeChoice;
+
+// This app kept the choice in a host-only `theme` cookie before the shared one.
+const LEGACY_SOURCES: LegacyThemeSources = { cookie: true };
 
 /**
  * Owns the light/dark choice for the whole app.
@@ -113,13 +117,13 @@ export default class ThemeService {
       const cookies = this.request?.headers.get('cookie');
       return parseThemeCookie(cookies) ?? parseLegacyThemeCookie(cookies);
     }
-    return readStoredTheme(this.config.getConfig().cookieDomain);
+    return readStoredTheme(this.config.getConfig().cookieDomain, LEGACY_SOURCES);
   }
 
   // For 'system' the server renders light and the pre-paint script applies the
   // OS preference.
   private persistTheme() {
-    writeThemeCookie(this.preference(), this.config.getConfig().cookieDomain);
+    storeThemeChoice(this.preference(), this.config.getConfig().cookieDomain, LEGACY_SOURCES);
   }
 
   // Apply the active theme to the <html> element. Runs on the server too, which

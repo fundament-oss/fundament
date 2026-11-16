@@ -60,9 +60,14 @@
     document.cookie = cookie;
   };
 
+  // 'dark', 'light' or 'system' from before the cookie; null without a choice.
+  // The landing page stored 'auto' for an explicit System. Starlight's own ''
+  // is not a choice: its picker writes it on every load for a visitor who never
+  // picked, and adopting it would hide a choice made in another frontend.
   const legacy = () => {
     try {
       const value = localStorage.getItem(STARLIGHT_KEY) || localStorage.getItem(LANDING_KEY);
+      if (value === 'auto') return 'system';
       return value === 'dark' || value === 'light' ? value : null;
     } catch {
       // Storage is unavailable (private mode, blocked site data).

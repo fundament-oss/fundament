@@ -24,8 +24,17 @@ export const THEME_COOKIE_NAME = 'fundament_theme';
 
 // Where earlier versions kept an explicit choice: localStorage in the Console
 // and DCIM, a host-only cookie in the marketplace, both named `theme`. Adopted
-// only while no shared cookie exists, and removed once the cookie holds it.
+// only while no shared cookie exists, and removed once the cookie holds it or
+// the visitor picks again.
 export const LEGACY_THEME_KEY = 'theme';
+
+export interface LegacyThemeSources {
+  /**
+   * Also adopt a `theme` cookie. Only the marketplace ever wrote one; elsewhere
+   * a cookie of that name belongs to another service on the parent domain.
+   */
+  cookie?: boolean;
+}
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -75,8 +84,8 @@ export function writeThemeCookie(theme: ThemeChoice, cookieDomain: string | unde
   document.cookie = cookie;
 }
 
-function readLegacyTheme(): 'dark' | 'light' | null {
-  const fromCookie = parseLegacyThemeCookie(document.cookie);
+function readLegacyTheme(sources: LegacyThemeSources): 'dark' | 'light' | null {
+  const fromCookie = sources.cookie ? parseLegacyThemeCookie(document.cookie) : null;
   if (fromCookie) return fromCookie;
   try {
     const legacy = localStorage.getItem(LEGACY_THEME_KEY);
@@ -87,8 +96,8 @@ function readLegacyTheme(): 'dark' | 'light' | null {
   }
 }
 
-function deleteLegacyTheme(): void {
-  deleteHostOnlyCookie(LEGACY_THEME_KEY);
+function deleteLegacyTheme(sources: LegacyThemeSources): void {
+  if (sources.cookie) deleteHostOnlyCookie(LEGACY_THEME_KEY);
   try {
     localStorage.removeItem(LEGACY_THEME_KEY);
   } catch {
@@ -97,12 +106,29 @@ function deleteLegacyTheme(): void {
 }
 
 /**
+ * Stores a choice the visitor just made. It replaces any legacy copy, also when
+ * the cookie cannot be written (cookies blocked), so an older choice can never
+ * come back over it on the next load. Browser only.
+ */
+export function storeThemeChoice(
+  theme: ThemeChoice,
+  cookieDomain: string | undefined,
+  legacy: LegacyThemeSources = {},
+): void {
+  writeThemeCookie(theme, cookieDomain);
+  deleteLegacyTheme(legacy);
+}
+
+/**
  * Reads the stored choice in the browser, or null when there is none. Along
  * the way it moves a choice that only exists on this host (a legacy one, or a
  * host-only cookie from when the domain was not usable) to the common domain.
  * Browser only.
  */
-export function readStoredTheme(cookieDomain: string | undefined): ThemeChoice | null {
+export function readStoredTheme(
+  cookieDomain: string | undefined,
+  legacy: LegacyThemeSources = {},
+): ThemeChoice | null {
   let stored = parseThemeCookie(document.cookie);
 
   if (stored && usableDomain(cookieDomain)) {
@@ -114,7 +140,7 @@ export function readStoredTheme(cookieDomain: string | undefined): ThemeChoice |
     stored = parseThemeCookie(document.cookie) ?? stored;
   }
 
-  const choice = stored ?? readLegacyTheme();
+  const choice = stored ?? readLegacyTheme(legacy);
   if (choice) {
     // Also renews the expiry, so a regular visitor never loses the choice.
     writeThemeCookie(choice, cookieDomain);
@@ -123,7 +149,7 @@ export function readStoredTheme(cookieDomain: string | undefined): ThemeChoice |
   // With cookies blocked, the legacy copy is all that keeps the choice, so it
   // only goes once the cookie reads back.
   if (parseThemeCookie(document.cookie)) {
-    deleteLegacyTheme();
+    deleteLegacyTheme(legacy);
   }
   return choice;
 }

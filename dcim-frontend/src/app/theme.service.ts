@@ -4,7 +4,7 @@ import {
   type ThemeChoice,
   parseThemeCookie,
   readStoredTheme,
-  writeThemeCookie,
+  storeThemeChoice,
 } from './theme-cookie';
 
 // Manages the app's light/dark theme. The active theme is reflected by a `dark`
@@ -59,7 +59,7 @@ export default class ThemeService {
     const preference = value === 'dark' || value === 'light' ? value : 'system';
     this.themePreference.set(preference);
 
-    writeThemeCookie(preference, this.config.getConfig().cookieDomain);
+    storeThemeChoice(preference, this.config.getConfig().cookieDomain);
 
     this.applyTheme();
   }

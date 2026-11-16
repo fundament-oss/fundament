@@ -54,7 +54,7 @@ import {
   type ThemeChoice,
   parseThemeCookie,
   readStoredTheme,
-  writeThemeCookie,
+  storeThemeChoice,
 } from './theme-cookie';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
@@ -740,7 +740,7 @@ export default class App implements OnInit {
   // Persist the user's theme choice. For 'system' the pre-paint script
   // (public/theme-init.js) applies the OS preference.
   private persistTheme() {
-    writeThemeCookie(this.themePreference(), this.configService.getConfig().cookieDomain);
+    storeThemeChoice(this.themePreference(), this.configService.getConfig().cookieDomain);
   }
 
   navigateTo(path: string) {

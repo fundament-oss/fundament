@@ -5,6 +5,7 @@ import {
   parseLegacyThemeCookie,
   parseThemeCookie,
   readStoredTheme,
+  storeThemeChoice,
   writeThemeCookie,
 } from './theme-cookie';
 
@@ -97,7 +98,7 @@ describe('theme cookie', () => {
   it('moves the legacy host-only marketplace cookie into the shared one', () => {
     hostOnly('theme=dark');
 
-    expect(readStoredTheme(SHARED_DOMAIN)).toBe('dark');
+    expect(readStoredTheme(SHARED_DOMAIN, { cookie: true })).toBe('dark');
     expect(parseLegacyThemeCookie(document.cookie)).toBeNull();
     hostOnly('fundament_theme=; max-age=0');
     expect(parseThemeCookie(document.cookie)).toBe('dark');
@@ -108,9 +109,28 @@ describe('theme cookie', () => {
     localStorage.setItem(LEGACY_THEME_KEY, 'dark');
     hostOnly('theme=dark');
 
-    expect(readStoredTheme(SHARED_DOMAIN)).toBe('system');
+    expect(readStoredTheme(SHARED_DOMAIN, { cookie: true })).toBe('system');
     expect(parseThemeCookie(document.cookie)).toBe('system');
     expect(localStorage.getItem(LEGACY_THEME_KEY)).toBeNull();
+  });
+
+  it('ignores a theme cookie outside the marketplace', () => {
+    // Another service on the parent domain may set a cookie named `theme`.
+    onSharedDomain('theme=dark');
+
+    expect(readStoredTheme(SHARED_DOMAIN)).toBeNull();
+    expect(parseThemeCookie(document.cookie)).toBeNull();
+    expect(parseLegacyThemeCookie(document.cookie)).toBe('dark');
+  });
+
+  it('drops the legacy choice when the visitor picks System, even without cookies', () => {
+    localStorage.setItem(LEGACY_THEME_KEY, 'dark');
+    vi.spyOn(document, 'cookie', 'set').mockImplementation(() => undefined);
+
+    storeThemeChoice('system', SHARED_DOMAIN);
+
+    expect(localStorage.getItem(LEGACY_THEME_KEY)).toBeNull();
+    expect(readStoredTheme(SHARED_DOMAIN)).toBeNull();
   });
 
   it('prefers the shared cookie over a stale host-only copy', () => {
