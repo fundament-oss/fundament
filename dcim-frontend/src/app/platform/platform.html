@@ -1,5 +1,6 @@
 <!-- The filter menus, anchored to their buttons in the toolbars below. Each
-     offers only what occurs in the list, with how many rows it would leave. -->
+     offers only what occurs in the search results, with how many rows it
+     would leave. -->
 <nldd-menu anchor="clusterStatusFilterTrigger" accessible-label="Filter by status">
   <nldd-menu-item
     type="radio"
@@ -140,7 +141,7 @@
           <h2>Organizations</h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
-        @if (api.organizations().length > 0) {
+        @if (api.organizations().length > 0 || filtering()) {
           <nldd-toolbar accessible-label="Organization list">
             <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
               <nldd-search-field
@@ -203,7 +204,11 @@
           }
           <nldd-inline-dialog
             slot="empty"
-            [attr.text]="filtering() ? 'No matching organizations' : 'No organizations'"
+            [attr.text]="
+              filtering() && api.organizations().length > 0
+                ? 'No matching organizations'
+                : 'No organizations'
+            "
           ></nldd-inline-dialog>
         </nldd-table>
       </nldd-container>
@@ -233,7 +238,7 @@
           <h2>Clusters</h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
-        @if (api.clusters().length > 0) {
+        @if (api.clusters().length > 0 || filtering()) {
           <nldd-toolbar accessible-label="Cluster list">
             <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
               <nldd-search-field
@@ -325,7 +330,9 @@
           }
           <nldd-inline-dialog
             slot="empty"
-            [attr.text]="filtering() ? 'No matching clusters' : 'No clusters'"
+            [attr.text]="
+              filtering() && api.clusters().length > 0 ? 'No matching clusters' : 'No clusters'
+            "
           ></nldd-inline-dialog>
         </nldd-table>
       </nldd-container>
@@ -562,7 +569,7 @@
     </p>
   </nldd-rich-text>
   <nldd-spacer size="16"></nldd-spacer>
-  @if (api.findings().length > 0) {
+  @if (api.findings().length > 0 || filtering()) {
     <nldd-toolbar accessible-label="Drift findings list">
       <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
         <nldd-search-field
@@ -632,7 +639,7 @@
           <nldd-text-cell hide-below="lg" [attr.text]="finding.detail"></nldd-text-cell>
         </nldd-table-row>
       }
-      @if (filtering()) {
+      @if (filtering() && api.findings().length > 0) {
         <nldd-inline-dialog slot="empty" text="No matching findings"></nldd-inline-dialog>
       } @else {
         <nldd-inline-dialog

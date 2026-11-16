@@ -199,12 +199,20 @@ export default class PlatformComponent implements OnInit, OnDestroy {
     filterFindings(this.api.findings(), this.searchQuery(), this.kindFilter()),
   );
 
+  // The menus count within the search results, so each count is what picking
+  // that value would leave.
   protected readonly statusOptions = computed(() =>
-    clusterStatusOptions(this.api.clusters(), this.statusFilter()),
+    clusterStatusOptions(
+      filterClusters(this.api.clusters(), this.searchQuery(), ALL),
+      this.statusFilter(),
+    ),
   );
 
   protected readonly kindOptions = computed(() =>
-    driftKindOptions(this.api.findings(), this.kindFilter()),
+    driftKindOptions(
+      filterFindings(this.api.findings(), this.searchQuery(), ALL),
+      this.kindFilter(),
+    ),
   );
 
   protected readonly statusFilterLabel = computed(() => {

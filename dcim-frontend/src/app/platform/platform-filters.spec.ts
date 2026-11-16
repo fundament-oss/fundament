@@ -92,6 +92,13 @@ describe('filterClusters', () => {
     ]);
   });
 
+  it('counts within the search results when given them', () => {
+    expect(clusterStatusOptions(filterClusters(clusters, 'ams', ALL), ALL)).toEqual([
+      { value: ClusterStatus.RUNNING, label: 'Running', count: 1 },
+      { value: ClusterStatus.ERROR, label: 'Error', count: 1 },
+    ]);
+  });
+
   it('keeps the picked status in the menu after its last cluster went', () => {
     expect(clusterStatusOptions(clusters, ClusterStatus.LOST).at(-1)).toEqual({
       value: ClusterStatus.LOST,
