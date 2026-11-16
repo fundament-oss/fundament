@@ -40,7 +40,7 @@ function setup({ url, navigatingTo }: Options) {
   const call = interceptor(async () => {
     throw new ConnectError('no session', Code.Unauthenticated);
   });
-  const fail = () => call({} as UnaryRequest).catch(() => {});
+  const fail = () => call({} as UnaryRequest);
   return { navigate, session, fail };
 }
 
@@ -52,7 +52,8 @@ describe('staffSessionInterceptor', () => {
   it('sends a refused reviewer to the login, marked as a refusal', async () => {
     const { navigate, session, fail } = setup({ url: '/admin/submissions/42' });
 
-    await fail();
+    // The caller still gets the error, whatever else happens.
+    await expect(fail()).rejects.toMatchObject({ code: Code.Unauthenticated });
 
     expect(session.sessionEnded).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith(['/login'], {
@@ -64,7 +65,7 @@ describe('staffSessionInterceptor', () => {
   it('returns to the page being opened, not the one being left', async () => {
     const { navigate, fail } = setup({ url: '/admin', navigatingTo: '/admin/submissions/42' });
 
-    await fail();
+    await expect(fail()).rejects.toMatchObject({ code: Code.Unauthenticated });
 
     expect(navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: { returnUrl: '/admin/submissions/42', refused: 1 },
@@ -79,7 +80,7 @@ describe('staffSessionInterceptor', () => {
       navigatingTo: '/login?returnUrl=%2Fadmin&refused=1',
     });
 
-    await fail();
+    await expect(fail()).rejects.toMatchObject({ code: Code.Unauthenticated });
 
     expect(navigate).not.toHaveBeenCalled();
   });

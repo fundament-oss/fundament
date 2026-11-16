@@ -1,10 +1,24 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  ParamMap,
+  Router,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import type LoginComponent from './login.component';
 import StaffSessionService, { type StaffUser } from './staff-session.service';
 
 const REVIEWER: StaffUser = { id: 'u1', name: 'Rev Iewer' };
+
+function loginQuery(refused: boolean): ParamMap {
+  return convertToParamMap({
+    returnUrl: '/admin/submissions/42',
+    ...(refused ? { refused: '1' } : {}),
+  });
+}
 
 let LoginComponentClass: typeof LoginComponent;
 
@@ -19,9 +33,11 @@ interface Options {
 
 async function setup({ user, refused = false, login }: Options) {
   const session = {
-    ensureUser: vi.fn(() => Promise.resolve(user)),
+    ensureUser: vi.fn((): Promise<StaffUser | null> => Promise.resolve(user)),
     login: vi.fn(login ?? (() => new Promise<StaffUser>(() => {}))),
   };
+
+  const query = new BehaviorSubject(loginQuery(refused));
 
   TestBed.configureTestingModule({
     providers: [
@@ -30,11 +46,9 @@ async function setup({ user, refused = false, login }: Options) {
       {
         provide: ActivatedRoute,
         useValue: {
-          snapshot: {
-            queryParamMap: convertToParamMap({
-              returnUrl: '/admin/submissions/42',
-              ...(refused ? { refused: '1' } : {}),
-            }),
+          queryParamMap: query,
+          get snapshot() {
+            return { queryParamMap: query.value };
           },
         },
       },
@@ -47,7 +61,7 @@ async function setup({ user, refused = false, login }: Options) {
   const fixture = TestBed.createComponent(LoginComponentClass);
   fixture.detectChanges();
   await fixture.whenStable();
-  return { component: fixture.componentInstance, navigateByUrl, session };
+  return { component: fixture.componentInstance, fixture, navigateByUrl, session, query };
 }
 
 describe('LoginComponent', () => {
@@ -80,6 +94,19 @@ describe('LoginComponent', () => {
 
     expect(navigateByUrl).not.toHaveBeenCalled();
     expect(component.error()).toContain('the review service did not accept your session');
+  });
+
+  // Signing out from the header while the refusal shows goes to /login, and
+  // the router reuses this page for it: the message must not outlive the URL.
+  it('drops the refusal when the reviewer signs out and the URL loses it', async () => {
+    const { component, fixture, session, query } = await setup({ user: REVIEWER, refused: true });
+    expect(component.error()).toContain('the review service did not accept your session');
+
+    session.ensureUser.mockResolvedValue(null);
+    query.next(loginQuery(false));
+    await fixture.whenStable();
+
+    expect(component.error()).toBeNull();
   });
 
   // The session ran out on both sides: the form is all there is to say.

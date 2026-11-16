@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
@@ -61,6 +62,10 @@ export default class LoginComponent {
 
   isLoading = signal(false);
 
+  // Bumped by every session check, so a slow answer for a URL the page has
+  // since left does not overwrite the newer one.
+  private checks = 0;
+
   emailError = computed(() => {
     const email = this.email().trim();
     if (!email) return 'Email address is required';
@@ -73,15 +78,35 @@ export default class LoginComponent {
   constructor() {
     inject(TitleService).setTitle('Sign in');
 
-    // Someone who is already signed in (in DCIM, or in another tab) has no
-    // business here: send them on to where they were going. Unless the review
-    // API has just refused that same session, which sending them on would only
-    // repeat, round and round: say so instead, and leave the form to sign in
-    // afresh. The review API's interceptor says so in the URL (`refused`).
-    const refused = this.route.snapshot.queryParamMap.has('refused');
+    // Checked again whenever the query changes: the router reuses this page
+    // for another /login URL, as when the reviewer signs out from the header
+    // while the refusal is on screen, and the message must follow the URL.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe((params) => this.checkSession(params.has('refused')));
+
+    afterNextRender(() => {
+      // After Lit's own render, which settles on a microtask after this hook.
+      setTimeout(() => this.emailField()?.nativeElement.focus());
+    });
+  }
+
+  /**
+   * Someone who is already signed in (in DCIM, or in another tab) has no
+   * business here: send them on to where they were going. Unless the review
+   * API has just refused that same session, which sending them on would only
+   * repeat, round and round: say so instead, and leave the form to sign in
+   * afresh. The review API's interceptor says so in the URL (`refused`).
+   */
+  private checkSession(refused: boolean) {
+    this.checks += 1;
+    const check = this.checks;
+    this.error.set(null);
     this.session
       .ensureUser()
       .then((user) => {
+        // A newer URL is being checked, and its answer is the one to show.
+        if (check !== this.checks) return;
         // A sign-in started meanwhile has taken over, and navigates itself; a
         // second navigation would cancel its own.
         if (!user || this.isLoading()) return;
@@ -94,11 +119,6 @@ export default class LoginComponent {
         this.goOn().catch(() => {});
       })
       .catch(() => {});
-
-    afterNextRender(() => {
-      // After Lit's own render, which settles on a microtask after this hook.
-      setTimeout(() => this.emailField()?.nativeElement.focus());
-    });
   }
 
   onEmailInput(event: Event) {

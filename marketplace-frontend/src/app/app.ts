@@ -86,7 +86,7 @@ export default class App {
   // Only the backoffice's build names it (see variant.admin.ts), so the
   // storefront and the portal neither build a dcim-authn-api client for every
   // visitor nor download its code (FUN-20).
-  private readonly staffSession = STAFF_SESSION ? inject(STAFF_SESSION) : null;
+  private readonly staffSession = inject(STAFF_SESSION);
 
   protected readonly user: Signal<{ id: string; name: string } | null> =
     this.staffSession?.user ?? this.session.user;
