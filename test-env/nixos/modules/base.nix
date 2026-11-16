@@ -26,8 +26,8 @@ in
   # --- Access (public key only) ---------------------------------------------
   services.openssh = {
     enable = true;
-    # Management SSH on 2022, NOT 22: Gardener's local kind bastion publishes
-    # 172.18.255.22:22 on the host, which a host sshd on 0.0.0.0:22 would block.
+    # Management SSH on 2022, NOT 22: Gardener's local bastions publish port 22 on
+    # a host loopback IP, which a host sshd on 0.0.0.0:22 would block.
     ports = [ 2022 ];
     settings.PasswordAuthentication = false;
     settings.KbdInteractiveAuthentication = false;

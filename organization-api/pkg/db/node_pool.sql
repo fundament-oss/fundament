@@ -1,6 +1,7 @@
 
 -- name: NodePoolListByClusterID :many
--- Each pool with its own latest sync row (view node_pool_sync_state).
+-- Each pool with its own latest sync row (view node_pool_sync_state) and the
+-- node counts last observed on the shoot (tenant.node_pool_snapshots).
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.cluster_id,
@@ -14,15 +15,20 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
     LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.deleted IS NULL
 ORDER BY tenant.node_pools.created DESC;
 
 -- name: NodePoolGetByID :one
--- The pool with its own latest sync row, as in NodePoolListByClusterID.
+-- The pool with its own latest sync row and node counts, as in
+-- NodePoolListByClusterID.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.cluster_id,
@@ -36,10 +42,14 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
     LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE tenant.node_pools.id = $1 AND tenant.node_pools.deleted IS NULL;
 
 -- name: NodePoolCreate :one

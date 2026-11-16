@@ -44,6 +44,9 @@ type RealShootAccess struct {
 	// newMetadataClient is the metadata-only counterpart of newClient, used by
 	// ReadInventory to count pods without fetching them.
 	newMetadataClient func(ctx context.Context, clusterID uuid.UUID) (metadata.Interface, error)
+	// nodeCredentials keeps each shoot's credentials for ListNodePools across
+	// status checks (nodeCredentialTTL); nil requests a set per read.
+	nodeCredentials *clientCache
 }
 
 // NewRealShootAccess creates a ShootAccess backed by real Gardener
@@ -51,8 +54,9 @@ type RealShootAccess struct {
 // are wired in this function, so a zero-value RealShootAccess has none.
 func NewRealShootAccess(gardenerClient gardener.Client, logger *slog.Logger) *RealShootAccess {
 	r := &RealShootAccess{
-		gardener: gardenerClient,
-		logger:   logger.With("component", "shoot-access"),
+		gardener:        gardenerClient,
+		logger:          logger.With("component", "shoot-access"),
+		nodeCredentials: newTTLClientCache(nodeCredentialTTL),
 	}
 
 	// The three factories are spelled out rather than built by one generic

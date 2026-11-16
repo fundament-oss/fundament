@@ -139,4 +139,8 @@ type ShootAccess interface {
 	// with arbitrary subjects (groups, users, ServiceAccounts). A changed
 	// roleRef (immutable) recreates the binding.
 	EnsureClusterRoleBindingSubjects(ctx context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error
+
+	// ListNodePools lists the shoot's nodes per worker pool, keyed by the
+	// worker.gardener.cloud/pool label (the generated worker name).
+	ListNodePools(ctx context.Context, clusterID uuid.UUID) (map[string][]PoolNode, error)
 }

@@ -2,6 +2,8 @@ package cluster_test
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -10,12 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	dbgen "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // Gardener's text names the generated worker name, never the raw pool name.
-var enrNomach = `machine deployment "shoot--acme--tf-a-` + kubename.GenerateWorkerName("nomach") + `-z1" is waiting for machines to join`
+const enrTechnicalID = "shoot--acme--tf-a"
+
+var enrNomach = `machine deployment "` + enrTechnicalID + `-` + kubename.GenerateWorkerName("nomach") + `-z1" is waiting for machines to join`
 
 func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	t.Parallel()
@@ -34,6 +39,7 @@ func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           enrTechnicalID,
 	})
 
 	require.NoError(t, checkStatus(t, h))
@@ -147,6 +153,7 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           enrTechnicalID,
 	})
 
 	require.NoError(t, checkStatus(t, h))
@@ -207,4 +214,164 @@ func TestClusterGetPushStateSyncPending(t *testing.T) {
 		require.NoError(t, err, tc.name)
 		assert.Equal(t, tc.want, push.SyncPending, tc.name)
 	}
+}
+
+// Issue 1383: on metal-stack, machine names carry no zone suffix. A cluster
+// being created with one pool metal-api has no machines for reports that pool
+// waiting, with its machine type in plain words; the other pool is not named.
+func TestCheckStatusRecordsWaitingMetalPool(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "metal")
+	insertNodePool(t, db, clusterID, "small", "n1-standard-4", 2, 2)
+	insertNodePool(t, db, clusterID, "medium", "n1-highmem-8", 2, 2)
+	markClusterSyncsCompleted(t, db, clusterID)
+
+	technicalID := "shoot--systemd819--enricotef4f"
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		Message: "Create: Waiting until shoot worker nodes have been reconciled",
+		EveryNodeReadyMessage: `Worker extension (` + technicalID + `/enricotef4f) reports failing health check: machine "` +
+			technicalID + `-` + kubename.GenerateWorkerName("medium") + `-68c79-bnnvm" failed: ` +
+			`[POST /v1/machine/allocate][422] allocateMachine default "{\"statuscode\":422,\"message\":\"no machine available\"}"`,
+		TechnicalID: technicalID,
+	})
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "medium")
+	assert.Equal(t, "waiting", status)
+	assert.Equal(t, "No free n1-highmem-8 machine is available.", message)
+	smallStatus, smallMessage := getNodePoolStatus(t, db, clusterID, "small")
+	assert.Equal(t, "progressing", smallStatus)
+	assert.Empty(t, smallMessage)
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "nodepool_waiting"))
+}
+
+// The poc case of issue 1383: a create that hangs on one pool. The pool whose
+// nodes joined is ready while Gardener still reconciles, the pool Gardener
+// names waits, and both pools' node counts are stored for the console.
+func TestCheckStatusSettlesPoolsByTheirOwnNodes(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+	nodes := shoot.NewMockShootAccess(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
+	h.SetPoolNodeReader(nodes)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-own")
+	insertNodePool(t, db, clusterID, "small", "n1-standard-4", 2, 2)
+	insertNodePool(t, db, clusterID, "nomach", "n1-standard-4", 2, 2)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting until shoot worker nodes have been reconciled", "", time.Minute)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		Message:            "Create: Waiting until shoot worker nodes have been reconciled",
+		APIServerAvailable: true, EveryNodeReadyMessage: enrNomach,
+		TechnicalID: enrTechnicalID,
+	})
+	joined := time.Now()
+	nodes.SetNodePools(clusterID, map[string][]shoot.PoolNode{
+		kubename.GenerateWorkerName("small"): {{Created: joined, Ready: true}, {Created: joined, Ready: true}},
+	})
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, _ := getNodePoolStatus(t, db, clusterID, "small")
+	assert.Equal(t, "ready", status)
+	status, message := getNodePoolStatus(t, db, clusterID, "nomach")
+	assert.Equal(t, "waiting", status)
+	assert.Equal(t, enrNomach, message)
+	assertEventExists(t, db, clusterID, "nodepool_waiting")
+
+	n, ready, counted := getNodePoolCount(t, db, clusterID, "small")
+	require.True(t, counted)
+	assert.Equal(t, int32(2), n)
+	assert.Equal(t, int32(2), ready)
+	n, ready, counted = getNodePoolCount(t, db, clusterID, "nomach")
+	require.True(t, counted)
+	assert.Zero(t, n)
+	assert.Zero(t, ready)
+
+	// While a pool waits, the check asks to run again within a minute: the
+	// nodes come up without Gardener writing the Shoot. The same counts are
+	// not written again.
+	updated := getNodePoolCountUpdated(t, db, clusterID, "small")
+	retryAfter, err := h.CheckClusterRetryAfter(t.Context(), clusterID)
+	require.NoError(t, err)
+	assert.Positive(t, retryAfter)
+	assert.LessOrEqual(t, retryAfter, time.Minute)
+	assert.Equal(t, updated, getNodePoolCountUpdated(t, db, clusterID, "small"))
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "nodepool_waiting"))
+}
+
+// A pool replaced by one of the same name (a machine type changes that way)
+// has the same worker name, so its predecessor's nodes carry its label. They
+// are counted for the console but do not make the new pool ready.
+func TestCheckStatusIgnoresPredecessorNodes(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+	nodes := shoot.NewMockShootAccess(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
+	h.SetPoolNodeReader(nodes)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-replace")
+	insertNodePool(t, db, clusterID, "workers", "n1-highmem-8", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", "", "", time.Minute)
+	setShootUpdating(t, db, clusterID, true)
+
+	// Gardener rolls the change out; the old machine type's node stands.
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		Message: "Reconcile: Waiting until shoot worker nodes have been reconciled", APIServerAvailable: true,
+		TechnicalID: enrTechnicalID,
+	})
+	nodes.SetNodePools(clusterID, map[string][]shoot.PoolNode{
+		kubename.GenerateWorkerName("workers"): {{Created: time.Now().Add(-time.Hour), Ready: true}},
+	})
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, _ := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "progressing", status)
+	assert.Zero(t, countEvents(t, db, clusterID, "nodepool_ready"))
+	n, ready, counted := getNodePoolCount(t, db, clusterID, "workers")
+	require.True(t, counted)
+	assert.Equal(t, int32(1), n)
+	assert.Equal(t, int32(1), ready)
+}
+
+// A failed read of the shoot's nodes changes nothing: the pools are
+// classified from Gardener's report alone and no count is stored.
+func TestCheckStatusIgnoresFailedNodeRead(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+	nodes := shoot.NewMockShootAccess(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
+	nodes.ListNodePoolsError = fmt.Errorf("forbidden")
+	h.SetPoolNodeReader(nodes)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-noread")
+	insertNodePool(t, db, clusterID, "small", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting until shoot worker nodes have been reconciled", "", time.Minute)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		Message: "Create: Waiting until shoot worker nodes have been reconciled", APIServerAvailable: true,
+	})
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, _ := getNodePoolStatus(t, db, clusterID, "small")
+	assert.Equal(t, "progressing", status)
+	_, _, counted := getNodePoolCount(t, db, clusterID, "small")
+	assert.False(t, counted)
 }

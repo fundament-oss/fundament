@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"slices"
 	"sync"
 
 	"github.com/google/uuid"
@@ -38,6 +39,9 @@ type MockShootAccess struct {
 	RoleBindings map[uuid.UUID]map[string]ResourceInfo
 	// Roles: clusterID -> "namespace/name" -> rules + labels
 	Roles map[uuid.UUID]map[string]MockClusterRole
+	// NodePools: clusterID -> worker name -> nodes. A cluster without an
+	// entry reports no nodes.
+	NodePools map[uuid.UUID]map[string][]PoolNode
 
 	// Configurable errors for testing
 	// EnsureNamespaceErrorFor fails EnsureNamespace for one cluster only,
@@ -64,6 +68,7 @@ type MockShootAccess struct {
 	DeleteRoleBindingError        error
 	ListRoleBindingsError         error
 	EnsureRoleError               error
+	ListNodePoolsError            error
 }
 
 // MockClusterRole is the in-memory representation of an applied ClusterRole.
@@ -90,6 +95,7 @@ func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
 		Deployments:         make(map[uuid.UUID]map[string]*appsv1.Deployment),
 		RoleBindings:        make(map[uuid.UUID]map[string]ResourceInfo),
 		Roles:               make(map[uuid.UUID]map[string]MockClusterRole),
+		NodePools:           make(map[uuid.UUID]map[string][]PoolNode),
 	}
 }
 
@@ -597,6 +603,35 @@ func (m *MockShootAccess) GetRoleBinding(clusterID uuid.UUID, namespace, name st
 		return nil
 	}
 	return &rb
+}
+
+func (m *MockShootAccess) ListNodePools(_ context.Context, clusterID uuid.UUID) (map[string][]PoolNode, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ListNodePoolsError != nil {
+		return nil, m.ListNodePoolsError
+	}
+	return clonePoolNodes(m.NodePools[clusterID]), nil
+}
+
+// SetNodePools sets what ListNodePools reports for a cluster.
+func (m *MockShootAccess) SetNodePools(clusterID uuid.UUID, pools map[string][]PoolNode) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.NodePools[clusterID] = clonePoolNodes(pools)
+}
+
+func clonePoolNodes(pools map[string][]PoolNode) map[string][]PoolNode {
+	if pools == nil {
+		return nil
+	}
+	out := make(map[string][]PoolNode, len(pools))
+	for pool, nodes := range pools {
+		out[pool] = slices.Clone(nodes)
+	}
+	return out
 }
 
 var _ ShootAccess = (*MockShootAccess)(nil)

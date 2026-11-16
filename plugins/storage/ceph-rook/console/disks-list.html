@@ -5,26 +5,10 @@
     <title>Disks</title>
   </head>
   <body class="light">
+    <!-- No title: the Console's page around this frame has it. No create
+         either: disks are discovered on the nodes, not made here. -->
     <div class="plugin-card">
-      <h1 class="plugin-heading">Disks</h1>
-      <div id="content">
-        <table class="plugin-table">
-          <thead>
-            <tr>
-              <th>Node</th>
-              <th>Path</th>
-              <th>Size</th>
-              <th>Type</th>
-              <th>Claim</th>
-            </tr>
-          </thead>
-          <tbody id="rows">
-            <tr>
-              <td colspan="5" class="plugin-text">Loading…</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div id="list"></div>
     </div>
     <script type="module" src="./disks-list.js"></script>
   </body>

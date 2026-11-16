@@ -34,8 +34,8 @@ const clusterOwnerEmail = process.env.E2E_CLUSTER_OWNER_EMAIL ?? 'alice@acme-cor
 const machineType = process.env.E2E_NODE_POOL_MACHINE_TYPE ?? 'local-small';
 const NODE_POOL_NAME = 'nomach';
 
-const seedContext = process.env.E2E_SEED_CONTEXT ?? 'kind-gardener-operator-local';
-const seedNode = process.env.E2E_SEED_NODE ?? 'gardener-operator-local-control-plane';
+const seedContext = process.env.E2E_SEED_CONTEXT ?? 'kind-gardener-local';
+const seedNode = process.env.E2E_SEED_NODE ?? 'gardener-local-control-plane';
 
 // scenarioStartedAt bounds the activity-log assertions: on a reused cluster
 // the log keeps nodepool_* events from earlier runs, and finding one of those

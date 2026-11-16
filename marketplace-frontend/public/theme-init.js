@@ -4,12 +4,19 @@
  * the visitor has a theme cookie; this covers the client-rendered routes and
  * the visitors who never chose, whose OS preference the server cannot know.
  *
+ * The saved choice is the `fundament_theme` cookie shared with the other
+ * Fundament apps (see src/app/theme-cookie.ts). Without one, it falls back to
+ * where earlier versions kept it: a host-only `theme` cookie, or localStorage
+ * before that. The app moves those into the shared cookie after boot.
+ *
  * Kept as a file rather than an inline script because the app is served with
  * `script-src 'self'`, which blocks inline execution. Mirrors ThemeService.
  */
 (function () {
   try {
-    var match = document.cookie.match(/(?:^|;\s*)theme=(dark|light)(?:;|$)/);
+    var match =
+      document.cookie.match(/(?:^|;\s*)fundament_theme=(dark|light|system)(?:;|$)/) ||
+      document.cookie.match(/(?:^|;\s*)theme=(dark|light)(?:;|$)/);
     var saved = match ? match[1] : localStorage.getItem('theme');
     var dark =
       saved === 'dark' ||

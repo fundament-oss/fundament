@@ -4434,6 +4434,10 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
+<policy name="node_pool_snapshots_select_organization" table="tenant.node_pool_snapshots" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM tenant.node_pools WHERE tenant.node_pools.id = tenant.node_pool_snapshots.node_pool_id AND authn.is_cluster_in_organization(tenant.node_pools.cluster_id))]]> </expression>
+</policy>
+
 <policy name="namespace_snapshots_select_platform_admin" table="tenant.namespace_snapshots" command="SELECT" permissive="true">	<roles names="fun_platform_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
@@ -6613,6 +6617,11 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="tenant.node_pool_snapshots" type="table"/>
 	<roles names="fun_platform_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.node_pool_snapshots" type="table"/>
+	<roles names="fun_fundament_api"/>
 	<privileges select="true"/>
 </permission>
 <permission>

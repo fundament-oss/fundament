@@ -68,6 +68,10 @@ type ShootStatus struct {
 	EveryNodeReadyMessage string
 	// LastErrors are the Shoot's .status.lastErrors descriptions.
 	LastErrors []string
+	// TechnicalID is the Shoot's .status.technicalID, its namespace in the
+	// seed. Gardener's machine deployment, machine and node names start with
+	// it. Empty until Gardener assigns one.
+	TechnicalID string
 }
 
 // equal compares every field. ShootStatus is not comparable as a value

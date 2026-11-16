@@ -1,8 +1,26 @@
 <!-- Same outer layout as the other pages, so a plugin's own create screen
-     gets the page padding and column the native forms have. -->
-<nldd-page>
+     gets the page padding, column, title bar and title the native forms have.
+     The back button leads to the list, like on a resource's own page. -->
+<nldd-page
+  sticky-header
+  style="--context-back-button-display: flex"
+>
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="title()"
+    [attr.back-text]="kindLabel()"
+    (back)="goToList($event)"
+    collapse-anchor="resource-create-title"
+  ></nldd-top-title-bar>
   <nldd-simple-section>
     <app-plugin-status-banner [installationName]="pluginName()" />
+    <nldd-title
+      id="resource-create-title"
+      size="2"
+    >
+      <h1>{{ title() }}</h1>
+    </nldd-title>
+    <nldd-spacer size="16"></nldd-spacer>
     @if (errorMessage()) {
       <nldd-banner
         variant="critical"

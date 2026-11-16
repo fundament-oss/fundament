@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { REVIEW_CLIENT } from '../../connect/tokens';
+import { REVIEW_CLIENT } from '../../connect/admin';
 import toIsoDate, { toEpochMs } from '../../connect/timestamp';
 import { isCustomIcon } from '../utils/custom-icon';
 import {

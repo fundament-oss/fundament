@@ -783,10 +783,17 @@ const nodePoolListStatusByClusterID = `-- name: NodePoolListStatusByClusterID :m
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.created,
     tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.status_message,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed
 FROM
     tenant.node_pools
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE
     tenant.node_pools.cluster_id = $1
     AND tenant.node_pools.deleted IS NULL
@@ -802,11 +809,20 @@ type NodePoolListStatusByClusterIDParams struct {
 type NodePoolListStatusByClusterIDRow struct {
 	ID            uuid.UUID
 	Name          string
+	MachineType   string
+	AutoscaleMin  int32
+	Created       pgtype.Timestamptz
 	Status        pgtype.Text
 	StatusMessage pgtype.Text
+	Nodes         pgtype.Int4
+	NodesReady    pgtype.Int4
+	Observed      pgtype.Timestamptz
 }
 
-// The status path needs only identity and the stored classification; the
+// The status path needs only identity, the machine type its reason names, the
+// minimum its own nodes are held to and when it was created (older nodes are a
+// predecessor's), the stored classification, and the node counts last
+// observed (tenant.node_pool_snapshots, shared with the inventory worker); the
 // worker-group build query above, with its catalog joins, stays with sync.
 func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
@@ -820,8 +836,14 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.MachineType,
+			&i.AutoscaleMin,
+			&i.Created,
 			&i.Status,
 			&i.StatusMessage,
+			&i.Nodes,
+			&i.NodesReady,
+			&i.Observed,
 		); err != nil {
 			return nil, err
 		}

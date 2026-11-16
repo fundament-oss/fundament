@@ -1,6 +1,6 @@
 // The DiskPool create and edit forms, which open in a console sheet over
-// the list and detail pages. sheet.js loads the SDK and the design system
-// bundle first.
+// the list and detail pages. sheet.js boots the SDK and the design system
+// bundle first (bootPage).
 import {
   errorBox,
   escapeHtml,
@@ -89,7 +89,7 @@ export async function diskPoolCreatePage() {
           </nldd-text>
         </nldd-form-section>
 
-        ${formActionsHtml({ submitId: 'submit-btn', submitText: 'Create DiskPool', cancelId: 'cancel-btn' })}
+        ${formActionsHtml({ submitId: 'submit-btn', submitText: 'Create disk pool', cancelId: 'cancel-btn' })}
       </form>
     </nldd-form>
   `;
@@ -101,7 +101,7 @@ export async function diskPoolCreatePage() {
   wireSubmit(form, {
     button: body.querySelector('#submit-btn'),
     errorBanner: body.querySelector('#error-banner'),
-    failPrefix: 'Failed to create DiskPool',
+    failPrefix: 'Failed to create disk pool',
     checks: [
       [nameInput, resourceNameError],
       [

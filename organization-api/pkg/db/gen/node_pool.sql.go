@@ -149,10 +149,14 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
     LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE tenant.node_pools.id = $1 AND tenant.node_pools.deleted IS NULL
 `
 
@@ -173,11 +177,15 @@ type NodePoolGetByIDRow struct {
 	Status              pgtype.Text
 	StatusMessage       pgtype.Text
 	StatusUpdated       pgtype.Timestamptz
+	Nodes               pgtype.Int4
+	NodesReady          pgtype.Int4
+	Observed            pgtype.Timestamptz
 	SyncStatus          pgtype.Text
 	SyncError           pgtype.Text
 }
 
-// The pool with its own latest sync row, as in NodePoolListByClusterID.
+// The pool with its own latest sync row and node counts, as in
+// NodePoolListByClusterID.
 func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams) (NodePoolGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, nodePoolGetByID, arg.ID)
 	var i NodePoolGetByIDRow
@@ -194,6 +202,9 @@ func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams
 		&i.Status,
 		&i.StatusMessage,
 		&i.StatusUpdated,
+		&i.Nodes,
+		&i.NodesReady,
+		&i.Observed,
 		&i.SyncStatus,
 		&i.SyncError,
 	)
@@ -214,10 +225,14 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pool_snapshots.nodes,
+    tenant.node_pool_snapshots.nodes_ready,
+    tenant.node_pool_snapshots.observed,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
     LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+    LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.deleted IS NULL
 ORDER BY tenant.node_pools.created DESC
 `
@@ -239,11 +254,15 @@ type NodePoolListByClusterIDRow struct {
 	Status              pgtype.Text
 	StatusMessage       pgtype.Text
 	StatusUpdated       pgtype.Timestamptz
+	Nodes               pgtype.Int4
+	NodesReady          pgtype.Int4
+	Observed            pgtype.Timestamptz
 	SyncStatus          pgtype.Text
 	SyncError           pgtype.Text
 }
 
-// Each pool with its own latest sync row (view node_pool_sync_state).
+// Each pool with its own latest sync row (view node_pool_sync_state) and the
+// node counts last observed on the shoot (tenant.node_pool_snapshots).
 func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]NodePoolListByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
 	if err != nil {
@@ -266,6 +285,9 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.Status,
 			&i.StatusMessage,
 			&i.StatusUpdated,
+			&i.Nodes,
+			&i.NodesReady,
+			&i.Observed,
 			&i.SyncStatus,
 			&i.SyncError,
 		); err != nil {

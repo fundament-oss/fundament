@@ -2,7 +2,8 @@
 The guided walkthrough of the console: the same nginx image as console-frontend, built
 from the demo entrypoint (`bun run build:demo`). All of its data is compiled into the
 bundle, so unlike console-frontend it needs no backend. Its config.json carries only
-pocUrl, for the test-environment banner; the demo takes nothing else from it.
+pocUrl, for the test-environment banner, and cookieDomain, for the theme choice shared
+with the other frontends; the demo takes nothing else from it.
 CONNECT_SRC is deliberately left unset — nginx.conf references it, and the CMD's envsubst
 resolves it to an empty string, giving a valid `connect-src 'self' ;`. The demo makes no
 network calls, so there is nothing to allow.
@@ -18,7 +19,8 @@ metadata:
 data:
   config.json: |
     {
-      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "console-demo") }}"
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "console-demo") }}",
+      "cookieDomain": "{{ $.Values.externalUrls.cookieDomain }}"
     }
 
 ---
@@ -37,8 +39,8 @@ spec:
     metadata:
       annotations:
         # The config is mounted with subPath, which never sees a ConfigMap
-        # update, so a changed pocUrl has to roll the pod instead.
-        checksum/config: {{ include "fundament.pocUrl" (dict "root" $ "site" "console-demo") | sha256sum }}
+        # update, so a changed pocUrl or cookieDomain has to roll the pod instead.
+        checksum/config: {{ printf "%s|%s" $.Values.externalUrls.cookieDomain (include "fundament.pocUrl" (dict "root" $ "site" "console-demo")) | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 8 }}
     spec:
