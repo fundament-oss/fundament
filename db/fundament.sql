@@ -69,7 +69,7 @@ CREATE TABLE tenant.organizations (
 	CONSTRAINT organizations_ck_quota_clusters CHECK (quota_clusters >= 0)
 );
 -- ddl-end --
-COMMENT ON COLUMN tenant.organizations.listed_publicly IS E'Whether the public platform overview (FUN-23) names this organization. Off until the organization opts in.';
+COMMENT ON COLUMN tenant.organizations.listed_publicly IS E'Whether the public platform overview (FUN-23) names this organization. Not read for now: until the fieldlab is over every organization is listed.';
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;
 -- ddl-end --
@@ -3893,7 +3893,8 @@ $function$
 -- The public platform page (FUN-23) reads through here only: its role has no
 -- table grants, so names and counts are all it can ever see. Counts follow the
 -- chain organization -> cluster -> project -> namespace with every level live.
--- Only organizations that opted in are named; the system organization never.
+-- Every live organization is named, the system organization never. Until the
+-- fieldlab is over listed_publicly is not read: everyone is listed by default.
 -- plpgsql, not sql: a sql body is checked at CREATE, and trek's diff creates
 -- functions before the columns they read, so a sql body here cannot migrate.
 BEGIN
@@ -3915,7 +3916,6 @@ LEFT JOIN tenant.namespaces
     ON tenant.namespaces.project_id = tenant.projects.id
     AND tenant.namespaces.deleted IS NULL
 WHERE tenant.organizations.deleted IS NULL
-    AND tenant.organizations.listed_publicly
     AND tenant.organizations.id <> tenant.system_organization_id()
 GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
 ORDER BY tenant.organizations.alias, tenant.organizations.name;
