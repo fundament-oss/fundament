@@ -4,6 +4,7 @@
 // request, so the objects come from the fixtures instead.
 import { Injectable } from '@angular/core';
 import type PluginResourceStoreService from '../plugin-resources/plugin-resource-store.service';
+import type { ListScope } from '../plugin-resources/plugin-resource-store.service';
 import type { KubeResource, ParsedCrd } from '../plugin-resources/types';
 import * as fx from './fixtures';
 
@@ -18,7 +19,18 @@ import * as fx from './fixtures';
 function resourcesFor(installationName: string, kind: string): KubeResource[] {
   const pluginName = fx.catalogPluginName(installationName);
   if (!pluginName) return [];
-  return fx.pluginResources[`${pluginName}/${kind}`] ?? [];
+  // The fixtures use console names; a cluster answers with its own.
+  return (fx.pluginResources[`${pluginName}/${kind}`] ?? []).map((r) => {
+    const ns = fx.namespaces.find((n) => n.name === r.metadata.namespace);
+    return ns ? { ...r, metadata: { ...r.metadata, namespace: ns.clusterSideName } } : r;
+  });
+}
+
+/** The project's namespaces, as the cluster names them. */
+function projectNamespaces(projectId: string): Set<string> {
+  return new Set(
+    fx.namespaces.filter((n) => n.projectId === projectId).map((n) => n.clusterSideName),
+  );
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,8 +46,15 @@ export default class FakePluginResourceStoreService implements Pick<
     _clusterId: string,
     _kubeApiProxyUrl: string,
     pluginName: string,
+    scope?: ListScope,
   ): Promise<KubeResource[]> {
-    return resourcesFor(pluginName, crd.kind);
+    const all = resourcesFor(pluginName, crd.kind);
+    if (crd.scope !== 'Namespaced' || !scope) return all;
+    const allowed = projectNamespaces(scope.projectId);
+    return all.filter((r) => {
+      const ns = r.metadata.namespace ?? '';
+      return allowed.has(ns) && (!scope.namespace || ns === scope.namespace);
+    });
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -46,9 +65,15 @@ export default class FakePluginResourceStoreService implements Pick<
     pluginName: string,
     name: string,
     namespace: string | undefined,
+    scope?: { projectId: string },
   ): Promise<KubeResource | undefined> {
+    const allowed =
+      crd.scope === 'Namespaced' && scope ? projectNamespaces(scope.projectId) : undefined;
     return resourcesFor(pluginName, crd.kind).find(
-      (r) => r.metadata.name === name && (!namespace || r.metadata.namespace === namespace),
+      (r) =>
+        r.metadata.name === name &&
+        (!namespace || r.metadata.namespace === namespace) &&
+        (!allowed || allowed.has(r.metadata.namespace ?? '')),
     );
   }
 

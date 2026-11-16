@@ -2,6 +2,7 @@ package cluster_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
@@ -315,6 +317,41 @@ func getNodePoolStatus(t *testing.T, db *testDB, clusterID uuid.UUID, name strin
 	).Scan(&status, &message)
 	require.NoError(t, err)
 	return status, message
+}
+
+// getNodePoolCount returns a pool's node counts from its snapshot row; ok is
+// false while none was recorded.
+func getNodePoolCount(t *testing.T, db *testDB, clusterID uuid.UUID, name string) (nodes, ready int32, ok bool) {
+	t.Helper()
+
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT tenant.node_pool_snapshots.nodes, tenant.node_pool_snapshots.nodes_ready
+		 FROM tenant.node_pool_snapshots
+		 JOIN tenant.node_pools ON tenant.node_pools.id = tenant.node_pool_snapshots.node_pool_id
+		 WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.name = $2 AND tenant.node_pools.deleted IS NULL`,
+		clusterID, name,
+	).Scan(&nodes, &ready)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, false
+	}
+	require.NoError(t, err)
+	return nodes, ready, true
+}
+
+// getNodePoolCountUpdated returns when a pool's node counts were last observed.
+func getNodePoolCountUpdated(t *testing.T, db *testDB, clusterID uuid.UUID, name string) time.Time {
+	t.Helper()
+
+	var observed time.Time
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT tenant.node_pool_snapshots.observed
+		 FROM tenant.node_pool_snapshots
+		 JOIN tenant.node_pools ON tenant.node_pools.id = tenant.node_pool_snapshots.node_pool_id
+		 WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.name = $2 AND tenant.node_pools.deleted IS NULL`,
+		clusterID, name,
+	).Scan(&observed)
+	require.NoError(t, err)
+	return observed
 }
 
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).

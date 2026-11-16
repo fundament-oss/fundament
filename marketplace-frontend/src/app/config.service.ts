@@ -28,6 +28,13 @@ export interface AppConfiguration {
    */
   authnApiUrl?: string;
   /**
+   * Base URL of dcim-authn-api. The review backoffice only: reviewers are
+   * Fundament staff, who sign in against the staff IDP rather than the
+   * console's (see StaffSessionService). Empty means there is nothing to sign
+   * in against, and the backoffice's routes are left unguarded.
+   */
+  dcimAuthnApiUrl?: string;
+  /**
    * Base URL of organization-api. The developer portal reads the names of the
    * session's organizations from it, for the header's organization switcher.
    * Empty leaves the switcher on shortened ids.
@@ -39,6 +46,12 @@ export interface AppConfiguration {
    * means this is the real thing and there is no banner.
    */
   pocUrl?: string;
+  /**
+   * Parent domain shared by the Fundament frontends (the session cookies'
+   * domain). The theme choice is stored in a cookie on it, so every app shows
+   * the same theme. Empty keeps the cookie on this host only.
+   */
+  cookieDomain?: string;
 }
 
 export type ConfigLoader = () => Promise<AppConfiguration>;

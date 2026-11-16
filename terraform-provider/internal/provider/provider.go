@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fundament-oss/fundament/common/discovery"
 )
 
 // Ensure FundamentProvider satisfies various provider interfaces.
@@ -26,6 +29,7 @@ type FundamentProvider struct {
 
 // FundamentProviderModel describes the provider data model.
 type FundamentProviderModel struct {
+	URL             types.String `tfsdk:"url"`
 	Endpoint        types.String `tfsdk:"endpoint"`
 	ApiKey          types.String `tfsdk:"api_key"`
 	AuthnEndpoint   types.String `tfsdk:"authn_endpoint"`
@@ -37,6 +41,7 @@ type FundamentProviderModel struct {
 
 // FundamentEnvConfig describes the environment variable configuration.
 type FundamentEnvConfig struct {
+	URL             string `env:"FUNDAMENT_URL"`
 	Endpoint        string `env:"FUNDAMENT_ENDPOINT"`
 	ApiKey          string `env:"FUNDAMENT_API_KEY"`
 	AuthnEndpoint   string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
@@ -66,8 +71,15 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 	resp.Schema = schema.Schema{
 		Description: "Manages the clusters, projects, namespaces and members of a Fundament organization.",
 		Attributes: map[string]schema.Attribute{
+			"url": schema.StringAttribute{
+				Description: "The root URL of the Fundament installation, for example https://fundament.example. The provider reads the URLs of the installation's APIs from its discovery document at /.well-known/fundament.json. Can also be set via the FUNDAMENT_URL environment variable. Required unless endpoint and authn_endpoint are both set (setting only endpoint is deprecated: authn_endpoint is then derived from it).",
+				Optional:    true,
+				Validators: []validator.String{
+					httpURLValidator{},
+				},
+			},
 			"endpoint": schema.StringAttribute{
-				Description: "The URL of the Fundament organization API, for example https://organization.fundament.example. Required: set it here or in the FUNDAMENT_ENDPOINT environment variable.",
+				Description: "The URL of the Fundament organization API, for example https://organization.fundament.example. Can also be set via the FUNDAMENT_ENDPOINT environment variable. If not provided, discovered from url.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
@@ -82,7 +94,7 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				},
 			},
 			"authn_endpoint": schema.StringAttribute{
-				Description: "The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, derived from endpoint by replacing 'organization' with 'authn' in the subdomain.",
+				Description: "The endpoint URL for the Fundament authentication API (for API key exchange). Can also be set via the FUNDAMENT_AUTHN_ENDPOINT environment variable. If not provided, discovered from url. Deprecated: without url it is derived from endpoint by replacing 'organization' with 'authn' in the host.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
@@ -96,14 +108,14 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				},
 			},
 			"kube_api_proxy_url": schema.StringAttribute{
-				Description: "The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.",
+				Description: "The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable. If not provided, discovered from url.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
 				},
 			},
 			"marketplace_install_url": schema.StringAttribute{
-				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable.",
+				Description: "The base URL of the marketplace install API (install.v1). Required to install a plugin without a pinned plugin_version. Can also be set via the FUNDAMENT_MARKETPLACE_INSTALL_URL environment variable. If not provided, discovered from url.",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
@@ -132,29 +144,78 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// Get endpoint: config takes precedence over environment variable
-	endpoint := config.Endpoint.ValueString()
-	if endpoint == "" {
-		endpoint = envConfig.Endpoint
+	// Config takes precedence over environment variables.
+	rootURL, err := resolveOptionalURL(config.URL.ValueString(), envConfig.URL, "FUNDAMENT_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
 	}
 
-	if endpoint == "" {
+	kubeAPIProxyURL, err := resolveOptionalURL(config.KubeAPIProxyURL.ValueString(), envConfig.KubeAPIProxyURL, "FUNDAMENT_KUBE_API_PROXY_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
+	}
+
+	marketplaceInstallURL, err := resolveOptionalURL(config.MarketplaceInstallURL.ValueString(), envConfig.MarketplaceInstallURL, "FUNDAMENT_MARKETPLACE_INSTALL_URL")
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid URL", err.Error())
+		return
+	}
+
+	urls := serviceURLs{
+		organization:       config.Endpoint.ValueString(),
+		authn:              config.AuthnEndpoint.ValueString(),
+		kubeAPIProxy:       kubeAPIProxyURL,
+		marketplaceInstall: marketplaceInstallURL,
+	}
+	if urls.organization == "" {
+		urls.organization = envConfig.Endpoint
+	}
+	if urls.authn == "" {
+		urls.authn = envConfig.AuthnEndpoint
+	}
+
+	err = urls.discover(ctx, rootURL)
+	if err != nil {
+		// Only the organization and authn APIs are needed to configure; the
+		// others are optional, so an installation that has given those two
+		// explicitly does not depend on its discovery document.
+		if urls.organization == "" || urls.authn == "" {
+			resp.Diagnostics.AddError("Endpoint Discovery Failed", err.Error())
+			return
+		}
+		// An installation that serves no document yet is not worth a warning
+		// on every run when everything required is set.
+		if errors.Is(err, discovery.ErrNotFound) {
+			tflog.Debug(ctx, "Installation serves no discovery document", map[string]any{"error": err.Error()})
+		} else {
+			resp.Diagnostics.AddWarning("Endpoint Discovery Failed", err.Error())
+		}
+	}
+
+	if urls.authn == "" && urls.organization != "" && rootURL == "" {
+		urls.authn = deriveAuthnEndpoint(urls.organization)
+		resp.Diagnostics.AddWarning(
+			"Deprecated: derived authn endpoint",
+			fmt.Sprintf("Neither url nor authn_endpoint is set, so the authentication API was guessed as %s by replacing 'organization' with 'authn' in endpoint. "+
+				"This guess is deprecated and will be removed: set url (FUNDAMENT_URL) to the installation's root URL, or set authn_endpoint (FUNDAMENT_AUTHN_ENDPOINT).", urls.authn),
+		)
+	}
+
+	if urls.organization == "" || urls.authn == "" {
 		resp.Diagnostics.AddError(
 			"Missing Endpoint",
-			"The provider cannot create the Fundament API client as there is a missing or empty value for the Fundament API endpoint. "+
-				"Set the endpoint value in the configuration or use the FUNDAMENT_ENDPOINT environment variable.",
+			"The provider cannot create the Fundament API client as it does not know the organization or authentication API. "+
+				"Set url (FUNDAMENT_URL) to the installation's root URL, or set both endpoint (FUNDAMENT_ENDPOINT) and authn_endpoint (FUNDAMENT_AUTHN_ENDPOINT).",
 		)
 		return
 	}
+	endpoint, authnEndpoint := urls.organization, urls.authn
 
 	apiKey := config.ApiKey.ValueString()
 	if apiKey == "" {
 		apiKey = envConfig.ApiKey
-	}
-
-	authnEndpoint := config.AuthnEndpoint.ValueString()
-	if authnEndpoint == "" {
-		authnEndpoint = envConfig.AuthnEndpoint
 	}
 
 	// Get organization_id: config takes precedence over environment variable
@@ -182,11 +243,6 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 
 	var client *FundamentClient
 
-	// Derive authn_endpoint if not provided
-	if authnEndpoint == "" {
-		authnEndpoint = deriveAuthnEndpoint(endpoint)
-	}
-
 	tflog.Debug(ctx, "Using API key authentication", map[string]any{
 		"endpoint":       endpoint,
 		"authn_endpoint": authnEndpoint,
@@ -204,19 +260,7 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	kubeAPIProxyURL, err := resolveOptionalURL(config.KubeAPIProxyURL.ValueString(), envConfig.KubeAPIProxyURL, "FUNDAMENT_KUBE_API_PROXY_URL")
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid URL", err.Error())
-		return
-	}
-
-	marketplaceInstallURL, err := resolveOptionalURL(config.MarketplaceInstallURL.ValueString(), envConfig.MarketplaceInstallURL, "FUNDAMENT_MARKETPLACE_INSTALL_URL")
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid URL", err.Error())
-		return
-	}
-
-	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL, marketplaceInstallURL)
+	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, urls.kubeAPIProxy, urls.marketplaceInstall)
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 
@@ -252,18 +296,58 @@ func (p *FundamentProvider) DataSources(ctx context.Context) []func() datasource
 	}
 }
 
-// deriveAuthnEndpoint derives the authn endpoint from the organization endpoint
-// by replacing 'organization' with 'authn' in the subdomain.
+// deriveAuthnEndpoint guesses the authn endpoint from the organization endpoint
+// by replacing 'organization' with 'authn' in the host.
+//
+// Deprecated: the guess is wrong for hosts such as organization-api.<domain>.
+// It only remains for configurations from before url, until
+// https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1480
 func deriveAuthnEndpoint(organizationEndpoint string) string {
 	u, err := url.Parse(organizationEndpoint)
 	if err != nil {
-		// Fall back to simple string replacement if URL parsing fails
 		return strings.Replace(organizationEndpoint, "organization", "authn", 1)
 	}
 
-	// Replace "organization" with "authn" in the host
 	u.Host = strings.Replace(u.Host, "organization", "authn", 1)
 	return u.String()
+}
+
+// serviceURLs are the APIs the provider talks to. marketplaceInstall is the
+// install.v1 API, which marketplace-catalog-api serves.
+type serviceURLs struct {
+	organization       string
+	authn              string
+	kubeAPIProxy       string
+	marketplaceInstall string
+}
+
+// discover fills the URLs that are not set from the discovery document of the
+// installation at rootURL. It makes no request when there is nothing to fill
+// or no rootURL.
+func (u *serviceURLs) discover(ctx context.Context, rootURL string) error {
+	complete := u.organization != "" && u.authn != "" && u.kubeAPIProxy != "" && u.marketplaceInstall != ""
+	if rootURL == "" || complete {
+		return nil
+	}
+
+	doc, err := discovery.Fetch(ctx, nil, rootURL)
+	if err != nil {
+		return fmt.Errorf("discovering the endpoints of %s: %w", rootURL, err)
+	}
+
+	if u.organization == "" {
+		u.organization = doc.OrganizationAPI
+	}
+	if u.authn == "" {
+		u.authn = doc.AuthnAPI
+	}
+	if u.kubeAPIProxy == "" {
+		u.kubeAPIProxy = doc.KubeAPIProxy
+	}
+	if u.marketplaceInstall == "" {
+		u.marketplaceInstall = doc.MarketplaceCatalogAPI
+	}
+	return nil
 }
 
 // resolveOptionalURL returns the configured URL, else the one from envName. Only

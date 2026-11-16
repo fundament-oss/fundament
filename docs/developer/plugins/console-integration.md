@@ -69,6 +69,7 @@ The plugin routes live under `plugin-resources/`, at organization level and unde
 
 - `:pluginName` is the PluginInstallation's `metadata.name` (`<organizationName>--<pluginName>`); `:resourceKind` is `<plural>.<group>`.
 - Each component looks up `customComponents.<Kind>.list`, `.detail` or `.create`. If present, it mounts the plugin iframe; if absent, it renders the generated view.
+- Either way the component draws the page around it: the title bar with the back button, and the `<h1>`. The list's title is the kind's label. The detail's title is the resource's name, with the `primaryCondition` badge the generated view shows, and its back button leads to the list. The create page is titled "New <kind>" and also leads back to the list. The detail route polls the resource for a custom page too, so the badge follows the cluster. A plugin page draws neither title nor back button: see [Page title and navigation](custom-ui#page-title-and-navigation).
 - The list shows a create action only when the kind has a `create` component.
 
 ### Generated fallback UI

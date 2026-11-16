@@ -1,16 +1,18 @@
 import {
-  loadSdk,
-  escapeHtml,
+  bootPage,
+  emptyStateHtml,
+  errorBox,
   humanizeQuantity,
-  emptyRow,
-  errorRow,
-  wireRowLinks,
+  loadingHtml,
+  navigateToDetail,
+  resourceListHtml,
+  wireListRows,
 } from './_shared.js';
 
-await loadSdk();
-await fundament.init;
+const list = document.getElementById('list');
+list.innerHTML = loadingHtml('Loading disks…');
 
-const tbody = document.getElementById('rows');
+await bootPage();
 
 // Deliberately never says "Available". `available` is a stale-able snapshot of
 // "empty and unformatted" — a disk running an OSD has been observed reporting
@@ -20,7 +22,7 @@ const tbody = document.getElementById('rows');
 // stays unstated.
 function claimText(status) {
   if (status?.claimedBy) return `Claimed by ${status.claimedBy}`;
-  if (status?.filesystem) return `No claim recorded — contains ${status.filesystem}`;
+  if (status?.filesystem) return `No claim recorded, contains ${status.filesystem}`;
   return 'No claim recorded';
 }
 
@@ -43,24 +45,32 @@ try {
   const live = (items ?? []).filter((item) => isLive(item.status ?? {}));
 
   if (live.length === 0) {
-    tbody.innerHTML = emptyRow(5, 'No disks discovered yet.');
+    list.innerHTML = emptyStateHtml({
+      icon: 'ssd-hard-drive',
+      text: 'No disks discovered yet',
+      supportingText: 'Disks appear here once a node reports them.',
+    });
   } else {
-    tbody.innerHTML = live
-      .map((item) => {
+    // The device path first: it is what an operator recognizes from the node,
+    // where the Disk's own name is a digest. Grouped by node through the sort.
+    const byNode = (a, b) =>
+      (a.status?.nodeName ?? '').localeCompare(b.status?.nodeName ?? '')
+      || (a.status?.path ?? '').localeCompare(b.status?.path ?? '');
+    list.innerHTML = resourceListHtml(
+      [...live].sort(byNode).map((item) => {
         const s = item.status ?? {};
         const name = item.metadata?.name ?? '';
-        return `
-          <tr data-name="${escapeHtml(name)}">
-            <td>${escapeHtml(s.nodeName ?? '(unknown node)')}</td>
-            <td><a href="#" class="row-link">${escapeHtml(s.path ?? name)}</a></td>
-            <td>${escapeHtml(humanizeQuantity(s.size))}</td>
-            <td>${escapeHtml(s.type ?? '')}</td>
-            <td>${escapeHtml(claimText(s))}</td>
-          </tr>`;
-      })
-      .join('');
-    wireRowLinks(tbody);
+        const facts = [s.nodeName ?? '(unknown node)', humanizeQuantity(s.size), s.type].filter(Boolean);
+        return {
+          name,
+          text: s.path ?? name,
+          supportingText: `${facts.join(' · ')} · ${claimText(s)}`,
+        };
+      }),
+      'Disks',
+    );
+    wireListRows(list, navigateToDetail);
   }
 } catch (err) {
-  tbody.innerHTML = errorRow(5, err);
+  list.innerHTML = errorBox(err);
 }
