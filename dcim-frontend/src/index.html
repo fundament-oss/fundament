@@ -13,11 +13,15 @@
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Apply the saved/system theme before first paint to avoid a flash of the
-         wrong theme on reload. Mirrors ThemeService.initializeTheme(). -->
+         wrong theme on reload. Mirrors ThemeService.initializeTheme(). The saved
+         choice is a cookie shared with the other Fundament apps (see
+         src/app/theme-cookie.ts); localStorage is where earlier versions kept it,
+         used only without a cookie (`system` in it is a choice too). -->
     <script>
       (function () {
         try {
-          var saved = localStorage.getItem('theme');
+          var match = document.cookie.match(/(?:^|;\s*)fundament_theme=(dark|light|system)(?:;|$)/);
+          var saved = match ? match[1] : localStorage.getItem('theme');
           var dark =
             saved === 'dark' ||
             (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);

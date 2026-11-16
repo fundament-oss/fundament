@@ -107,6 +107,10 @@ export default defineConfig({
         PageTitle: './src/components/overrides/PageTitle.astro',
         // Adds the test-environment banner above the header.
         PageFrame: './src/components/overrides/PageFrame.astro',
+        // Keep the theme choice in the cookie the other Fundament frontends
+        // share, instead of Starlight's per-origin localStorage.
+        ThemeProvider: './src/components/overrides/ThemeProvider.astro',
+        ThemeSelect: './src/components/overrides/ThemeSelect.astro',
       },
       plugins: [sidebarMetaPlugin()],
       sidebar: [

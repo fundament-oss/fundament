@@ -21,7 +21,8 @@ data:
       "storefrontUrl": "{{ $.Values.externalUrls.marketplace }}",
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
-      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "marketplace-registry") }}"
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "marketplace-registry") }}",
+      "cookieDomain": "{{ $.Values.externalUrls.cookieDomain }}"
     }
 
 {{- /*
@@ -52,7 +53,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-                checksum/config: {{ printf "%s|%s|%s|%s|%s|%s" $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.console $.Values.externalUrls.marketplace $.Values.externalUrls.authn $.Values.externalUrls.organization (include "fundament.pocUrl" (dict "root" $ "site" "marketplace-registry")) | sha256sum }}
+                checksum/config: {{ printf "%s|%s|%s|%s|%s|%s|%s" $.Values.externalUrls.cookieDomain $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.console $.Values.externalUrls.marketplace $.Values.externalUrls.authn $.Values.externalUrls.organization (include "fundament.pocUrl" (dict "root" $ "site" "marketplace-registry")) | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-registry-frontend" "component" "frontend") | nindent 8 }}
     spec:
