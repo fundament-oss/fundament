@@ -1048,7 +1048,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.deleteError.set(null);
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
-    this.isDeleting.set(false);
+    // isDeleting is deliberately left alone: a DeleteCluster still out from
+    // before the dialog was closed (Escape) must keep the button disabled, or a
+    // second one goes out and comes back not found.
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

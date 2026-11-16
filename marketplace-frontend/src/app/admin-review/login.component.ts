@@ -77,8 +77,8 @@ export default class LoginComponent {
     // business here: send them on to where they were going. Unless the review
     // API has just refused that same session, which sending them on would only
     // repeat, round and round: say so instead, and leave the form to sign in
-    // afresh.
-    const refused = this.session.takeRefusal();
+    // afresh. The review API's interceptor says so in the URL (`refused`).
+    const refused = this.route.snapshot.queryParamMap.has('refused');
     this.session
       .ensureUser()
       .then((user) => {

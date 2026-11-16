@@ -60,14 +60,15 @@
         </nldd-form-field>
         <nldd-form-actions>
           <!-- Never switched off: a button you cannot press says nothing about
-               what is missing, and the loading state already says it is busy. -->
+               what is missing, and the loading state already says it is busy.
+               No (click) of its own: it submits the form, whose (submit)
+               already handles both the click and Enter. -->
           <nldd-button
             type="submit"
             text="Sign in"
             appearance="primary"
             width="full"
             [attr.loading]="isLoading() ? '' : null"
-            (click)="onSubmit()"
           ></nldd-button>
         </nldd-form-actions>
       </nldd-form>

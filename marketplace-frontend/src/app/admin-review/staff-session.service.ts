@@ -23,6 +23,11 @@ export interface StaffSession {
  *  for good. */
 export const SESSION_LOOKUP_TIMEOUT_MS = 5000;
 
+/** How long signing in may take before the reviewer is told the sign-in
+ *  service did not answer. Longer than a lookup: dcim-authn-api asks the
+ *  identity provider in turn. */
+export const LOGIN_TIMEOUT_MS = 15000;
+
 /**
  * The reviewer's session in the review backoffice (FUN-20).
  *
@@ -56,10 +61,6 @@ export default class StaffSessionService {
   // to a lookup started before signing in could land after the one started
   // by login(), and sign the reviewer straight back out.
   private lookups = 0;
-
-  // Set when marketplace-admin-api refused a session that dcim-authn-api may
-  // still accept (see sessionRefused), and taken by the login page it leads to.
-  private refused = false;
 
   /**
    * Whether this build has anywhere to sign in. The demo bundle and a
@@ -98,8 +99,14 @@ export default class StaffSessionService {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        // Without it, a dcim-authn-api that takes the connection but never
+        // answers leaves the Sign in button spinning for good.
+        signal: AbortSignal.timeout(LOGIN_TIMEOUT_MS),
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        throw new Error('The sign-in service did not answer. Try again in a moment.');
+      }
       // A network failure, or a CORS answer that leaves out this origin.
       throw new Error('The sign-in service could not be reached. Try again in a moment.');
     }
@@ -110,7 +117,6 @@ export default class StaffSessionService {
 
     // A fresh lookup, which callers from here on join: one already out was
     // asked before the cookie existed.
-    this.refused = false;
     const { user, failed } = await this.startLookup();
     if (failed) {
       // Signed in, but dcim-authn-api (or its directory) did not answer the
@@ -126,7 +132,7 @@ export default class StaffSessionService {
       // that blocks the cookie on a cross-site call. Whether the cookie also
       // reaches marketplace-admin-api only shows on the first review call: a
       // refusal there leads back to the login page, which then says so (see
-      // sessionRefused).
+      // the ADMIN_TRANSPORT interceptor).
       throw new Error('You were signed in, but the session did not reach this site.');
     }
     return user;
@@ -158,28 +164,6 @@ export default class StaffSessionService {
     this.user.set(null);
   }
 
-  /**
-   * Forgets the reviewer after marketplace-admin-api refused the session. Most
-   * often it ran out, and dcim-authn-api says the same, so the login page
-   * shows its form. But dcim-authn-api may still accept it (a cookie domain
-   * that leaves out marketplace-admin-api's host, a JWT secret that differs):
-   * the login page would then send the reviewer straight back to the page
-   * that was just refused, and round again. The flag lets it say what
-   * happened instead.
-   */
-  sessionRefused(): void {
-    this.refused = true;
-    this.sessionEnded();
-  }
-
-  /** Whether marketplace-admin-api refused the session since the last
-   *  sign-in. Asking clears it, so only the login page it led to sees it. */
-  takeRefusal(): boolean {
-    const { refused } = this;
-    this.refused = false;
-    return refused;
-  }
-
   private startLookup(): Promise<StaffSession> {
     const lookup: Promise<StaffSession> = this.lookup().finally(() => {
       if (this.pending === lookup) this.pending = undefined;
@@ -207,8 +191,11 @@ export default class StaffSessionService {
       }
     }
 
-    // A newer lookup or a sign-out has taken over: leave its answer standing.
-    if (lookup !== this.lookups) return { user: this.user(), failed };
+    // A newer lookup or a sign-out has taken over: leave its answer standing,
+    // and give that answer rather than this one. A newer lookup still out is
+    // joined, as ensureSession would: answering with the user it has not
+    // written yet would send the guard to the login just as login() succeeds.
+    if (lookup !== this.lookups) return this.pending ?? { user: this.user(), failed: false };
     this.user.set(user);
     return { user, failed };
   }

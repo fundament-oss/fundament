@@ -19,7 +19,6 @@ interface Options {
 
 async function setup({ user, refused = false, login }: Options) {
   const session = {
-    takeRefusal: vi.fn(() => refused),
     ensureUser: vi.fn(() => Promise.resolve(user)),
     login: vi.fn(login ?? (() => new Promise<StaffUser>(() => {}))),
   };
@@ -31,7 +30,12 @@ async function setup({ user, refused = false, login }: Options) {
       {
         provide: ActivatedRoute,
         useValue: {
-          snapshot: { queryParamMap: convertToParamMap({ returnUrl: '/admin/submissions/42' }) },
+          snapshot: {
+            queryParamMap: convertToParamMap({
+              returnUrl: '/admin/submissions/42',
+              ...(refused ? { refused: '1' } : {}),
+            }),
+          },
         },
       },
     ],

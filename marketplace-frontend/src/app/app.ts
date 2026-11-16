@@ -34,8 +34,7 @@ import ThemeService, { type ThemePreference } from './theme.service';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 import SessionService from './session.service';
-import StaffSessionService from './admin-review/staff-session.service';
-import { VARIANT } from './variant';
+import { STAFF_SESSION, VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
@@ -84,9 +83,10 @@ export default class App {
   private session = inject(SessionService);
 
   // The backoffice's reviewers sign in against the staff IDP, not the console.
-  // Only the backoffice asks for it, so the storefront and the portal do not
-  // build a dcim-authn-api client for every visitor (FUN-20).
-  private readonly staffSession = this.variant === 'admin' ? inject(StaffSessionService) : null;
+  // Only the backoffice's build names it (see variant.admin.ts), so the
+  // storefront and the portal neither build a dcim-authn-api client for every
+  // visitor nor download its code (FUN-20).
+  private readonly staffSession = STAFF_SESSION ? inject(STAFF_SESSION) : null;
 
   protected readonly user: Signal<{ id: string; name: string } | null> =
     this.staffSession?.user ?? this.session.user;

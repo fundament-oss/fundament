@@ -274,28 +274,64 @@ describe('StaffSessionService.login', () => {
     expect(getUserInfo).toHaveBeenCalledTimes(1);
   });
 
-  it('remembers a refusal by the review API for the login page, once', async () => {
+  // The same, but with the early lookup answering while login()'s is still
+  // out: it must wait for that one rather than answer with the reviewer
+  // login() has not written yet, which would send the guard to the login just
+  // as signing in succeeds.
+  it('has a lookup overtaken by login() wait for the newer answer', async () => {
     const reviewer = { id: 'u1', name: 'Rev Iewer' };
-    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    const { session, getUserInfo } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
+    let answerEarlyLookup!: () => void;
+    let answerLoginLookup!: () => void;
+    let loginLookupAsked!: () => void;
+    const loginLookupStarted = new Promise<void>((resolve) => {
+      loginLookupAsked = resolve;
+    });
+    getUserInfo
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            answerEarlyLookup = () => reject(new ConnectError('no session', Code.Unauthenticated));
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerLoginLookup = () => resolve({ user: reviewer });
+            loginLookupAsked();
+          }),
+      );
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
-    await session.login('rev@example.com', 'secret');
 
-    session.sessionRefused();
+    const early = session.ensureSession();
+    const login = session.login('rev@example.com', 'secret');
+    await loginLookupStarted;
+    answerEarlyLookup();
+    let earlySettled = false;
+    early.then(() => {
+      earlySettled = true;
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+    expect(earlySettled).toBe(false);
 
-    expect(session.user()).toBeNull();
-    expect(session.takeRefusal()).toBe(true);
-    expect(session.takeRefusal()).toBe(false);
+    answerLoginLookup();
+
+    expect(await early).toEqual({ user: reviewer, failed: false });
+    await expect(login).resolves.toEqual(reviewer);
   });
 
-  it('forgets a refusal on signing in again', async () => {
-    const reviewer = { id: 'u1', name: 'Rev Iewer' };
-    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, reviewer);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'));
+  it('gives up on a sign-in that dcim-authn-api never answers', async () => {
+    const { session } = await setup({ dcimAuthnApiUrl: DCIM_AUTHN_URL }, 'unauthenticated');
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new DOMException('signal timed out', 'TimeoutError'));
 
-    session.sessionRefused();
-    await session.login('rev@example.com', 'secret');
-
-    expect(session.takeRefusal()).toBe(false);
+    await expect(session.login('rev@example.com', 'secret')).rejects.toThrow(
+      'The sign-in service did not answer. Try again in a moment.',
+    );
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('ignores a lookup that answers after signing out', async () => {
