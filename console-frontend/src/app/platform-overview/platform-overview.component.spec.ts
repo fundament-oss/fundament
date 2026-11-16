@@ -67,7 +67,7 @@ describe('PlatformOverviewComponent', () => {
     expect(element.querySelector('nldd-table')).toBeNull();
   });
 
-  it('explains an empty list: organizations opt in', async () => {
+  it('explains an empty list', async () => {
     const empty = create(GetPlatformOverviewResponseSchema, { totals: {} });
     const fixture = await render({ getPlatformOverview: () => of(empty) });
 

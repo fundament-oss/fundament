@@ -137,7 +137,8 @@ func (s *Seed) GardenerShoot(clusterID uuid.UUID, name, version string, seenAgo 
 // (tenant.system_organization_id()), which no platform view lists.
 var SystemOrganizationID = uuid.MustParse("019b4000-0000-7000-8000-000000000000")
 
-// ListPublicly opts an organization into the public platform overview.
+// ListPublicly opts an organization into the public platform overview. The
+// overview does not read the flag until the fieldlab is over (FUN-23).
 func (s *Seed) ListPublicly(orgID uuid.UUID) {
 	s.t.Helper()
 	s.exec(`UPDATE tenant.organizations SET listed_publicly = true WHERE id = $1`, orgID)
