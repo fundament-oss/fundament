@@ -683,7 +683,8 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		err := r.waitForPluginGone(ctx, clusterID, name, 5*time.Second, 2*time.Minute)
 		if errors.Is(err, errControllerIdle) {
 			resp.Diagnostics.AddWarning("Plugin Installation Not Removed",
-				err.Error()+". It is removed from state, but stays on the cluster until plugin-controller runs again.")
+				err.Error()+". It is removed from state, but stays on the cluster until plugin-controller runs again. "+
+					"Creating an installation with the same name fails until then.")
 			return
 		}
 		if err != nil {

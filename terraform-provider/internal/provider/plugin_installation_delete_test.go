@@ -47,6 +47,11 @@ func (f *fakeKubeProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.methods = append(f.methods, r.Method)
 	queue := f.responses[r.Method]
+	if len(queue) == 0 {
+		f.mu.Unlock()
+		http.Error(w, "no fake response configured for "+r.Method, http.StatusInternalServerError)
+		return
+	}
 	res := queue[0]
 	if len(queue) > 1 {
 		f.responses[r.Method] = queue[1:]
