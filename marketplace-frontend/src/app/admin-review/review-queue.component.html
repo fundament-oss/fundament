@@ -28,10 +28,20 @@
     <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
   </div>
 } @else {
-  <!-- Status summary -->
+  <!-- Status summary: each card filters the table on its status -->
   <div class="mt-6 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     @for (summary of statusCounts(); track summary.status) {
-      <nldd-card class="block">
+      <nldd-card
+        class="block"
+        button
+        [attr.background]="statusFilter() === summary.status ? 'accent-tinted' : 'base'"
+        [attr.accessible-label]="
+          statusFilter() === summary.status
+            ? summary.label + ', ' + summary.count + '. Showing only these; show all submissions'
+            : summary.label + ', ' + summary.count + '. Show only these'
+        "
+        (click)="toggleStatus(summary.status)"
+      >
         <div class="flex items-center gap-2.5 p-4">
           <span
             class="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -39,6 +49,9 @@
           ></span>
           <span class="font-mono text-xl leading-none">{{ summary.count }}</span>
           <span class="text-gray-600 dark:text-gray-300">{{ summary.label }}</span>
+          @if (statusFilter() === summary.status) {
+            <nldd-icon icon="check-mark" class="text-accent-700 ml-auto h-4 w-4"></nldd-icon>
+          }
         </div>
       </nldd-card>
     }
@@ -58,70 +71,111 @@
       </nldd-container>
     </nldd-box>
   } @else {
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Plugin</th>
-            <th scope="col">Categories</th>
-            <th scope="col">Submitted</th>
-            <th scope="col">Status</th>
-            <th scope="col"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (submission of sortedSubmissions(); track submission.id) {
-            <tr
-              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
-              (click)="goToSubmission(submission.id)"
-            >
-              <td>
-                <div class="flex items-center gap-3">
-                  <app-plugin-icon
-                    [logo]="submission.logo"
-                    [logoDark]="submission.logoDark"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
-                  />
-                  <div class="py-1">
-                    <p class="text-lg font-medium">
-                      {{ submission.title }}
-                    </p>
-                    <p class="max-w-md truncate text-gray-600 dark:text-gray-400">
-                      {{ submission.description }}
-                    </p>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="flex max-w-xs flex-wrap gap-1.5">
-                  @for (category of submission.categories; track category) {
-                    <nldd-tag color="neutral" [text]="category"></nldd-tag>
-                  }
-                </div>
-              </td>
-              <td class="text-gray-600 dark:text-gray-400">
-                <p class="whitespace-nowrap">{{ submission.submittedAt }}</p>
-                <p class="text-sm text-gray-500 dark:text-gray-500">
-                  {{ submission.submitterName }}
-                </p>
-              </td>
-              <td>
-                <span class="badge {{ statusBadgeClass(submission.status) }}">{{
-                  statusLabel(submission.status)
-                }}</span>
-              </td>
-              <td class="text-right">
-                <nldd-button
-                  [routerLink]="['/admin/submissions', submission.id]"
-                  [text]="submission.status === 'pending' ? 'Review' : 'View'"
-                  appearance="secondary"
-                  size="sm"
-                ></nldd-button>
-              </td>
-            </tr>
+    <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <nldd-search-field
+        class="w-full max-w-sm"
+        width="full"
+        placeholder="Search plugin or publisher"
+        accessible-label="Search submissions by plugin or publisher"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+      ></nldd-search-field>
+      @if (hasFilters()) {
+        <p class="text-gray-600 dark:text-gray-300" aria-live="polite">
+          Showing {{ filteredSubmissions().length }} of {{ submissions().length }}
+          @if (statusFilter(); as status) {
+            · {{ statusLabel(status) }}
           }
-        </tbody>
-      </table>
+        </p>
+        <nldd-button
+          text="Clear filters"
+          appearance="neutral-transparent"
+          size="sm"
+          (click)="clearFilters()"
+        ></nldd-button>
+      }
     </div>
+
+    @if (filteredSubmissions().length === 0) {
+      <nldd-box>
+        <nldd-container padding="24">
+          <nldd-inline-dialog
+            icon="search"
+            icon-color="secondary"
+            text="No matching submissions"
+            supporting-text="No submission matches this status and search. Clear the filters to see the whole queue."
+          >
+          </nldd-inline-dialog>
+        </nldd-container>
+      </nldd-box>
+    } @else {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Plugin</th>
+              <th scope="col">Categories</th>
+              <th scope="col">Submitted</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (submission of filteredSubmissions(); track submission.id) {
+              <tr
+                class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                (click)="goToSubmission(submission.id)"
+              >
+                <td>
+                  <div class="flex items-center gap-3">
+                    <app-plugin-icon
+                      [logo]="submission.logo"
+                      [logoDark]="submission.logoDark"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                    />
+                    <div class="py-1">
+                      <p class="text-lg font-medium">
+                        {{ submission.title }}
+                      </p>
+                      @if (submission.descriptionShort) {
+                        <p class="max-w-md truncate text-gray-600 dark:text-gray-400">
+                          {{ submission.descriptionShort }}
+                        </p>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="flex max-w-xs flex-wrap gap-1.5">
+                    @for (category of submission.categories; track category) {
+                      <nldd-tag color="neutral" [text]="category"></nldd-tag>
+                    }
+                  </div>
+                </td>
+                <td class="text-gray-600 dark:text-gray-400">
+                  <p class="whitespace-nowrap">{{ submission.submittedAt }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-500">
+                    {{ submission.submitterName }}
+                  </p>
+                </td>
+                <td>
+                  <span class="badge {{ statusBadgeClass(submission.status) }}">{{
+                    statusLabel(submission.status)
+                  }}</span>
+                </td>
+                <td class="text-right">
+                  <nldd-button
+                    [routerLink]="['/admin/submissions', submission.id]"
+                    [text]="submission.status === 'pending' ? 'Review' : 'View'"
+                    appearance="secondary"
+                    size="sm"
+                  ></nldd-button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   }
 }
