@@ -50,10 +50,10 @@
             (input)="onNameInput($event)"
           ></nldd-text-field>
           <nldd-validation-list>
-            <!-- No hint on this one: everything else on this sheet is optional,
-                 so that a name is needed goes without saying until it is
-                 missing. It only ever shows in the critical state, so it reads
-                 as what is wrong rather than as a requirement. -->
+            <!-- No hint on this one: the name is the only field, so that it is
+                 needed goes without saying until it is missing. It only ever
+                 shows in the critical state, so it reads as what is wrong
+                 rather than as a requirement. -->
             <nldd-validation-item
               id="namespace-name-required"
               required
@@ -92,87 +92,6 @@
             </nldd-validation-item>
           </nldd-validation-list>
         </nldd-form-field>
-        <!-- A namespace is made to work in, so the people come with it. Optional:
-             creating one without anyone in it is a normal thing to do. -->
-        @if (memberCandidates().length > 0) {
-          <nldd-form-field
-            label="Members"
-            optional
-            optional-label="Optional"
-          >
-            <nldd-token-field
-              accessible-label="Members"
-              [attr.values]="draftMemberIds().join(',')"
-              (change)="onMembersChange($event)"
-            >
-              <nldd-menu accessible-label="Project members">
-                @for (member of memberCandidates(); track member.id) {
-                  <nldd-menu-item
-                    [attr.value]="member.id"
-                    [attr.text]="member.userName"
-                  ></nldd-menu-item>
-                }
-              </nldd-menu>
-            </nldd-token-field>
-            <nldd-form-field-help-text>
-              Only project members can be added to a project namespace.
-              @if (coveredMemberCount() > 0) {
-                {{
-                  coveredMemberCount() === 1
-                    ? '1 of them has access to all namespaces and reaches this one already.'
-                    : coveredMemberCount() +
-                      ' of them have access to all namespaces and reach this one already.'
-                }}
-              }
-            </nldd-form-field-help-text>
-          </nldd-form-field>
-        }
-        <!-- Only once someone is picked: roles for nobody decide nothing, and an
-             empty role list next to an empty member field reads as a step you
-             skipped rather than one that does not apply yet. -->
-        @if (draftMemberIds().length > 0) {
-          <!-- The header is our own (see .form-field-header in styles.css): the
-               field label takes plain text only, and the badge belongs next to
-               it. The list below carries the accessible name. -->
-          <nldd-form-field>
-            <div class="form-field-header">
-              <span class="form-field-header__label">
-                Roles
-                <app-mock-badge label="Mock: roles are not saved yet"></app-mock-badge>
-              </span>
-            </div>
-            <nldd-list
-              appearance="box-tinted"
-              accessible-label="Roles"
-            >
-              @for (role of allRoles; track role) {
-                <nldd-list-item
-                  checkbox
-                  [attr.checked]="draftRoles().includes(role) ? '' : null"
-                  (click)="toggleDraftRole(role)"
-                >
-                  <nldd-cell width="fit-content">
-                    <nldd-checkbox
-                      decorative
-                      [attr.checked]="draftRoles().includes(role) ? '' : null"
-                    ></nldd-checkbox>
-                  </nldd-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell
-                    width="full"
-                    [attr.text]="role"
-                  ></nldd-text-cell>
-                </nldd-list-item>
-              }
-            </nldd-list>
-            <!-- Says who the roles land on: the field above takes several
-                 people at once and they all get this same set. -->
-            <nldd-form-field-help-text>
-              Everyone you add gets these roles, and without one they can see the namespace but do
-              nothing in it. You can change them per person later under Members.
-            </nldd-form-field-help-text>
-          </nldd-form-field>
-        }
         <nldd-form-actions>
           <nldd-button
             type="button"

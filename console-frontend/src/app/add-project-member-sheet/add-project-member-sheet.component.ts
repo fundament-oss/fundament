@@ -11,30 +11,18 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT, NAMESPACE } from '../../connect/tokens';
-import { ListProjectNamespacesRequestSchema } from '../../generated/v1/namespace_pb';
+import { PROJECT } from '../../connect/tokens';
 import SheetSyncDirective from '../sheet-sync.directive';
-import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import AutofocusDirective from '../autofocus.directive';
-import { ALL_ROLES } from '../utils/mock-role-bindings';
-import {
-  NEW_NAMESPACE,
-  ALL_NAMESPACES,
-  NAMESPACE_NAME,
-  namespaceLabel,
-  toggleNamespace,
-} from '../utils/namespace-grants';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import '@nldd/design-system/combo-box';
 
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
-import '@nldd/design-system/checkbox';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
@@ -49,7 +37,6 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
-import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
@@ -60,11 +47,11 @@ const stringToRole = (value: string): ProjectMemberRole =>
 /**
  * Adding someone to a project, from wherever you were. The shell owns this sheet
  * rather than the member list, so the toolbar can open it over any page; it
- * therefore loads the users it can offer and the project's namespaces itself.
+ * therefore loads the users it can offer itself.
  */
 @Component({
   selector: 'app-add-project-member-sheet',
-  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective, MockBadgeComponent],
+  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project-member-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,8 +67,6 @@ export default class AddProjectMemberSheetComponent {
 
   private projectClient = inject(PROJECT);
 
-  private namespaceClient = inject(NAMESPACE);
-
   private idempotency = createIdempotencyRef();
 
   private notificationService = inject(NotificationService);
@@ -96,8 +81,6 @@ export default class AddProjectMemberSheetComponent {
   });
 
   availableUsers = signal<{ id: string; name: string }[]>([]);
-
-  projectNamespaces = signal<string[]>([]);
 
   isAddingMember = signal(false);
 
@@ -132,40 +115,6 @@ export default class AddProjectMemberSheetComponent {
     },
   ];
 
-  /** Namespace access, handed out while adding: giving someone a place to work
-   *  is the same intention as putting them in the project, so it does not need a
-   *  second trip through the member sheet. Empty is fine, nothing is granted. */
-  draftNamespaces = signal<string[]>([]);
-
-  draftRoles = signal<string[]>([]);
-
-  newNamespaceName = signal('');
-
-  /** Set by pressing the button: it is never disabled, so the fields are what
-   *  say what is missing. */
-  private addSubmitted = signal(false);
-
-  newNamespaceInvalid = computed(() => {
-    if (!this.draftNamespaces().includes(NEW_NAMESPACE)) return false;
-    const name = this.newNamespaceName();
-    if (name.trim() === '') return this.addSubmitted();
-    return !NAMESPACE_NAME.test(name);
-  });
-
-  newNamespaceError = computed(() =>
-    this.newNamespaceName().trim() === ''
-      ? 'A namespace name is required.'
-      : 'Use lowercase letters, numbers and hyphens, starting with a letter.',
-  );
-
-  allRoles = ALL_ROLES;
-
-  NEW_NAMESPACE = NEW_NAMESPACE;
-
-  ALL_NAMESPACES = ALL_NAMESPACES;
-
-  namespaceLabel = namespaceLabel;
-
   constructor() {
     // The sheet outlives the page it was opened over, so opening starts from
     // nothing and fetches what the form offers rather than trusting last time.
@@ -173,25 +122,16 @@ export default class AddProjectMemberSheetComponent {
       if (!this.show()) return;
       this.selectedUserId.set('');
       this.userFieldTouched.set(false);
-      this.addSubmitted.set(false);
-      this.draftNamespaces.set([]);
-      this.draftRoles.set([]);
-      this.newNamespaceName.set('');
       this.memberForm.reset({ userId: '', permission: 'viewer' });
       this.load(this.projectId());
     });
   }
 
   private async load(projectId: string) {
-    const [project, organizationMembers, namespaces] = await Promise.all([
+    const [project, organizationMembers] = await Promise.all([
       firstValueFrom(this.projectClient.listProjectMembers({ projectId })).catch(() => null),
       // Through the shared cache, so the sidebar's count is of this same list.
       this.organizationData.reloadMembers().catch(() => null),
-      firstValueFrom(
-        this.namespaceClient.listProjectNamespaces(
-          create(ListProjectNamespacesRequestSchema, { projectId }),
-        ),
-      ).catch(() => null),
     ]);
 
     const inProject = new Set((project?.members ?? []).map((member) => member.userId));
@@ -202,7 +142,6 @@ export default class AddProjectMemberSheetComponent {
       )
       .map((member) => ({ id: member.userId, name: member.name }));
     this.availableUsers.set(available);
-    this.projectNamespaces.set((namespaces?.namespaces ?? []).map((namespace) => namespace.name));
   }
 
   onClose() {
@@ -222,16 +161,6 @@ export default class AddProjectMemberSheetComponent {
     this.memberForm.get('userId')?.markAsDirty();
   }
 
-  toggleDraftNamespace(namespace: string) {
-    this.draftNamespaces.update((current) => toggleNamespace(current, namespace));
-  }
-
-  toggleDraftRole(role: string) {
-    this.draftRoles.update((roles) =>
-      roles.includes(role) ? roles.filter((current) => current !== role) : [...roles, role],
-    );
-  }
-
   async saveMember(event?: Event) {
     // No defaultPrevented guard as in the other sheets: [formGroup] cancels the
     // submit before this runs, and the keydown that requested it is marked
@@ -240,11 +169,10 @@ export default class AddProjectMemberSheetComponent {
     event?.preventDefault();
     if (this.isAddingMember()) return;
 
-    this.addSubmitted.set(true);
-    if (!this.selectedUserId()) this.userFieldTouched.set(true);
-    // Both fields report at once: fixing one and being sent back for the other
-    // reads as a second failure.
-    if (!this.selectedUserId() || this.newNamespaceInvalid()) return;
+    if (!this.selectedUserId()) {
+      this.userFieldTouched.set(true);
+      return;
+    }
 
     this.isAddingMember.set(true);
     const role = stringToRole(this.memberForm.value.permission!);
@@ -257,7 +185,6 @@ export default class AddProjectMemberSheetComponent {
         { signal: this.idempotency.reset() },
       );
       this.closed.emit();
-      await this.grantDraftAccess(userId);
       this.notificationService.success(
         `'${this.selectedUserName()}' added to ${this.projectName()}`,
       );
@@ -274,45 +201,5 @@ export default class AddProjectMemberSheetComponent {
     } finally {
       this.isAddingMember.set(false);
     }
-  }
-
-  /**
-   * The access picked in the add form, handed out once the member exists. The
-   * member is already in the project by now, so a namespace that cannot be
-   * created is reported and the rest still goes through.
-   */
-  private async grantDraftAccess(userId: string) {
-    let namespaces = [...this.draftNamespaces()];
-    if (namespaces.length === 0) return;
-
-    if (namespaces.includes(NEW_NAMESPACE)) {
-      const name = this.newNamespaceName();
-      try {
-        await firstValueFrom(
-          this.namespaceClient.createNamespace({ projectId: this.projectId(), name }),
-        );
-        this.notificationService.success(`Namespace '${name}' created`);
-        this.organizationData.namespacesChanged.update((count) => count + 1);
-        // Under an all-namespaces grant the new one is covered already.
-        namespaces = namespaces.includes(ALL_NAMESPACES)
-          ? namespaces.filter((entry) => entry !== NEW_NAMESPACE)
-          : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
-      } catch (err) {
-        this.notificationService.error(
-          err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
-        );
-        namespaces = namespaces.filter((entry) => entry !== NEW_NAMESPACE);
-      }
-    }
-
-    if (namespaces.length === 0) return;
-
-    // The member id only exists once the list comes back, so the roles are
-    // parked against the user and attached by the list that reloads.
-    const roles = ALL_ROLES.filter((role) => this.draftRoles().includes(role));
-    this.organizationData.pendingProjectGrant.set({
-      userId,
-      bindings: namespaces.map((namespace) => ({ namespace, roles })),
-    });
   }
 }

@@ -21,10 +21,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import { ListProjectNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import { mockBindingsFor } from '../utils/mock-role-bindings';
-import { ALL_NAMESPACES } from '../utils/namespace-grants';
-import { NAMESPACE, PROJECT } from '../../connect/tokens';
-import type { ProjectMember } from '../../generated/v1/project_pb';
+import { NAMESPACE } from '../../connect/tokens';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
@@ -62,8 +59,6 @@ export default class NamespacesComponent implements OnInit {
 
   private router = inject(Router);
 
-  private projectClient = inject(PROJECT);
-
   private fb = inject(FormBuilder);
 
   private namespaceClient = inject(NAMESPACE);
@@ -89,10 +84,6 @@ export default class NamespacesComponent implements OnInit {
    *  look the same, and only one of them should offer to create something. */
   isLoading = signal(true);
 
-  members = signal<ProjectMember[]>([]);
-
-  namespaceNames = computed(() => this.namespaces().map((namespace) => namespace.name));
-
   errorMessage = signal<string | null>(null);
 
   constructor() {
@@ -102,7 +93,7 @@ export default class NamespacesComponent implements OnInit {
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     this.projectId.set(projectId);
-    await Promise.all([this.loadNamespaces(projectId), this.loadMembers(projectId)]);
+    await this.loadNamespaces(projectId);
   }
 
   /** The sheets that create and delete one stand over this very list without
@@ -112,31 +103,6 @@ export default class NamespacesComponent implements OnInit {
     const projectId = this.projectId();
     if (projectId) this.loadNamespaces(projectId);
   });
-
-  /** Only for the member summary on a row; the sheet has the detail. */
-  async loadMembers(projectId: string) {
-    try {
-      const response = await firstValueFrom(this.projectClient.listProjectMembers({ projectId }));
-      this.members.set(response.members);
-    } catch {
-      this.members.set([]);
-    }
-  }
-
-  /** Who works in this namespace. One of them is worth naming: the name says
-   *  more than the number does. */
-  memberSummary = (namespace: string): string => {
-    const names = this.members()
-      .filter((member) => {
-        const bindings = mockBindingsFor(member.id, this.namespaceNames());
-        return bindings.some(
-          (binding) => binding.namespace === namespace || binding.namespace === ALL_NAMESPACES,
-        );
-      })
-      .map((member) => member.userName);
-    if (names.length === 1) return names[0];
-    return `${names.length} members`;
-  };
 
   /** Routes client-side while leaving the row a real link, so middle-click and
    *  "open in new tab" keep working. */

@@ -79,19 +79,6 @@
               [attr.text]="namespace.name"
               [attr.supporting-text]="'Created ' + formatDate(namespace.created)"
             ></nldd-text-cell>
-            <!-- Too wide next to a name on a phone; the sheet has the detail
-                 anyway. -->
-            <nldd-spacer-cell
-              size="12"
-              hide-below="md"
-            ></nldd-spacer-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              color="secondary"
-              hide-below="md"
-              [attr.text]="memberSummary(namespace.name)"
-            ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-icon-cell
               icon="chevron-right"

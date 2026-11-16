@@ -12,39 +12,23 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators, type ValidatorFn } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
-import {
-  ListProjectNamespacesRequestSchema,
-  CreateNamespaceRequestSchema,
-} from '../../generated/v1/namespace_pb';
+import { CreateNamespaceRequestSchema } from '../../generated/v1/namespace_pb';
 import SheetSyncDirective from '../sheet-sync.directive';
-import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import AutofocusDirective from '../autofocus.directive';
-import { ALL_ROLES, mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
-import { ALL_NAMESPACES } from '../utils/namespace-grants';
-import { NAMESPACE, PROJECT } from '../../connect/tokens';
-import type { ProjectMember } from '../../generated/v1/project_pb';
-import '@nldd/design-system/token-field';
+import { NAMESPACE } from '../../connect/tokens';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
-import '@nldd/design-system/cell';
-import '@nldd/design-system/checkbox';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
-import '@nldd/design-system/list';
-import '@nldd/design-system/list-item';
-import '@nldd/design-system/menu';
 import '@nldd/design-system/page';
 import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
-import '@nldd/design-system/spacer-cell';
-import '@nldd/design-system/text-cell';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
@@ -56,13 +40,11 @@ const MAX_COMBINED_NAME_LENGTH = 57;
 
 /**
  * Making a namespace, from wherever you were. The shell owns this sheet rather
- * than the namespace list, so the toolbar can open it over any page; that also
- * means it cannot borrow the list's data and loads the members and the existing
- * names itself when it opens.
+ * than the namespace list, so the toolbar can open it over any page.
  */
 @Component({
   selector: 'app-new-namespace-sheet',
-  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective, MockBadgeComponent],
+  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './new-namespace-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,8 +57,6 @@ export default class NewNamespaceSheetComponent {
   @Output() closed = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
-
-  private projectClient = inject(PROJECT);
 
   private namespaceClient = inject(NAMESPACE);
 
@@ -113,10 +93,6 @@ export default class NewNamespaceSheetComponent {
       : limit;
   });
 
-  members = signal<ProjectMember[]>([]);
-
-  namespaceNames = signal<string[]>([]);
-
   createErrorMessage = signal<string | null>(null);
 
   isCreatingNamespace = signal<boolean>(false);
@@ -128,29 +104,6 @@ export default class NewNamespaceSheetComponent {
    * turn critical once this is true.
    */
   createAttempted = signal<boolean>(false);
-
-  /** Who gets access to the namespace being created, and with which roles. A
-   *  namespace is made to work in, so the people come with it rather than in a
-   *  second visit to the sheet. */
-  draftMemberIds = signal<string[]>([]);
-
-  draftRoles = signal<string[]>([]);
-
-  readonly allRoles = ALL_ROLES;
-
-  /** Members with an all-namespaces grant are left out: they reach the new one
-   *  the moment it exists, so offering them here would promise a change that
-   *  does not happen. */
-  memberCandidates = computed(() =>
-    this.members().filter(
-      (member) =>
-        !mockBindingsFor(member.id, this.namespaceNames()).some(
-          (binding) => binding.namespace === ALL_NAMESPACES,
-        ),
-    ),
-  );
-
-  coveredMemberCount = computed(() => this.members().length - this.memberCandidates().length);
 
   namespaceForm = this.fb.group({
     name: [
@@ -176,50 +129,23 @@ export default class NewNamespaceSheetComponent {
       control.updateValueAndValidity();
     });
 
-    // Opening is the moment to start from nothing and to fetch what the form
-    // offers: the sheet outlives the page it was opened over, so neither the
-    // draft nor the member list can be left over from last time.
+    // Opening is the moment to start from nothing: the sheet outlives the page
+    // it was opened over, so the draft cannot be left over from last time.
     effect(() => {
       if (!this.show()) return;
       this.namespaceForm.reset();
       this.createErrorMessage.set(null);
-      this.draftMemberIds.set([]);
-      this.draftRoles.set([]);
-      this.load(this.projectId());
     });
-  }
-
-  private async load(projectId: string) {
-    const [members, namespaces] = await Promise.all([
-      firstValueFrom(this.projectClient.listProjectMembers({ projectId })).catch(() => null),
-      firstValueFrom(
-        this.namespaceClient.listProjectNamespaces(
-          create(ListProjectNamespacesRequestSchema, { projectId }),
-        ),
-      ).catch(() => null),
-    ]);
-    this.members.set(members?.members ?? []);
-    this.namespaceNames.set((namespaces?.namespaces ?? []).map((namespace) => namespace.name));
   }
 
   onClose() {
     this.closed.emit();
   }
 
-  onMembersChange(event: Event): void {
-    this.draftMemberIds.set((event as CustomEvent<{ values: string[] }>).detail.values);
-  }
-
-  toggleDraftRole(role: string): void {
-    this.draftRoles.update((current) =>
-      current.includes(role) ? current.filter((entry) => entry !== role) : [...current, role],
-    );
-  }
-
   async createNamespace(event?: Event) {
-    // A control that acts on Enter itself, like picking an option in the token
-    // field, marks the event handled. Submitting on that Enter would put the
-    // form in error while the user is still filling it in.
+    // A control that acts on Enter itself marks the event handled. Submitting
+    // on that Enter would put the form in error while the user is still filling
+    // it in.
     if (event?.defaultPrevented) return;
 
     event?.preventDefault();
@@ -244,14 +170,9 @@ export default class NewNamespaceSheetComponent {
       });
 
       const name = this.namespaceForm.value.name!;
-      const granted = this.grantDraftAccess(name);
 
       this.closed.emit();
-      this.notificationService.success(
-        granted === 0
-          ? `Namespace '${name}' created`
-          : `Namespace '${name}' created, ${granted === 1 ? '1 member has' : `${granted} members have`} access`,
-      );
+      this.notificationService.success(`Namespace '${name}' created`);
 
       // The list that shows namespaces is a page of its own, and it may well be
       // the page behind this sheet, so it hears about the new one from here.
@@ -270,20 +191,6 @@ export default class NewNamespaceSheetComponent {
     } finally {
       this.isCreatingNamespace.set(false);
     }
-  }
-
-  /** TEMPORARY, dev only: roles have no API, so the grant goes into the mock
-   *  store the rest of the screens read from. Delete with the mock bindings. */
-  private grantDraftAccess(namespace: string): number {
-    const memberIds = this.draftMemberIds();
-    if (memberIds.length === 0) return 0;
-
-    const roles = ALL_ROLES.filter((role) => this.draftRoles().includes(role));
-    memberIds.forEach((memberId) => {
-      const existing = mockBindingsFor(memberId, this.namespaceNames());
-      setMockBindings(memberId, [...existing, { namespace, roles }]);
-    });
-    return memberIds.length;
   }
 
   onNameInput(event: Event) {
