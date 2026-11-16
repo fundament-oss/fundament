@@ -32,6 +32,7 @@ import AdminReviewService, {
   type PluginSubmission,
   type SubmissionHistoryEntry,
 } from './admin-review.service';
+import ReviewQueueFiltersService from './review-queue-filters.service';
 import {
   type RejectionReasonValue,
   REJECTION_REASONS,
@@ -85,6 +86,9 @@ export default class SubmissionDetailComponent implements OnInit {
   private location = inject(Location);
 
   private destroyRef = inject(DestroyRef);
+
+  // The filters of the queue this reviewer came from, for every way back to it.
+  protected queueParams = inject(ReviewQueueFiltersService).queryParams;
 
   // Moving through the history reuses this component for another id, so a
   // slow response for the submission you left must not land on the next one.
@@ -234,7 +238,7 @@ export default class SubmissionDetailComponent implements OnInit {
     try {
       await this.service.approve(submission.id);
       this.toastService.success(`${submission.title} approved and published to the marketplace`);
-      this.router.navigate(['/admin']);
+      this.router.navigate(['/admin'], { queryParams: this.queueParams() });
     } catch (error) {
       this.toastService.error(connectErrorMessage(error));
     }
@@ -285,7 +289,7 @@ export default class SubmissionDetailComponent implements OnInit {
         this.toastService.info(`${submission.title} rejected`);
       }
       this.closeDecision();
-      this.router.navigate(['/admin']);
+      this.router.navigate(['/admin'], { queryParams: this.queueParams() });
     } catch (error) {
       this.toastService.error(connectErrorMessage(error));
     } finally {

@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   computed,
+  effect,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -15,6 +16,7 @@ import { TitleService } from '../title.service';
 import { ConfigService } from '../config.service';
 import { PluginIconComponent } from '../icons';
 import AdminReviewService, { type PluginSubmission } from './admin-review.service';
+import ReviewQueueFiltersService from './review-queue-filters.service';
 import { type SubmissionStatus, statusLabel, statusBadgeClass } from '../status/submission-status';
 import connectErrorMessage from '../../connect/error';
 
@@ -126,8 +128,18 @@ export default class ReviewQueueComponent implements OnInit {
     }));
   });
 
+  private queueFilters = inject(ReviewQueueFiltersService);
+
   constructor() {
     this.titleService.setTitle('Review queue');
+    // Remembered for the submission page's way back here. The router drops
+    // the undefined ones, so an unfiltered queue gets a bare /admin.
+    effect(() => {
+      this.queueFilters.queryParams.set({
+        status: this.statusFilter() ?? undefined,
+        q: this.searchQuery() || undefined,
+      });
+    });
   }
 
   async ngOnInit() {

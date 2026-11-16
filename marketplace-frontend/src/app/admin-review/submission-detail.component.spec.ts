@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  convertToParamMap,
+  provideRouter,
+  type Params,
+} from '@angular/router';
 import { of } from 'rxjs';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type SubmissionDetailComponent from './submission-detail.component';
@@ -7,6 +13,7 @@ import AdminReviewService, {
   type PluginSubmission,
   type SubmissionHistoryEntry,
 } from './admin-review.service';
+import ReviewQueueFiltersService from './review-queue-filters.service';
 
 const LOGO = 'data:image/svg+xml;base64,AA';
 const LOGO_DARK = 'data:image/svg+xml;base64,BB';
@@ -67,6 +74,7 @@ let DetailComponent: typeof SubmissionDetailComponent;
 async function render(
   value: PluginSubmission,
   rounds: SubmissionHistoryEntry[] = history,
+  queueParams: Params = {},
 ): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     providers: [
@@ -74,10 +82,15 @@ async function render(
       { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 's1' })) } },
       {
         provide: AdminReviewService,
-        useValue: { getSubmission: async () => value, listPluginHistory: async () => rounds },
+        useValue: {
+          getSubmission: async () => value,
+          listPluginHistory: async () => rounds,
+          approve: async () => {},
+        },
       },
     ],
   });
+  TestBed.inject(ReviewQueueFiltersService).queryParams.set(queueParams);
   const fixture = TestBed.createComponent(DetailComponent);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -178,6 +191,26 @@ describe('SubmissionDetailComponent', () => {
 
     expect(root.querySelector('pre')?.textContent).toBe('## Setup');
     expect(root.querySelector('app-markdown')).toBeNull();
+  });
+
+  it('goes back to the queue with the filters the reviewer left it with', async () => {
+    const root = await render(submission, history, { status: 'pending', q: 'acme' });
+
+    expect(root.querySelector('a[href^="/admin"]')?.getAttribute('href')).toBe(
+      '/admin?status=pending&q=acme',
+    );
+  });
+
+  it('returns to the filtered queue after a decision', async () => {
+    const root = await render(submission, history, { status: 'pending' });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    root.querySelector('nldd-button[text="Approve"]')?.dispatchEvent(new Event('click'));
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+
+    expect(navigate).toHaveBeenCalledWith(['/admin'], { queryParams: { status: 'pending' } });
   });
 
   it('lists every review round, linking to all but the one on screen', async () => {

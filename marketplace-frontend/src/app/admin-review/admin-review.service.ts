@@ -136,14 +136,23 @@ export default class AdminReviewService {
       .filter((submission) => submission.pluginId === pluginId)
       .sort((a, b) => toEpochMs(b.submitted) - toEpochMs(a.submitted));
 
+    // Every round is known from the queue already, so a version that fails
+    // to load only loses its label (the page shows "Unknown version"), not
+    // the whole timeline.
     const versionIds = [...new Set(rounds.map((round) => round.pluginVersionId))];
-    const versions = new Map(
-      await Promise.all(
-        versionIds.map(async (pluginVersionId) => {
-          const found = await firstValueFrom(this.client.getPluginVersion({ pluginVersionId }));
-          return [pluginVersionId, found.version?.version ?? ''] as const;
-        }),
+    const lookups = await Promise.allSettled(
+      versionIds.map((pluginVersionId) =>
+        firstValueFrom(this.client.getPluginVersion({ pluginVersionId })),
       ),
+    );
+    const versions = new Map(
+      versionIds.map((pluginVersionId, index) => {
+        const lookup = lookups[index];
+        return [
+          pluginVersionId,
+          lookup.status === 'fulfilled' ? (lookup.value.version?.version ?? '') : '',
+        ] as const;
+      }),
     );
 
     return rounds.map((round) => ({

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import ReviewQueueComponent from './review-queue.component';
 import AdminReviewService, { type PluginSubmission } from './admin-review.service';
 import { ConfigService } from '../config.service';
+import ReviewQueueFiltersService from './review-queue-filters.service';
 
 function submission(
   id: string,
@@ -106,6 +107,16 @@ describe('ReviewQueueComponent', () => {
     card().click();
     await harness.fixture.whenStable();
     expect(router.url).toBe('/admin');
+  });
+
+  it('remembers its filters for the way back from a submission', async () => {
+    const harness = await render('/admin?status=pending&q=acme');
+    const filters = TestBed.inject(ReviewQueueFiltersService);
+    expect(filters.queryParams()).toEqual({ status: 'pending', q: 'acme' });
+
+    await harness.navigateByUrl('/admin');
+    harness.detectChanges();
+    expect(filters.queryParams()).toEqual({ status: undefined, q: undefined });
   });
 
   it('shows the short description, not the markdown', async () => {
