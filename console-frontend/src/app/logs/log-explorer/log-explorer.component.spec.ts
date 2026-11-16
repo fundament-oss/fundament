@@ -164,6 +164,26 @@ describe('LogExplorerComponent level counts', () => {
 
     expect(component.levelCounts()).toBeNull();
   });
+
+  it('drops a live-tail poll that lands after a newer one', async () => {
+    const { component, logsApi, load } = build();
+    await load();
+    const older = deferred<LogHistogram>();
+    const newer = deferred<LogHistogram>();
+    logsApi.histogram.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+
+    // Two tail ticks under the same load, as `startLiveTail` sends them.
+    const { from, to } = component['timeRange']();
+    component['refreshHistogram'](from, to, component['loadSeq']);
+    component['refreshHistogram'](from, to, component['loadSeq']);
+    newer.resolve({ buckets: BUCKETS.slice(1), backend: LogBackend.LOKI, exact: true });
+    await settle();
+    older.resolve({ buckets: BUCKETS, backend: LogBackend.LOKI, exact: true });
+    await settle();
+
+    expect(component.histogramBuckets()).toEqual(BUCKETS.slice(1));
+    expect(component.levelCountLabel('ERROR')).toBe('1');
+  });
 });
 
 describe('LogExplorerComponent level selection', () => {

@@ -563,6 +563,17 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   private loadSeq = 0;
 
   /**
+   * Which histogram request the counts on screen belong to.
+   *
+   * `loadSeq` cannot tell these apart within one load: a live tail refetches
+   * the counts every few ticks under the load it started from, and `countsQuery`
+   * leaves the sliding anchor out, so two polls in flight carry the same seq
+   * and the same key. Without this a slow older poll lands last and paints the
+   * previous window over the newer one.
+   */
+  private histogramSeq = 0;
+
+  /**
    * Axis labels for the buckets. A window wider than a day needs the date:
    * now that the chart really does span the whole range, twelve identical
    * "08:00" ticks would be seven different days.
@@ -895,8 +906,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    * Kept separate from the entry query and never allowed to fail the page: the
    * chart is context for the lines, so a backend that can serve lines but not
    * aggregates should still show you your logs. `seq` is the load it belongs
-   * to; an answer for a load that has been superseded is dropped rather than
-   * painted over the current one.
+   * to; an answer for a load that has been superseded, or one overtaken by a
+   * later histogram request in the same load, is dropped rather than painted
+   * over the current one.
    */
   private async loadHistogram(from: Date, to: Date, seq: number): Promise<void> {
     const clusterId = this.selectedCluster();
@@ -904,6 +916,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     // Taken with the request's own parameters, not when the answer lands: a
     // filter that moves in between makes this answer one to a different query.
     const query = this.countsQuery();
+    this.histogramSeq += 1;
+    const ticket = this.histogramSeq;
+    const superseded = () => seq !== this.loadSeq || ticket !== this.histogramSeq;
     try {
       const result = await this.logsApi.histogram({
         clusterId,
@@ -928,12 +943,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         // two requests resolve to different backends.
         limit: this.LOG_LIMIT,
       });
-      if (seq !== this.loadSeq) return;
+      if (superseded()) return;
       this.histogramBuckets.set(result.buckets);
       this.histogramExact.set(result.exact);
       this.histogramCountsQuery.set(query);
     } catch {
-      if (seq !== this.loadSeq) return;
+      if (superseded()) return;
       // An empty chart above a full list reads as "no traffic", which is the
       // opposite of what happened, so drop the chart instead.
       this.histogramBuckets.set([]);
