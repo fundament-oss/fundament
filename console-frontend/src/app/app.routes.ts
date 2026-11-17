@@ -342,14 +342,6 @@ const routes: Routes = [
         pathMatch: 'full',
       },
       {
-        // The project Metrics page is unrouted: the per-shoot Prometheus only
-        // scrapes kube-system, so the page was always empty. The component
-        // keeps its project view for when tenant namespaces have a source.
-        path: 'projects/:id/metrics',
-        redirectTo: 'projects/:id/general',
-        pathMatch: 'full',
-      },
-      {
         path: 'plugins',
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
       },
