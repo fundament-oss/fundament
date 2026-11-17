@@ -199,7 +199,7 @@
                 <nldd-cell width="fit-content">
                   <nldd-button
                     type="button"
-                    (click)="onUninstall(cluster.id)"
+                    (click)="onUninstall(cluster)"
                     text="Uninstall"
                     appearance="destructive"
                     size="sm"
@@ -259,3 +259,33 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
+<!-- Uninstall confirmation: one misclick on a row's Uninstall would otherwise
+     remove the plugin and its configuration at once. -->
+<nldd-modal-dialog
+  #uninstallDialog
+  appDialogSync
+  [show]="pendingUninstall() !== null"
+  [attr.text]="
+    'Uninstall ' + pluginDisplayName() + ' from ' + (pendingUninstall()?.name ?? '') + '?'
+  "
+  supporting-text="This removes the plugin and its configuration from the cluster. To use it again, you install and configure it again."
+  accessible-label="Confirm plugin uninstall"
+  variant="alert"
+  (open)="onUninstallDialogOpen()"
+  (close)="pendingUninstall.set(null)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="pendingUninstall.set(null)"
+    text="Keep plugin"
+    appearance="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmUninstall()"
+    text="Uninstall plugin"
+    appearance="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

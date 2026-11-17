@@ -292,3 +292,67 @@ describe('InstallPluginModalComponent statusMessage', () => {
     expect(component.statusMessage(cluster('Deploying', ''))).toBe('');
   });
 });
+
+describe('InstallPluginModalComponent uninstall confirmation', () => {
+  const installed = {
+    id: 'c1',
+    name: 'prod',
+    phase: 'Running',
+    version: 'v1.0.0',
+    running: true,
+    configInvalid: false,
+    message: '',
+  };
+
+  function buildWithCluster(phase: string | null) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: INSTALL, useValue: {} }],
+    });
+    const fixture = TestBed.createComponent(InstallPluginModalComponent);
+    fixture.componentRef.setInput('clusters', [{ ...installed, phase }]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const emitted: string[] = [];
+    component.uninstall.subscribe((id) => emitted.push(id));
+    return { component, emitted };
+  }
+
+  it('asks for confirmation instead of uninstalling right away', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+
+    expect(emitted).toEqual([]);
+    expect(component.pendingUninstall()).toEqual({ id: 'c1', name: 'prod' });
+  });
+
+  it('uninstalls once confirmed', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual(['c1']);
+    expect(component.pendingUninstall()).toBeNull();
+  });
+
+  it('does not uninstall when the cluster stopped offering it meanwhile', () => {
+    const { component, emitted } = buildWithCluster(null);
+
+    component.onUninstall(installed);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual([]);
+    expect(component.pendingUninstall()).toBeNull();
+  });
+
+  it('closing the sheet drops a pending confirmation', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    component.onClose();
+    component.confirmUninstall();
+
+    expect(emitted).toEqual([]);
+  });
+});

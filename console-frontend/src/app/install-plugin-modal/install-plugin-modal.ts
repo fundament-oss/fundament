@@ -3,15 +3,19 @@ import {
   computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  ElementRef,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { INSTALL } from '../../connect/tokens';
 import { ConfigSchemaEntry } from '../../generated/catalog/v1/catalog_pb';
 import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
 import { UNKNOWN_PLUGIN_VERSION } from '../plugin-installation/plugin-installation.service';
+import DialogSyncDirective from '../dialog-sync.directive';
+import focusFirstModalInput from '../modal-focus';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PluginConfigFormComponent from './plugin-config-form.component';
 import {
@@ -31,6 +35,7 @@ import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
 import '@nldd/design-system/menu';
+import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
 import '@nldd/design-system/rich-text';
 import '@nldd/design-system/sheet';
@@ -95,7 +100,7 @@ function showsInstalledVersion(cluster: Cluster): boolean {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [SheetSyncDirective, PluginConfigFormComponent],
+  imports: [DialogSyncDirective, SheetSyncDirective, PluginConfigFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -145,6 +150,13 @@ export default class InstallPluginModalComponent {
     option: PluginVersionOption;
     schema: ConfigSchemaEntry[];
   } | null>(null);
+
+  // The cluster whose Uninstall was clicked and still awaits confirmation; the
+  // confirmation dialog is open while this is set. The name is kept with the
+  // ID so the dialog's title stays put even if the row changes under it.
+  pendingUninstall = signal<{ id: string; name: string } | null>(null);
+
+  private uninstallDialogRef = viewChild<ElementRef<HTMLElement>>('uninstallDialog');
 
   schemaError = signal(false);
 
@@ -223,6 +235,7 @@ export default class InstallPluginModalComponent {
     this.schemaError.set(false);
     this.schemaLoading.set(false);
     this.retryUnavailableVersion.set(null);
+    this.pendingUninstall.set(null);
     this.schemaCache.clear();
     this.closeModal.emit();
   }
@@ -305,8 +318,27 @@ export default class InstallPluginModalComponent {
     this.pendingInstall.set(null);
   }
 
-  onUninstall(clusterId: string): void {
-    this.uninstall.emit(clusterId);
+  /** Asks first: Uninstall sits on every installed row, right next to Retry,
+   *  and removes the plugin and its configuration at once. */
+  onUninstall(cluster: Cluster): void {
+    this.pendingUninstall.set({ id: cluster.id, name: cluster.name });
+  }
+
+  onUninstallDialogOpen(): void {
+    const el = this.uninstallDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
+
+  /** Uninstalls only if the row still offers Uninstall: a poll can move the
+   *  cluster to uninstalling, or drop the plugin from it, while the dialog is
+   *  open, and a second uninstall then would report a failure for nothing. */
+  confirmUninstall(): void {
+    const pending = this.pendingUninstall();
+    if (!pending) return;
+    this.pendingUninstall.set(null);
+    const cluster = this.clusters().find((c) => c.id === pending.id);
+    if (!cluster || cluster.phase === null || isInstallInProgress(cluster.phase)) return;
+    this.uninstall.emit(pending.id);
   }
 
   /** Retries at the version already pinned on that cluster, falling back to the
