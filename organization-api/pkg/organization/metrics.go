@@ -59,6 +59,19 @@ const (
 	queryPodsTotalByNode = `sum(kube_node_status_capacity{type="shoot",resource="pods"}) by (node)`
 )
 
+// Per tenant namespace, from the container metrics that
+// gardener-extension-tenant-metrics collects; without it these return nothing.
+// Pods are counted from their containers: Gardener's kube-state-metrics only
+// covers kube-system, which also leaves requests and limits unknown. A deleted
+// pod stays counted until its series go stale, up to 5 minutes.
+const (
+	queryTenantCPUByNamespace   = `sum(rate(container_cpu_usage_seconds_total{type="shoot",namespace=~"tnt-.+",container!=""}[5m])) by (namespace)`
+	queryTenantMemByNamespace   = `sum(container_memory_working_set_bytes{type="shoot",namespace=~"tnt-.+",container!=""}) by (namespace)`
+	queryTenantPodsByNamespace  = `count(count(container_memory_working_set_bytes{type="shoot",namespace=~"tnt-.+",container!=""}) by (namespace, pod)) by (namespace)`
+	queryTenantNetRxByNamespace = `sum(rate(container_network_receive_bytes_total{type="shoot",namespace=~"tnt-.+"}[5m])) by (namespace)`
+	queryTenantNetTxByNamespace = `sum(rate(container_network_transmit_bytes_total{type="shoot",namespace=~"tnt-.+"}[5m])) by (namespace)`
+)
+
 // promClientFor selects the Prometheus backend for one cluster:
 //   - "per-shoot" → the cluster's per-shoot Prometheus at the monitoring
 //     secret's prometheus-url annotation;
@@ -156,6 +169,9 @@ func (s *Server) GetClusterWorkloadMetrics(
 		nodeCPUUsed, nodeCPUTotal   []prom.Sample
 		nodeMemUsed, nodeMemTotal   []prom.Sample
 		nodePodsUsed, nodePodsTotal []prom.Sample
+
+		nsCPU, nsMem, nsPods []prom.Sample
+		nsNetRx, nsNetTx     []prom.Sample
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -195,6 +211,12 @@ func (s *Server) GetClusterWorkloadMetrics(
 	qs(&nodePodsUsed, "query per-node pods used", queryPodsByNode)
 	qs(&nodePodsTotal, "query per-node pods total", queryPodsTotalByNode)
 
+	qs(&nsCPU, "query per-namespace cpu", queryTenantCPUByNamespace)
+	qs(&nsMem, "query per-namespace mem", queryTenantMemByNamespace)
+	qs(&nsPods, "query per-namespace pods", queryTenantPodsByNamespace)
+	qs(&nsNetRx, "query per-namespace net rx", queryTenantNetRxByNamespace)
+	qs(&nsNetTx, "query per-namespace net tx", queryTenantNetTxByNamespace)
+
 	err = g.Wait()
 	if err != nil {
 		if isPromBadQuery(err) {
@@ -217,10 +239,9 @@ func (s *Server) GetClusterWorkloadMetrics(
 	}.Build()
 
 	return organizationv1.GetClusterWorkloadMetricsResponse_builder{
-		Totals: totals,
-		// No per-namespace breakdown: the per-shoot Prometheus only covers
-		// kube-system, never a project namespace (issue 1456).
-		Nodes: buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
+		Totals:     totals,
+		Nodes:      buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
+		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nil, nil, nil, nil, nsNetRx, nsNetTx),
 	}.Build(), nil
 }
 
@@ -1116,6 +1137,7 @@ func (s *Server) sendClusterSnapshot(
 	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Nodes:              workload.GetNodes(),
+		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),

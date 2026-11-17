@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gardener-extension-tenant-metrics
+description: Scrapes tenant namespaces into each shoot's Prometheus
+type: application
+version: 0.1.0

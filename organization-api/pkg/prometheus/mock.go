@@ -189,6 +189,9 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 	nsFilter := mockExtractNamespaces(q)
 
 	switch {
+	case strings.Contains(q, "count(count("):
+		// Pods counted from their containers.
+		return mockPodCount(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "container_cpu_usage_seconds_total"), strings.Contains(q, "node_cpu_seconds_total"):
 		return mockCPUUsage(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "kube_node_status_capacity") && strings.Contains(q, `resource="cpu"`):
