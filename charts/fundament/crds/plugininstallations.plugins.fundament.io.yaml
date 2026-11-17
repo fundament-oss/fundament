@@ -72,6 +72,10 @@ spec:
                       type: string
                     definitionHash:
                       type: string
+                      # plugin-controller writes the whole object back, with "" for an
+                      # unset hash; storing "" for an omitted one keeps that write equal
+                      # under the immutability rule on definitionRef.
+                      default: ""
                       description: >-
                         SHA-256 hash of the published manifest bytes stored in
                         organization-api (prefixed with "sha256:") — the admin's
