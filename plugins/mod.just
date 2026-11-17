@@ -22,16 +22,28 @@ _default:
 
 # Create a local K3D cluster for plugin development with local registry
 cluster-create:
+    mkdir -p "$(dirname "${KUBECONFIG:-.}")"
     k3d cluster create --config=sandbox/k3d-config.yaml
 
 # Create the cluster with the host's block devices bound in (storage plugin work)
 cluster-create-storage:
+    mkdir -p "$(dirname "${KUBECONFIG:-.}")"
     k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
 
 # uncordon is a no-op unless storage disks were ever attached.
 # Start the cluster (creates if it doesn't exist), clearing any leftover cordon
 cluster-start:
-    @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just plugins cluster-create
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! k3d cluster list {{ cluster }} > /dev/null 2>&1; then
+        just plugins cluster-create
+    else
+        k3d cluster start {{ cluster }}
+        # k3d writes the context only at create; merge adds a missing entry and refreshes the
+        # API port, which changes on restart.
+        mkdir -p "$(dirname "${KUBECONFIG:-.}")"
+        k3d kubeconfig merge {{ cluster }} --kubeconfig-merge-default --kubeconfig-switch-context > /dev/null
+    fi
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
 
 # drain fails on purpose while a volume is still mapped, because stopping then wedges
