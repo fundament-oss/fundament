@@ -26,6 +26,7 @@ spec:
     - name: REGION
       type: string
       required: true
+      placeholder: nl-1
 `
 
 func schemaOf(t *testing.T, definition string) []pluginruntime.ConfigSchemaEntry {
@@ -48,7 +49,7 @@ func TestResolveConfigListsAllMissingRequired(t *testing.T) {
 	_, err := ResolveConfig(schemaOf(t, configDefinition), "", nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ADMIN_EMAIL (Admin email): Receives alerts.")
-	assert.Contains(t, err.Error(), "REGION")
+	assert.Contains(t, err.Error(), "REGION (e.g. nl-1)")
 	assert.Contains(t, err.Error(), "--set KEY=VALUE")
 }
 

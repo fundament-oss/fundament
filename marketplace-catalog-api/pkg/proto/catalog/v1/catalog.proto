@@ -217,7 +217,8 @@ message ConfigSchemaEntry {
   // derives one from name.
   string display_name = 80;
   // Example value the console shows in an empty text field; never
-  // submitted. Empty for bool and enum keys.
+  // submitted. plugin-sdk accepts it at publish time only on string and
+  // int keys without a default.
   string placeholder = 90;
 }
 

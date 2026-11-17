@@ -294,6 +294,14 @@ func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
 			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      placeholder: host\n",
 			wantErr: "sets a placeholder but has type \"enum\"",
 		},
+		"placeholder with a default": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      default: \"3\"\n      placeholder: \"5\"\n",
+			wantErr: "both a placeholder and a default",
+		},
+		"int placeholder that is not an int": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      placeholder: three\n",
+			wantErr: "placeholder:",
+		},
 		"required enum with only blank values": {
 			// Unsatisfiable: the enum accepts only "", the required check
 			// rejects exactly "".

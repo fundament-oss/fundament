@@ -652,7 +652,8 @@ export type ConfigSchemaEntry = Message<"catalog.v1.ConfigSchemaEntry"> & {
 
   /**
    * Example value the console shows in an empty text field; never
-   * submitted. Empty for bool and enum keys.
+   * submitted. plugin-sdk accepts it at publish time only on string and
+   * int keys without a default.
    *
    * @generated from field: string placeholder = 90;
    */

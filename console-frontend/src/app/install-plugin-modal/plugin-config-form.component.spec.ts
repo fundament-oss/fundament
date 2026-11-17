@@ -141,6 +141,18 @@ describe('PluginConfigFormComponent', () => {
     expect(confirmed).not.toHaveBeenCalled();
   });
 
+  it('omits an optional key that shows only its placeholder', () => {
+    const component = build([{ name: 'REGION', type: ConfigType.STRING, placeholder: 'nl-1' }]);
+
+    let emitted: Record<string, string> | undefined;
+    component.confirmed.subscribe((value) => {
+      emitted = value;
+    });
+    component.onSubmit();
+
+    expect(emitted).toEqual({});
+  });
+
   it('blocks submit when an int value has 20 digits (does not fit int64)', () => {
     const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 

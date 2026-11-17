@@ -2008,7 +2008,8 @@ type ConfigSchemaEntry_builder struct {
 	// derives one from name.
 	DisplayName string
 	// Example value the console shows in an empty text field; never
-	// submitted. Empty for bool and enum keys.
+	// submitted. plugin-sdk accepts it at publish time only on string and
+	// int keys without a default.
 	Placeholder string
 }
 

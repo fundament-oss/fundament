@@ -230,11 +230,12 @@ optional `-`, digits, within int64). `string`,
 may omit both `default` and `required`: an omitted key falls back to whatever
 default the plugin binary's own env parsing applies. `advanced: true` collapses
 the key under an "advanced" toggle in the install form instead of showing it by
-default. `placeholder` is an example value the console shows in the empty text
-field of a `string` or `int` key — use it to show the expected format of a
-required key that has no sensible default. It is never submitted, so it does
-not replace `default`, and the description stays the place for the full
-explanation. Other types reject a placeholder.
+default. `placeholder` is an example value that the console shows in an empty
+text field. Use it to show the expected format of a key that has no sensible
+default. Only a `string` or `int` key without a `default` can have a
+placeholder, and an `int` placeholder must be a valid int. The console never
+submits the placeholder. The description stays the place for the full
+explanation.
 
 The schema is closed: `spec.config` in the `PluginInstallation` may only set
 keys declared here. The one exception is the SDK's own keys — `LOG_LEVEL` and

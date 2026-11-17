@@ -120,7 +120,7 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 ** `formGroups`: Groups of related fields for create/edit forms.
 ** `statusMapping`: Maps a `jsonPath` to badge/label values for status display.
 * **crds**: List of CRDs the plugin provides.
-* **configSchema**: Optional list of declared install-time config keys. Each entry has `name` (uppercase, becomes the `FUNP_<name>` env var), `displayName` (optional human-readable label; the console derives one from `name` when absent), `type` (`string`/`int`/`bool`/`enum`), `default`, `description`, `required`, `values` (enum only), `advanced` (collapsed by default in the install form), and `placeholder` (an example value shown in an empty `string` or `int` field; never submitted). The console renders the install form from this list; the plugin-controller rejects a `spec.config` that violates it. A definition without a schema accepts any config (pre-schema behavior).
+* **configSchema**: Optional list of declared install-time config keys. Each entry has `name` (uppercase, becomes the `FUNP_<name>` env var), `displayName` (optional human-readable label; the console derives one from `name` when absent), `type` (`string`/`int`/`bool`/`enum`), `default`, `description`, `required`, `values` (enum only), and `advanced` (collapsed by default in the install form). The console renders the install form from this list; the plugin-controller rejects a `spec.config` that violates it. A definition without a schema accepts any config (pre-schema behavior). A `string` or `int` entry without a `default` can also set `placeholder`. The console shows this example value in the empty field and never submits it.
 
 == Plugin SDK
 
