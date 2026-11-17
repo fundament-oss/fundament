@@ -30,6 +30,14 @@ const (
 	testReviewerAliceEmail = "alice@acme-corp.com"
 )
 
+// testManifest is a parseable definition: approval syncs its listing fields.
+func testManifest(name, version, displayName string) string {
+	return "apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n" +
+		"  name: " + name + "\n  displayName: " + displayName + "\n  version: " + version + "\n" +
+		"  description: Ships logs.\n  tags: [logging]\n" +
+		"spec:\n  image: ghcr.io/example/" + name + "@sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\n"
+}
+
 // seedPluginVersion inserts a plugin with one version in the given status.
 func seedPluginVersion(t *testing.T, ctx *Context, orgID, name, version string, status dbconst.PluginDefinitionStatus) (pluginID, definitionID uuid.UUID) {
 	t.Helper()
@@ -42,8 +50,8 @@ func seedPluginVersion(t *testing.T, ctx *Context, orgID, name, version string, 
 
 	err = ctx.DB.Pool.QueryRow(t.Context(), `
 		INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash, status)
-		VALUES ($1, $2, '\x', 'testhash', $3)
-		RETURNING id`, pluginID, version, string(status)).Scan(&definitionID)
+		VALUES ($1, $2, $3, 'testhash', $4)
+		RETURNING id`, pluginID, version, []byte(testManifest(name, version, name)), string(status)).Scan(&definitionID)
 	require.NoError(t, err)
 
 	return pluginID, definitionID
@@ -105,6 +113,30 @@ func TestPluginApprove_PublishesPendingVersion(t *testing.T) {
 	assert.NotNil(t, reviewed)
 	assert.NotNil(t, closed)
 	assert.Equal(t, "well packaged", feedback)
+}
+
+// Approval copies the fields definition.yaml owns onto the listing, as
+// marketplace-admin-api's does.
+func TestPluginApprove_SyncsListingFields(t *testing.T) {
+	ctx := newTestContext(t)
+	pluginID, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
+	seedOpenRound(t, ctx, defID)
+
+	require.NoError(t, (&PluginApproveCmd{
+		Plugin: pluginID.String(), Version: "1.0.0", Reviewer: testReviewerAliceID,
+	}).Run(ctx))
+
+	var descriptionShort string
+	var tags []string
+	err := ctx.DB.Pool.QueryRow(t.Context(), `
+		SELECT plugins.description_short,
+		       ARRAY(SELECT tags.name FROM appstore.plugins_tags
+		               JOIN appstore.tags ON tags.id = plugins_tags.tag_id
+		              WHERE plugins_tags.plugin_id = plugins.id)
+		FROM appstore.plugins WHERE id = $1`, pluginID).Scan(&descriptionShort, &tags)
+	require.NoError(t, err)
+	assert.Equal(t, "Ships logs.", descriptionShort)
+	assert.Equal(t, []string{"logging"}, tags)
 }
 
 func TestPluginApprove_ByPluginID(t *testing.T) {

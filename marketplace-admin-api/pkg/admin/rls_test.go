@@ -67,17 +67,22 @@ func TestAdminRoleCannotRewriteSubmissionIdentity(t *testing.T) {
 	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
 }
 
-// The reviewer reads listings but does not author them.
+// The reviewer writes only the columns approval syncs from definition.yaml;
+// the rest of the listing belongs to its publisher.
 func TestAdminRoleCannotWriteListings(t *testing.T) {
 	env := newTestEnv(t)
 	seeded := seedPendingSubmission(t, env, "cert-manager")
 
-	_, err := env.servicePool.Exec(context.Background(),
-		`UPDATE appstore.plugins SET display_name = 'renamed' WHERE id = $1`, seeded.pluginID)
-	require.Error(t, err)
-	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
+	for _, stmt := range []string{
+		`UPDATE appstore.plugins SET description = 'rewritten' WHERE id = $1`,
+		`UPDATE appstore.plugins SET organization_id = gen_random_uuid() WHERE id = $1`,
+	} {
+		_, err := env.servicePool.Exec(context.Background(), stmt, seeded.pluginID)
+		require.Error(t, err, stmt)
+		assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
+	}
 
-	_, err = env.servicePool.Exec(context.Background(),
+	_, err := env.servicePool.Exec(context.Background(),
 		`INSERT INTO appstore.plugins (organization_id, name, display_name, description, visibility)
 		 VALUES ($1, 'rogue', 'rogue', '', 'public')`, seeded.organizationID)
 	require.Error(t, err)

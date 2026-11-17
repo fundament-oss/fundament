@@ -2297,6 +2297,11 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
+<policy name="plugins_update_admin" table="appstore.plugins" command="UPDATE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="plugin_definitions_select_admin" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
@@ -2316,6 +2321,14 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugins_tags_select_admin" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_tags_insert_admin" table="appstore.plugins_tags" command="INSERT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_tags_delete_admin" table="appstore.plugins_tags" command="DELETE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -6286,6 +6299,16 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<privileges insert="true"/>
 </permission>
 <permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
 	<object name="appstore.plugins" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
 	<privileges select="true" insert="true" update="true"/>
@@ -6386,6 +6409,31 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<privileges select="true"/>
 </permission>
 <permission>
+	<object name="display_name" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="description_short" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="repository_url" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="license" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="updated" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
 	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
@@ -6438,12 +6486,12 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="appstore.tags" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
-	<privileges select="true"/>
+	<privileges select="true" insert="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugins_tags" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
-	<privileges select="true"/>
+	<privileges select="true" insert="true" delete="true"/>
 </permission>
 <permission>
 	<object name="appstore.categories_plugins" type="table"/>

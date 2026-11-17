@@ -595,3 +595,119 @@ func TestListCategoriesServesVocabulary(t *testing.T) {
 	// db/seed/0101-appstore-catalog.sql ships the vocabulary.
 	assert.NotEmpty(t, resp.GetCategories())
 }
+
+// listingManifest is testManifest with the listing fields definition.yaml owns.
+func listingManifest(version, displayName string) string {
+	return `apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  displayName: ` + displayName + `
+  version: ` + version + `
+  description: Issues certificates.
+  license: Apache-2.0
+  urls:
+    repository: https://example.com/cert-manager
+  tags: [tls, security]
+spec:
+  image: ghcr.io/example/cert-manager@sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+`
+}
+
+func seedVersionWithManifest(t *testing.T, env *testEnv, pluginID uuid.UUID, version, status, manifest string) uuid.UUID {
+	t.Helper()
+
+	versionID := uuid.New()
+	_, err := env.superPool.Exec(context.Background(), `
+		INSERT INTO appstore.plugin_definitions (id, plugin_id, plugin_version, manifest, hash, image, status, published)
+		VALUES ($1, $2, $3, $4, 'sha256:test', 'ghcr.io/example/img@sha256:abc', $5,
+		        CASE WHEN $5 = 'approved' THEN now() END)`,
+		versionID, pluginID, version, []byte(manifest), status)
+	require.NoError(t, err)
+
+	return versionID
+}
+
+type listingRow struct {
+	displayName, descriptionShort, description, license string
+	repositoryURL                                       *string
+	tags                                                []string
+}
+
+func readListing(t *testing.T, env *testEnv, pluginID uuid.UUID) listingRow {
+	t.Helper()
+
+	var row listingRow
+	err := env.superPool.QueryRow(context.Background(), `
+		SELECT display_name, description_short, description, license, repository_url,
+		       COALESCE((SELECT array_agg(tags.name ORDER BY tags.name)
+		                   FROM appstore.plugins_tags
+		                   JOIN appstore.tags ON tags.id = plugins_tags.tag_id
+		                  WHERE plugins_tags.plugin_id = plugins.id), '{}')
+		FROM appstore.plugins WHERE id = $1`, pluginID).
+		Scan(&row.displayName, &row.descriptionShort, &row.description, &row.license, &row.repositoryURL, &row.tags)
+	require.NoError(t, err)
+
+	return row
+}
+
+func approve(t *testing.T, env *testEnv, submissionID uuid.UUID) {
+	t.Helper()
+
+	_, err := newReviewer(t, env).ApproveSubmission(context.Background(),
+		adminv1.ApproveSubmissionRequest_builder{SubmissionId: submissionID.String()}.Build())
+	require.NoError(t, err)
+}
+
+func TestApproveSyncsDefinitionOwnedListingFields(t *testing.T) {
+	env := newTestEnv(t)
+	orgID := seedOrganization(t, env, "acme")
+	submitterID := seedUser(t, env, "dev")
+	pluginID := seedPlugin(t, env, orgID, "cert-manager")
+	_, err := env.superPool.Exec(context.Background(),
+		`UPDATE appstore.plugins SET description = 'Long write-up.' WHERE id = $1`, pluginID)
+	require.NoError(t, err)
+
+	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", "pending", listingManifest("1.0.0", "Cert Manager"))
+	approve(t, env, seedSubmission(t, env, versionID, submitterID))
+
+	listing := readListing(t, env, pluginID)
+	assert.Equal(t, "Cert Manager", listing.displayName)
+	assert.Equal(t, "Issues certificates.", listing.descriptionShort)
+	assert.Equal(t, "Apache-2.0", listing.license)
+	require.NotNil(t, listing.repositoryURL)
+	assert.Equal(t, "https://example.com/cert-manager", *listing.repositoryURL)
+	assert.Equal(t, []string{"security", "tls"}, listing.tags)
+	assert.Equal(t, "Long write-up.", listing.description, "the long description belongs to the listing")
+}
+
+func TestApprovingAnOlderVersionLineLeavesTheListing(t *testing.T) {
+	env := newTestEnv(t)
+	orgID := seedOrganization(t, env, "acme")
+	submitterID := seedUser(t, env, "dev")
+	pluginID := seedPlugin(t, env, orgID, "cert-manager")
+
+	newer := seedVersionWithManifest(t, env, pluginID, "2.0.0", "pending", listingManifest("2.0.0", "Cert Manager Two"))
+	approve(t, env, seedSubmission(t, env, newer, submitterID))
+
+	older := seedVersionWithManifest(t, env, pluginID, "1.0.1", "pending", listingManifest("1.0.1", "Cert Manager One"))
+	approve(t, env, seedSubmission(t, env, older, submitterID))
+
+	assert.Equal(t, "Cert Manager Two", readListing(t, env, pluginID).displayName)
+}
+
+func TestNonApprovalDecisionsLeaveTheListing(t *testing.T) {
+	env := newTestEnv(t)
+	orgID := seedOrganization(t, env, "acme")
+	submitterID := seedUser(t, env, "dev")
+	pluginID := seedPlugin(t, env, orgID, "cert-manager")
+
+	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", "pending", listingManifest("1.0.0", "Cert Manager"))
+	submissionID := seedSubmission(t, env, versionID, submitterID)
+
+	_, err := newReviewer(t, env).RequestChanges(context.Background(),
+		adminv1.RequestChangesRequest_builder{SubmissionId: submissionID.String(), Feedback: "Fix it."}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, "cert-manager", readListing(t, env, pluginID).displayName)
+}

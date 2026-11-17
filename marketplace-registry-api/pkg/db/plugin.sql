@@ -102,17 +102,14 @@ INSERT INTO appstore.plugins (
 RETURNING id;
 
 -- name: PluginUpdate :execrows
--- name is absent: it is immutable once reserved (FUN-5). Zero rows means the
+-- name is absent: it is immutable once reserved (FUN-5). So are the fields
+-- definition.yaml owns, which are synced on approval. Zero rows means the
 -- listing was soft-deleted after the handler looked it up.
 UPDATE appstore.plugins SET
-	display_name = sqlc.arg('display_name')::text,
-	description_short = sqlc.arg('description_short')::text,
 	description = sqlc.arg('description')::text,
 	image = sqlc.arg('image')::text,
-	repository_url = sqlc.narg('repository_url')::text,
 	author_name = sqlc.narg('author_name')::text,
 	author_url = sqlc.narg('author_url')::text,
-	license = sqlc.arg('license')::text,
 	visibility = sqlc.arg('visibility')::text,
 	updated = now()
 WHERE id = sqlc.arg('id')::uuid

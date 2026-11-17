@@ -3,6 +3,7 @@ package registry_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -73,6 +74,20 @@ func createPlugin(t *testing.T, client registryClient, name string) *registryv1.
 		Name:        name,
 		DisplayName: "Postgres Operator",
 		Description: "Runs Postgres.",
+		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+	}.Build())
+	require.NoError(t, err)
+
+	return resp.GetPlugin()
+}
+
+func createPluginWithTags(t *testing.T, client registryClient, name string, tags ...string) *registryv1.Plugin {
+	t.Helper()
+
+	resp, err := client.CreatePlugin(context.Background(), registryv1.CreatePluginRequest_builder{
+		Name:        name,
+		DisplayName: "Postgres Operator",
+		Tags:        tags,
 		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 	}.Build())
 	require.NoError(t, err)
@@ -175,14 +190,12 @@ func TestListPluginsKeepsChildRowsWithTheirOwnListing(t *testing.T) {
 	env := newTestEnv(t)
 	_, client := newOrgClient(t, env)
 
-	first := createPlugin(t, client, "postgres-operator")
-	second := createPlugin(t, client, "cert-manager")
+	first := createPluginWithTags(t, client, "postgres-operator", "database")
+	second := createPluginWithTags(t, client, "cert-manager", "certificates", "tls")
 
 	_, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
-		PluginId:    first.GetId(),
-		DisplayName: "Postgres Operator",
-		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
-		Tags:        []string{"database"},
+		PluginId:   first.GetId(),
+		Visibility: registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 		Features: []*marketplacev1.FeatureBlock{
 			marketplacev1.FeatureBlock_builder{Title: "Backups", Body: "Nightly."}.Build(),
 		},
@@ -190,10 +203,8 @@ func TestListPluginsKeepsChildRowsWithTheirOwnListing(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
-		PluginId:    second.GetId(),
-		DisplayName: "Cert Manager",
-		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
-		Tags:        []string{"certificates", "tls"},
+		PluginId:   second.GetId(),
+		Visibility: registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 		DocumentationLinks: []*marketplacev1.DocumentationLink{
 			marketplacev1.DocumentationLink_builder{Title: "Guide", UrlName: "guide", Url: "https://example.com/guide"}.Build(),
 		},
@@ -298,26 +309,59 @@ func TestUpdatePluginReplacesRepeatedFieldsWholesale(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	update := func(tags []string) *registryv1.Plugin {
+	update := func(titles ...string) *registryv1.Plugin {
+		features := make([]*marketplacev1.FeatureBlock, 0, len(titles))
+		for _, title := range titles {
+			features = append(features, marketplacev1.FeatureBlock_builder{Title: title, Body: "Body."}.Build())
+		}
 		resp, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
-			PluginId:    plugin.GetId(),
-			DisplayName: "Postgres Operator",
-			Tags:        tags,
-			Features: []*marketplacev1.FeatureBlock{
-				marketplacev1.FeatureBlock_builder{Title: "Backups", Body: "Nightly."}.Build(),
-			},
+			PluginId:   plugin.GetId(),
+			Features:   features,
 			Visibility: registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 		}.Build())
 		require.NoError(t, err)
 		return resp.GetPlugin()
 	}
 
-	assert.Equal(t, []string{"database", "operator"}, update([]string{"database", "operator"}).GetTags())
+	require.Len(t, update("Backups", "Failover").GetFeatures(), 2)
 
-	// Omitting a tag clears it rather than merging with what was there.
-	after := update([]string{"database"})
-	assert.Equal(t, []string{"database"}, after.GetTags())
+	// Omitting a block removes it rather than merging with what was there.
+	after := update("Backups")
 	require.Len(t, after.GetFeatures(), 1, "features are replaced, not appended")
+	assert.Equal(t, "Backups", after.GetFeatures()[0].GetTitle())
+}
+
+// The fields definition.yaml owns are synced on approval, so UpdatePlugin
+// leaves them as they are.
+func TestUpdatePluginKeepsDefinitionOwnedFields(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	created, err := client.CreatePlugin(context.Background(), registryv1.CreatePluginRequest_builder{
+		Name:             "postgres-operator",
+		DisplayName:      "Postgres Operator",
+		DescriptionShort: "Runs Postgres.",
+		Tags:             []string{"database"},
+		RepositoryUrl:    "https://example.com/repo",
+		License:          "Apache-2.0",
+		Visibility:       registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+	}.Build())
+	require.NoError(t, err)
+
+	resp, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
+		PluginId:    created.GetPlugin().GetId(),
+		Description: "A long write-up.",
+		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+	}.Build())
+	require.NoError(t, err)
+
+	updated := resp.GetPlugin()
+	assert.Equal(t, "A long write-up.", updated.GetDescription())
+	assert.Equal(t, "Postgres Operator", updated.GetDisplayName())
+	assert.Equal(t, "Runs Postgres.", updated.GetDescriptionShort())
+	assert.Equal(t, []string{"database"}, updated.GetTags())
+	assert.Equal(t, "https://example.com/repo", updated.GetRepositoryUrl())
+	assert.Equal(t, "Apache-2.0", updated.GetLicense())
 }
 
 func TestUpdatePluginStoresTheAllowListForRestrictedListings(t *testing.T) {
@@ -329,7 +373,6 @@ func TestUpdatePluginStoresTheAllowListForRestrictedListings(t *testing.T) {
 
 	resp, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
 		PluginId:               plugin.GetId(),
-		DisplayName:            "Postgres Operator",
 		Visibility:             registryv1.PluginVisibility_PLUGIN_VISIBILITY_RESTRICTED,
 		AllowedOrganizationIds: []string{allowedOrgID.String()},
 	}.Build())
@@ -346,7 +389,6 @@ func TestUpdatePluginStoresTheAllowListForRestrictedListings(t *testing.T) {
 func updateChildrenRequest(pluginID string, links []*marketplacev1.DocumentationLink, features []*marketplacev1.FeatureBlock) *registryv1.UpdatePluginRequest {
 	return registryv1.UpdatePluginRequest_builder{
 		PluginId:           pluginID,
-		DisplayName:        "Postgres Operator",
 		Visibility:         registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 		DocumentationLinks: links,
 		Features:           features,
@@ -597,6 +639,27 @@ func TestCreatePluginVersionAcceptsAVersionWithoutTheVPrefix(t *testing.T) {
 	}.Build())
 
 	require.NoError(t, err)
+}
+
+// Listing fields are synced on approval, so ones the listing cannot hold are
+// refused at push.
+func TestCreatePluginVersionRejectsListingFieldsTheListingCannotHold(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+	manifest := strings.Replace(testManifest, "  version: 1.2.3\n",
+		"  version: 1.2.3\n  license: "+strings.Repeat("x", 65)+"\n", 1)
+
+	_, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "v1.2.3",
+		Manifest: []byte(manifest),
+	}.Build())
+
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connectCode(err))
+	assert.Contains(t, err.Error(), "metadata.license")
 }
 
 func TestCreatePluginVersionRejectsAnUnparseableManifest(t *testing.T) {

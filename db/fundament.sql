@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1989,6 +1989,16 @@ CREATE POLICY plugins_select_admin ON appstore.plugins
 	USING (true);
 -- ddl-end --
 
+-- object: plugins_update_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_update_admin ON appstore.plugins CASCADE;
+CREATE POLICY plugins_update_admin ON appstore.plugins
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_marketplace_admin_api
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
 -- object: plugin_definitions_select_admin | type: POLICY --
 -- DROP POLICY IF EXISTS plugin_definitions_select_admin ON appstore.plugin_definitions CASCADE;
 CREATE POLICY plugin_definitions_select_admin ON appstore.plugin_definitions
@@ -2032,6 +2042,24 @@ CREATE POLICY submissions_update_admin ON appstore.submissions
 CREATE POLICY plugins_tags_select_admin ON appstore.plugins_tags
 	AS PERMISSIVE
 	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugins_tags_insert_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_insert_admin ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_insert_admin ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_marketplace_admin_api
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: plugins_tags_delete_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_delete_admin ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_delete_admin ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR DELETE
 	TO fun_marketplace_admin_api
 	USING (true);
 -- ddl-end --
@@ -5630,6 +5658,22 @@ GRANT INSERT
 -- ddl-end --
 
 
+-- object: "grant_U_6a4ca2bb2d" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_7c6262d704 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
 -- object: grant_raw_04e3e3c135 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE appstore.plugins
@@ -5790,6 +5834,46 @@ GRANT SELECT
 -- ddl-end --
 
 
+-- object: grant_w_ea5c25f6bb | type: PERMISSION --
+GRANT UPDATE(display_name)
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_96ed2ef78a | type: PERMISSION --
+GRANT UPDATE(description_short)
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_4574d129e1 | type: PERMISSION --
+GRANT UPDATE(repository_url)
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_bb42ac5948 | type: PERMISSION --
+GRANT UPDATE(license)
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_3e4ded66e1 | type: PERMISSION --
+GRANT UPDATE(updated)
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
 -- object: grant_r_55abf03dc9 | type: PERMISSION --
 GRANT SELECT
    ON TABLE appstore.plugin_definitions
@@ -5870,16 +5954,16 @@ GRANT SELECT
 -- ddl-end --
 
 
--- object: grant_r_df7e1a526f | type: PERMISSION --
-GRANT SELECT
+-- object: grant_ra_df7e1a526f | type: PERMISSION --
+GRANT SELECT,INSERT
    ON TABLE appstore.tags
    TO fun_marketplace_admin_api;
 
 -- ddl-end --
 
 
--- object: grant_r_ad567998bf | type: PERMISSION --
-GRANT SELECT
+-- object: grant_rad_ad567998bf | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
    ON TABLE appstore.plugins_tags
    TO fun_marketplace_admin_api;
 

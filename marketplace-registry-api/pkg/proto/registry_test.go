@@ -99,7 +99,6 @@ func TestUpdatePluginRequestValidation(t *testing.T) {
 	t.Run("accepts a restricted plugin with an organization allow-list", func(t *testing.T) {
 		req := registryv1.UpdatePluginRequest_builder{
 			PluginId:               testPluginID,
-			DisplayName:            "Postgres Operator",
 			CategoryIds:            []string{testCategoryID},
 			Visibility:             registryv1.PluginVisibility_PLUGIN_VISIBILITY_RESTRICTED,
 			AllowedOrganizationIds: []string{testOrganizationID},
@@ -111,7 +110,6 @@ func TestUpdatePluginRequestValidation(t *testing.T) {
 	t.Run("rejects a non-uuid entry in the allow-list", func(t *testing.T) {
 		req := registryv1.UpdatePluginRequest_builder{
 			PluginId:               testPluginID,
-			DisplayName:            "Postgres Operator",
 			CategoryIds:            []string{testCategoryID},
 			Visibility:             registryv1.PluginVisibility_PLUGIN_VISIBILITY_RESTRICTED,
 			AllowedOrganizationIds: []string{"acme-corp"},

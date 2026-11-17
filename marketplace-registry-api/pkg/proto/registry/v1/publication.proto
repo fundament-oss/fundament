@@ -56,7 +56,8 @@ message GetPluginResponse {
 }
 
 // Reserves the name within the caller's organization and creates the listing.
-// Only the essentials; UpdatePlugin fills in the rest.
+// The definition.yaml-owned fields seed the listing until its first approved
+// version replaces them; UpdatePlugin fills in the rest.
 message CreatePluginRequest {
   string name = 10 [
     (buf.validate.field).string = {max_len: 63},
@@ -102,14 +103,14 @@ message CreatePluginResponse {
 }
 
 // A full replacement: omitted repeated fields are cleared, not preserved.
-// No name — it is immutable once reserved.
+// No name — it is immutable once reserved. display_name, description_short,
+// tags, repository_url and license are owned by definition.yaml and synced
+// from the newest approved version, so they are not editable here.
 message UpdatePluginRequest {
+  reserved 20, 30, 60, 80, 90;
+  reserved display_name, description_short, tags, repository_url, license;
+
   string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
-  string display_name = 20 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 255
-  }];
-  string description_short = 30 [(buf.validate.field).string = {max_len: 255}];
   string description = 40 [(buf.validate.field).string = {max_len: 8000}];
   repeated string category_ids = 50 [(buf.validate.field).repeated = {
     max_items: 10
@@ -117,18 +118,11 @@ message UpdatePluginRequest {
       string: {uuid: true}
     }
   }];
-  // Tag names, not ids — the server upserts them.
-  repeated string tags = 60 [(buf.validate.field).repeated = {max_items: 20}];
   // Listing artwork, not a container image.
   string image = 70 [
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string = {uri: true}
   ];
-  string repository_url = 80 [
-    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
-    (buf.validate.field).string = {uri: true}
-  ];
-  string license = 90 [(buf.validate.field).string = {max_len: 64}];
   // A link with no id is created; one carrying an id updates that link in
   // place, keeping its id. Links the request omits are soft-deleted.
   repeated marketplace.v1.DocumentationLink documentation_links = 100 [(buf.validate.field).repeated = {max_items: 20}];

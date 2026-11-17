@@ -3,6 +3,7 @@ package registry
 import (
 	"fmt"
 
+	"github.com/fundament-oss/fundament/common/pluginlisting"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
@@ -30,6 +31,12 @@ func parseManifest(manifest []byte, iconFiles map[string][]byte) (parsedManifest
 	icons, err := pluginruntime.ValidateIcons(&definition, iconFiles)
 	if err != nil {
 		return parsedManifest{}, fmt.Errorf("validating icons: %w", err)
+	}
+
+	// Checked at push so the listing sync on approval cannot fail on them.
+	listing := pluginlisting.FromDefinition(&definition)
+	if err := listing.Validate(); err != nil {
+		return parsedManifest{}, fmt.Errorf("validating listing fields: %w", err)
 	}
 
 	return parsedManifest{
