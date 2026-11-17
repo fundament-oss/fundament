@@ -25,8 +25,10 @@ const idTokenCookiePath = "/logout"
 // one past its exp. Logout clears the cookie, and the next login replaces it.
 const idTokenCookieMaxAge = 30 * 24 * time.Hour
 
-// maxIDTokenCookieBytes is the most a browser keeps of a cookie's name and
-// value; a larger one is dropped without a word.
+// maxIDTokenCookieBytes is the size past which a browser may drop a cookie
+// without a word. Browsers count it differently (name and value, or with the
+// attributes too, as RFC 6265 puts it), so this is checked against the whole
+// serialized cookie: the strictest reading.
 const maxIDTokenCookieBytes = 4096
 
 // HandleLogout clears the auth cookie. When the identity provider supports
@@ -80,13 +82,16 @@ func (s *AuthnServer) setIDTokenCookie(w http.ResponseWriter, idToken string) {
 	if s.config.EndSessionURL == "" {
 		return
 	}
-	if len(idTokenCookieName)+len(idToken) > maxIDTokenCookieBytes {
+	cookie := s.buildIDTokenCookie(idToken)
+	if size := len(cookie.String()); size > maxIDTokenCookieBytes {
 		// The browser would drop it anyway. Logout still works, only with the
-		// provider asking the user to confirm.
-		s.logger.Warn("ID token too large to keep for logout", "bytes", len(idToken))
+		// provider asking the user to confirm. Clear the token an earlier login
+		// left, though: as the hint it would name that session, not this one.
+		s.logger.Warn("ID token too large to keep for logout", "bytes", size)
+		http.SetCookie(w, s.buildClearIDTokenCookie())
 		return
 	}
-	http.SetCookie(w, s.buildIDTokenCookie(idToken))
+	http.SetCookie(w, cookie)
 }
 
 // buildIDTokenCookie keeps the provider's ID token until logout (see

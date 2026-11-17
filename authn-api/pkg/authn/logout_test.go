@@ -98,14 +98,20 @@ func TestHandleLogout_EndSessionURL(t *testing.T) {
 }
 
 func TestSetIDTokenCookie(t *testing.T) {
+	// Name and value fill the limit exactly; the attributes push it over.
+	fitsWithoutAttributes := strings.Repeat("x", maxIDTokenCookieBytes-len(idTokenCookieName))
+
 	tests := map[string]struct {
 		endSessionURL string
 		idToken       string
-		wantCookie    bool
+		// "kept", "none", or "cleared": an earlier login's token is removed,
+		// so logout does not hand the provider a hint for another session.
+		want string
 	}{
-		"with an end-session endpoint": {endSessionURL: testEndSessionURL, idToken: "the-id-token", wantCookie: true},
-		"without one (Dex)":            {idToken: "the-id-token"},
-		"too large for the browser":    {endSessionURL: testEndSessionURL, idToken: strings.Repeat("x", maxIDTokenCookieBytes)},
+		"with an end-session endpoint":        {endSessionURL: testEndSessionURL, idToken: "the-id-token", want: "kept"},
+		"without one (Dex)":                   {idToken: "the-id-token", want: "none"},
+		"too large for the browser":           {endSessionURL: testEndSessionURL, idToken: strings.Repeat("x", maxIDTokenCookieBytes), want: "cleared"},
+		"too large once its attributes count": {endSessionURL: testEndSessionURL, idToken: fitsWithoutAttributes, want: "cleared"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -113,12 +119,20 @@ func TestSetIDTokenCookie(t *testing.T) {
 			logoutServer(tt.endSessionURL).setIDTokenCookie(recorder, tt.idToken)
 
 			cookies := recorder.Result().Cookies()
-			if !tt.wantCookie {
+			switch tt.want {
+			case "none":
 				assert.Empty(t, cookies)
-				return
+			case "kept":
+				require.Len(t, cookies, 1)
+				assert.Equal(t, tt.idToken, cookies[0].Value)
+			case "cleared":
+				require.Len(t, cookies, 1)
+				assert.Equal(t, idTokenCookieName, cookies[0].Name)
+				assert.Empty(t, cookies[0].Value)
+				assert.Equal(t, -1, cookies[0].MaxAge)
+			default:
+				panic("unknown want: " + tt.want)
 			}
-			require.Len(t, cookies, 1)
-			assert.Equal(t, tt.idToken, cookies[0].Value)
 		})
 	}
 }

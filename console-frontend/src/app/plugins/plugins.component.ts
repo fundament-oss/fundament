@@ -50,6 +50,7 @@ import {
   reportedStatusMessage,
 } from '../utils/plugin-install-status';
 import createInstallPoller from '../utils/install-poller';
+import sortByName from '../utils/sort-by-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
@@ -468,10 +469,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       // list read then meant "No clusters found" for good.
       const clusters = this.organizationDataService.clustersLoaded()
         ? this.organizationDataService.clusterSummaries()
-        : (await firstValueFrom(this.clusterClient.listClusters({}))).clusters;
+        : sortByName((await firstValueFrom(this.clusterClient.listClusters({}))).clusters);
       this.clusters.set(this.inScope(clusters));
 
       await this.loadInstalls();
+
+      // Left while loading (to another cluster's plugins, say, which mounts a
+      // new page): starting the polls now would keep them going for good.
+      if (this.destroyed) return;
 
       this.isLoading.set(false);
 
@@ -492,7 +497,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Set once the page is gone, so loads that finish later start no timers.
+  private destroyed = false;
+
   ngOnDestroy() {
+    this.destroyed = true;
     this.stopPolling();
     document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
   }
@@ -506,7 +515,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   private async refreshClusters() {
     try {
       const response = await firstValueFrom(this.clusterClient.listClusters({}));
-      const clusters = this.inScope(response.clusters);
+      if (this.destroyed) return;
+      const clusters = this.inScope(sortByName(response.clusters));
       this.clusters.set(clusters);
 
       const needsPolling = clusters.some((c) => shouldPollStatus(c.status));

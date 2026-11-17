@@ -530,18 +530,36 @@ describe('PluginsComponent install page', () => {
   // The marketplace's "Install plugin" opens this page in a new tab, where the
   // catalog can come back before the shell has the organization's clusters.
   it('reads the clusters itself when the shell has not got them yet', async () => {
+    // In creation order, as the API lists them; the page shows them by name.
     const component = build(
       [acmeCertManager],
       [],
       '',
       {},
       installPage(acmeCertManager.id),
-      [cluster, staging],
+      [staging, cluster],
       false,
     );
     await component.ngOnInit();
 
-    expect(component.clustersForModal.map((c) => c.id)).toEqual([cluster.id, staging.id]);
+    expect(component.clustersForModal.map((c) => c.name)).toEqual(['production', 'staging']);
+  });
+
+  // A page left while it loads (to another cluster's plugins, which mounts a
+  // new one) must not start polling once its loads come back.
+  it('starts no polling when left before its loads finish', async () => {
+    const provisioning = { ...staging, status: ClusterStatus.PROVISIONING };
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const component = build([acmeCertManager], [], '', {}, installPage(acmeCertManager.id), [
+      provisioning,
+    ]);
+
+    const loading = component.ngOnInit();
+    component.ngOnDestroy();
+    await loading;
+
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setIntervalSpy.mockRestore();
   });
 
   it('says so when the plugin is not in the catalog', async () => {
