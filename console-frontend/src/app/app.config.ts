@@ -6,9 +6,10 @@ import {
   Injector,
   runInInjectionContext,
 } from '@angular/core';
-import { provideRouter, withRouterConfig } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
+import RemountOnParamChangeStrategy from './remount-on-param-change';
 import {
   AUTHN_TRANSPORT,
   INSTALL_TRANSPORT,
@@ -57,6 +58,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
+    { provide: RouteReuseStrategy, useClass: RemountOnParamChangeStrategy },
     provideStaleChunkReload(),
     // Initialize configuration before app starts
     provideAppInitializer(() => {

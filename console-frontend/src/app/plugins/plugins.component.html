@@ -158,11 +158,19 @@
            read, so say that plugins on the rest may be missing from it. -->
         @if (installsReadFailed()) {
           <nldd-spacer size="24"></nldd-spacer>
-          <nldd-inline-dialog
-            variant="alert"
-            text="Some clusters couldn't be read"
-            supporting-text="Plugins installed on those clusters may be missing here. Reload the page to try again."
-          ></nldd-inline-dialog>
+          @if (scopedClusterId) {
+            <nldd-inline-dialog
+              variant="alert"
+              text="Couldn't read the plugins on this cluster"
+              supporting-text="Plugins installed here may be missing from the list. Reload the page to try again."
+            ></nldd-inline-dialog>
+          } @else {
+            <nldd-inline-dialog
+              variant="alert"
+              text="Some clusters couldn't be read"
+              supporting-text="Plugins installed on those clusters may be missing here. Reload the page to try again."
+            ></nldd-inline-dialog>
+          }
         }
         <nldd-spacer size="16"></nldd-spacer>
         <!-- The filters were a sidebar of two lists; as menus they stay out of the

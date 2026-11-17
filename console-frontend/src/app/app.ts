@@ -777,9 +777,10 @@ export default class App implements OnInit {
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
       // The identity provider ends its own session there and sends the browser
-      // back to /login, so the next login asks for credentials again.
+      // back to /login, so the next login asks for credentials again. Replace,
+      // not assign: Back must not return to the page that was signed out of.
       if (providerLogoutUrl) {
-        window.location.assign(providerLogoutUrl);
+        window.location.replace(providerLogoutUrl);
         return;
       }
       this.router.navigate(['/login']);

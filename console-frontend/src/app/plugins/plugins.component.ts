@@ -462,8 +462,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         };
       });
 
-      // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
-      this.clusters.set(this.inScope(this.organizationDataService.clusterSummaries()));
+      // The shell's cluster list when it is in, rather than a second
+      // ListClusters. A page opened straight from a link (the marketplace's
+      // "Install plugin" opens a new tab) can get here first, and the empty
+      // list read then meant "No clusters found" for good.
+      const clusters = this.organizationDataService.clustersLoaded()
+        ? this.organizationDataService.clusterSummaries()
+        : (await firstValueFrom(this.clusterClient.listClusters({}))).clusters;
+      this.clusters.set(this.inScope(clusters));
 
       await this.loadInstalls();
 

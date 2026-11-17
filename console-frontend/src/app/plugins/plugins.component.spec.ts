@@ -92,6 +92,8 @@ function build(
   installationService: Partial<PluginInstallationService> = {},
   route?: RouteSetup,
   clusters: ClusterSummary[] = [cluster],
+  // Whether the shell's cluster list is in by the time the page loads.
+  clustersLoaded = true,
 ) {
   TestBed.configureTestingModule({
     providers: [
@@ -134,7 +136,9 @@ function build(
       },
       {
         provide: CLUSTER,
-        useValue: {} as unknown as ObservableClient<typeof ClusterService>,
+        useValue: {
+          listClusters: () => of({ clusters }),
+        } as unknown as ObservableClient<typeof ClusterService>,
       },
       {
         provide: PluginInstallationService,
@@ -147,7 +151,8 @@ function build(
       {
         provide: OrganizationDataService,
         useValue: {
-          clusterSummaries: () => clusters,
+          clusterSummaries: () => (clustersLoaded ? clusters : []),
+          clustersLoaded: () => clustersLoaded,
         } as unknown as OrganizationDataService,
       },
       {
@@ -519,6 +524,23 @@ describe('PluginsComponent install page', () => {
     expect(component.selectedPlugin?.id).toBe(acmeCertManager.id);
     expect(component.showInstallModal()).toBe(true);
     expect(component.installVersions().map((v) => v.version)).toEqual(['1.17.2', '1.16.0']);
+    expect(component.clustersForModal.map((c) => c.id)).toEqual([cluster.id, staging.id]);
+  });
+
+  // The marketplace's "Install plugin" opens this page in a new tab, where the
+  // catalog can come back before the shell has the organization's clusters.
+  it('reads the clusters itself when the shell has not got them yet', async () => {
+    const component = build(
+      [acmeCertManager],
+      [],
+      '',
+      {},
+      installPage(acmeCertManager.id),
+      [cluster, staging],
+      false,
+    );
+    await component.ngOnInit();
+
     expect(component.clustersForModal.map((c) => c.id)).toEqual([cluster.id, staging.id]);
   });
 

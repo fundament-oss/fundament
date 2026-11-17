@@ -763,12 +763,18 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.containers.set([]);
       return;
     }
+    // A listing that comes back after the plugin or cluster changed is for
+    // the old one: its pods must not land in the new one's menus.
+    const stillSelected = () =>
+      this.selectedCluster() === clusterId && this.selectedNamespace() === namespace;
     try {
       const pods = await this.shootPods.listPods(clusterId, namespace);
+      if (!stillSelected()) return;
       this.livePods.set(pods);
       this.pods.set(pods.map((p) => p.name));
       this.containers.set(containersOf(pods));
     } catch {
+      if (!stillSelected()) return;
       this.livePods.set([]);
       this.pods.set([]);
       this.containers.set([]);

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 )
@@ -16,6 +17,17 @@ const idTokenCookieName = "fundament_id_token" //nolint:gosec // a cookie name, 
 // idTokenCookiePath scopes the ID token cookie to the one request that needs
 // it, so the browser does not send it along with every other authn call.
 const idTokenCookiePath = "/logout"
+
+// idTokenCookieMaxAge is how long the ID token cookie lives. Not TokenExpiry:
+// /refresh keeps a session going past it, and cannot renew this cookie (the
+// browser sends it to /logout only). An expired ID token is still a valid
+// hint: OpenID Connect RP-Initiated Logout 1.0 asks the provider to accept
+// one past its exp. Logout clears the cookie, and the next login replaces it.
+const idTokenCookieMaxAge = 30 * 24 * time.Hour
+
+// maxIDTokenCookieBytes is the most a browser keeps of a cookie's name and
+// value; a larger one is dropped without a word.
+const maxIDTokenCookieBytes = 4096
 
 // HandleLogout clears the auth cookie. When the identity provider supports
 // RP-initiated logout, it also returns the URL that ends the session there:
@@ -60,15 +72,32 @@ func (s *AuthnServer) providerLogoutURL(r *http.Request) string {
 	return endSession.String()
 }
 
-// buildIDTokenCookie keeps the provider's ID token until logout, for as long
-// as the auth cookie lives. Host-only and scoped to /logout: no other service
-// on the cookie domain has any use for it.
+// setIDTokenCookie keeps the provider's ID token for logout, after a login
+// through the provider (the code flow or the password grant). Only where
+// logout can use it: a provider without an end-session endpoint has nothing
+// to hand it back to.
+func (s *AuthnServer) setIDTokenCookie(w http.ResponseWriter, idToken string) {
+	if s.config.EndSessionURL == "" {
+		return
+	}
+	if len(idTokenCookieName)+len(idToken) > maxIDTokenCookieBytes {
+		// The browser would drop it anyway. Logout still works, only with the
+		// provider asking the user to confirm.
+		s.logger.Warn("ID token too large to keep for logout", "bytes", len(idToken))
+		return
+	}
+	http.SetCookie(w, s.buildIDTokenCookie(idToken))
+}
+
+// buildIDTokenCookie keeps the provider's ID token until logout (see
+// idTokenCookieMaxAge). Host-only and scoped to /logout: no other service on
+// the cookie domain has any use for it.
 func (s *AuthnServer) buildIDTokenCookie(idToken string) *http.Cookie {
 	return &http.Cookie{ //nolint:gosec // Secure comes from config; HttpOnly and SameSite are set
 		Name:     idTokenCookieName,
 		Value:    idToken,
 		Path:     idTokenCookiePath,
-		MaxAge:   int(s.config.TokenExpiry.Seconds()),
+		MaxAge:   int(idTokenCookieMaxAge.Seconds()),
 		HttpOnly: true,
 		Secure:   s.config.CookieSecure,
 		SameSite: http.SameSiteStrictMode,

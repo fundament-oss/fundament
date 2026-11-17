@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,7 +88,37 @@ func TestHandleLogout_EndSessionURL(t *testing.T) {
 			assert.Equal(t, testEndSessionURL, logoutURL.Scheme+"://"+logoutURL.Host+logoutURL.Path)
 			assert.Equal(t, "fundament-poc", logoutURL.Query().Get("client_id"))
 			assert.Equal(t, "https://console.fundament.localhost:8443/login", logoutURL.Query().Get("post_logout_redirect_uri"))
-			assert.Equal(t, tt.wantHint, logoutURL.Query().Get("id_token_hint"))
+			if tt.wantHint == "" {
+				assert.NotContains(t, logoutURL.Query(), "id_token_hint")
+			} else {
+				assert.Equal(t, tt.wantHint, logoutURL.Query().Get("id_token_hint"))
+			}
+		})
+	}
+}
+
+func TestSetIDTokenCookie(t *testing.T) {
+	tests := map[string]struct {
+		endSessionURL string
+		idToken       string
+		wantCookie    bool
+	}{
+		"with an end-session endpoint": {endSessionURL: testEndSessionURL, idToken: "the-id-token", wantCookie: true},
+		"without one (Dex)":            {idToken: "the-id-token"},
+		"too large for the browser":    {endSessionURL: testEndSessionURL, idToken: strings.Repeat("x", maxIDTokenCookieBytes)},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			logoutServer(tt.endSessionURL).setIDTokenCookie(recorder, tt.idToken)
+
+			cookies := recorder.Result().Cookies()
+			if !tt.wantCookie {
+				assert.Empty(t, cookies)
+				return
+			}
+			require.Len(t, cookies, 1)
+			assert.Equal(t, tt.idToken, cookies[0].Value)
 		})
 	}
 }
@@ -99,7 +130,8 @@ func TestBuildIDTokenCookie(t *testing.T) {
 	assert.Equal(t, "the-id-token", cookie.Value)
 	assert.Equal(t, idTokenCookiePath, cookie.Path)
 	assert.Empty(t, cookie.Domain, "only authn reads it, so it stays on authn's host")
-	assert.Equal(t, int(time.Hour.Seconds()), cookie.MaxAge)
+	// Outlives the token: /refresh extends the session past TokenExpiry.
+	assert.Equal(t, int(idTokenCookieMaxAge.Seconds()), cookie.MaxAge)
 	assert.True(t, cookie.HttpOnly)
 	assert.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
 }

@@ -221,12 +221,14 @@ const routes: Routes = [
         // cluster: what runs on it, and what can be added to it.
         path: 'clusters/:id/plugins',
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
-        data: { pluginsView: 'cluster' },
+        // Both pages read the cluster once, as they open (see
+        // RemountOnParamChangeStrategy).
+        data: { pluginsView: 'cluster', remountOnParamChange: true },
       },
       {
         path: 'clusters/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-        data: { metricsScope: 'cluster' },
+        data: { metricsScope: 'cluster', remountOnParamChange: true },
       },
       // The detail page was the cluster's own address before the cluster had a
       // menu of its own; links to its editors still land on them.
@@ -365,7 +367,7 @@ const routes: Routes = [
         // marketplace's "Install plugin" button lands here.
         path: 'plugins/:pluginId/install',
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
-        data: { pluginsView: 'install' },
+        data: { pluginsView: 'install', remountOnParamChange: true },
       },
       {
         // The plugin page is gone; a link to a plugin (with or without the old
