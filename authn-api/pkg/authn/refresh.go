@@ -3,6 +3,8 @@ package authn
 import (
 	"errors"
 	"net/http"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,6 +19,16 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		s.writeErrorJSON(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+
+	// A session ends SessionMaxAge after its login, however often it is
+	// refreshed. API-key tokens are not sessions: the key is exchanged again.
+	now := time.Now()
+	if claims.AuthTime == nil || slices.Contains(claims.AMR, amrAPIKey) ||
+		!now.Before(claims.AuthTime.Add(s.config.SessionMaxAge)) {
+		s.writeErrorJSON(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	sess := session{authTime: claims.AuthTime.Time, amr: claims.AMR}
 
 	// Refresh only extends a session whose subject still resolves to a live
 	// account, so a soft-deleted user cannot keep a session alive. The name
@@ -47,18 +59,20 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		Name:            row.Name,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
+	exp := s.sessionExpiry(sess, now)
+	accessToken, err := s.generateJWTWithExpiry(u, claims.Groups, sess, exp)
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
 		s.writeErrorJSON(w, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
-	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	ttl := exp.Sub(now)
+	http.SetCookie(w, s.buildAuthCookie(accessToken, ttl))
 	if err := s.writeJSON(w, http.StatusOK, authnhttp.RefreshResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
-		ExpiresIn:   int(s.config.TokenExpiry.Seconds()),
+		ExpiresIn:   int(ttl.Seconds()),
 	}); err != nil {
 		s.logger.Error("failed to write JSON response", "error", err)
 	}

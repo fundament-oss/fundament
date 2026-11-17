@@ -38,11 +38,14 @@ type user struct {
 
 // Config holds the configuration for the authentication server.
 type Config struct {
-	TokenExpiry  time.Duration
-	JWTSecret    []byte
-	CookieDomain string
-	CookieSecure bool
-	FrontendURL  string
+	TokenExpiry time.Duration
+	// SessionMaxAge bounds how long refresh may extend a session past the
+	// login that started it.
+	SessionMaxAge time.Duration
+	JWTSecret     []byte
+	CookieDomain  string
+	CookieSecure  bool
+	FrontendURL   string
 	// WorkloadSubjects extends DefaultWorkloadSubjects with deployment-specific
 	// ServiceAccounts (the plugin sandbox's controller in local dev).
 	WorkloadSubjects map[string]string
@@ -96,6 +99,10 @@ type AuthnServer struct {
 
 // New creates a new AuthnServer.
 func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup, shootVerifier shootverify.Verifier) (*AuthnServer, error) {
+	if cfg.SessionMaxAge <= 0 {
+		return nil, fmt.Errorf("session maximum age must be positive, got %s", cfg.SessionMaxAge)
+	}
+
 	queries := db.New(database.Pool)
 	return &AuthnServer{
 		config:              cfg,
@@ -132,13 +139,42 @@ func (s *AuthnServer) getUserOrganizationIDs(ctx context.Context, userID uuid.UU
 	return organizationIDs, nil
 }
 
-// generateJWT generates a JWT for the given user with the default expiry.
-func (s *AuthnServer) generateJWT(u *user, groups []string) (string, error) {
-	return s.generateJWTWithExpiry(u, groups, s.config.TokenExpiry)
+// Authentication methods recorded in a UserToken's amr claim.
+const (
+	amrOIDC     = "oidc"
+	amrPassword = "password"
+	amrAPIKey   = "api_key"
+)
+
+// session is what a UserToken carries across refreshes: when and how the user
+// authenticated.
+type session struct {
+	authTime time.Time
+	amr      []string
 }
 
-// generateJWTWithExpiry generates a JWT for the given user with a custom expiry.
-func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry time.Duration) (string, error) {
+// newSession starts a session for a login that happens now.
+func newSession(amr string) session {
+	return session{authTime: time.Now(), amr: []string{amr}}
+}
+
+// sessionExpiry is a token's expiry: TokenExpiry from now, but never past
+// SessionMaxAge after the login.
+func (s *AuthnServer) sessionExpiry(sess session, now time.Time) time.Time {
+	exp := now.Add(s.config.TokenExpiry)
+	if limit := sess.authTime.Add(s.config.SessionMaxAge); limit.Before(exp) {
+		return limit
+	}
+	return exp
+}
+
+// generateJWT generates a JWT for the given user with the session's expiry.
+func (s *AuthnServer) generateJWT(u *user, groups []string, sess session) (string, error) {
+	return s.generateJWTWithExpiry(u, groups, sess, s.sessionExpiry(sess, time.Now()))
+}
+
+// generateJWTWithExpiry generates a JWT for the given user that expires at exp.
+func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, sess session, exp time.Time) (string, error) {
 	now := time.Now()
 
 	claims := auth.Claims{
@@ -147,11 +183,13 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 			Subject:   u.ID.String(),
 			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
+			ExpiresAt: jwt.NewNumericDate(exp),
 		},
 		OrganizationIDs: u.OrganizationIDs,
 		Name:            u.Name,
 		Groups:          groups,
+		AuthTime:        jwt.NewNumericDate(sess.authTime),
+		AMR:             sess.amr,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -205,9 +243,10 @@ func parseState(state string) (*StateData, error) {
 	return &data, nil
 }
 
-// buildAuthCookie returns the auth cookie with the signed token.
-func (s *AuthnServer) buildAuthCookie(token string) *http.Cookie {
-	return s.cookieBuilder.Build(token, int(s.config.TokenExpiry.Seconds()))
+// buildAuthCookie returns the auth cookie with the signed token, living as
+// long as the token.
+func (s *AuthnServer) buildAuthCookie(token string, ttl time.Duration) *http.Cookie {
+	return s.cookieBuilder.Build(token, int(ttl.Seconds()))
 }
 
 // buildClearAuthCookie returns a cookie that clears the auth cookie.

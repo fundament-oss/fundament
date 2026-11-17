@@ -21,6 +21,12 @@ const (
 	APITokenExpiry = 15 * time.Minute
 )
 
+// generateAPIKeyJWT mints the token ExchangeToken returns. Its amr marks it
+// as an API-key token, which refresh refuses.
+func (s *AuthnServer) generateAPIKeyJWT(u *user) (string, error) {
+	return s.generateJWTWithExpiry(u, []string{}, newSession(amrAPIKey), time.Now().Add(APITokenExpiry))
+}
+
 // ExchangeToken exchanges an API token for a short-lived JWT.
 func (s *AuthnServer) ExchangeToken(
 	ctx context.Context,
@@ -73,7 +79,7 @@ func (s *AuthnServer) ExchangeToken(
 		ExternalRef:     dbUser.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWTWithExpiry(u, []string{}, APITokenExpiry)
+	accessToken, err := s.generateAPIKeyJWT(u)
 	if err != nil {
 		s.logger.Error("failed to generate jwt for api token", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))

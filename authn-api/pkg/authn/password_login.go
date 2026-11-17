@@ -53,7 +53,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "password")
+	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, amrPassword)
 	if err != nil {
 		s.logger.Error("process oidc login", "error", err)
 		s.writeErrorJSON(w, loginErrorStatus(err), err.Error())
@@ -67,7 +67,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 		"groups", claims.Groups,
 	)
 
-	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	http.SetCookie(w, s.buildAuthCookie(accessToken, s.config.TokenExpiry))
 	s.setIDTokenCookie(w, rawIDToken)
 	if err := s.writeJSON(w, http.StatusOK, authnhttp.TokenResponse{
 		AccessToken: accessToken,
