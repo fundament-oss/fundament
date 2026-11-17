@@ -36,7 +36,7 @@ type OrganizationMemberAddCmd struct {
 	//   Permission string `help:"Permission in the organization: viewer or admin. A new membership defaults to viewer; a pending invitation keeps the permission it was sent with unless one is given." enum:",viewer,admin" default:""`
 	// and the viewer default in Run.
 	Permission string `help:"Permission in the organization: admin (viewer is temporarily disabled). A new membership defaults to admin; a pending invitation keeps the permission it was sent with unless one is given." enum:",admin" default:""`
-	CreateUser   bool   `help:"Register the email address as a new user first, for someone who has not signed in yet. The membership is then waiting when they do."`
+	CreateUser bool   `help:"Register the email address as a new user first, for someone who has not signed in yet. The membership is then waiting when they do."`
 }
 
 // OrganizationMemberListCmd lists the members of an organization.
