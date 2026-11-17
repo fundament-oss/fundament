@@ -132,7 +132,8 @@ func TestClusterProxy_CookieOrigin(t *testing.T) {
 		{name: "cookie on a same-site navigation", fetch: "same-site", cookie: true, want: http.StatusUnauthorized},
 		{name: "cookie from an opaque origin", origin: "null", cookie: true, want: http.StatusUnauthorized},
 		{name: "cookie on a WebSocket upgrade from a foreign origin", origin: pluginOrigin, cookie: true, upgrade: true, want: http.StatusUnauthorized},
-		{name: "cookie with a non-bearer Authorization header", origin: pluginOrigin, authz: "Basic Zm9vOmJhcg==", cookie: true, want: http.StatusUnauthorized},
+		{name: "cookie with a non-bearer Authorization header from the console", origin: consoleOrigin, authz: "Basic Zm9vOmJhcg==", cookie: true, want: http.StatusOK},
+		{name: "cookie with a non-bearer Authorization header from a foreign origin", origin: pluginOrigin, authz: "Basic Zm9vOmJhcg==", cookie: true, want: http.StatusUnauthorized},
 		{name: "bearer from a foreign origin", origin: pluginOrigin, authz: "Bearer " + token, want: http.StatusOK},
 		{name: "bearer without Origin", authz: "Bearer " + token, want: http.StatusOK},
 	}

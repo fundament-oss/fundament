@@ -70,6 +70,8 @@ kubeApiProxy:
   enabled: true
   replicas: 1
   logLevel: debug
+  # The console behind the gateway, and `ng serve` on its default port.
+  cookieAllowedOrigins: "https://console.fundament.localhost:8443,http://localhost:4200"
   mode: mock
   # Point kube-api-proxy at the local k3d-fundament-plugin sandbox cluster.
   # Same Secret plugin-proxy uses — created by: just plugin-sandbox-kubeconfig

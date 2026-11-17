@@ -222,6 +222,9 @@ kubeApiProxy:
   replicas: 1
   resources: {}
   logLevel: info
+  # Comma-separated origins whose session cookie is accepted; empty means
+  # externalUrls.console. Add a dev server's origin here, never plugin-proxy.
+  cookieAllowedOrigins: ""
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
   # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets a local
