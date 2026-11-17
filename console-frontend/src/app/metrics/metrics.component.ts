@@ -10,6 +10,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
@@ -37,6 +38,7 @@ import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import {
   StreamClusterWorkloadMetricsRequestSchema,
   type StreamWorkloadMetricsResponse,
+  type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 import '@nldd/design-system/table';
 import '@nldd/design-system/segmented-control';
@@ -77,6 +79,17 @@ interface NodeUsageData {
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
   pods: { used: number; total: number };
+}
+
+/** A tenant namespace. Requests and limits are left out: Gardener's
+ *  kube-state-metrics only covers kube-system, so they are never measured. */
+interface NamespaceUsageData {
+  name: string;
+  cpu: number;
+  memory: number;
+  pods: number;
+  networkReceiveMbs: number;
+  networkTransmitMbs: number;
 }
 
 export type TimeRangePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -302,6 +315,26 @@ function usageRows(
   ]);
 }
 
+/** One namespace's figures. None of them has a ceiling to sit under, so the
+ *  Total column stays empty on every row. */
+function namespaceRows(ns: NamespaceUsageData): string[][] {
+  const metrics: [string, number, string][] = [
+    ['CPU used', ns.cpu, 'cores'],
+    ['Memory used', ns.memory, 'GiB'],
+    ['Pods', ns.pods, 'pods'],
+    ['Network receive', ns.networkReceiveMbs, 'MB/s'],
+    ['Network transmit', ns.networkTransmitMbs, 'MB/s'],
+  ];
+  return metrics.map(([metric, value, unit]) => [
+    'Namespace',
+    ns.name,
+    metric,
+    csvNumber(value),
+    '',
+    unit,
+  ]);
+}
+
 type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
 
 /** Both live outside this component's template (the sheet is teleported to the
@@ -321,7 +354,7 @@ function closeCustomRange(): void {
 
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, MockBadgeComponent],
+  imports: [FormsModule, DecimalPipe, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
@@ -435,6 +468,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   nodeUsage = signal<NodeUsageData[]>([]);
 
+  namespaceUsage = signal<NamespaceUsageData[]>([]);
+
   private cpuSeriesData: (number | null)[] = [];
 
   private memorySeriesData: (number | null)[] = [];
@@ -536,7 +571,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   });
 
   /** Nothing has arrived yet, so there is nothing to hand over. */
-  canExport = computed(() => !!this.currentTotals() || this.nodeUsage().length > 0);
+  canExport = computed(
+    () => !!this.currentTotals() || this.nodeUsage().length > 0 || this.namespaceUsage().length > 0,
+  );
 
   /** What the file is called: the filter it was taken under and the period it
    *  covers, so two downloads from two views do not land on the same name. */
@@ -555,8 +592,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   /**
    * Everything on screen, as one file.
    *
-   * The page holds three different shapes of number — totals, a card per node,
-   * and five series over time — and a CSV holds one shape. So every figure
+   * The page holds four different shapes of number — totals, a card per node,
+   * a namespace table, and five series over time — and a CSV holds one shape. So every figure
    * becomes its own row and says which section it came from, which is the
    * layout a pivot table wants anyway.
    */
@@ -571,6 +608,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.nodeUsage().forEach((node) => {
       rows.push(...usageRows('Node', node.name, node, true));
     });
+    this.namespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
     rows.push(...this.seriesRows());
 
     downloadCsv(this.csvFilename(), rows);
@@ -699,6 +737,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private clearData(): void {
     this.clusterTotals.set(null);
     this.nodeUsage.set([]);
+    this.namespaceUsage.set([]);
   }
 
   private cancelStream(): void {
@@ -854,10 +893,22 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
       })),
     );
+    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
 
     if (r.timeSeries) {
       this.applyTimeSeries(r.timeSeries, r.refreshedAt);
     }
+  }
+
+  private static mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
+    return namespaces.map((n) => ({
+      name: n.namespace,
+      cpu: n.cpuCores,
+      memory: n.memoryGib,
+      pods: n.pods,
+      networkReceiveMbs: n.networkReceiveMbS,
+      networkTransmitMbs: n.networkTransmitMbS,
+    }));
   }
 
   private applyTimeSeries(

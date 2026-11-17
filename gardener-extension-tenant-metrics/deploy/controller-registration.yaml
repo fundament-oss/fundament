@@ -1,0 +1,18 @@
+# Applied to the virtual garden, next to a ControllerDeployment of the same
+# name that carries the chart in ../chart. gardenlet installs the chart on each
+# seed and creates an Extension of this type in the control-plane namespace of
+# every shoot that has workers.
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: fundament-tenant-metrics
+spec:
+  deployment:
+    deploymentRefs:
+      - name: fundament-tenant-metrics
+  resources:
+    - kind: Extension
+      type: fundament-tenant-metrics
+      autoEnable:
+        - shoot
+      workerlessSupported: false
