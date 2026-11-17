@@ -46,8 +46,10 @@ export default class FakeAuthnApiService implements Pick<
   }
   /* eslint-enable class-methods-use-this */
 
-  async logout(): Promise<void> {
+  // No identity provider, so no provider logout URL to hand back.
+  async logout(): Promise<string | undefined> {
     this.currentUserSubject.next(undefined);
+    return undefined;
   }
 
   isAuthenticated(): boolean {

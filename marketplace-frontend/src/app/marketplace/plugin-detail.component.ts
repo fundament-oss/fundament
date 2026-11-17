@@ -50,9 +50,10 @@ export default class PluginDetailComponent implements OnInit {
   // Installing needs an organization and a cluster, which only the
   // authenticated console has, so the storefront's "Install plugin" button
   // hands the visitor over to it. Both apps list the same appstore.plugins
-  // rows, so the id in the URL is the same key on the other side. `install=1`
-  // has the console open its install sheet on arrival: the visitor pressed
-  // Install here, and should not have to press it a second time there.
+  // rows, so the id in the URL is the same key on the other side. It lands on
+  // the console's install page, which shows the plugin with the clusters to
+  // pick from: the visitor pressed Install here, and should not have to press
+  // it a second time there.
   //
   // Composed through URL rather than string concatenation so a query or hash on
   // the configured value survives: the demo points this at a console that
@@ -65,8 +66,7 @@ export default class PluginDetailComponent implements OnInit {
     if (!plugin || !consoleUrl) return '';
     try {
       const url = new URL(consoleUrl);
-      url.pathname = `${url.pathname.replace(/\/+$/, '')}/plugins/${plugin.id}`;
-      url.searchParams.set('install', '1');
+      url.pathname = `${url.pathname.replace(/\/+$/, '')}/plugins/${plugin.id}/install`;
       return url.toString();
     } catch {
       return '';

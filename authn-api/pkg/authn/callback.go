@@ -67,6 +67,11 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	// Kept only where logout can use it: a provider without an end-session
+	// endpoint has nothing to hand it back to.
+	if s.config.EndSessionURL != "" {
+		http.SetCookie(w, s.buildIDTokenCookie(rawIDToken))
+	}
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }
 

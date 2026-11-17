@@ -259,8 +259,8 @@
               </h3>
               <nldd-button
                 slot="end"
-                [attr.href]="pageNav.path('/metrics')"
-                (click)="pageNav.navigate($event, '/metrics')"
+                [attr.href]="pageNav.path(clusterPath('/metrics'))"
+                (click)="pageNav.navigate($event, clusterPath('/metrics'))"
                 text="View metrics"
                 appearance="secondary"
                 size="sm"
@@ -452,15 +452,15 @@
                   ></nldd-badge>
                 }
               </h3>
-              <!-- Installing runs through a plugin's own page, the one place
-                   that picks a version, asks for config and offers retry and
-                   uninstall. So this starts where plugins are found, the same
-                   as the sidebar's "Install plugins…". The marketplace is
+              <!-- Installing runs through the cluster's plugins page, the one
+                   place that picks a version, asks for config and offers retry
+                   and uninstall. So this starts where plugins are found, the
+                   same as the toolbar's "Install plugins…". The marketplace is
                    another site, so only the console's own page opens in place. -->
               <nldd-button
                 slot="end"
-                [attr.href]="browsePluginsUrl || pageNav.path('/plugins')"
-                (click)="browsePluginsUrl || pageNav.navigate($event, '/plugins')"
+                [attr.href]="browsePluginsUrl || pageNav.path(clusterPath('/plugins'))"
+                (click)="browsePluginsUrl || pageNav.navigate($event, clusterPath('/plugins'))"
                 text="Install plugins…"
                 start-icon="add-plugin"
                 appearance="secondary"
@@ -477,8 +477,8 @@
               ></nldd-inline-dialog>
               <nldd-spacer size="16"></nldd-spacer>
             } @else if (installedPlugins().length > 0) {
-              <!-- Each card opens the plugin's page, whose Manage sheet updates,
-                   retries or uninstalls it on this cluster. -->
+              <!-- Each card opens the plugin's details on the cluster's plugins
+                   page, whose Manage sheet retries or uninstalls it here. -->
               <nldd-collection
                 layout="grid"
                 item-min-width="320px"
@@ -486,9 +486,9 @@
               >
                 @for (plugin of installedPlugins(); track plugin.id) {
                   <nldd-card
-                    [attr.href]="pageNav.path('/plugins/' + plugin.id)"
+                    [attr.href]="pageNav.path(clusterPath('/plugins?plugin=' + plugin.id))"
                     [attr.accessible-label]="pluginDisplayName(plugin)"
-                    (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
+                    (click)="pageNav.navigate($event, clusterPath('/plugins?plugin=' + plugin.id))"
                   >
                     <nldd-container padding="16">
                       <app-plugin-icon

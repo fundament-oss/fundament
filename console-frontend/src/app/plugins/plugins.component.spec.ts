@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { vi } from 'vitest';
 import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
@@ -9,6 +10,8 @@ import PluginInstallationService, {
 import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { NotificationService } from '../notification.service';
+import PageNavService from '../page-nav.service';
+import { TitleService } from '../title.service';
 import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
@@ -69,14 +72,43 @@ const acmeInstall: PluginInstallationItem = {
   status: { phase: 'Running', ready: true },
 };
 
+const staging: ClusterSummary = create(ListClustersResponse_ClusterSummarySchema, {
+  id: 'cl-2',
+  name: 'staging',
+  status: ClusterStatus.RUNNING,
+});
+
+/** The route the component is opened on: its data, params and query. */
+interface RouteSetup {
+  data?: Record<string, unknown>;
+  params?: Record<string, string>;
+  query?: Record<string, string>;
+}
+
 function build(
   plugins: PluginSummary[],
   installs: PluginInstallationItem[],
   marketplaceUrl = '',
   installationService: Partial<PluginInstallationService> = {},
+  route?: RouteSetup,
+  clusters: ClusterSummary[] = [cluster],
 ) {
   TestBed.configureTestingModule({
     providers: [
+      ...(route
+        ? [
+            {
+              provide: ActivatedRoute,
+              useValue: {
+                snapshot: {
+                  data: route.data ?? {},
+                  paramMap: convertToParamMap(route.params ?? {}),
+                  queryParamMap: convertToParamMap(route.query ?? {}),
+                },
+              },
+            },
+          ]
+        : []),
       {
         provide: CATALOG,
         useValue: {
@@ -115,7 +147,7 @@ function build(
       {
         provide: OrganizationDataService,
         useValue: {
-          clusterSummaries: () => [cluster],
+          clusterSummaries: () => clusters,
         } as unknown as OrganizationDataService,
       },
       {
@@ -129,6 +161,15 @@ function build(
       {
         provide: NotificationService,
         useValue: { success: () => {}, error: () => {} } as unknown as NotificationService,
+      },
+      { provide: TitleService, useValue: { setTitle: () => {} } },
+      {
+        provide: PageNavService,
+        useValue: {
+          backText: () => '',
+          path: (within: string) => within,
+          goTo: vi.fn(),
+        } as unknown as PageNavService,
       },
     ],
   });
@@ -393,5 +434,136 @@ describe('PluginsComponent retry install', () => {
     await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
 
     expect(errorNotification).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PluginsComponent on a cluster', () => {
+  const onProduction: RouteSetup = { data: { pluginsView: 'cluster' }, params: { id: cluster.id } };
+
+  it('acts on the cluster it is about, not on every cluster', async () => {
+    const component = build([acmeCertManager], [acmeInstall], '', {}, onProduction, [
+      cluster,
+      staging,
+    ]);
+    await component.ngOnInit();
+
+    expect(component.clusters().map((c) => c.id)).toEqual([cluster.id]);
+    component.selectedPlugin = component.plugins[0];
+    expect(component.clustersForModal.map((c) => c.id)).toEqual([cluster.id]);
+    expect(component.pluginStatusLabel('acme', 'cert-manager')).toBe('Installed');
+  });
+
+  it("shows the installation's phase, version and what it reports", async () => {
+    const degraded: PluginInstallationItem = {
+      ...acmeInstall,
+      status: { phase: 'Degraded', ready: false, message: 'webhook not reachable' },
+    };
+    const component = build([acmeCertManager], [degraded], '', {}, onProduction);
+    await component.ngOnInit();
+
+    expect(component.installStatusRows('acme', 'cert-manager')).toEqual([
+      {
+        clusterId: cluster.id,
+        clusterName: 'production',
+        label: 'Degraded',
+        badgeColor: 'warning',
+        version: 'v1.0.0',
+        message: 'The installation reports: “webhook not reachable”',
+        configInvalid: false,
+      },
+    ]);
+  });
+
+  it('says a running installation is installed', async () => {
+    const component = build([acmeCertManager], [acmeInstall], '', {}, onProduction);
+    await component.ngOnInit();
+
+    expect(component.installStatusRows('acme', 'cert-manager')).toMatchObject([
+      { label: 'Installed', badgeColor: 'success', message: '' },
+    ]);
+  });
+
+  it('opens the details of the plugin named in the address', async () => {
+    const component = build(
+      [acmeCertManager],
+      [acmeInstall],
+      '',
+      {},
+      {
+        ...onProduction,
+        query: { plugin: acmeCertManager.id },
+      },
+    );
+    await component.ngOnInit();
+
+    expect(component.sheetPlugin()?.id).toBe(acmeCertManager.id);
+  });
+});
+
+describe('PluginsComponent install page', () => {
+  const installPage = (pluginId: string): RouteSetup => ({
+    data: { pluginsView: 'install' },
+    params: { pluginId },
+  });
+
+  it('offers the plugin on every cluster of the organization', async () => {
+    const component = build([acmeCertManager], [], '', {}, installPage(acmeCertManager.id), [
+      cluster,
+      staging,
+    ]);
+    await component.ngOnInit();
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+
+    expect(component.selectedPlugin?.id).toBe(acmeCertManager.id);
+    expect(component.showInstallModal()).toBe(true);
+    expect(component.installVersions().map((v) => v.version)).toEqual(['1.17.2', '1.16.0']);
+    expect(component.clustersForModal.map((c) => c.id)).toEqual([cluster.id, staging.id]);
+  });
+
+  it('says so when the plugin is not in the catalog', async () => {
+    const component = build([acmeCertManager], [], '', {}, installPage('pl-gone'));
+    await component.ngOnInit();
+
+    expect(component.installPluginMissing()).toBe(true);
+    expect(component.showInstallModal()).toBe(false);
+  });
+
+  it('goes on to the cluster the plugin was installed on', async () => {
+    const installationService = {
+      listInstallations: () => Promise.resolve([]),
+      installPlugin: vi.fn().mockResolvedValue(undefined),
+    };
+    const component = build(
+      [acmeCertManager],
+      [],
+      '',
+      installationService,
+      installPage(acmeCertManager.id),
+      [cluster, staging],
+    );
+    const { goTo } = TestBed.inject(PageNavService);
+    await component.ngOnInit();
+    component.selectedPlugin = component.plugins[0];
+
+    await component.onInstallOnClusters({
+      clusterIds: [staging.id],
+      version: '1.17.2',
+      hash: 'sha256:new',
+      config: {},
+    });
+
+    expect(installationService.installPlugin).toHaveBeenCalledWith(
+      staging.id,
+      'acme',
+      'cert-manager',
+      '1.17.2',
+      'sha256:new',
+      {},
+    );
+    expect(goTo).toHaveBeenCalledWith(
+      `/clusters/${staging.id}/plugins?plugin=${acmeCertManager.id}`,
+    );
   });
 });

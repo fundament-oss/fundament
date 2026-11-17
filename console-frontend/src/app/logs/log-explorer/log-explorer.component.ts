@@ -16,6 +16,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { Subscription } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import type { LogEntry, LogLevel, HistogramBucket } from '../log.types';
 import { LogsApiService, type ClusterOption } from '../logs.service';
@@ -64,6 +65,11 @@ import '@nldd/design-system/top-title-bar';
 Chart.register(...registerables);
 
 const ALL_LEVELS: LogLevel[] = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
+
+/** Every container the given pods run, each once, in the order first seen. */
+export function containersOf(pods: ShootPod[]): string[] {
+  return [...new Set(pods.flatMap((p) => p.containers))];
+}
 const PAGE_SIZE = 50;
 
 const TIME_PRESETS: { label: string; value: string; minutes: number }[] = [
@@ -223,8 +229,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   // ── log source mode
   //
   // 'vali' reads the shoot's system logs from the Gardener logging stack
-  // (history, cross-pod search); 'live' reads a single plugin pod through the
-  // kube-api-proxy (live only, pod required, per-user access). The two behave
+  // (history, cross-pod search); 'live' reads a plugin's pods through the
+  // kube-api-proxy (live only, one plugin at a time, per-user access). The two behave
   // differently by design — the tab bar makes that explicit up front, and the
   // page text under it says what the picked source can and cannot answer.
   readonly sourceMode = signal<'vali' | 'live'>('vali');
@@ -337,9 +343,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     () => this.selectedNamespace() || (this.isLiveMode() ? 'Select a plugin' : 'All namespaces'),
   );
 
-  readonly podLabel = computed(
-    () => this.selectedPod() || (this.isLiveMode() ? 'Select a pod' : 'All pods'),
-  );
+  readonly podLabel = computed(() => this.selectedPod() || 'All pods');
 
   readonly containerLabel = computed(() => this.selectedContainer() || 'All containers');
 
@@ -763,7 +767,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       const pods = await this.shootPods.listPods(clusterId, namespace);
       this.livePods.set(pods);
       this.pods.set(pods.map((p) => p.name));
-      this.containers.set([]);
+      this.containers.set(containersOf(pods));
     } catch {
       this.livePods.set([]);
       this.pods.set([]);
@@ -800,14 +804,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.clearLogs();
       return;
     }
-    // Live mode reads one pod at a time (Kubernetes pod-log semantics), so a
-    // namespace + pod selection is a hard requirement before querying.
-    if (this.isLiveMode() && (!this.selectedNamespace() || !this.selectedPod())) {
-      this.clearLogs();
-      return;
-    }
-    // The Kubernetes fallback can only read a single pod, so require one.
-    if (this.isFallback() && (!this.selectedNamespace() || !this.selectedPod())) {
+    // Live mode and the Kubernetes fallback read pod logs one namespace at a
+    // time (the backend reads every pod in it when none is picked), so a
+    // namespace is a hard requirement before querying.
+    if (this.streamBlockedReason()) {
       this.clearLogs();
       return;
     }
@@ -1083,9 +1083,27 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.liveTailPaused.set(false);
   }
 
+  /**
+   * Why a query or stream cannot start yet, or null when it can. Pod logs are
+   * read one namespace at a time, so live mode needs a plugin and the
+   * Kubernetes fallback a namespace. Saying so beats opening a stream the
+   * backend refuses and reporting it as "disconnected".
+   */
+  readonly streamBlockedReason = computed(() => {
+    if (this.selectedNamespace()) return null;
+    if (this.isLiveMode()) return 'Select a plugin first';
+    if (this.isFallback()) return 'Select a namespace first';
+    return null;
+  });
+
   private startLiveTail(): void {
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
+    const blocked = this.streamBlockedReason();
+    if (blocked) {
+      this.notificationService.info(blocked);
+      return;
+    }
     this.liveTailEnabled.set(true);
     this.liveTailPaused.set(false);
     this.liveTailReceived = 0;
@@ -1128,8 +1146,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
           this.liveTailReceived += 1;
           this.allLogs.update((logs) => [entry, ...logs].slice(0, this.LOG_LIMIT));
         },
-        error: () => {
-          this.notificationService.error('Live tail disconnected');
+        error: (err: unknown) => {
+          // A refused request says what was wrong with it; anything else is
+          // the connection dropping.
+          const refused = err instanceof ConnectError && err.code === Code.InvalidArgument;
+          this.notificationService.error(refused ? err.rawMessage : 'Live tail disconnected');
           this.stopLiveTail();
         },
         // A server-side stream that ends normally (pod gone, backend closed the
@@ -1205,8 +1226,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedContainer.set('');
     this.currentPage.set(0);
     if (this.isLiveMode()) {
-      const pod = this.livePods().find((p) => p.name === value);
-      this.containers.set(pod?.containers ?? []);
+      // Back to every pod: offer every container any of them runs.
+      const pods = value ? this.livePods().filter((p) => p.name === value) : this.livePods();
+      this.containers.set(containersOf(pods));
     }
     this.reloadForFilterChange();
   }

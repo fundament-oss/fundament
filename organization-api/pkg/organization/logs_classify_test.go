@@ -28,7 +28,7 @@ func Test_ClassifyLogError(t *testing.T) {
 			&logs.StatusError{StatusCode: http.StatusBadRequest}, logErrorCaller},
 		{"unprocessable surfaces to the caller",
 			&logs.StatusError{StatusCode: http.StatusUnprocessableEntity}, logErrorCaller},
-		{"pod required surfaces to the caller", logs.ErrPodRequired, logErrorCaller},
+		{"namespace required surfaces to the caller", logs.ErrNamespaceRequired, logErrorCaller},
 		{"rotated credentials are a config fault",
 			&logs.StatusError{StatusCode: http.StatusUnauthorized}, logErrorConfig},
 		{"revoked datasource proxy is a config fault",
