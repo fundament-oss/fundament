@@ -28,6 +28,7 @@ func TestValidatorWithCookieOrigins(t *testing.T) {
 		{name: "same-site navigation without Origin", allowed: []string{"https://console.example.com"}, fetch: "same-site"},
 		{name: "no Origin and no Sec-Fetch-Site", allowed: []string{"https://console.example.com"}},
 		{name: "empty allow-list", origin: "https://console.example.com"},
+		{name: "empty allow-list on a same-origin fetch", fetch: "same-origin"},
 		{name: "invalid entry is dropped", allowed: []string{"console.example.com"}, origin: "https://console.example.com"},
 		{name: "bearer ignores the allow-list", origin: "https://plugin-proxy.example.com", bearer: true, accepted: true},
 	}

@@ -157,6 +157,9 @@ func (v *Validator) Validate(header http.Header) (*Claims, error) {
 // Browsers omit Origin on same-origin GET and HEAD; Sec-Fetch-Site tells those
 // apart from navigations, which also carry none.
 func (v *Validator) cookieOriginAllowed(header http.Header) bool {
+	if len(v.cookieOrigins) == 0 {
+		return false
+	}
 	raw := header.Get("Origin")
 	if raw == "" {
 		return header.Get("Sec-Fetch-Site") == "same-origin"
