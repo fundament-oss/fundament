@@ -133,3 +133,8 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
+
+func TestNew_RejectsSessionShorterThanToken(t *testing.T) {
+	_, err := New(discardLogger(), &Config{TokenExpiry: 24 * time.Hour, SessionMaxAge: time.Hour}, nil, nil, nil, nil, nil, nil, nil)
+	require.ErrorContains(t, err, "shorter than token expiry")
+}

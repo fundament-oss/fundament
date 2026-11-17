@@ -59,7 +59,13 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		Name:            row.Name,
 	}
 
+	// The lookups take time; near the limit they can carry the session past it.
+	now = time.Now()
 	exp := s.sessionExpiry(sess, now)
+	if !exp.After(now) {
+		s.writeErrorJSON(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	accessToken, err := s.generateJWTWithExpiry(u, claims.Groups, sess, exp)
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
