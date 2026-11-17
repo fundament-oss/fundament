@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/auth"
@@ -51,16 +50,15 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "/" + path
 	r.URL.RawPath = ""
 
-	// Dispatch on token type. PluginToken is the FUN-17 gateway path:
-	// per-request SAR against the user, forward injecting the plugin SA token.
-	switch peekTokenType(r) {
-	case auth.TokenTypePlugin:
+	// A PluginToken takes the FUN-17 gateway path: per-request SAR against the
+	// user, forward injecting the plugin SA token.
+	if isPluginToken(r, s.pluginGateway.jwtSecret) {
 		s.pluginGateway.serve(w, r, clusterID.String())
-	default:
-		// UserToken or the cookie; authValidator takes the cookie only from
-		// COOKIE_ALLOWED_ORIGINS, so plugin pages cannot ride the session.
-		s.handleUserClusterProxy(w, r, clusterID)
+		return
 	}
+	// A UserToken or the cookie; authValidator takes the cookie only from
+	// COOKIE_ALLOWED_ORIGINS, so plugin pages cannot ride the session.
+	s.handleUserClusterProxy(w, r, clusterID)
 }
 
 // handleUserClusterProxy serves a UserToken, or the console's cookie.
@@ -136,26 +134,15 @@ func servesAccessReview(r *http.Request) bool {
 	return isSelfSubjectAccessReview(r) && !kube.HasClientImpersonation(r.Header)
 }
 
-// peekTokenType returns the audience-derived token type of the request's
-// bearer token (or user for cookie-borne requests), without verifying the
-// signature. The real validation happens in the branch handler.
-func peekTokenType(r *http.Request) auth.TokenType {
+// isPluginToken reports whether the request carries a valid PluginToken. It
+// verifies the signature, so a forged audience cannot choose the path.
+func isPluginToken(r *http.Request, secret []byte) bool {
 	tok, ok := auth.BearerToken(r.Header)
 	if !ok {
-		// Cookie-borne UserToken: only the browser sends these, never a plugin.
-		if c, err := r.Cookie(auth.ConsoleAuthCookieName); err == nil && c.Value != "" {
-			return auth.TokenTypeUser
-		}
-		return ""
+		return false
 	}
-	var c auth.Claims
-	if _, _, err := new(jwt.Parser).ParseUnverified(tok, &c); err != nil {
-		return ""
-	}
-	if slices.Contains(c.Audience, auth.TokenTypePlugin) {
-		return auth.TokenTypePlugin
-	}
-	return auth.TokenTypeUser
+	_, err := auth.ParsePluginToken(tok, secret)
+	return err == nil
 }
 
 // isAllowedPath reports whether the first segment of the raw wildcard path (the
