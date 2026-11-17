@@ -10,13 +10,15 @@
       } from './_shared.js';
 
       await loadSdk();
-      await fundament.init;
+      const ctx = await fundament.init;
       const tbody = document.getElementById('rows');
 
       try {
         const { items } = await fundament.k8s.list({
           group: 'cert-manager.io',
           version: 'v1',
+          // Set on project pages; without it the list is cluster-wide, still limited by RBAC.
+          projectId: ctx.projectId,
           resource: 'issuers',
         });
         if (!items || items.length === 0) {
