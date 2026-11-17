@@ -1,7 +1,7 @@
 // The project's Buckets page: its ObjectBucketClaims across every store. A
 // claim's detail and the create form open in a console sheet (see sheet.js).
 import { bootPage, emptyStateHtml, errorBox, latestRead, loadingHtml } from './_shared.js';
-import { OBC, OBC_KIND, claimListHtml, wireClaimLinks } from './bucket-pages.js';
+import { OBC, OBC_KIND, claimListHtml, loadObjectStorageClasses, wireClaimLinks } from './bucket-pages.js';
 
 const list = document.getElementById('list');
 list.innerHTML = loadingHtml('Loading buckets…');
@@ -21,7 +21,11 @@ async function showList() {
     // projectId limits the cluster-wide list to the project's namespaces;
     // without it the list would widen to the whole cluster.
     if (!ctx.projectId) throw new Error('this page needs a project');
-    const { items } = await fundament.k8s.list({ ...OBC, projectId: ctx.projectId });
+    // The classes only label the stores; failing to read them leaves the class names.
+    const [{ items }, classes] = await Promise.all([
+      fundament.k8s.list({ ...OBC, projectId: ctx.projectId }),
+      loadObjectStorageClasses().catch(() => null),
+    ]);
     if (!isCurrent()) return;
     if (!items || items.length === 0) {
       list.innerHTML = emptyStateHtml({
@@ -32,7 +36,8 @@ async function showList() {
     }
     list.innerHTML = claimListHtml(items, {
       displayNames: ctx.namespaceDisplayNames ?? {},
-      store: true,
+      showStore: true,
+      classes,
     });
     wireClaimLinks(list);
   } catch (err) {

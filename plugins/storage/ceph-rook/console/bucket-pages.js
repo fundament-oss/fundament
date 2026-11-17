@@ -116,12 +116,14 @@ export function storeFieldHtml(classes) {
 // The claims as a list. The rows carry the cluster-side namespace for the
 // link; displayNames only changes the namespace shown, since the cluster name
 // (tnt-<project>--<name>) is not what anyone calls it.
-export function claimListHtml(claims, { displayNames = {}, store = false } = {}) {
+// With showStore, classes (objectStorageClasses' result, or null when unknown)
+// turns each claim's class into its store's name.
+export function claimListHtml(claims, { displayNames = {}, showStore = false, classes = null } = {}) {
   return resourceListHtml(
     claims.map((c) => {
       const namespace = c.metadata?.namespace ?? '';
       const facts = [`Namespace ${displayNames[namespace] ?? namespace}`, `bucket ${requestedBucket(c.spec)}`];
-      if (store) facts.push(storeFact(c.spec?.storageClassName));
+      if (showStore) facts.push(storeFact(c.spec?.storageClassName, classes));
       return {
         name: c.metadata?.name ?? '',
         namespace,
@@ -133,13 +135,11 @@ export function claimListHtml(claims, { displayNames = {}, store = false } = {})
   );
 }
 
-// The store by name, as the create form shows it; a class not named like an
-// ObjectStorage's stays as is.
-function storeFact(storageClassName) {
-  if (storageClassName?.startsWith(OBJECT_STORAGE_CLASS_PREFIX)) {
-    return `object storage ${storageClassName.slice(OBJECT_STORAGE_CLASS_PREFIX.length)}`;
-  }
-  return `class ${storageClassName ?? '—'}`;
+// The store by name, as the create form shows it. Only an ObjectStorage-owned
+// class names a store; any other class, or an unknown one, stays as is.
+function storeFact(storageClassName, classes) {
+  const owned = classes?.find((sc) => sc.name === storageClassName);
+  return owned ? `object storage ${owned.store}` : `class ${storageClassName ?? '—'}`;
 }
 
 // Opens a claim's detail in a sheet when one of the rows is clicked.
@@ -297,7 +297,7 @@ export async function bucketDetailPage(ctx) {
 
 // Project members may list StorageClasses. Should the list still be
 // forbidden, null means unknown and the form takes the class by name.
-async function loadObjectStorageClasses() {
+export async function loadObjectStorageClasses() {
   try {
     const { items } = await fundament.k8s.list(STORAGECLASSES);
     return objectStorageClasses(items);

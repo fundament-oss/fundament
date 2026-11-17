@@ -106,13 +106,20 @@ describe('claimListHtml', () => {
     expect(html).not.toContain('cephobj-s3');
   });
   test('shows the namespace display name and the store on request', () => {
-    const html = claimListHtml([claim], { displayNames: { 'tnt-acme--web': 'web' }, store: true });
+    const html = claimListHtml([claim], {
+      displayNames: { 'tnt-acme--web': 'web' },
+      showStore: true,
+      classes: [{ name: 'cephobj-s3', store: 's3' }],
+    });
     expect(html).toContain('data-namespace="tnt-acme--web"');
     expect(html).toContain('supporting-text="Namespace web · bucket logs-… · object storage s3"');
   });
-  test('keeps a class not named like an object storage', () => {
-    const other = { ...claim, spec: { ...claim.spec, storageClassName: 'custom' } };
-    expect(claimListHtml([other], { store: true })).toContain('· class custom"');
+  test('keeps a class no ObjectStorage owns, even one named like it', () => {
+    const html = claimListHtml([claim], { showStore: true, classes: [{ name: 'cephobj-other', store: 'other' }] });
+    expect(html).toContain('· class cephobj-s3"');
+  });
+  test('keeps the class when the classes are unknown', () => {
+    expect(claimListHtml([claim], { showStore: true, classes: null })).toContain('· class cephobj-s3"');
   });
   test('escapes claim fields', () => {
     expect(claimListHtml([{ metadata: { name: '<x>' } }])).toContain('&lt;x&gt;');
