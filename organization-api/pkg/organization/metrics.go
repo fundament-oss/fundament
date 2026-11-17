@@ -1037,7 +1037,6 @@ func (s *Server) sendOrgSnapshot(
 	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:      workload.GetTotals(),
 		Clusters:    workload.GetClusters(),
-		Namespaces:  workload.GetNamespaces(),
 		TimeSeries:  ts,
 		RefreshedAt: timestamppb.Now(),
 	}.Build()); err != nil {
@@ -1082,7 +1081,6 @@ func (s *Server) sendClusterSnapshot(
 	if err := stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
 		Totals:             workload.GetTotals(),
 		Nodes:              workload.GetNodes(),
-		Namespaces:         workload.GetNamespaces(),
 		TimeSeries:         ts,
 		RefreshedAt:        timestamppb.Now(),
 		MetricsUnavailable: workload.GetMetricsUnavailable(),

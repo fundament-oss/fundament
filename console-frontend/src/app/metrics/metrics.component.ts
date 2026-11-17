@@ -10,9 +10,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom, Subscription } from 'rxjs';
 import {
@@ -41,9 +39,7 @@ import {
 import {
   StreamOrgWorkloadMetricsRequestSchema,
   StreamClusterWorkloadMetricsRequestSchema,
-  StreamProjectWorkloadMetricsRequestSchema,
   type StreamWorkloadMetricsResponse,
-  type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 import '@nldd/design-system/table';
 import '@nldd/design-system/segmented-control';
@@ -89,19 +85,6 @@ interface NodeUsageData {
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
   pods: { used: number; total: number };
-}
-
-interface NamespaceUsageData {
-  name: string;
-  cpu: number;
-  memory: number;
-  pods: number;
-  cpuRequests: number;
-  cpuLimits: number;
-  memoryRequests: number;
-  memoryLimits: number;
-  networkReceiveMbs: number;
-  networkTransmitMbs: number;
 }
 
 interface ClusterSummaryData {
@@ -338,30 +321,6 @@ function usageRows(
   ]);
 }
 
-/** One namespace's nine figures. None of them has a ceiling to sit under, so the
- *  Total column stays empty on every row. */
-function namespaceRows(ns: NamespaceUsageData): string[][] {
-  const metrics: [string, number, string][] = [
-    ['CPU used', ns.cpu, 'cores'],
-    ['CPU requests', ns.cpuRequests, 'cores'],
-    ['CPU limits', ns.cpuLimits, 'cores'],
-    ['Memory used', ns.memory, 'GiB'],
-    ['Memory requests', ns.memoryRequests, 'GiB'],
-    ['Memory limits', ns.memoryLimits, 'GiB'],
-    ['Pods', ns.pods, 'pods'],
-    ['Network receive', ns.networkReceiveMbs, 'MB/s'],
-    ['Network transmit', ns.networkTransmitMbs, 'MB/s'],
-  ];
-  return metrics.map(([metric, value, unit]) => [
-    'Namespace',
-    ns.name,
-    metric,
-    csvNumber(value),
-    '',
-    unit,
-  ]);
-}
-
 type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
 
 /** Both live outside this component's template (the sheet is teleported to the
@@ -381,15 +340,13 @@ function closeCustomRange(): void {
 
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DecimalPipe, MockBadgeComponent],
+  imports: [FormsModule, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
 })
 export default class MetricsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
-
-  private route = inject(ActivatedRoute);
 
   private clusterClient = inject(CLUSTER);
 
@@ -427,13 +384,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private chartsReady = false;
 
-  viewMode = signal<'org' | 'project'>('org');
-
-  projectId = signal<string | null>(null);
-
   selectedClusterId = signal('');
-
-  selectedNamespace = signal('');
 
   // Default to 1h: young clusters have little history, and the longer ranges
   // render near-invisibly sparse lines until enough samples accumulate.
@@ -495,19 +446,15 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   orgTotals = signal<ClusterUsageData | null>(null);
 
-  projectTotals = signal<ClusterUsageData | null>(null);
-
   clusterSummaries = signal<ClusterSummaryData[]>([]);
 
   clusterTotals = signal<ClusterUsageData | null>(null);
 
   // The backend could not reach the metrics backend for the current cluster
-  // or project view; its zero totals are placeholders, not measurements.
+  // view; its zero totals are placeholders, not measurements.
   totalsUnavailable = signal(false);
 
   nodeUsage = signal<NodeUsageData[]>([]);
-
-  namespaceUsage = signal<NamespaceUsageData[]>([]);
 
   private cpuSeriesData: (number | null)[] = [];
 
@@ -529,14 +476,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    const projectId = this.route.snapshot.params['id'];
-    if (projectId) {
-      this.viewMode.set('project');
-      this.projectId.set(projectId);
-    } else {
-      this.viewMode.set('org');
-      this.loadClusters();
-    }
+    this.loadClusters();
     this.startStream();
   }
 
@@ -545,10 +485,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.destroyCharts();
   }
 
-  currentTotals = computed<ClusterUsageData | null>(() => {
-    if (this.viewMode() === 'project') return this.projectTotals();
-    return this.selectedClusterId() ? this.clusterTotals() : this.orgTotals();
-  });
+  currentTotals = computed<ClusterUsageData | null>(() =>
+    this.selectedClusterId() ? this.clusterTotals() : this.orgTotals(),
+  );
 
   get hasCpuData(): boolean {
     return hasMeasurement(this.cpuSeriesData);
@@ -565,18 +504,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   get hasNetworkData(): boolean {
     return hasMeasurement(this.networkRxSeriesData) || hasMeasurement(this.networkTxSeriesData);
   }
-
-  /** Namespaces only show in the project view: elsewhere the list would be
-   *  kube-system and shoot-control-plane, never a project namespace, and
-   *  organization-api no longer sends it. The project view is parked: it has
-   *  no route (projects/:id/metrics) until tenant namespaces have a metrics
-   *  source, so for now this is always false. */
-  showNamespaces = computed(() => this.viewMode() === 'project');
-
-  filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {
-    if (!this.selectedNamespace()) return this.namespaceUsage();
-    return this.namespaceUsage().filter((ns) => ns.name === this.selectedNamespace());
-  });
 
   getUsagePercentage = getUsagePercentage;
 
@@ -637,8 +564,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     return this.clusters().find((cluster) => cluster.id === id)?.name ?? 'All clusters';
   });
 
-  namespaceLabel = computed(() => this.selectedNamespace() || 'All namespaces');
-
   /** Picking from the menu goes through the same path the select used. */
   selectCluster(id: string): void {
     this.selectedClusterId.set(id);
@@ -648,10 +573,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   /** Nothing has arrived yet, so there is nothing to hand over. */
   canExport = computed(
     () =>
-      !!this.currentTotals() ||
-      (this.showNamespaces() && this.namespaceUsage().length > 0) ||
-      this.clusterSummaries().length > 0 ||
-      this.nodeUsage().length > 0,
+      !!this.currentTotals() || this.clusterSummaries().length > 0 || this.nodeUsage().length > 0,
   );
 
   /** What the file is called: the filter it was taken under and the period it
@@ -664,22 +586,16 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   /** The filter the export was taken under, named the way the toolbar names it. */
   private exportScope(): string {
-    if (this.viewMode() === 'project') return `Project ${this.projectId() ?? ''}`.trim();
     return this.clusterLabel();
   }
 
   /**
    * Everything on screen, as one file.
    *
-   * The page holds four different shapes of number — totals, a card per cluster
-   * or node, a wide namespace table, and five series over time — and a CSV holds
-   * one shape. So every figure becomes its own row and says which section it came
-   * from, which is the layout a pivot table wants anyway. Taking only the
-   * namespace table instead would hand back an empty file to anyone exporting the
-   * organisation view, where namespaces are the one thing that can be absent.
-   *
-   * What is exported is what is filtered: the namespace picker narrows the file
-   * the same way it narrows the table.
+   * The page holds three different shapes of number — totals, a card per
+   * cluster or node, and five series over time — and a CSV holds one shape. So
+   * every figure becomes its own row and says which section it came from, which
+   * is the layout a pivot table wants anyway.
    */
   exportCsv(): void {
     if (!this.canExport()) return;
@@ -695,9 +611,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.nodeUsage().forEach((node) => {
       rows.push(...usageRows('Node', node.name, node, true));
     });
-    if (this.showNamespaces()) {
-      this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
-    }
     rows.push(...this.seriesRows());
 
     downloadCsv(this.csvFilename(), rows);
@@ -833,11 +746,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private clearData(): void {
     this.orgTotals.set(null);
-    this.projectTotals.set(null);
     this.clusterTotals.set(null);
     this.clusterSummaries.set([]);
     this.nodeUsage.set([]);
-    this.namespaceUsage.set([]);
   }
 
   private cancelStream(): void {
@@ -941,25 +852,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     const preset = this.selectedPreset();
     const windowSeconds = preset !== 'custom' ? PRESET_WINDOW_SECONDS[preset] : 0;
 
-    if (this.viewMode() === 'project') {
-      const pid = this.projectId();
-      if (!pid) throw new Error('No project ID');
-      const req =
-        windowSeconds > 0
-          ? create(StreamProjectWorkloadMetricsRequestSchema, {
-              projectId: pid,
-              windowSeconds,
-              stepSeconds: computeStepSeconds(windowSeconds),
-            })
-          : create(StreamProjectWorkloadMetricsRequestSchema, {
-              projectId: pid,
-              start: timestampFromDate(startOfDay(this.dateFrom)),
-              end: timestampFromDate(endOfDay(this.dateTo)),
-              stepSeconds: computeStepSeconds(this.customRangeSeconds()),
-            });
-      return this.metricsClient.streamProjectWorkloadMetrics(req);
-    }
-
     const clusterId = this.selectedClusterId();
     if (clusterId) {
       const req =
@@ -1018,9 +910,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
     this.totalsUnavailable.set(r.metricsUnavailable);
 
-    if (this.viewMode() === 'project') {
-      this.projectTotals.set(totals);
-    } else if (this.selectedClusterId()) {
+    if (this.selectedClusterId()) {
       this.clusterTotals.set(totals);
       this.nodeUsage.set(
         r.nodes.map((n) => ({
@@ -1044,8 +934,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       );
     }
 
-    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
-
     if (r.timeSeries) {
       this.applyTimeSeries(r.timeSeries, r.refreshedAt);
     }
@@ -1065,21 +953,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     } catch {
       // Non-fatal — cluster dropdown will be empty but the rest of the page still works.
     }
-  }
-
-  private static mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
-    return namespaces.map((n) => ({
-      name: n.namespace,
-      cpu: n.cpuCores,
-      memory: n.memoryGib,
-      pods: n.pods,
-      cpuRequests: n.cpuRequests,
-      cpuLimits: n.cpuLimits,
-      memoryRequests: n.memoryRequestsGib,
-      memoryLimits: n.memoryLimitsGib,
-      networkReceiveMbs: n.networkReceiveMbS,
-      networkTransmitMbs: n.networkTransmitMbS,
-    }));
   }
 
   private applyTimeSeries(

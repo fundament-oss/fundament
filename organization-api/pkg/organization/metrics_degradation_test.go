@@ -172,7 +172,6 @@ func Test_Metrics_ClusterView_DegradesWhenPrometheusUnreachable(t *testing.T) {
 	assert.Zero(t, metricsRes.GetTotals().GetCpu().GetUsed())
 	assert.Equal(t, "cores", metricsRes.GetTotals().GetCpu().GetUnit())
 	assert.Empty(t, metricsRes.GetNodes())
-	assert.Empty(t, metricsRes.GetNamespaces())
 
 	tsReq := organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{ClusterId: clusterID}.Build()
 	tsRes, err := metricsClient.GetClusterWorkloadTimeSeries(ctx, tsReq)
