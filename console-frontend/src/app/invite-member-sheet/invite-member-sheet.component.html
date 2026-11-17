@@ -87,12 +87,14 @@
                 <!-- The row is the control; the radio only shows which one it is. -->
                 <nldd-list-item
                   button
-                  (click)="invitePermission.set(option.value)"
+                  [attr.disabled]="option.disabled ? '' : null"
+                  (click)="selectPermission(option)"
                 >
                   <nldd-cell width="fit-content">
                     <nldd-radio-button
                       decorative
                       [attr.checked]="invitePermission() === option.value ? '' : null"
+                      [attr.disabled]="option.disabled ? '' : null"
                     ></nldd-radio-button>
                   </nldd-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
