@@ -12,7 +12,7 @@ Run a plugin against the local platform: the platform stores its definition, a s
 │ marketplace-registry-api    │◄──────┤ just plugins publish        │
 │                             │       │                             │
 │ marketplace-catalog-api     ├──────►│ plugin-controller           │
-│                     relay :38080    │   runs plugin-<org>--<name> │
+│                     relays          │   runs plugin-<org>--<name> │
 │ kube-api-proxy              │       │                             │
 │ plugin-proxy                ├──────►│ (console reads the sandbox) │
 │             Secret plugin-sandbox-kubeconfig                      │
@@ -43,8 +43,11 @@ just plugins sandbox-catalog
 
 ```text
 - kube-api-proxy is proxying to the sandbox (mock disabled)
-- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:38080
+- http://fundament-catalog-relay.fundament.svc:8080 in the sandbox relays to NodePort 30080
+- http://fundament-authn-relay.fundament.svc:8080 in the sandbox relays to NodePort 30081
 ```
+
+After restarting Docker, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` again: the containers get new addresses on the sandbox network. If `k3d-fundament-plugin-server-0` keeps restarting, its k3s cannot find its old node address; recreate the sandbox (`just plugins cluster-delete && just plugins cluster-create && just plugins deploy`) and run both again. The new sandbox has an empty registry and no installations, while the catalog keeps the published versions: push each plugin's image again with `just plugins publish <path>`, which then reports that the version already exists, and apply its installation again ([5. Install](#5-install)).
 
 ## 3. Log in with functl
 
