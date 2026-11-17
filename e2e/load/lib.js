@@ -1,5 +1,5 @@
 // Shared by the load scenarios: targets, request helpers, content checks and
-// the event log that `report.ts` reads after the run.
+// the event log the report (report.go) reads after the run.
 import http from 'k6/http';
 import encoding from 'k6/encoding';
 import { Counter } from 'k6/metrics';
@@ -32,10 +32,10 @@ export const baseOptions = {
 export const contentFailures = new Counter('content_failures');
 export const contentChecks = new Counter('content_checks');
 
-// One JSON line per event for report.ts, written to the k6 log file:
+// One JSON line per event for the report, written to the k6 log file:
 //   fail  a request with an unexpected status
 //   ok    a success, at most once per second per VU and name, and only in a
-//         scenario that calls heartbeat(), so report.ts can bound how long a
+//         scenario that calls heartbeat(), so the report can bound how long a
 //         call kept failing
 //   check a content check that failed
 const lastOk = {};
@@ -50,8 +50,11 @@ function event(kind, name, status, detail) {
 
 export function track(name, res, expect = [200]) {
   const ok = [].concat(expect).includes(res.status);
-  if (!ok) event('fail', name, res.status, res.error || res.body);
-  else if (heartbeats) {
+  if (!ok) {
+    event('fail', name, res.status, res.error || res.body);
+    // So the report sees the recovery, however soon it follows.
+    delete lastOk[name];
+  } else if (heartbeats) {
     const now = Date.now();
     if (!lastOk[name] || now - lastOk[name] >= 1000) {
       lastOk[name] = now;
@@ -86,22 +89,33 @@ export function headers(token, org) {
   };
 }
 
-// expect: the status that counts as success, or a list of them.
-export function call(name, method, url, body, hdrs, expect = 200, params = {}) {
-  const ok = [].concat(expect);
-  const res = http.request(method, url, body, {
-    headers: hdrs,
-    tags: { name },
-    timeout: '15s',
-    responseCallback: http.expectedStatuses(...ok),
-    ...params,
-  });
-  track(name, res, ok);
+// A request as http.batch takes it. expect: the status that counts as
+// success, or a list of them.
+export function request(name, method, url, body, hdrs, expect = 200, params = {}) {
+  return {
+    method,
+    url,
+    body,
+    params: { headers: hdrs, tags: { name }, timeout: '15s', responseCallback: http.expectedStatuses(...[].concat(expect)), ...params },
+  };
+}
+
+export function rpcRequest(name, base, path, token, org, body = {}, expect = 200, params = {}) {
+  return request(name, 'POST', `${base}/${path}`, JSON.stringify(body), headers(token, org), expect, params);
+}
+
+export function send(name, r, expect = 200) {
+  const res = http.request(r.method, r.url, r.body, r.params);
+  track(name, res, [].concat(expect));
   return res;
 }
 
-export function rpc(name, base, path, token, org, body = {}, expect = 200) {
-  return call(name, 'POST', `${base}/${path}`, JSON.stringify(body), headers(token, org), expect);
+export function call(name, method, url, body, hdrs, expect = 200, params = {}) {
+  return send(name, request(name, method, url, body, hdrs, expect, params), expect);
+}
+
+export function rpc(name, base, path, token, org, body = {}, expect = 200, params = {}) {
+  return send(name, rpcRequest(name, base, path, token, org, body, expect, params), expect);
 }
 
 // Password login, which Dex's static users support in the local deployment.
@@ -123,9 +137,24 @@ export function pageView(s) {
   if (id) rpc('projects', URLS.org, 'organization.v1.ProjectService/ListProjects', s.token, s.org, { clusterId: id });
 }
 
-// p95 per call name, within one scenario when given; the names also make k6
-// print each call's latency.
-export function latency(names, p95ms, scenario) {
+// A number from the environment. A threshold that is not a number would make
+// its comparison false and pass, so any such value stops the run instead.
+export function setting(name, fallback) {
+  const raw = __ENV[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${name}=${raw} is not a non-negative number`);
+  return value;
+}
+
+// Share of requests that may fail with an unexpected status.
+export const failRate = `rate<=${setting('FAIL_RATE', 0)}`;
+
+// p95 per call name, within one scenario when given, under P95_MS. Latency
+// depends on the machine k6 shares with the cluster, so without P95_MS the
+// threshold always holds; it is there so k6 prints each call's latency.
+export function latency(names, scenario) {
+  const p95 = setting('P95_MS');
   const tag = scenario ? `,scenario:${scenario}` : '';
-  return Object.fromEntries(names.map((n) => [`http_req_duration{name:${n}${tag}}`, [`p(95)<${p95ms}`]]));
+  return Object.fromEntries(names.map((n) => [`http_req_duration{name:${n}${tag}}`, [p95 === undefined ? 'max>=0' : `p(95)<${p95}`]]));
 }

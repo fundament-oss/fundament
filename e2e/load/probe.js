@@ -8,50 +8,54 @@
 //            refused acme-corp.
 //   writes   one per 2 s: Alice creates a project and, once her own grant has
 //            arrived, adds Bart as viewer. Bart must see the members within
-//            15 s; Cindy, an organization viewer outside the project, must
-//            see none. Alice deletes the project, and Bart must lose it
-//            within 15 s.
+//            GRANT_WAIT_S (15 s); Cindy, an organization viewer outside the
+//            project, must see none. Alice deletes the project, and Bart must
+//            lose it within GRANT_WAIT_S.
 //   browser  one per 2 s: the console's login through authn /login, Dex's
 //            form and /callback, then GetUserInfo on the cookie alone.
 //
-// Without MAX_OUTAGE every request must succeed. With it, refused requests are
-// judged by report.ts: a disruption may refuse requests for up to MAX_OUTAGE
-// seconds per call. Either way every content check must hold, and enough of
-// them must run.
+// Without MAX_OUTAGE at most FAIL_RATE of the requests may fail. With it, the
+// report (report.go) judges refused requests: a disruption may refuse them for
+// up to MAX_OUTAGE seconds per call. Either way every content check must hold,
+// and enough of them must run.
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { Trend } from 'k6/metrics';
-import { RUN, URLS, baseOptions, bodyOf, call, check, headers, heartbeat, latency, login, rpc, track } from './lib.js';
+import { RUN, URLS, baseOptions, bodyOf, call, check, failRate, heartbeat, latency, login, rpc, setting } from './lib.js';
 
 heartbeat();
 
 const ACME = '019b4000-0000-7000-8000-000000000001';
 const BART = '019b4000-1000-7000-8000-000000000002';
 const duration = __ENV.DURATION || '5m';
-const rate = Number(__ENV.RATE || 1);
+const rate = setting('RATE', 1);
+const grantWait = setting('GRANT_WAIT_S', 15) * 1000;
 const grantVisible = new Trend('grant_visible_ms', true);
 
-// Half of the read cycles' checks (three per cycle), counted in reads alone, so
-// a run where most read cycles end early on a failed request does not pass on
-// the checks the writes and browser logins made.
+// CHECK_SHARE (half) of the read cycles' checks, three per cycle, counted in
+// reads alone, so a run where most read cycles end early on a failed request
+// does not pass on the checks the writes and browser logins made.
 const unit = /^(\d+)(s|m|h)$/.exec(duration);
 if (!unit) throw new Error(`DURATION=${duration}: use one unit, such as 90s, 5m or 1h`);
 const seconds = Number(unit[1]) * { s: 1, m: 60, h: 3600 }[unit[2]];
-const minChecks = Math.floor((seconds * rate * 3) / 2);
+const minChecks = Math.floor(seconds * rate * 3 * setting('CHECK_SHARE', 0.5));
 
 export const options = {
   ...baseOptions,
   thresholds: {
-    ...(__ENV.MAX_OUTAGE ? {} : { http_req_failed: ['rate==0'] }),
+    ...(__ENV.MAX_OUTAGE ? {} : { http_req_failed: [failRate] }),
     content_failures: ['count==0'],
     [`content_checks{scenario:reads}`]: [`count>=${minChecks}`],
-    dropped_iterations: ['count==0'],
-    ...latency(['login', 'console', 'userinfo', 'clusters', 'projects', 'b:submit'], Number(__ENV.P95_MS || 500)),
+    dropped_iterations: [`count<=${setting('MAX_DROPPED', 0)}`],
+    ...latency(['login', 'console', 'userinfo', 'clusters', 'projects', 'b:submit']),
   },
+  // maxVUs holds iterations that wait out every timeout and retry while
+  // something is down: a read cycle about 2 min, a write cycle about 2.5 min,
+  // a browser login 1 min. k6 starts the extra VUs only when it needs them.
   scenarios: {
-    reads: { executor: 'constant-arrival-rate', exec: 'reads', rate, timeUnit: '1s', duration, preAllocatedVUs: 5, maxVUs: 40 },
-    writes: { executor: 'constant-arrival-rate', exec: 'writes', rate: 1, timeUnit: '2s', duration, preAllocatedVUs: 3, maxVUs: 20 },
-    browser: { executor: 'constant-arrival-rate', exec: 'browser', rate: 1, timeUnit: '2s', duration, preAllocatedVUs: 3, maxVUs: 20 },
+    reads: { executor: 'constant-arrival-rate', exec: 'reads', rate, timeUnit: '1s', duration, preAllocatedVUs: 5, maxVUs: Math.max(40, Math.ceil(rate * 120)) },
+    writes: { executor: 'constant-arrival-rate', exec: 'writes', rate: 1, timeUnit: '2s', duration, preAllocatedVUs: 3, maxVUs: 80 },
+    browser: { executor: 'constant-arrival-rate', exec: 'browser', rate: 1, timeUnit: '2s', duration, preAllocatedVUs: 3, maxVUs: 40 },
   },
 };
 
@@ -93,17 +97,12 @@ export function reads() {
   }
 }
 
-// Polls as Bart until seen(response) holds or 15 s pass; returns whether it held.
+// Polls as Bart until seen(response) holds or GRANT_WAIT_S pass; returns
+// whether it held.
 function bartUntil(b, pid, seen, name) {
   const start = Date.now();
-  while (Date.now() - start < 15000) {
-    const r = http.post(`${URLS.org}/organization.v1.ProjectService/ListProjectMembers`, JSON.stringify({ projectId: pid }), {
-      headers: headers(b.token, b.org),
-      tags: { name },
-      timeout: '10s',
-      responseCallback: http.expectedStatuses(200, 403, 404),
-    });
-    track(name, r, [200, 403, 404]);
+  while (Date.now() - start < grantWait) {
+    const r = rpc(name, URLS.org, 'organization.v1.ProjectService/ListProjectMembers', b.token, b.org, { projectId: pid }, [200, 403, 404], { timeout: '10s' });
     if (seen(r)) {
       if (name === 'w:bart') grantVisible.add(Date.now() - start);
       return true;
@@ -125,18 +124,26 @@ export function writes() {
   const pid = bodyOf(cr).projectId;
   if (!pid) return;
 
-  // Alice's own grant on the new project comes through the authz outbox.
+  // Alice's own grant on the new project comes through the authz outbox:
+  // until it arrives the add is refused with 403. An add refused during a
+  // disruption is retried for 30 s, so a cycle checks the grants whenever the
+  // disruption ends in time; the report judges how long it lasted.
   const t0 = Date.now();
   let add;
+  let disrupted = false;
   do {
     add = rpc('w:add', URLS.org, 'organization.v1.ProjectService/AddProjectMember', a.token, a.org, { projectId: pid, userId: BART, role: 'PROJECT_MEMBER_ROLE_VIEWER' }, [200, 403]);
     if (add.status === 403) sleep(0.05);
-  } while (add.status === 403 && Date.now() - t0 < 15000);
-  check('owner-grant', add.status !== 403, `alice cannot manage ${pid} after 15 s`);
+    else if (add.status !== 200) {
+      disrupted = true;
+      sleep(1);
+    }
+  } while ((add.status === 403 || add.status === 0 || add.status >= 500) && Date.now() - t0 < (disrupted ? 30000 : grantWait));
+  check('owner-grant', add.status !== 403, `alice cannot manage ${pid} after ${grantWait / 1000} s`);
 
   if (add.status === 200) {
     const members = (r) => (r.status === 200 ? (bodyOf(r).members || []).length : 0);
-    check('viewer-grant', bartUntil(b, pid, (r) => members(r) >= 2, 'w:bart'), `bart cannot see ${pid} after 15 s`);
+    check('viewer-grant', bartUntil(b, pid, (r) => members(r) >= 2, 'w:bart'), `bart cannot see ${pid} after ${grantWait / 1000} s`);
     const r = rpc('w:cindy', URLS.org, 'organization.v1.ProjectService/ListProjectMembers', c.token, c.org, { projectId: pid }, [200, 403]);
     if (r.status === 200 || r.status === 403) check('non-member', members(r) === 0, `cindy sees ${members(r)} members of ${pid}`);
   }
@@ -151,7 +158,7 @@ export function writes() {
   } while (del.status !== 200 && Date.now() - t1 < 30000);
   if (del.status === 200 && add.status === 200) {
     const gone = (r) => r.status === 403 || r.status === 404 || (r.status === 200 && (bodyOf(r).members || []).length === 0);
-    check('revoked', bartUntil(b, pid, gone, 'w:bart-gone'), `bart still sees ${pid} 15 s after its delete`);
+    check('revoked', bartUntil(b, pid, gone, 'w:bart-gone'), `bart still sees ${pid} ${grantWait / 1000} s after its delete`);
   }
 }
 

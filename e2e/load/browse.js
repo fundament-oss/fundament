@@ -9,11 +9,11 @@
 //           find where the stack gives out. It has no thresholds: it is
 //           expected to fail at the top.
 import { sleep } from 'k6';
-import { URLS, baseOptions, latency, login, pageView, rpc } from './lib.js';
+import { URLS, baseOptions, failRate, latency, login, pageView, rpc, setting } from './lib.js';
 
 const USERS = ['alice@acme-corp.com', 'bart@acme-corp.com', 'cindy@acme-corp.com', 'david@globex.com'];
 const phases = (__ENV.PHASES || 'storm,browse').split(',');
-const stressMax = Number(__ENV.STRESS_MAX || 400);
+const stressMax = setting('STRESS_MAX', 400);
 
 const all = {
   storm: { seconds: 60, executor: 'constant-arrival-rate', exec: 'storm', rate: 5, timeUnit: '1s', duration: '1m', preAllocatedVUs: 20, maxVUs: 200 },
@@ -48,15 +48,14 @@ const all = {
 
 const scenarios = {};
 const thresholds = {};
-const p95 = Number(__ENV.P95_MS || 500);
 let offset = 0;
 for (const p of phases) {
   const { seconds, ...scenario } = all[p];
   scenarios[p] = { ...scenario, startTime: `${offset}s` };
   offset += seconds + 15;
   if (p === 'stress') continue;
-  thresholds[`http_req_failed{scenario:${p}}`] = ['rate==0'];
-  Object.assign(thresholds, latency(['login', 'console', 'userinfo', 'orgs', 'clusters', 'projects', 'poll'], p95, p));
+  thresholds[`http_req_failed{scenario:${p}}`] = [failRate];
+  Object.assign(thresholds, latency(['login', 'console', 'userinfo', 'orgs', 'clusters', 'projects', 'poll'], p));
 }
 export const options = { ...baseOptions, scenarios, thresholds };
 
