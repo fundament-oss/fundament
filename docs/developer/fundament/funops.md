@@ -45,7 +45,7 @@ On macOS, use `base64 -D`. Against the local development stack,
 funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
-funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
+funops organization member add <organization> <user-id|email> [--permission admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
 funops organization quota get-clusters <organization>
@@ -73,7 +73,8 @@ Someone who has signed in but is in no organization yet shows up here:
 funops user list --without-organization
 ```
 
-Assign them, as a viewer or an admin:
+Assign them. A new membership is an admin; the viewer role is temporarily
+disabled, so `--permission` only takes `admin`:
 
 ```bash
 funops organization member add acme-corp alice@acme-corp.com --permission admin
