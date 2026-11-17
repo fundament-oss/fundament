@@ -77,17 +77,19 @@ func main() {
 	}
 
 	fmt.Println("\n== probe 2: metric availability (via production client) ==")
+	// Only the shoot's own series (type="shoot"): the control plane federated
+	// from the seed (type="seed") never reaches the console.
 	metrics := []string{
-		"container_cpu_usage_seconds_total",
+		"node_cpu_seconds_total",
+		"node_memory_MemAvailable_bytes",
+		"kubelet_running_pods",
+		"kube_node_info",
 		"kube_node_status_capacity",
-		"kube_pod_info",
-		"kube_pod_container_resource_requests",
-		"kube_pod_container_resource_limits",
 		"container_network_receive_bytes_total",
 		"container_network_transmit_bytes_total",
 	}
 	for _, m := range metrics {
-		samples, err := client.Query(ctx, "count("+m+")", now)
+		samples, err := client.Query(ctx, "count("+m+`{type="shoot"})`, now)
 		if err != nil {
 			fmt.Printf("  %-42s ERROR: %v\n", m, err)
 			continue
@@ -98,7 +100,7 @@ func main() {
 		}
 		fmt.Printf("  %-42s %v series\n", m, n)
 	}
-	nodeSamples, err := client.Query(ctx, `count by (node) (kube_node_status_capacity{resource="cpu"})`, now)
+	nodeSamples, err := client.Query(ctx, `count by (node) (kube_node_status_capacity{type="shoot",resource="cpu"})`, now)
 	fatal("node label probe", err)
 	fmt.Printf("  node label survives: %d node(s)", len(nodeSamples))
 	for _, s := range nodeSamples {
@@ -106,27 +108,29 @@ func main() {
 	}
 	fmt.Println()
 
-	fmt.Println("\n== probe 2b: dashboard query set (exact org-api queries) ==")
+	// Copies of organization-api's queries (pkg/organization/metrics.go); keep in step.
+	fmt.Println("\n== probe 2b: dashboard query set (org-api queries) ==")
 	instant := map[string]string{
-		"cpu used":  `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`,
-		"cpu total": `sum(kube_node_status_capacity{resource="cpu"})`,
-		"mem used":  `sum(container_memory_working_set_bytes{container!=""})`,
-		"pods used": `count(kube_pod_info)`,
-		"ns cpu":    `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (namespace)`,
+		"cpu used":     `sum(rate(node_cpu_seconds_total{type="shoot",mode!~"idle|iowait|steal"}[5m]))`,
+		"cpu total":    `sum(kube_node_status_capacity{type="shoot",resource="cpu"})`,
+		"mem used":     `sum(node_memory_MemTotal_bytes{type="shoot"} - node_memory_MemAvailable_bytes{type="shoot"})`,
+		"pods used":    `sum(max by (instance) (kubelet_running_pods{type="shoot"}))`,
+		"pods by node": `max by (node) (label_replace(kubelet_running_pods{type="shoot"}, "internal_ip", "$1", "instance", "(.+)") * on (internal_ip) group_left (node) topk by (internal_ip) (1, kube_node_info{type="shoot"}))`,
+		"net rx":       `sum(rate(container_network_receive_bytes_total{type="shoot",host_network="true",interface!="tunl0"}[5m]))`,
 	}
 	for label, q := range instant {
 		samples, err := client.Query(ctx, q, now)
 		if err != nil {
-			fmt.Printf("  %-10s ERROR: %v\n", label, err)
+			fmt.Printf("  %-12s ERROR: %v\n", label, err)
 			continue
 		}
 		if len(samples) == 0 {
-			fmt.Printf("  %-10s empty\n", label)
+			fmt.Printf("  %-12s empty\n", label)
 			continue
 		}
-		fmt.Printf("  %-10s %.4g (%d series)\n", label, samples[0].Value, len(samples))
+		fmt.Printf("  %-12s %.4g (%d series)\n", label, samples[0].Value, len(samples))
 	}
-	series, err := client.QueryRange(ctx, `sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))`, now.Add(-time.Hour), now, 5*time.Minute)
+	series, err := client.QueryRange(ctx, `sum(rate(node_cpu_seconds_total{type="shoot",mode!~"idle|iowait|steal"}[5m]))`, now.Add(-time.Hour), now, 5*time.Minute)
 	switch {
 	case err != nil:
 		fmt.Printf("  range 1h    ERROR: %v\n", err)
@@ -142,7 +146,7 @@ func main() {
 	done := make(chan error, 21)
 	for range 21 {
 		go func() {
-			_, err := client.Query(ctx, `sum(kube_node_status_capacity{resource="cpu"})`, now)
+			_, err := client.Query(ctx, `sum(kube_node_status_capacity{type="shoot",resource="cpu"})`, now)
 			done <- err
 		}()
 	}

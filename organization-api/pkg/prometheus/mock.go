@@ -189,15 +189,15 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 	nsFilter := mockExtractNamespaces(q)
 
 	switch {
-	case strings.Contains(q, "container_cpu_usage_seconds_total"):
+	case strings.Contains(q, "container_cpu_usage_seconds_total"), strings.Contains(q, "node_cpu_seconds_total"):
 		return mockCPUUsage(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "kube_node_status_capacity") && strings.Contains(q, `resource="cpu"`):
 		return mockCPUCapacity(clusters, byNode, byCluster)
-	case strings.Contains(q, "container_memory_working_set_bytes"):
+	case strings.Contains(q, "container_memory_working_set_bytes"), strings.Contains(q, "node_memory_MemAvailable_bytes"):
 		return mockMemUsage(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "kube_node_status_capacity") && strings.Contains(q, `resource="memory"`):
 		return mockMemCapacity(clusters, byNode, byCluster)
-	case strings.Contains(q, "kube_pod_info"):
+	case strings.Contains(q, "kube_pod_info"), strings.Contains(q, "kubelet_running_pods"):
 		return mockPodCount(clusters, t, byNode, byNamespace, byCluster, nsFilter)
 	case strings.Contains(q, "kube_node_status_capacity") && strings.Contains(q, `resource="pods"`):
 		return mockPodCapacity(clusters, byNode, byCluster)
@@ -505,7 +505,8 @@ func mockExtractClusterName(q string) string {
 
 func mockExtractNamespaces(q string) []string {
 	m := mockReNamespaceRegex.FindStringSubmatch(q)
-	if m == nil {
+	// A pattern (the tenant-namespace prefix) names no namespaces.
+	if len(m) < 2 || strings.Contains(m[1], ".+") {
 		return nil
 	}
 	return strings.Split(m[1], "|")
