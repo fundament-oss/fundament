@@ -343,15 +343,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   readonly containerLabel = computed(() => this.selectedContainer() || 'All containers');
 
-  /**
-   * The total beside "All levels", and only while the query asked for every
-   * level: with a subset selected the other levels are absent from the result
-   * set entirely, so a sum over what came back would count a part and call it
-   * the whole. Same reason a single level's count goes blank.
-   */
+  /** The total beside "All levels". The counts cover every level whatever is
+   *  selected (see `loadHistogram`), so the sum is the whole either way. */
   readonly allLevelsCountLabel = computed(() => {
-    if (this.selectedLevels().size !== ALL_LEVELS.length) return '';
     const counts = this.levelCounts();
+    if (!counts) return '';
     return ALL_LEVELS.reduce((total, level) => total + counts[level], 0).toLocaleString();
   });
 
@@ -388,8 +384,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     return { from: new Date(now.getTime() - minutes * 60 * 1000), to: now };
   });
 
-  // ── filtered logs without level filter (the base for the list, and the
-  //    fallback the chip counts use when the histogram did not come back)
+  // ── filtered logs without level filter (the base for the list)
   private readonly filteredLogsNoLevel = computed(() => {
     const { from, to } = this.timeRange();
     // Tailed entries carry a server timestamp of "now", which is at or past
@@ -418,48 +413,38 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   /**
    * The count to show on a severity chip, or "" when it is not known.
    *
-   * The backend applies the severity filter, so an unselected level is absent
-   * from the result set entirely — its count would render as a confident zero
-   * that says nothing about the cluster. A number is only shown for levels the
-   * current query actually asked for.
+   * Shown for unselected levels too: that is what tells you whether ticking
+   * one is worth it. The entry list lacks those levels, but the counts are a
+   * separate query that always covers all four.
    */
   levelCountLabel(level: LogLevel): string {
-    if (!this.selectedLevels().has(level)) {
-      return '';
-    }
-    return this.levelCounts()[level].toLocaleString();
+    return this.levelCounts()?.[level].toLocaleString() ?? '';
   }
 
   /**
-   * Counts for the severity chips.
+   * Counts for the severity chips, or null when no whole-window count for the
+   * current query is in hand.
    *
-   * Taken from the histogram whenever there is one, rather than from the
-   * fetched page: the page stops at LOG_LIMIT while the chart directly above
-   * counts the whole window, and a chip reading "2,000" under bars that sum to
-   * forty thousand is worse than either number on its own. The page is only
-   * the fallback for when the counts did not come back — which is also when
-   * the chart is hidden, so the two are never on screen disagreeing.
+   * Only ever taken from an exact histogram. Counting the fetched page instead
+   * described the page, not the window: it stops at LOG_LIMIT and the backend
+   * has already applied the level filter to it, so with every level selected an
+   * INFO-heavy page read "0" on Error, and ticking Error re-queried and listed
+   * errors the chip had just denied. The page was the fallback whenever the
+   * histogram failed, and on the pod-log backend it was the only source. A
+   * blank chip says "not known"; a zero says "none", and only the histogram can
+   * say that.
    */
-  readonly levelCounts = computed(() => {
-    const buckets = this.histogramBuckets();
-    if (buckets.length > 0) {
-      return buckets.reduce(
-        (total, b) => ({
-          ERROR: total.ERROR + b.error,
-          WARN: total.WARN + b.warn,
-          INFO: total.INFO + b.info,
-          DEBUG: total.DEBUG + b.debug,
-        }),
-        { ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 },
-      );
-    }
-    const logs = this.filteredLogsNoLevel();
-    return {
-      ERROR: logs.filter((l) => l.level === 'ERROR').length,
-      WARN: logs.filter((l) => l.level === 'WARN').length,
-      INFO: logs.filter((l) => l.level === 'INFO').length,
-      DEBUG: logs.filter((l) => l.level === 'DEBUG').length,
-    };
+  readonly levelCounts = computed((): Record<LogLevel, number> | null => {
+    if (!this.levelCountsKnown()) return null;
+    return this.histogramBuckets().reduce(
+      (total, b) => ({
+        ERROR: total.ERROR + b.error,
+        WARN: total.WARN + b.warn,
+        INFO: total.INFO + b.info,
+        DEBUG: total.DEBUG + b.debug,
+      }),
+      { ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 },
+    );
   });
 
   // ── fully filtered logs (with level filter)
@@ -518,6 +503,45 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    *  cannot aggregate (Kubernetes pod logs, plugin logs). */
   readonly histogramExact = signal(true);
 
+  /**
+   * Everything the counts depend on, as one comparable value. The level
+   * selection is not in it: the counts cover every level whatever is ticked.
+   * Neither is the window anchor, which moves on every load and every tail
+   * tick without changing what is being asked.
+   */
+  private readonly countsQuery = computed(() =>
+    JSON.stringify([
+      this.selectedCluster(),
+      this.selectedNamespace(),
+      this.selectedPod(),
+      this.selectedContainer(),
+      this.searchText(),
+      this.requestedSource(),
+      this.timePreset(),
+    ]),
+  );
+
+  /** The `countsQuery` the exact buckets in `histogramBuckets` answered. */
+  private readonly histogramCountsQuery = signal<string | null>(null);
+
+  /**
+   * Whether `histogramBuckets` is an exact count for the query now on screen.
+   *
+   * Separate from the buckets themselves because those are kept through a
+   * reload, so the chart does not blink on every filter change. The chips
+   * cannot do the same: Error 12,345 above the three lines a new search left
+   * reads as a count of those three. Compared against the filters as they
+   * stand rather than reset when a load starts, so the chips go blank the
+   * moment a filter moves (a search is debounced, a cluster change waits on its
+   * labels first) and stay put when only the level selection does.
+   */
+  private readonly levelCountsKnown = computed(
+    () =>
+      this.histogramExact() &&
+      this.histogramBuckets().length > 0 &&
+      this.histogramCountsQuery() === this.countsQuery(),
+  );
+
   private readonly HISTOGRAM_BUCKETS = 30;
 
   /**
@@ -537,6 +561,17 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    * a different filter than the lines underneath it.
    */
   private loadSeq = 0;
+
+  /**
+   * Which histogram request the counts on screen belong to.
+   *
+   * `loadSeq` cannot tell these apart within one load: a live tail refetches
+   * the counts every few ticks under the load it started from, and `countsQuery`
+   * leaves the sliding anchor out, so two polls in flight carry the same seq
+   * and the same key. Without this a slow older poll lands last and paints the
+   * previous window over the newer one.
+   */
+  private histogramSeq = 0;
 
   /**
    * Axis labels for the buckets. A window wider than a day needs the date:
@@ -592,11 +627,29 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   readonly isAllLevelsSelected = computed(() => this.selectedLevels().size === ALL_LEVELS.length);
 
+  /**
+   * The buckets as the chart draws them: unticked levels zeroed. The counts
+   * cover every level so the sidebar can show them all, but the chart sits on
+   * top of the list and has to describe the same lines it does.
+   */
+  private readonly chartBuckets = computed((): HistogramBucket[] => {
+    const levels = this.selectedLevels();
+    const buckets = this.histogramBuckets();
+    if (levels.size === 0 || levels.size === ALL_LEVELS.length) return buckets;
+    return buckets.map((b) => ({
+      start: b.start,
+      error: levels.has('ERROR') ? b.error : 0,
+      warn: levels.has('WARN') ? b.warn : 0,
+      info: levels.has('INFO') ? b.info : 0,
+      debug: levels.has('DEBUG') ? b.debug : 0,
+    }));
+  });
+
   constructor() {
     this.titleService.setTitle('Log explorer');
 
     effect(() => {
-      const buckets = this.histogramBuckets();
+      const buckets = this.chartBuckets();
       if (this.histogram) {
         this.histogram.data.labels = this.histogramLabels();
         this.histogram.data.datasets[0].data = buckets.map((b) => b.error);
@@ -853,12 +906,19 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    * Kept separate from the entry query and never allowed to fail the page: the
    * chart is context for the lines, so a backend that can serve lines but not
    * aggregates should still show you your logs. `seq` is the load it belongs
-   * to; an answer for a load that has been superseded is dropped rather than
-   * painted over the current one.
+   * to; an answer for a load that has been superseded, or one overtaken by a
+   * later histogram request in the same load, is dropped rather than painted
+   * over the current one.
    */
   private async loadHistogram(from: Date, to: Date, seq: number): Promise<void> {
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
+    // Taken with the request's own parameters, not when the answer lands: a
+    // filter that moves in between makes this answer one to a different query.
+    const query = this.countsQuery();
+    this.histogramSeq += 1;
+    const ticket = this.histogramSeq;
+    const superseded = () => seq !== this.loadSeq || ticket !== this.histogramSeq;
     try {
       const result = await this.logsApi.histogram({
         clusterId,
@@ -866,21 +926,29 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         pod: this.selectedPod() || undefined,
         container: this.selectedContainer() || undefined,
         search: this.searchText() || undefined,
-        levels: this.requestedLevels(),
+        // Every level, not the selection: the sidebar counts each level
+        // whether or not it is ticked, and `chartBuckets` drops the unticked
+        // ones from the chart. Asking for the selection only left nothing to
+        // count the other chips with.
+        levels: undefined,
         source: this.requestedSource(),
         from,
         to,
         buckets: this.HISTOGRAM_BUCKETS,
-        // A backend that cannot aggregate counts a page instead. Handing it
-        // the entry query's limit keeps that page the one the list is
-        // showing, rather than a second, larger read of the same pod log.
+        // A backend that cannot aggregate counts a page instead, and the
+        // limit keeps that page no larger than the list's. It is not the same
+        // page, though: this one holds every level and the list only the
+        // ticked ones. The backends that cannot aggregate are read through
+        // `refreshHistogram`'s own page count, so this only matters when the
+        // two requests resolve to different backends.
         limit: this.LOG_LIMIT,
       });
-      if (seq !== this.loadSeq) return;
+      if (superseded()) return;
       this.histogramBuckets.set(result.buckets);
       this.histogramExact.set(result.exact);
+      this.histogramCountsQuery.set(query);
     } catch {
-      if (seq !== this.loadSeq) return;
+      if (superseded()) return;
       // An empty chart above a full list reads as "no traffic", which is the
       // opposite of what happened, so drop the chart instead.
       this.histogramBuckets.set([]);
@@ -904,7 +972,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   // ── chart
   private createHistogram(): void {
-    const buckets = this.histogramBuckets();
+    const buckets = this.chartBuckets();
     const config: ChartConfiguration = {
       type: 'bar',
       data: {
@@ -1264,7 +1332,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       } else {
         next.add(level);
       }
-      return next;
+      // Unticking the last level asks for all of them again, the same as
+      // dropping the last level token does. An empty set was already queried
+      // as "all levels", but left every box in the sidebar unticked.
+      return next.size === 0 ? new Set(ALL_LEVELS) : next;
     });
     this.currentPage.set(0);
     this.reloadForFilterChange();
