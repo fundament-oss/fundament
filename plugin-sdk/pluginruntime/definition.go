@@ -140,6 +140,11 @@ type ConfigSchemaEntry struct {
 	Values []string `yaml:"values"`
 	// Advanced keys start collapsed in the console install form.
 	Advanced bool `yaml:"advanced"`
+	// Placeholder is an example value the console shows in an empty text
+	// field, e.g. "cluster.example.org"; optional. Only for "string" and
+	// "int": a checkbox or toggle group has no empty field to show it in.
+	// It is never submitted, so it is no substitute for Default.
+	Placeholder string `yaml:"placeholder"`
 }
 
 // PluginMetadata holds the identifying information for a plugin.
@@ -327,6 +332,9 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 		}
 		if entry.Required && entry.Advanced {
 			return fmt.Errorf("configSchema key %q is required and advanced; a required choice cannot default to hidden", entry.Name)
+		}
+		if entry.Placeholder != "" && entry.Type != ConfigTypeString && entry.Type != ConfigTypeInt {
+			return fmt.Errorf("configSchema key %q sets a placeholder but has type %q; only string and int keys have a text field to show it in", entry.Name, entry.Type)
 		}
 		if entry.Type == ConfigTypeBool {
 			if entry.Required {

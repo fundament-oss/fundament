@@ -199,6 +199,7 @@ function enumChoices(entry: ConfigSchemaEntry): string[] {
                the pattern validator attached in ngOnInit. -->
           <nldd-text-field
             [value]="form.get(entry.name)?.value"
+            [attr.placeholder]="entry.placeholder || null"
             [required]="entry.required"
             [invalid]="isInvalid(entry.name)"
             (input)="onTextInput(entry.name, $event)"

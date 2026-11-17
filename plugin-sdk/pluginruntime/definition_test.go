@@ -208,9 +208,13 @@ func TestParseSourceDefinition_AcceptsValidConfigSchema(t *testing.T) {
       type: enum
       values: [host, osd]
       required: true
+    - name: DOMAIN
+      type: string
+      required: true
+      placeholder: cluster.example.org
 `))
 	require.NoError(t, err)
-	require.Len(t, def.Spec.ConfigSchema, 3)
+	require.Len(t, def.Spec.ConfigSchema, 4)
 	assert.Equal(t, "MON_COUNT", def.Spec.ConfigSchema[0].Name)
 	assert.Equal(t, "Monitor count", def.Spec.ConfigSchema[0].DisplayName)
 	assert.Equal(t, "int", def.Spec.ConfigSchema[0].Type)
@@ -218,6 +222,7 @@ func TestParseSourceDefinition_AcceptsValidConfigSchema(t *testing.T) {
 	assert.True(t, def.Spec.ConfigSchema[1].Advanced)
 	assert.Equal(t, []string{"host", "osd"}, def.Spec.ConfigSchema[2].Values)
 	assert.True(t, def.Spec.ConfigSchema[2].Required)
+	assert.Equal(t, "cluster.example.org", def.Spec.ConfigSchema[3].Placeholder)
 }
 
 func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
@@ -280,6 +285,14 @@ func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
 		"required and advanced": {
 			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      required: true\n      advanced: true\n",
 			wantErr: "required and advanced",
+		},
+		"placeholder on a bool": {
+			schema:  "    - name: ENABLED\n      type: bool\n      default: \"false\"\n      placeholder: \"true\"\n",
+			wantErr: "sets a placeholder but has type \"bool\"",
+		},
+		"placeholder on an enum": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      placeholder: host\n",
+			wantErr: "sets a placeholder but has type \"enum\"",
 		},
 		"required enum with only blank values": {
 			// Unsatisfiable: the enum accepts only "", the required check

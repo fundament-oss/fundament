@@ -1861,6 +1861,7 @@ type ConfigSchemaEntry struct {
 	xxx_hidden_Values       []string               `protobuf:"bytes,60,rep,name=values"`
 	xxx_hidden_Advanced     bool                   `protobuf:"varint,70,opt,name=advanced"`
 	xxx_hidden_DisplayName  string                 `protobuf:"bytes,80,opt,name=display_name,json=displayName"`
+	xxx_hidden_Placeholder  string                 `protobuf:"bytes,90,opt,name=placeholder"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1946,6 +1947,13 @@ func (x *ConfigSchemaEntry) GetDisplayName() string {
 	return ""
 }
 
+func (x *ConfigSchemaEntry) GetPlaceholder() string {
+	if x != nil {
+		return x.xxx_hidden_Placeholder
+	}
+	return ""
+}
+
 func (x *ConfigSchemaEntry) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
@@ -1978,6 +1986,10 @@ func (x *ConfigSchemaEntry) SetDisplayName(v string) {
 	x.xxx_hidden_DisplayName = v
 }
 
+func (x *ConfigSchemaEntry) SetPlaceholder(v string) {
+	x.xxx_hidden_Placeholder = v
+}
+
 type ConfigSchemaEntry_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1995,6 +2007,9 @@ type ConfigSchemaEntry_builder struct {
 	// Human-readable label for the console form; empty means the console
 	// derives one from name.
 	DisplayName string
+	// Example value the console shows in an empty text field; never
+	// submitted. Empty for bool and enum keys.
+	Placeholder string
 }
 
 func (b0 ConfigSchemaEntry_builder) Build() *ConfigSchemaEntry {
@@ -2009,6 +2024,7 @@ func (b0 ConfigSchemaEntry_builder) Build() *ConfigSchemaEntry {
 	x.xxx_hidden_Values = b.Values
 	x.xxx_hidden_Advanced = b.Advanced
 	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Placeholder = b.Placeholder
 	return m0
 }
 
@@ -2255,7 +2271,7 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x11organization_name\x18\n" +
 	" \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\x10organizationName\x12*\n" +
 	"\vplugin_name\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\n" +
-	"pluginName\"\x8d\x02\n" +
+	"pluginName\"\xaf\x02\n" +
 	"\x11ConfigSchemaEntry\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12*\n" +
@@ -2265,7 +2281,8 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\brequired\x182 \x01(\bR\brequired\x12\x16\n" +
 	"\x06values\x18< \x03(\tR\x06values\x12\x1a\n" +
 	"\badvanced\x18F \x01(\bR\badvanced\x12!\n" +
-	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xa4\x02\n" +
+	"\fdisplay_name\x18P \x01(\tR\vdisplayName\x12 \n" +
+	"\vplaceholder\x18Z \x01(\tR\vplaceholder\"\xa4\x02\n" +
 	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
 	"\bmanifest\x18\n" +
 	" \x01(\fR\bmanifest\x12'\n" +

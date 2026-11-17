@@ -216,6 +216,9 @@ message ConfigSchemaEntry {
   // Human-readable label for the console form; empty means the console
   // derives one from name.
   string display_name = 80;
+  // Example value the console shows in an empty text field; never
+  // submitted. Empty for bool and enum keys.
+  string placeholder = 90;
 }
 
 // Mirrors the manifest's configSchema type strings.
