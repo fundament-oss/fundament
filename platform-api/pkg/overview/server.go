@@ -17,6 +17,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	platformv1 "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/platform/v1"
 	"github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/platform/v1/platformv1connect"
@@ -81,11 +82,11 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, cfg Config) *Server {
 	)
 
 	mux := http.NewServeMux()
-	mux.Handle(platformv1connect.NewOverviewServiceHandler(s, interceptors))
+	mux.Handle(platformv1connect.NewOverviewServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	reflector := grpcreflect.NewStaticReflector(platformv1connect.OverviewServiceName)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	// GET is how the console calls it (the method has no side effects), so a
 	// browser or proxy can serve it from cache. No credentials, so no

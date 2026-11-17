@@ -11,6 +11,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/catalog"
@@ -63,7 +64,7 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
 		loggingInterceptor,
 	)
 
-	path, handler := installv1connect.NewInstallServiceHandler(s.Service, interceptors)
+	path, handler := installv1connect.NewInstallServiceHandler(s.Service, interceptors, connectlimit.ReadMaxBytes())
 
 	// Credentialed, unlike the storefront's: the console sends its cookie or
 	// bearer plus the organization header. Same shape as the registry's.

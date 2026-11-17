@@ -11,6 +11,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -52,22 +53,22 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		validate.NewInterceptor(),
 	)
 
-	mux.Handle(dcimv1connect.NewSiteServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewRoomServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewRackRowServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewRackServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewAssetServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewPlacementServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewPhysicalConnectionServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewCatalogServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewLogicalDesignServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewLogicalDeviceServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewLogicalConnectionServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewLogicalDeviceLayoutServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewNoteServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewTaskServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewTaskStepServiceHandler(s, interceptors))
-	mux.Handle(dcimv1connect.NewUserServiceHandler(s, interceptors))
+	mux.Handle(dcimv1connect.NewSiteServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewRoomServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewRackRowServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewRackServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewAssetServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewPlacementServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewPhysicalConnectionServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewCatalogServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewLogicalDesignServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewLogicalDeviceServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewLogicalConnectionServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewLogicalDeviceLayoutServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewNoteServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewTaskServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewTaskStepServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewUserServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	reflector := grpcreflect.NewStaticReflector(
 		"dcim.v1.SiteService",
@@ -87,8 +88,8 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		"dcim.v1.TaskStepService",
 		"dcim.v1.UserService",
 	)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	s.handler = mux
 
