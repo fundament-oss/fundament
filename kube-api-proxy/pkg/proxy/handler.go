@@ -51,29 +51,21 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "/" + path
 	r.URL.RawPath = ""
 
-	// Dispatch on token type. UserToken is the browser/user path (unchanged).
-	// PluginToken is the FUN-17 gateway path: per-request SAR against the user,
-	// forward injecting the plugin SA token.
+	// Dispatch on token type. PluginToken is the FUN-17 gateway path:
+	// per-request SAR against the user, forward injecting the plugin SA token.
 	switch peekTokenType(r) {
 	case auth.TokenTypePlugin:
 		s.pluginGateway.serve(w, r, clusterID.String())
 	default:
-		// UserToken and cookie-borne requests: unchanged behaviour.
+		// UserToken or the cookie; authValidator takes the cookie only from
+		// COOKIE_ALLOWED_ORIGINS, so plugin pages cannot ride the session.
 		s.handleUserClusterProxy(w, r, clusterID)
 	}
 }
 
-// handleUserClusterProxy is the unchanged pre-FUN-17 UserToken path.
+// handleUserClusterProxy serves a UserToken, or the console's cookie.
 func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, clusterID uuid.UUID) {
 	// --- Authentication ---
-
-	// The cookie rides along on any same-site request, plugin pages included,
-	// so it only counts when the console sent it. Browsers always set Origin on
-	// cross-origin requests and WebSocket upgrades.
-	if !auth.HasBearer(r.Header) && !slices.Contains(s.cookieAllowedOrigins, r.Header.Get("Origin")) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 
 	claims, err := s.authValidator.Validate(r.Header)
 	if err != nil {
@@ -148,8 +140,8 @@ func servesAccessReview(r *http.Request) bool {
 // bearer token (or user for cookie-borne requests), without verifying the
 // signature. The real validation happens in the branch handler.
 func peekTokenType(r *http.Request) auth.TokenType {
-	tok := bearerToken(r)
-	if tok == "" {
+	tok, ok := auth.BearerToken(r.Header)
+	if !ok {
 		// Cookie-borne UserToken: only the browser sends these, never a plugin.
 		if c, err := r.Cookie(auth.ConsoleAuthCookieName); err == nil && c.Value != "" {
 			return auth.TokenTypeUser

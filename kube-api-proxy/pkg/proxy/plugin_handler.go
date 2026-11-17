@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -34,7 +33,7 @@ type pluginGateway struct {
 
 // serve runs the PluginToken gates in order and forwards on success.
 func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathClusterID string) {
-	bearer := bearerToken(r)
+	bearer, _ := auth.BearerToken(r.Header)
 	claims, err := auth.ParsePluginToken(bearer, g.jwtSecret)
 	if err != nil {
 		g.logger.Debug("plugin token invalid", "err", err)
@@ -118,13 +117,4 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 	// The multi-cluster proxy resolves the target apiserver from this key.
 	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterUUID.String())
 	g.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-func bearerToken(r *http.Request) string {
-	const p = "Bearer "
-	h := r.Header.Get("Authorization")
-	if strings.HasPrefix(h, p) {
-		return h[len(p):]
-	}
-	return ""
 }

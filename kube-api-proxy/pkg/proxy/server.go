@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/rs/cors"
@@ -36,14 +35,12 @@ type Config struct {
 type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
-	// cookieAllowedOrigins: see Config.CookieAllowedOrigins.
-	cookieAllowedOrigins []string
-	authz                *authz.Client
-	store                *authz.Store
-	tokenCache           *tokenpkg.Cache
-	kubeHandler          http.Handler
-	handler              http.Handler
-	pluginGateway        *pluginGateway
+	authz         *authz.Client
+	store         *authz.Store
+	tokenCache    *tokenpkg.Cache
+	kubeHandler   http.Handler
+	handler       http.Handler
+	pluginGateway *pluginGateway
 	// namespaces serves filtered namespace listings in real mode; nil in mock
 	// mode, where user requests reach the mock or sandbox API unfiltered.
 	namespaces *namespaceLister
@@ -77,13 +74,13 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 	}
 
 	s := &Server{
-		logger:               logger,
-		authValidator:        auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		cookieAllowedOrigins: normalizeOrigins(cfg.CookieAllowedOrigins),
-		authz:                authzClient,
-		store:                store,
-		tokenCache:           tokenCache,
-		kubeHandler:          kubeHandler,
+		logger: logger,
+		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger).
+			WithCookieOrigins(cfg.CookieAllowedOrigins),
+		authz:       authzClient,
+		store:       store,
+		tokenCache:  tokenCache,
+		kubeHandler: kubeHandler,
 	}
 
 	if tokenCache != nil && authzClient != nil {
@@ -230,15 +227,4 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 			"acl-allow-origin", w.Header().Get("Access-Control-Allow-Origin"),
 		)
 	})
-}
-
-// normalizeOrigins drops a trailing slash, which an Origin header never has.
-func normalizeOrigins(origins []string) []string {
-	out := make([]string, 0, len(origins))
-	for _, o := range origins {
-		if o = strings.TrimSuffix(strings.TrimSpace(o), "/"); o != "" {
-			out = append(out, o)
-		}
-	}
-	return out
 }

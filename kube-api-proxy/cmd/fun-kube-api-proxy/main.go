@@ -26,7 +26,7 @@ type config struct {
 	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
 	// The console origin; a cookie request from any other origin is refused.
-	CookieAllowedOrigins []string `env:"COOKIE_ALLOWED_ORIGINS"`
+	CookieAllowedOrigins []string `env:"COOKIE_ALLOWED_ORIGINS" envDefault:"https://console.fundament.localhost:8443,http://localhost:4200"`
 	KubeProxyMode        string   `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
 	GardenerKubeconfig   string   `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 

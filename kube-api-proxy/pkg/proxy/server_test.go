@@ -103,7 +103,7 @@ func TestClusterProxy_CookieOrigin(t *testing.T) {
 	const consoleOrigin = "https://console.example.com"
 	const pluginOrigin = "https://plugin-proxy.example.com"
 	secret := []byte("test-secret")
-	ts := newMockServer(t, &proxy.Config{JWTSecret: secret, CookieAllowedOrigins: []string{consoleOrigin + "/"}})
+	ts := newMockServer(t, &proxy.Config{JWTSecret: secret, CookieAllowedOrigins: []string{"HTTPS://Console.Example.com:443/"}})
 
 	userClaims := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -119,6 +119,7 @@ func TestClusterProxy_CookieOrigin(t *testing.T) {
 	tests := []struct {
 		name    string
 		origin  string
+		fetch   string // Sec-Fetch-Site
 		authz   string
 		cookie  bool
 		upgrade bool
@@ -127,6 +128,9 @@ func TestClusterProxy_CookieOrigin(t *testing.T) {
 		{name: "cookie from the console origin", origin: consoleOrigin, cookie: true, want: http.StatusOK},
 		{name: "cookie from the plugin-proxy origin", origin: pluginOrigin, cookie: true, want: http.StatusUnauthorized},
 		{name: "cookie without Origin", cookie: true, want: http.StatusUnauthorized},
+		{name: "cookie on a same-origin fetch without Origin", fetch: "same-origin", cookie: true, want: http.StatusOK},
+		{name: "cookie on a same-site navigation", fetch: "same-site", cookie: true, want: http.StatusUnauthorized},
+		{name: "cookie from an opaque origin", origin: "null", cookie: true, want: http.StatusUnauthorized},
 		{name: "cookie on a WebSocket upgrade from a foreign origin", origin: pluginOrigin, cookie: true, upgrade: true, want: http.StatusUnauthorized},
 		{name: "cookie with a non-bearer Authorization header", origin: pluginOrigin, authz: "Basic Zm9vOmJhcg==", cookie: true, want: http.StatusUnauthorized},
 		{name: "bearer from a foreign origin", origin: pluginOrigin, authz: "Bearer " + token, want: http.StatusOK},
@@ -138,6 +142,9 @@ func TestClusterProxy_CookieOrigin(t *testing.T) {
 			require.NoError(t, err)
 			if tc.origin != "" {
 				req.Header.Set("Origin", tc.origin)
+			}
+			if tc.fetch != "" {
+				req.Header.Set("Sec-Fetch-Site", tc.fetch)
 			}
 			if tc.authz != "" {
 				req.Header.Set("Authorization", tc.authz)
