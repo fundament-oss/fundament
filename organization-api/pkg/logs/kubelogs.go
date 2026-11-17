@@ -22,11 +22,11 @@ import (
 // at a time, so "every pod" has to be a namespace's pods, listed first.
 var ErrNamespaceRequired = errors.New("kubernetes log backend requires a namespace")
 
-// maxFanOutStreams caps how many pod logs one query without a pod reads at
-// once. A plugin namespace holds a handful of pods; the cap keeps a large
-// namespace from turning one query into hundreds of kubelet requests. Past
-// it, the pods the listing returns last are left out without notice: the
-// API has no way to report a partial read yet.
+// maxFanOutStreams caps how many pod and container logs a query or tail
+// without a pod reads in total. A plugin namespace holds a handful of pods;
+// the cap keeps a large namespace from turning one query into hundreds of
+// kubelet requests. Past it, the pods the listing returns last are left out
+// without notice: the API has no way to report a partial read yet.
 const maxFanOutStreams = 20
 
 // defaultRelistInterval is how often a tail across a namespace lists its pods
@@ -39,9 +39,9 @@ const defaultRelistInterval = 10 * time.Second
 // or session cookie) so the proxy can authorise the request and inject the
 // per-user ServiceAccount token.
 //
-// This backend is narrower than Loki: it needs a namespace, reads every pod in
-// it one request each when no pod is given, and only sees logs the node still
-// retains.
+// This backend is narrower than Loki: it needs a namespace, and when no pod is
+// given reads the namespace's pods one request per container, up to
+// maxFanOutStreams in all. It only sees logs the node still retains.
 type KubeClient struct {
 	proxyURL string      // base kube-api-proxy URL (e.g. http://kube-api-proxy:8081)
 	auth     http.Header // caller's auth headers (Authorization and/or Cookie), forwarded verbatim
