@@ -14,4 +14,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	registerRPCHandlers(mux, &dcimauthn.Server{})
 
 	connectlimittest.AssertRejectsGzipBomb(t, mux, dcimauthnv1connect.AuthnServiceGetUserInfoProcedure)
+	connectlimittest.AssertEveryProcedureRejectsGzipBomb(t, mux)
 }

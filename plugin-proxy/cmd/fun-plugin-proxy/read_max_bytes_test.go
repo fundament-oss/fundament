@@ -16,4 +16,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	registerRPCHandlers(mux, service.New(logger, nil), logger)
 
 	connectlimittest.AssertRejectsGzipBomb(t, mux, pluginproxyv1connect.PluginInstallationServiceGetInstallationManifestProcedure)
+	connectlimittest.AssertEveryProcedureRejectsGzipBomb(t, mux)
 }

@@ -14,5 +14,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	srv := fleet.New(slog.New(slog.DiscardHandler), fleet.Config{JWTSecret: []byte("secret")}, &psqldb.DB{})
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), fleetv1connect.FleetServiceGetFleetSummaryProcedure)
-	connectlimittest.AssertReflectionRejectsGzipBomb(t, srv.Handler())
+	connectlimittest.AssertEveryProcedureRejectsGzipBomb(t, srv.Handler())
 }

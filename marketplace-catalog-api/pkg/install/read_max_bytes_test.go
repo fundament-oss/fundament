@@ -14,4 +14,5 @@ func TestRejectsGzipBombBeforeAuth(t *testing.T) {
 	srv := install.New(slog.New(slog.DiscardHandler), install.Config{JWTSecret: []byte("secret")}, &psqldb.DB{})
 
 	connectlimittest.AssertRejectsGzipBomb(t, srv.Handler(), installv1connect.InstallServiceListPluginsProcedure)
+	connectlimittest.AssertEveryProcedureRejectsGzipBomb(t, srv.Handler())
 }
