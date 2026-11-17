@@ -342,12 +342,20 @@
                       <!-- The role is part of the invitation, so it can still be
                            corrected: without this a wrong one costs a cancel, a
                            second invite and a second mail to the same person. -->
+                      <!-- The organization viewer role is temporarily
+                           disabled: an admin cannot be made viewer, so the
+                           item stays visible but switched off. Remove the
+                           disabled and details bindings to bring it back. -->
                       <nldd-menu-item
                         icon="user-admin"
                         [attr.text]="
                           member.permission === 'admin'
                             ? 'Switch to organization viewer'
                             : 'Switch to organization admin'
+                        "
+                        [attr.disabled]="member.permission === 'admin' ? '' : null"
+                        [attr.details]="
+                          member.permission === 'admin' ? 'Temporarily unavailable' : null
                         "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
@@ -398,12 +406,20 @@
                     <nldd-menu slot="popup">
                       <!-- Names the result, not the form: one click instead of
                            a sheet holding a single radio group. -->
+                      <!-- The organization viewer role is temporarily
+                           disabled: an admin cannot be made viewer, so the
+                           item stays visible but switched off. Remove the
+                           disabled and details bindings to bring it back. -->
                       <nldd-menu-item
                         icon="user-admin"
                         [attr.text]="
                           member.permission === 'admin'
                             ? 'Make organization viewer'
                             : 'Make organization admin'
+                        "
+                        [attr.disabled]="member.permission === 'admin' ? '' : null"
+                        [attr.details]="
+                          member.permission === 'admin' ? 'Temporarily unavailable' : null
                         "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>

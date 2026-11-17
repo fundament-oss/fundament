@@ -367,6 +367,9 @@ export default class OrganizationMembersComponent implements OnInit {
    *  the menu flips it directly instead of opening a sheet to hold one radio
    *  group. Reversible in one click, so no confirmation. */
   async setPermission(member: OrganizationMember) {
+    // The organization viewer role is temporarily disabled, so an admin stays
+    // an admin. Remove this guard to bring the viewer role back.
+    if (member.permission === 'admin') return;
     const permission = member.permission === 'admin' ? 'viewer' : 'admin';
     // An invitation is a member record without a name yet, and nobody is
     // anything until they accept: "will be admin", not "is admin".

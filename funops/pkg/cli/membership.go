@@ -31,7 +31,11 @@ type OrganizationMemberCmd struct {
 type OrganizationMemberAddCmd struct {
 	Organization string `arg:"" help:"Organization name." required:""`
 	User         string `arg:"" help:"User ID or email address of an existing user." required:""`
-	Permission   string `help:"Permission in the organization: viewer or admin. A new membership defaults to viewer; a pending invitation keeps the permission it was sent with unless one is given." enum:",viewer,admin" default:""`
+	// The viewer role is temporarily disabled: the flag only takes admin, and a
+	// new membership defaults to admin. To bring viewer back, restore:
+	//   Permission string `help:"Permission in the organization: viewer or admin. A new membership defaults to viewer; a pending invitation keeps the permission it was sent with unless one is given." enum:",viewer,admin" default:""`
+	// and the viewer default in Run.
+	Permission string `help:"Permission in the organization: admin (viewer is temporarily disabled). A new membership defaults to admin; a pending invitation keeps the permission it was sent with unless one is given." enum:",admin" default:""`
 	CreateUser   bool   `help:"Register the email address as a new user first, for someone who has not signed in yet. The membership is then waiting when they do."`
 }
 
@@ -71,9 +75,11 @@ func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 		return errors.New("--create-user registers an email address; pass the address rather than a user ID")
 	}
 
-	// Unset means: viewer for a new membership, and hands off a pending
+	// Unset means: admin for a new membership, and hands off a pending
 	// invitation's own permission rather than overwriting it.
-	permission := dbconst.OrganizationsUserPermission_Viewer
+	// The viewer role is temporarily disabled; the default used to be:
+	// permission := dbconst.OrganizationsUserPermission_Viewer
+	permission := dbconst.OrganizationsUserPermission_Admin
 	if c.Permission != "" {
 		permission, err = parsePermission(c.Permission)
 		if err != nil {
