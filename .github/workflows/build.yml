@@ -8,7 +8,8 @@
 #
 #   build              service images → ghcr.io/<owner>/fundament/<name>
 #   build-plugins      plugin images  → ghcr.io/<owner>/fundament/<name>-plugin
-#   publish-chart      chart pinning build's digests → charts/ (master) or charts-pr/ (PR)
+#   publish-chart      charts pinning build's digests → charts/ (master) or charts-pr/ (PR):
+#                      fundament, and gardener-extension-tenant-metrics for the seeds
 #   release            moves the rolling release fundament-latest to this build (merge to master)
 #   preview-label      adds the flux-preview label → flux-operator installs the PR's chart
 #   environment-ready  waits until the preview runs this commit
@@ -219,6 +220,11 @@ jobs:
           - image-name: openfsc-operator
             dockerfile: openfsc-operator/Dockerfile
             context: "."
+          # Runs on the Gardener seeds, not in the fundament chart: publish-chart
+          # ships it in a chart of its own.
+          - image-name: gardener-extension-tenant-metrics
+            dockerfile: gardener-extension-tenant-metrics/Dockerfile
+            context: "."
           - image-name: marketplace-catalog-api
             dockerfile: marketplace-catalog-api/Dockerfile
             context: "."
@@ -386,10 +392,32 @@ jobs:
           done
           mise exec -- yq '.images' charts/fundament/values.yaml
 
+      # Same version and revision as the fundament chart, so one build number
+      # names both. Gardener installs it on the seeds from an operator Extension.
+      - name: Stamp the gardener-extension-tenant-metrics chart
+        run: |
+          CHART=gardener-extension-tenant-metrics/chart
+          file=digests/gardener-extension-tenant-metrics
+          if [ ! -s "$file" ]; then
+            echo "no digest for gardener-extension-tenant-metrics" >&2
+            exit 1
+          fi
+          V="$CHART_VERSION" SHA="${{ github.sha }}" mise exec -- yq -i '
+            .version = strenv(V) |
+            .appVersion = strenv(V) |
+            .annotations."org.opencontainers.image.revision" = strenv(SHA) |
+            .annotations."org.opencontainers.image.source" = "https://github.com/fundament-oss/fundament"
+          ' "$CHART/Chart.yaml"
+          IMG="${IMAGE_PREFIX}/gardener-extension-tenant-metrics@$(cat "$file")" \
+            mise exec -- yq -i '.image = strenv(IMG)' "$CHART/values.yaml"
+          mise exec -- yq '.image' "$CHART/values.yaml"
+
       - name: Lint and package
         run: |
           mise exec -- helm lint charts/fundament
           mise exec -- helm package charts/fundament --destination dist
+          mise exec -- helm lint gardener-extension-tenant-metrics/chart
+          mise exec -- helm package gardener-extension-tenant-metrics/chart --destination dist
 
       - name: Verify the package
         run: |
@@ -401,11 +429,18 @@ jobs:
           fi
           mise exec -- helm show chart "$TGZ"
 
+          EXT="dist/gardener-extension-tenant-metrics-${CHART_VERSION}.tgz"
+          if ! mise exec -- helm show values "$EXT" | mise exec -- yq -r '.image' | grep -q '@sha256:'; then
+            echo "ERROR: the packaged extension chart's image is not a digest" >&2
+            exit 1
+          fi
+
       - name: Push
         run: |
           echo '${{ secrets.GITHUB_TOKEN }}' | mise exec -- helm registry login ghcr.io \
             --username '${{ github.actor }}' --password-stdin
           mise exec -- helm push "dist/fundament-${CHART_VERSION}.tgz" "oci://${CHART_REPO}"
+          mise exec -- helm push "dist/gardener-extension-tenant-metrics-${CHART_VERSION}.tgz" "oci://${CHART_REPO}"
 
   # The pre-release fundament-latest always describes the latest master build: its
   # chart version, commit and the digest of every image it pushed. release.json carries

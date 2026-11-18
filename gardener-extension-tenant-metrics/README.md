@@ -19,17 +19,36 @@ extension the console's per-namespace table is empty.
   Requests and limits are not available: they come from kube-state-metrics,
   which Gardener runs for `kube-system` only.
 
+## Build and publish
+
+`.github/workflows/build.yml` builds the image with the other services, as
+`ghcr.io/fundament-oss/fundament/gardener-extension-tenant-metrics`. The
+`publish-chart` job packages `chart/` with that image pinned by digest and
+pushes it next to the fundament chart, with the same version:
+
+- master: `oci://ghcr.io/fundament-oss/fundament/charts/gardener-extension-tenant-metrics`,
+  version `0.1.0-master.<run>`
+- PR: `oci://ghcr.io/fundament-oss/fundament/charts-pr/gardener-extension-tenant-metrics`,
+  version `0.1.0-pr<number>.<run>`
+
 ## Install
 
-Apply to the virtual garden, together:
+With gardener-operator, apply an `operator.gardener.cloud/v1alpha1`
+`Extension` named `fundament-tenant-metrics` to the runtime cluster. It points
+`.spec.deployment.extension.helm.ociRepository` at the published chart and
+declares the resource `kind: Extension`, `type: fundament-tenant-metrics`,
+`autoEnable: [shoot]`, `workerlessSupported: false`.
+
+Without gardener-operator, apply to the virtual garden, together:
 
 1. A `ControllerDeployment` named `fundament-tenant-metrics` that carries the
-   chart in `chart/`, with the value `image` set to the controller image.
+   chart, packaged from `chart/` with the value `image` set, or the published
+   one.
 2. `deploy/controller-registration.yaml`.
 
 Gardener refuses to reconcile shoots while a registered extension is not
 installed and healthy on the seed. Register it only with a working image, and
-never without the `ControllerDeployment`.
+never without its chart.
 
 ## Cost
 
