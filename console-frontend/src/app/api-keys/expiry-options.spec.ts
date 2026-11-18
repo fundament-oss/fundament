@@ -1,4 +1,13 @@
-import { defaultExpiry, expiryOptions, maximumLabel, parseDuration } from './expiry-options';
+import {
+  customExpiryMoment,
+  defaultExpiry,
+  durationUntil,
+  expiryOptions,
+  isoDate,
+  lastExpiryDate,
+  maximumLabel,
+  parseDuration,
+} from './expiry-options';
 
 const values = (maxExpiresIn: string | null) =>
   expiryOptions(maxExpiresIn).map((option) => option.value);
@@ -72,5 +81,49 @@ describe('maximumLabel', () => {
     expect(maximumLabel('8760h')).toBe('1 year');
     expect(maximumLabel('2400h')).toBe('100 days');
     expect(maximumLabel('1h30m')).toBe('1h30m');
+  });
+});
+
+describe('a custom expiry date', () => {
+  // Local time, as the calendar is: the tests hold in any time zone.
+  const now = new Date(2026, 10, 18, 14, 30, 0);
+
+  it('reads and writes local calendar dates', () => {
+    expect(isoDate(now)).toBe('2026-11-18');
+    expect(isoDate(new Date(2027, 0, 5))).toBe('2027-01-05');
+  });
+
+  it('can fall no later than the day the maximum runs out', () => {
+    expect(lastExpiryDate('8760h', now)).toBe('2027-11-18');
+    expect(lastExpiryDate('720h', now)).toBe('2026-12-18');
+    expect(lastExpiryDate('1h', now)).toBe('2026-11-18');
+  });
+
+  it('has no last day when there is no maximum, or none that can be read', () => {
+    expect(lastExpiryDate('', now)).toBeNull();
+    expect(lastExpiryDate(null, now)).toBeNull();
+    expect(lastExpiryDate('7d', now)).toBeNull();
+  });
+
+  it('lasts until the end of the picked day', () => {
+    expect(customExpiryMoment('2026-12-01', '8760h', now)).toEqual(
+      new Date(2026, 11, 1, 23, 59, 59),
+    );
+    expect(customExpiryMoment('2030-01-01', '', now)).toEqual(new Date(2030, 0, 1, 23, 59, 59));
+  });
+
+  it('stops at the maximum when that runs out during the picked day', () => {
+    expect(customExpiryMoment('2027-11-18', '8760h', now)).toEqual(
+      new Date(now.getTime() + 8760 * 3_600_000),
+    );
+  });
+
+  it('is sent as whole seconds from now, and not at all once it has passed', () => {
+    expect(durationUntil(new Date(2026, 10, 18, 23, 59, 59), now)).toBe(
+      `${9 * 3600 + 29 * 60 + 59}s`,
+    );
+    expect(durationUntil(new Date(now.getTime() + 8760 * 3_600_000), now)).toBe(`${8760 * 3600}s`);
+    expect(durationUntil(now, now)).toBeNull();
+    expect(durationUntil(new Date(2026, 10, 17, 23, 59, 59), now)).toBeNull();
   });
 });
