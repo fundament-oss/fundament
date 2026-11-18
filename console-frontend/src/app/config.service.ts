@@ -21,7 +21,7 @@ export interface AppConfiguration {
   consoleDemoUrl?: string;
   /**
    * Public URL of the plugin marketplace. Optional: the marketplace is not
-   * deployed in every environment, and the plugin sheet's "View full details"
+   * deployed in every environment, and the plugin sheet's "View on Marketplace"
    * button falls back to the console's own plugin page when this is empty.
    */
   marketplaceUrl?: string;

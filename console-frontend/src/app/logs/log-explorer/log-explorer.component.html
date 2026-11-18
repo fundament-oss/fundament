@@ -336,9 +336,9 @@
     >
       @if (isLiveMode()) {
         <p>
-          Plugin logs come straight from one pod, with your own cluster access. Pick a plugin and a
-          pod to read them. History goes back as far as the node kept it, and the search covers the
-          lines that are loaded, not the whole cluster.
+          Plugin logs come straight from the plugin's pods, with your own cluster access. Pick a
+          plugin to read them, and a pod to narrow them down. History goes back as far as the node
+          kept it, and the search covers the lines that are loaded, not the whole cluster.
         </p>
       } @else {
         <p>
@@ -367,7 +367,7 @@
         slot="header"
         variant="warning"
         text="Loki is not configured, so these are Kubernetes pod logs"
-        supporting-text="Pick a namespace and a pod to read them. Searching across pods and older history need Loki."
+        supporting-text="Pick a namespace to read its pods. Searching the whole cluster and older history need Loki."
       ></nldd-banner>
     }
     @if (loadError()) {
@@ -455,16 +455,14 @@
       <nldd-combo-box
         accessible-label="Pod"
         [attr.value]="selectedPod()"
-        [attr.placeholder]="isLiveMode() ? 'Select a pod' : 'All pods'"
+        placeholder="All pods"
         (change)="onPodChange($any($event).target.value)"
       >
         <nldd-menu>
-          @if (!isLiveMode()) {
-            <nldd-menu-item
-              value=""
-              text="All pods"
-            ></nldd-menu-item>
-          }
+          <nldd-menu-item
+            value=""
+            text="All pods"
+          ></nldd-menu-item>
           @for (pod of pods(); track pod) {
             <nldd-menu-item
               [attr.value]="pod"
@@ -739,13 +737,21 @@
             </nldd-token>
             <nldd-token
               control="menu"
-              [attr.text]="selectedPod() ? 'Pod: ' + selectedPod() : 'Pod'"
+              [attr.text]="'Pod: ' + podLabel()"
               menu-text="Choose a pod"
             >
               <nldd-menu
                 slot="menu"
                 accessible-label="Pod"
               >
+                @if (pods().length > 0) {
+                  <nldd-menu-item
+                    type="radio"
+                    text="All pods"
+                    [attr.selected]="selectedPod() === '' ? '' : null"
+                    (click)="onPodChange('')"
+                  ></nldd-menu-item>
+                }
                 @for (pod of pods(); track pod) {
                   <nldd-menu-item
                     type="radio"

@@ -4,7 +4,6 @@ import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT, MEMBER } from '../connect/tokens';
 import OrganizationContextService from './organization-context.service';
-import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
@@ -70,12 +69,6 @@ export class OrganizationDataService {
    *  lists them: a child route, so that page is never unmounted and would go on
    *  showing the pools it fetched when it was opened. */
   readonly nodePoolsChanged = signal(0);
-
-  /** TEMPORARY, dev only: roles have no API, so a fresh grant waits here for the
-   *  member id the list assigns. The sheet that hands it out belongs to the
-   *  shell, so it cannot park it on the list itself. Delete with the mock
-   *  bindings. */
-  readonly pendingProjectGrant = signal<{ userId: string; bindings: RoleBinding[] } | null>(null);
 
   private organizationContext = inject(OrganizationContextService);
 

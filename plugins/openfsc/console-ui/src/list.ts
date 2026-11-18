@@ -30,11 +30,13 @@ loadNlddDesignSystem().catch((err) => {
 
 try {
   await loadSdk();
-  await window.fundament.init;
+  const ctx = await window.fundament.init;
   const { items } = await window.fundament.k8s.list<FSCInstallation>({
     group: 'openfsc.fundament.io',
     version: 'v1',
     resource: 'fscinstallations',
+    // Set on project pages; without it the list is cluster-wide, still limited by RBAC.
+    projectId: ctx.projectId,
   });
   if (!items || items.length === 0) {
     tbody.innerHTML = emptyRow(6, 'No FSC installations found.');

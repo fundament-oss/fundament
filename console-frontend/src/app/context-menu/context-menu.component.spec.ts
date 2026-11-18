@@ -42,8 +42,8 @@ describe('ContextMenuComponent', () => {
     expect(items.map((row) => row.label)).toEqual(['Project overview', 'Members', 'Namespaces']);
   });
 
-  it('keeps Metrics in the organization menu', () => {
-    const items = itemsFor({ kind: 'organization' });
-    expect(items.find((row) => row.label === 'Metrics')?.path).toBe('/metrics');
+  it('keeps Metrics in the cluster menu', () => {
+    const items = itemsFor({ kind: 'cluster', clusterId: 'c-1' });
+    expect(items.find((row) => row.label === 'Metrics')?.path).toBe('/clusters/c-1/metrics');
   });
 });

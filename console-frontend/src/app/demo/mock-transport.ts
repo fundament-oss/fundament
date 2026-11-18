@@ -29,6 +29,7 @@ import {
   NamespaceService,
   ListClusterNamespacesResponseSchema,
   ListProjectNamespacesResponseSchema,
+  GetNamespaceByProjectAndNameResponseSchema,
   CreateNamespaceResponseSchema,
   DeleteNamespaceResponseSchema,
   NamespaceSchema,
@@ -367,6 +368,18 @@ export default function createDemoTransport(): Transport {
         return create(ListProjectNamespacesResponseSchema, {
           namespaces: fx.namespaces.filter((n) => n.projectId === req.projectId),
         });
+      },
+      getNamespaceByProjectAndName: async (req) => {
+        await delay();
+        const cluster = fx.clusterSummaries.find((c) => c.name === req.clusterName);
+        const project = fx.projects.find(
+          (p) => p.clusterId === cluster?.id && p.name === req.projectName,
+        );
+        const namespace = fx.namespaces.find(
+          (n) => n.projectId === project?.id && n.name === req.namespaceName,
+        );
+        if (!namespace) throw new ConnectError('namespace not found', Code.NotFound);
+        return create(GetNamespaceByProjectAndNameResponseSchema, { namespace });
       },
       createNamespace: async (req, ctx) => {
         await delay();

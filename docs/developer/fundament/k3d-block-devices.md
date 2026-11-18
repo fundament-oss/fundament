@@ -25,7 +25,7 @@ just storage-disks doctor          # check the kernel Docker runs on
 just storage-disks attach          # creates /dev/loop0p1 .. /dev/loop2p1
 ```
 
-Then verify the disks really work, independently of any plugin:
+Then verify the disks really work, independently of any plugin. The script calls `kubectl` and `helm` directly, with the local clusters' contexts that mise sets in the checkout ([Getting started](getting-started.md#run-the-platform)):
 
 ```bash
 ../deploy/k3d/rook-smoke.sh up     # upstream Rook chart + a minimal CephCluster

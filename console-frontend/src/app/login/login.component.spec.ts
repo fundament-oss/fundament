@@ -127,7 +127,7 @@ describe('LoginComponent', () => {
     const { ssoButtons, form, divider } = await render(fixture);
 
     expect(ssoButtons).toHaveLength(1);
-    expect(ssoButtons[0].getAttribute('text')).toBe('Log in with Pleio');
+    expect(ssoButtons[0].getAttribute('text')).toBe('Log in');
     expect(ssoButtons[0].getAttribute('appearance')).toBe('primary');
     // The page as it was opened, hand-off parameters and all, so the visitor
     // still ends up at the portal.

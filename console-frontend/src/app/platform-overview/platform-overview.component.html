@@ -5,21 +5,19 @@
   <nldd-simple-section>
     <nldd-title size="2">
       <h1>Fundament platform</h1>
-      <!-- The way in for someone who has an account. Signing in is a page of
-           its own, so a link rather than a form here. -->
+      <!-- The way into the console for someone who has an account. The root
+           opens the console when signed in and sends to the login page when
+           not, so one link serves both. -->
       <nldd-button
         slot="end"
-        href="/login"
-        text="Sign in"
+        href="/"
+        text="Go to console"
         appearance="secondary"
       ></nldd-button>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
     <nldd-rich-text spacing="flat">
-      <p>
-        The organizations on Fundament that chose to be listed, with the clusters, projects and
-        namespaces they run.
-      </p>
+      <p>The organizations on Fundament, with the clusters, projects and namespaces they run.</p>
     </nldd-rich-text>
     <nldd-spacer size="24"></nldd-spacer>
     @if (unavailable()) {
@@ -68,7 +66,13 @@
           <nldd-container padding="16">
             <nldd-toolbar accessible-label="Organizations">
               <nldd-toolbar-item slot="start">
-                <nldd-rich-text spacing="flat">
+                <!-- No wrapping: the item is an inline-flex column, and Firefox
+                     sizes the text to its min-content width, which stacked it
+                     one character per line. -->
+                <nldd-rich-text
+                  spacing="flat"
+                  class="whitespace-nowrap"
+                >
                   <p>As of {{ asOf() }}</p>
                 </nldd-rich-text>
               </nldd-toolbar-item>
@@ -132,7 +136,7 @@
                 <nldd-inline-dialog
                   slot="empty"
                   text="No organization listed yet"
-                  supporting-text="Organizations appear here once they choose to be listed."
+                  supporting-text="Organizations appear here once they are created."
                 ></nldd-inline-dialog>
               } @else {
                 <nldd-inline-dialog

@@ -13,6 +13,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
@@ -84,8 +85,8 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB, authzClient *auth
 	// Unauthenticated, as on every other surface here: the descriptors are
 	// public and grpcurl carries no token.
 	reflector := grpcreflect.NewStaticReflector("registry.v1.PublicationService")
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	// Wider than the catalog's: this surface is authenticated, so the developer
 	// frontend sends credentials plus the organization header.

@@ -11,6 +11,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
@@ -40,12 +41,16 @@ import { type Category, type Preset } from '../../generated/marketplace/v1/commo
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
+  getInstallStatusDisplay,
   hasInvalidConfig,
+  installIssue,
   installPhase,
   isInstallInProgress,
   isInstallTerminating,
+  reportedStatusMessage,
 } from '../utils/plugin-install-status';
 import createInstallPoller from '../utils/install-poller';
+import sortByName from '../utils/sort-by-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
@@ -58,6 +63,7 @@ import PluginInstallWatchService, {
 import injectBrowsePluginsUrl from './browse-plugins-url';
 
 import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/badge';
 import '@nldd/design-system/button';
 import '@nldd/design-system/button-group';
 import '@nldd/design-system/card';
@@ -154,6 +160,38 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   count: number;
 }
 
+/** How one cluster's installation of a plugin is doing, for the details sheet. */
+export interface InstallStatusRow {
+  clusterId: string;
+  clusterName: string;
+  label: string;
+  badgeColor: string;
+  // The pinned version; '' while a new install has not recorded one.
+  version: string;
+  // What the installation reports, quoted; '' when it says nothing.
+  message: string;
+  // A failure caused by configuration the controller rejected: retrying
+  // replays it, so the way out is uninstalling and installing again.
+  configInvalid: boolean;
+}
+
+/**
+ * Which page this component is serving, from the route's data:
+ * - 'cluster': the plugins of one cluster (`clusters/:id/plugins`). Every
+ *   install and uninstall acts on that cluster.
+ * - 'install': one plugin, to install on any of the organization's clusters
+ *   (`plugins/:pluginId/install`), as a full page. The marketplace's
+ *   "Install plugin" button lands here.
+ */
+export type PluginsView = 'cluster' | 'install';
+
+/** The page's title: what it is for, and on a cluster whether it lists the
+ *  catalog or only what is installed (the marketplace does the browsing). */
+function pageTitleFor(view: PluginsView, installedOnly: boolean): string {
+  if (view === 'install') return 'Install plugin';
+  return installedOnly ? 'Installed plugins' : 'Plugins';
+}
+
 /** The "official" marker is a tag on the plugin; on a card it reads better as a
  *  property of the name than as one entry in a tag row. */
 function isOfficialPlugin(plugin: { tags: string[] }): boolean {
@@ -169,6 +207,26 @@ function isOfficialPlugin(plugin: { tags: string[] }): boolean {
 })
 export default class PluginsComponent implements OnInit, OnDestroy {
   protected pageNav = inject(PageNavService);
+
+  // Optional so the component can be built without a router in tests; without
+  // one it shows every cluster, the way the organization page used to.
+  private route = inject(ActivatedRoute, { optional: true });
+
+  /** See PluginsView. */
+  readonly view: PluginsView =
+    (this.route?.snapshot.data['pluginsView'] as PluginsView | undefined) ?? 'cluster';
+
+  /** The cluster this page is about; null on the install page, which offers
+   *  every cluster. */
+  readonly scopedClusterId: string | null =
+    this.view === 'cluster' ? (this.route?.snapshot.paramMap.get('id') ?? null) : null;
+
+  /** The plugin the install page is for. */
+  private readonly installPluginId: string | null =
+    this.view === 'install' ? (this.route?.snapshot.paramMap.get('pluginId') ?? null) : null;
+
+  /** Set when the install page's plugin is not in the catalog. */
+  readonly installPluginMissing = signal(false);
 
   private titleService = inject(TitleService);
 
@@ -235,7 +293,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
    *  the marketplace. */
   protected readonly installedOnly = !!this.browsePluginsUrl;
 
-  protected readonly pageTitle = this.installedOnly ? 'Installed plugins' : 'Plugins';
+  protected readonly pageTitle = pageTitleFor(this.view, this.installedOnly);
 
   private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
 
@@ -405,12 +463,24 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         };
       });
 
-      // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
-      this.clusters.set(this.organizationDataService.clusterSummaries());
+      // The shell's cluster list when it is in, rather than a second
+      // ListClusters. A page opened straight from a link (the marketplace's
+      // "Install plugin" opens a new tab) can get here first, and the empty
+      // list read then meant "No clusters found" for good.
+      const clusters = this.organizationDataService.clustersLoaded()
+        ? this.organizationDataService.clusterSummaries()
+        : sortByName((await firstValueFrom(this.clusterClient.listClusters({}))).clusters);
+      this.clusters.set(this.inScope(clusters));
 
       await this.loadInstalls();
 
+      // Left while loading (to another cluster's plugins, say, which mounts a
+      // new page): starting the polls now would keep them going for good.
+      if (this.destroyed) return;
+
       this.isLoading.set(false);
+
+      this.openFromRoute();
 
       // Poll for cluster readiness so the install modal reflects status changes
       // (e.g. a provisioning cluster becoming RUNNING) without a page refresh.
@@ -427,7 +497,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Set once the page is gone, so loads that finish later start no timers.
+  private destroyed = false;
+
   ngOnDestroy() {
+    this.destroyed = true;
     this.stopPolling();
     document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
   }
@@ -441,9 +515,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   private async refreshClusters() {
     try {
       const response = await firstValueFrom(this.clusterClient.listClusters({}));
-      this.clusters.set(response.clusters);
+      if (this.destroyed) return;
+      const clusters = this.inScope(sortByName(response.clusters));
+      this.clusters.set(clusters);
 
-      const needsPolling = response.clusters.some((c) => shouldPollStatus(c.status));
+      const needsPolling = clusters.some((c) => shouldPollStatus(c.status));
       if (needsPolling && !this.pollingTimer) {
         this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
       } else if (!needsPolling) {
@@ -452,6 +528,35 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     } catch {
       // Ignore errors from background polling.
     }
+  }
+
+  /** The clusters this page acts on: the one it is about, or all of them. */
+  private inScope(clusters: ClusterSummary[]): ClusterSummary[] {
+    const { scopedClusterId } = this;
+    return scopedClusterId ? clusters.filter((c) => c.id === scopedClusterId) : clusters;
+  }
+
+  /**
+   * What the address asks for once the catalog is in: the install page opens
+   * its plugin's install list, and a cluster page opened with ?plugin=<id>
+   * (from a plugin card on the cluster overview, or after installing) opens
+   * that plugin's details.
+   */
+  private openFromRoute(): void {
+    if (this.view === 'install') {
+      const plugin = this.plugins.find((p) => p.id === this.installPluginId);
+      if (!plugin) {
+        this.installPluginMissing.set(true);
+        return;
+      }
+      this.titleService.setTitle(`Install ${displayNameOf(plugin)}`);
+      this.onInstallPlugin(plugin);
+      return;
+    }
+    const pluginId = this.route?.snapshot.queryParamMap.get('plugin');
+    if (!pluginId) return;
+    const plugin = this.listedPlugins.find((p) => p.id === pluginId);
+    if (plugin) this.openPluginDetails(plugin);
   }
 
   private stopPolling() {
@@ -763,8 +868,31 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     ).length;
   }
 
-  get clusterCount(): number {
-    return this.clusters().length;
+  /** How each cluster's installation of the plugin is doing, for the details
+   *  sheet: on a cluster's own page, that one cluster. */
+  installStatusRows(organizationName: string, pluginName: string): InstallStatusRow[] {
+    return this.installs()
+      .filter(
+        (install) =>
+          install.organizationName === organizationName && install.pluginName === pluginName,
+      )
+      .map((install) => {
+        const issue = installIssue({
+          phase: install.phase,
+          ready: install.ready,
+          message: install.message,
+        });
+        const display = issue ?? getInstallStatusDisplay(install.phase);
+        return {
+          clusterId: install.clusterId,
+          clusterName: this.clusterName(install.clusterId),
+          label: display.label,
+          badgeColor: display.badgeColor,
+          version: install.version,
+          message: issue?.message ?? reportedStatusMessage(install.message),
+          configInvalid: install.configInvalid,
+        };
+      });
   }
 
   async onInstallPlugin(plugin: PluginWithPresets) {
@@ -787,7 +915,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   // The marketplace listing for a plugin, or '' when no marketplace is
-  // configured and the sheet has to fall back to the console's own plugin page.
+  // configured (the sheet then has nothing further to link to).
   // Both apps list the same appstore.plugins rows, so the id in the URL is the
   // same key on the other side.
   marketplacePluginUrl(plugin: PluginWithPresets): string {
@@ -818,6 +946,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   pluginStatusLabel(organizationName: string, pluginName: string): string {
     const count = this.installedClusterCount(organizationName, pluginName);
+    if (count > 0 && this.scopedClusterId) return 'Installed';
     if (count > 0) return `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
     // Nothing settled yet, but an install on its way: the sheet offers Manage
     // for it, so it must not read as not installed.
@@ -973,6 +1102,13 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
 
     this.startInstallPollingIfNeeded();
+
+    // From the install page, on to the cluster it went on, where its status
+    // can be followed in the plugin's details.
+    const installed = targets.find((_, i) => results[i].status === 'fulfilled');
+    if (this.view === 'install' && installed) {
+      this.pageNav.goTo(`/clusters/${installed}/plugins?plugin=${encodeURIComponent(plugin.id)}`);
+    }
   }
 
   async onUninstallFromCluster(clusterId: string): Promise<void> {

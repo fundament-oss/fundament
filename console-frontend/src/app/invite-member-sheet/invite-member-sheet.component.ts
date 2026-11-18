@@ -71,7 +71,9 @@ export default class InviteMemberSheetComponent {
 
   inviteSubmitted = signal(false);
 
-  invitePermission = signal('viewer');
+  // The organization viewer role is temporarily disabled, so admin is the
+  // default; it used to be 'viewer'.
+  invitePermission = signal('admin');
 
   inviteError = signal<string | null>(null);
 
@@ -84,7 +86,7 @@ export default class InviteMemberSheetComponent {
    *  clears the fields while the created step may still be showing them. */
   createdEmail = signal('');
 
-  createdPermission = signal('viewer');
+  createdPermission = signal('admin');
 
   organizationName = computed(() => this.organizationDataService.currentOrganizationDisplayName());
 
@@ -93,17 +95,29 @@ export default class InviteMemberSheetComponent {
    *  from role-label so this list, the tag on the row, the menu item that
    *  changes it and now the invitation email all say the same words. */
   permissionOptions = [
+    // The organization viewer role is temporarily disabled. It stays in the
+    // list, switched off, so it is clear the role exists but cannot be picked
+    // right now. To bring it back, drop `disabled`, restore the viewer
+    // description 'Can look at the organization, its clusters and its
+    // members.' and the admin one 'Can also create clusters, ...'.
     {
       value: 'viewer',
       label: organizationPermissionLabel('viewer'),
-      description: 'Can look at the organization, its clusters and its members.',
+      description: 'Temporarily unavailable.',
+      disabled: true,
     },
     {
       value: 'admin',
       label: organizationPermissionLabel('admin'),
-      description: 'Can also create clusters, invite members and reach every project.',
+      description: 'Can create clusters, invite members and reach every project.',
+      disabled: false,
     },
   ];
+
+  selectPermission(option: { value: string; disabled: boolean }) {
+    if (option.disabled) return;
+    this.invitePermission.set(option.value);
+  }
 
   constructor() {
     // The sheet outlives the page it was opened over, so opening is the moment
@@ -118,7 +132,7 @@ export default class InviteMemberSheetComponent {
   private resetForm() {
     this.inviteEmail.set('');
     this.inviteSubmitted.set(false);
-    this.invitePermission.set('viewer');
+    this.invitePermission.set('admin');
     this.inviteError.set(null);
     this.isSubmitting.set(false);
   }

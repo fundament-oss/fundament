@@ -60,7 +60,8 @@ just cluster-start
 just dev-hotreload
 ```
 
-- `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and the Envoy Gateway that serves every `*.fundament.localhost` host on port 8443, and switches the kubectl context to it.
+- `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and the Envoy Gateway that serves every `*.fundament.localhost` host on port 8443, and adds its context `k3d-fundament` to `.dev/kubeconfig` in the checkout. The `just` recipes use that file; `~/.kube/config` is left alone.
+- In the checkout, mise puts `.dev/kubeconfig` ahead of your own kubeconfig, so `kubectl`, `helm` and k9s use the local clusters; your other contexts stay reachable with `--context`, and a context switch is written to `.dev/kubeconfig` only. Outside the checkout, put it ahead of your own: `export KUBECONFIG=<checkout>/.dev/kubeconfig:$HOME/.kube/config`, or in PowerShell `$env:KUBECONFIG = "<checkout>\.dev\kubeconfig;$HOME\.kube\config"`.
 - `dev-hotreload` builds and deploys every service, then stays attached.
   - Edits to existing files are synced into the running containers.
   - Adding, moving or deleting a file rebuilds the image and redeploys.
@@ -69,6 +70,8 @@ just dev-hotreload
 - It runs in mock mode: clusters exist only in the database. For real clusters, see [Test environment](./test-env.md).
 
 The cluster runs on the docker network `k3d-fundament`, subnet `172.19.0.0/16`. If another network on your machine uses that range, creating it fails; set `FUNDAMENT_K3D_SUBNET` to a free subnet, e.g. `export FUNDAMENT_K3D_SUBNET=172.29.0.0/16` in your shell profile or `$env:FUNDAMENT_K3D_SUBNET = "172.29.0.0/16"` in `$PROFILE`, and run `just cluster-start` again. It is read whenever the network is created, also after `just cluster-delete`; an existing network keeps the subnet it has.
+
+A cluster created while its ports were published on every network address keeps them there: `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`, and the sandbox with `just plugins cluster-delete && just plugins cluster-create && just plugins deploy`. After recreating either, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` to connect them again.
 
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 
@@ -86,8 +89,8 @@ To check the production images (the Dockerfiles CI builds), run `just dev` once 
 If a host does not answer, check that the gateway is `PROGRAMMED` and every route is `Accepted`:
 
 ```shell
-kubectl -n gateway get gateway,certificate
-kubectl -n fundament get httproute
+kubectl --context k3d-fundament -n gateway get gateway,certificate
+kubectl --context k3d-fundament -n fundament get httproute
 ```
 
 See [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md) for the frontend commands.

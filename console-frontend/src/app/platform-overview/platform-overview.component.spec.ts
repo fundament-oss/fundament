@@ -67,7 +67,7 @@ describe('PlatformOverviewComponent', () => {
     expect(element.querySelector('nldd-table')).toBeNull();
   });
 
-  it('explains an empty list: organizations opt in', async () => {
+  it('explains an empty list', async () => {
     const empty = create(GetPlatformOverviewResponseSchema, { totals: {} });
     const fixture = await render({ getPlatformOverview: () => of(empty) });
 
@@ -104,10 +104,10 @@ describe('PlatformOverviewComponent', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('offers a way to sign in', async () => {
+  it('offers a way into the console', async () => {
     const fixture = await render({ getPlatformOverview: () => of(response) });
-    const signIn = fixture.nativeElement.querySelector('nldd-button[href="/login"]');
-    expect(signIn?.getAttribute('text')).toBe('Sign in');
+    const toConsole = fixture.nativeElement.querySelector('nldd-button[href="/"]');
+    expect(toConsole?.getAttribute('text')).toBe('Go to console');
   });
 
   it('says so when the overview cannot be loaded', async () => {

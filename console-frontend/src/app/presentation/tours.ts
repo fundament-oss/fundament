@@ -97,6 +97,9 @@ const searchMarketplaceDrive: DriveStep[] = [
   { set: 'nldd-search-field', value: 'cert', type: true },
 ];
 
+/** Plugins are a page of the cluster they run on; the tours install on production. */
+const PLUGINS_PAGE = '/clusters/cl-production/plugins';
+
 /** The marketplace listing every tour opens; the id is shared with the console fixtures. */
 const CERT_MANAGER_LISTING = '/plugins/pl-cert-manager';
 
@@ -321,18 +324,18 @@ const intro: Tour = {
       ),
       bullets: [
         loc(
-          'Wat al draait staat gemarkeerd als geïnstalleerd, met op hoeveel clusters.',
-          'Whatever is already running is marked as installed, and on how many clusters.',
+          'Plugins horen bij een cluster: wat er al draait, staat gemarkeerd als geïnstalleerd.',
+          'Plugins belong to a cluster: whatever already runs on it is marked as installed.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
     },
     {
       id: 'plugins-install',
       title: loc('Een plugin installeren', 'Installing a plugin'),
       lead: loc(
-        'Installeren doe je zelf, op de clusters die je kiest.',
-        'You install it yourself, on the clusters you pick.',
+        'Installeren doe je zelf, op het cluster dat je kiest.',
+        'You install it yourself, on the cluster you pick.',
       ),
       bullets: [
         loc(
@@ -340,7 +343,7 @@ const intro: Tour = {
           'Watch along: Cert Manager is being installed on a cluster here.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
       drive: installPluginDrive,
     },
     {
@@ -543,7 +546,7 @@ const marketplace: Tour = {
           'Watch along: Cert Manager is being installed on a cluster here.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
       drive: installPluginDrive,
     },
     {
@@ -757,7 +760,7 @@ const developer: Tour = {
           'No more standing up your own Postgres cluster just to get started.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
     },
     closing(
       'Je eigen project, je eigen namespace, en je deploy die vandaag draait.',
@@ -908,7 +911,7 @@ const platformEngineer: Tour = {
           'Watch along: Cert Manager is installed on a cluster. The status moves to Installed on its own.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
       drive: installPluginDrive,
     },
     closing(
@@ -1059,7 +1062,9 @@ const securityOfficer: Tour = {
           'For each plugin you can see where it came from before it lands on a cluster.',
         ),
       ],
-      route: '/plugins/pl-cert-manager',
+      // The console has no plugin page of its own any more: the provenance
+      // lives on the marketplace listing.
+      embed: CERT_MANAGER_LISTING,
     },
     closing(
       'Controle door grenzen vooraf, in plaats van goedkeuring per aanvraag.',
@@ -1206,7 +1211,7 @@ const policyMaker: Tour = {
           'Open source, and the provenance of every building block can be checked.',
         ),
       ],
-      route: '/plugins',
+      route: PLUGINS_PAGE,
     },
     closing(
       'Tempo voor je teams, overzicht voor jou, en geen leverancier die de deur dichthoudt.',

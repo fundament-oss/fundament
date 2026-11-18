@@ -38,29 +38,18 @@ access.
 A project admin sets the project's own **Defaults**, on **Project → General**,
 within whatever the cluster allows. See [Defaults](./namespaces.md#defaults).
 
-## Namespace role bindings
+## Namespaces
 
-**Project → Roles** is where finer-grained access will live: binding a user to
-Kubernetes roles within a specific namespace, so that someone can deploy in one
-namespace while only reading in another.
+Access has no namespace dimension. A namespace inherits its permissions
+wholesale from its project: a project admin can view, edit and delete every
+namespace in the project, and a project viewer can view all of them. On the
+cluster the same split applies: organization admins get `cluster-admin`;
+project admins are bound to the built-in `admin` role and project viewers to
+the built-in `view` role in every namespace of their project. See
+[Cluster access](./clusters.md#what-the-kubeconfig-grants).
 
-:::note[Not yet in effect]
-The page is a preview. It lets you build bindings out of four roles (`deploy`,
-`view-pods`, `view-logs` and `manage-services`), but nothing is stored or
-enforced yet, and the list of roles is not final.
-:::
-
-What is enforced today has no namespace dimension. A namespace inherits its
-permissions wholesale from its project: a project admin can view, edit and
-delete every namespace in the project, and a project viewer can view all of
-them. On the cluster the same split applies: organization admins get
-`cluster-admin`; project admins are bound to the built-in `admin` role and
-project viewers to the built-in `view` role in every namespace of their
-project. See [Cluster access](./clusters.md#what-the-kubeconfig-grants).
-
-Bindings that differ per namespace within a project are recorded as future
-work in FUN-7, including the option of matching namespaces by pattern (for
-example `staging-*`) rather than one binding at a time.
+There is no way to give someone access to a single namespace. If workloads
+need to be separated by who can reach them, put them in separate projects.
 
 ## Authorization model
 

@@ -17,6 +17,7 @@ export interface InitContext {
   view?: 'list' | 'detail' | 'create';
   resource?: ResourceContext;
   namespaces?: string[];
+  projectId?: string;
 }
 
 export interface K8sRef {
@@ -24,6 +25,7 @@ export interface K8sRef {
   version: string;
   resource: string;
   namespace?: string;
+  projectId?: string;
 }
 
 export interface K8sGetRef extends K8sRef {

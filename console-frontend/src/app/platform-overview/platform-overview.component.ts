@@ -59,8 +59,10 @@ export function tilesFor(totals: PlatformTotals | undefined): Tile[] {
 }
 
 /**
- * The public platform overview (FUN-23): every organization on Fundament that
- * chose to be listed, with how many clusters, projects and namespaces it runs.
+ * The public platform overview (FUN-23): every organization on Fundament except
+ * the system organization, with how many clusters, projects and namespaces it
+ * runs. Until the fieldlab is over nobody has to opt in; opting in comes back
+ * after it.
  * Anyone may read it, signed in or not, so it renders without the console's
  * shell and names nothing inside an organization. An environment that does
  * not run the public platform API has no overview, and the page says so

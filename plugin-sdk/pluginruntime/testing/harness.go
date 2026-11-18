@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/observability"
@@ -128,7 +129,7 @@ func RunInProcess(plugin pluginruntime.Plugin) (*InProcessPlugin, error) {
 		func() pluginruntime.PluginStatus { return h.CurrentStatus() },
 		uninstallFn,
 	)
-	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)
+	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler, connectlimit.ReadMaxBytes())
 	mux.Handle(path, rpcHandler)
 
 	httpServer := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}

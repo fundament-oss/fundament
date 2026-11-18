@@ -8,6 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { INSTALL } from '../../connect/tokens';
 import { ConfigSchemaEntry } from '../../generated/catalog/v1/catalog_pb';
 import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
@@ -95,7 +96,7 @@ function showsInstalledVersion(cluster: Cluster): boolean {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [SheetSyncDirective, PluginConfigFormComponent],
+  imports: [NgTemplateOutlet, SheetSyncDirective, PluginConfigFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -124,6 +125,10 @@ export default class InstallPluginModalComponent {
   versionsError = input(false);
 
   show = input(false);
+
+  /** 'sheet' slides in over the page; 'page' renders the same content inline,
+   *  for the full-page install screen, which has its own header and no close. */
+  layout = input<'sheet' | 'page'>('sheet');
 
   closeModal = output<void>();
 

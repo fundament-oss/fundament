@@ -112,8 +112,6 @@ export default class ContextMenuComponent {
               ? this.organizationData.clusterSummaries().length
               : null,
           }),
-          item('/plugins', 'plugin', 'Plugins'),
-          item('/metrics', 'analytics', 'Metrics', { metrics: true }),
           item('/logs', 'bullet-list', 'Logs'),
           item('/quotas', 'score-meter', 'Quotas'),
         ];
@@ -131,6 +129,8 @@ export default class ContextMenuComponent {
         return [
           item(`${base}/general`, 'kubernetes', 'Cluster overview'),
           item(`${base}/projects`, 'folder', 'Projects', { count: projectCount }),
+          item(`${base}/plugins`, 'plugin', 'Plugins'),
+          item(`${base}/metrics`, 'analytics', 'Metrics', { metrics: true }),
         ];
       }
       case 'project': {

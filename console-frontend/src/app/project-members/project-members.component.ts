@@ -16,14 +16,12 @@ import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import PageNavService from '../page-nav.service';
 import { OverlayService } from '../overlay.service';
-import { PROJECT, NAMESPACE } from '../../connect/tokens';
+import { PROJECT } from '../../connect/tokens';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import { NotificationService } from '../notification.service';
 import { formatTimeAgo } from '../utils/date-format';
 import { projectRoleLabel } from '../utils/role-label';
-import { mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
-import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import opensElsewhere from '../opens-elsewhere';
@@ -80,23 +78,6 @@ const stringToRole = (s: string): ProjectMemberRole => {
 const formatMemberDate = (member: ProjectMember): string =>
   formatTimeAgo(member.created ? timestampDate(member.created) : undefined);
 
-/** Which namespaces this member has a role in. One of them is worth naming: the
- *  name says more than the number does. Beyond that it is a count, and the sheet
- *  shows which. */
-const namespaceSummary = (memberId: string, namespaces: string[]): string => {
-  const bindings = mockBindingsFor(memberId, namespaces);
-  if (bindings.some((binding) => binding.namespace === ALL_NAMESPACES)) return 'All namespaces';
-  if (bindings.length === 1) return bindings[0].namespace;
-  return `${bindings.length} namespaces`;
-};
-
-/** The roles under that summary, but only while it names one thing: across
- *  several namespaces the roles differ per namespace and the sheet shows them. */
-const namespaceRoles = (memberId: string, namespaces: string[]): string | null => {
-  const bindings = mockBindingsFor(memberId, namespaces);
-  return bindings.length === 1 ? bindings[0].roles.join(', ') : null;
-};
-
 /** A locked row: the project role equals the organization role and the member is
  *  an admin there, so this page cannot change it. */
 const isLocked = (view: ProjectMemberView): boolean =>
@@ -143,8 +124,6 @@ export default class ProjectMembersComponent implements OnInit {
   private projectClient = inject(PROJECT);
 
   private idempotency = createIdempotencyRef();
-
-  private namespaceClient = inject(NAMESPACE);
 
   private notificationService = inject(NotificationService);
 
@@ -199,7 +178,6 @@ export default class ProjectMembersComponent implements OnInit {
     const projectId = this.route.snapshot.params['id'];
     this.projectId.set(projectId);
     this.loadMembers();
-    this.loadNamespaces();
   }
 
   /** What membersChanged stood at when this list was built. An effect runs once
@@ -215,18 +193,6 @@ export default class ProjectMembersComponent implements OnInit {
     this.seenMembersChanged = changed;
     if (this.projectId()) this.loadMembers();
   });
-
-  /** Only for the namespace count on a row; the sheet has the detail. */
-  async loadNamespaces() {
-    try {
-      const response = await firstValueFrom(
-        this.namespaceClient.listProjectNamespaces({ projectId: this.projectId() }),
-      );
-      this.projectNamespaces.set(response.namespaces.map((namespace) => namespace.name));
-    } catch {
-      this.projectNamespaces.set([]);
-    }
-  }
 
   async loadMembers() {
     this.isLoading.set(true);
@@ -260,13 +226,6 @@ export default class ProjectMembersComponent implements OnInit {
         return { member, source: 'project', orgPermission: null };
       });
       this.memberViews.set(views);
-
-      const pending = this.organizationData.pendingProjectGrant();
-      const granted = pending && views.find((view) => view.member.userId === pending.userId);
-      if (pending && granted) {
-        setMockBindings(granted.member.id, pending.bindings);
-        this.organizationData.pendingProjectGrant.set(null);
-      }
 
       // Available users for "add member": org members not yet in project
       const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
@@ -311,14 +270,6 @@ export default class ProjectMembersComponent implements OnInit {
     }
     if (next) this.actionError.set({ ...next, attempts: failed.attempts + 1 });
   }
-
-  projectNamespaces = signal<string[]>([]);
-
-  namespaceSummary = (memberId: string): string =>
-    namespaceSummary(memberId, this.projectNamespaces());
-
-  namespaceRoles = (memberId: string): string | null =>
-    namespaceRoles(memberId, this.projectNamespaces());
 
   /** Routes client-side while leaving the row a real link, so middle-click and
    *  "open in new tab" keep working. */

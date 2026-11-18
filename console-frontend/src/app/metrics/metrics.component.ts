@@ -11,8 +11,9 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import {
   Chart,
   ChartConfiguration,
@@ -26,18 +27,14 @@ import { TitleService } from '../title.service';
 import { formatUsageValue, getUsagePercentage } from '../utils/usage';
 import { alignToRange } from '../utils/time-series';
 import { downloadCsv, slugify } from '../utils/csv';
-import { CLUSTER, METRICS } from '../../connect/tokens';
+import { METRICS } from '../../connect/tokens';
+import { OrganizationDataService } from '../organization-data.service';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
 import datePickerTranslations from '../utils/nldd-translations';
 import { ConfigService } from '../config.service';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import {
-  ListClustersRequestSchema,
-  type ListClustersResponse_ClusterSummary,
-} from '../../generated/v1/cluster_pb';
-import {
-  StreamOrgWorkloadMetricsRequestSchema,
   StreamClusterWorkloadMetricsRequestSchema,
   type StreamWorkloadMetricsResponse,
 } from '../../generated/v1/metrics_pb';
@@ -69,11 +66,6 @@ import '@nldd/design-system/top-title-bar';
 
 Chart.register(...registerables, ZoomPlugin);
 
-interface ClusterOption {
-  id: string;
-  name: string;
-}
-
 interface ClusterUsageData {
   cpu: { used: number; total: number; unit: string };
   memory: { used: number; total: number; unit: string };
@@ -85,17 +77,6 @@ interface NodeUsageData {
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
   pods: { used: number; total: number };
-}
-
-interface ClusterSummaryData {
-  id: string;
-  name: string;
-  cpu: { used: number; total: number };
-  memory: { used: number; total: number };
-  pods: { used: number; total: number };
-  // The backend could not reach this cluster's Prometheus (provisioning,
-  // hibernated, ingress down). Its zeros are placeholders, not measurements.
-  unavailable: boolean;
 }
 
 export type TimeRangePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -135,8 +116,8 @@ function usageText(used: number, total: number, unit: string): string {
   return `${formatUsageValue(used)} / ${formatUsageValue(total)}${suffix} (${getUsagePercentage(used, total)}%)`;
 }
 
-/** The same three bars as the totals, for one cluster or one node. */
-const usageBars = (entry: ClusterSummaryData | NodeUsageData) =>
+/** The same three bars as the totals, for one node. */
+const usageBars = (entry: NodeUsageData) =>
   [
     { label: 'CPU', usage: entry.cpu, unit: 'cores' },
     { label: 'Memory', usage: entry.memory, unit: 'GiB' },
@@ -348,7 +329,9 @@ function closeCustomRange(): void {
 export default class MetricsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
-  private clusterClient = inject(CLUSTER);
+  private route = inject(ActivatedRoute);
+
+  private organizationData = inject(OrganizationDataService);
 
   private metricsClient = inject(METRICS);
 
@@ -384,6 +367,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private chartsReady = false;
 
+  /** The cluster of `clusters/:id/metrics`. The organization-wide view moved
+   *  into each cluster: one cluster's figures are the ones you act on. */
   selectedClusterId = signal('');
 
   // Default to 1h: young clusters have little history, and the longer ranges
@@ -422,8 +407,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   readonly datePickerTranslations = datePickerTranslations;
 
-  clusters = signal<ClusterOption[]>([]);
-
   isLoading = signal(false);
 
   /** Loading that has lasted long enough to be worth a spinner. Under a second
@@ -443,10 +426,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   customRange = signal<{ start: string; end: string } | null>(null);
 
   errorMessage = signal<string | null>(null);
-
-  orgTotals = signal<ClusterUsageData | null>(null);
-
-  clusterSummaries = signal<ClusterSummaryData[]>([]);
 
   clusterTotals = signal<ClusterUsageData | null>(null);
 
@@ -476,7 +455,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.loadClusters();
+    this.selectedClusterId.set(this.route.snapshot.params['id']);
     this.startStream();
   }
 
@@ -485,9 +464,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.destroyCharts();
   }
 
-  currentTotals = computed<ClusterUsageData | null>(() =>
-    this.selectedClusterId() ? this.clusterTotals() : this.orgTotals(),
-  );
+  currentTotals = computed<ClusterUsageData | null>(() => this.clusterTotals());
 
   get hasCpuData(): boolean {
     return hasMeasurement(this.cpuSeriesData);
@@ -558,23 +535,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }));
   });
 
-  /** What the filter buttons say while their menu is closed. */
-  clusterLabel = computed(() => {
-    const id = this.selectedClusterId();
-    return this.clusters().find((cluster) => cluster.id === id)?.name ?? 'All clusters';
-  });
-
-  /** Picking from the menu goes through the same path the select used. */
-  selectCluster(id: string): void {
-    this.selectedClusterId.set(id);
-    this.onClusterChange();
-  }
-
   /** Nothing has arrived yet, so there is nothing to hand over. */
-  canExport = computed(
-    () =>
-      !!this.currentTotals() || this.clusterSummaries().length > 0 || this.nodeUsage().length > 0,
-  );
+  canExport = computed(() => !!this.currentTotals() || this.nodeUsage().length > 0);
 
   /** What the file is called: the filter it was taken under and the period it
    *  covers, so two downloads from two views do not land on the same name. */
@@ -586,16 +548,17 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   /** The filter the export was taken under, named the way the toolbar names it. */
   private exportScope(): string {
-    return this.clusterLabel();
+    const clusterId = this.selectedClusterId();
+    return this.organizationData.getClusterById(clusterId)?.cluster.name ?? `Cluster ${clusterId}`;
   }
 
   /**
    * Everything on screen, as one file.
    *
-   * The page holds three different shapes of number — totals, a card per
-   * cluster or node, and five series over time — and a CSV holds one shape. So
-   * every figure becomes its own row and says which section it came from, which
-   * is the layout a pivot table wants anyway.
+   * The page holds three different shapes of number — totals, a card per node,
+   * and five series over time — and a CSV holds one shape. So every figure
+   * becomes its own row and says which section it came from, which is the
+   * layout a pivot table wants anyway.
    */
   exportCsv(): void {
     if (!this.canExport()) return;
@@ -605,9 +568,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     const totals = this.currentTotals();
     if (totals) rows.push(...usageRows('Totals', scope, totals, !this.totalsUnavailable()));
 
-    this.clusterSummaries().forEach((c) => {
-      rows.push(...usageRows('Cluster', c.name, c, !c.unavailable));
-    });
     this.nodeUsage().forEach((node) => {
       rows.push(...usageRows('Node', node.name, node, true));
     });
@@ -714,14 +674,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onClusterChange(): void {
-    if (!this.selectedClusterId()) {
-      this.clusterTotals.set(null);
-      this.nodeUsage.set([]);
-    }
-    this.startStream();
-  }
-
   onRangeChange(event: Event): void {
     const { start, end } = (event as CustomEvent<{ start?: string; end?: string }>).detail ?? {};
     // The picker also fires halfway through a range, with only a start. Wait for
@@ -745,9 +697,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   }
 
   private clearData(): void {
-    this.orgTotals.set(null);
     this.clusterTotals.set(null);
-    this.clusterSummaries.set([]);
     this.nodeUsage.set([]);
   }
 
@@ -853,35 +803,20 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     const windowSeconds = preset !== 'custom' ? PRESET_WINDOW_SECONDS[preset] : 0;
 
     const clusterId = this.selectedClusterId();
-    if (clusterId) {
-      const req =
-        windowSeconds > 0
-          ? create(StreamClusterWorkloadMetricsRequestSchema, {
-              clusterId,
-              windowSeconds,
-              stepSeconds: computeStepSeconds(windowSeconds),
-            })
-          : create(StreamClusterWorkloadMetricsRequestSchema, {
-              clusterId,
-              start: timestampFromDate(startOfDay(this.dateFrom)),
-              end: timestampFromDate(endOfDay(this.dateTo)),
-              stepSeconds: computeStepSeconds(this.customRangeSeconds()),
-            });
-      return this.metricsClient.streamClusterWorkloadMetrics(req);
-    }
-
     const req =
       windowSeconds > 0
-        ? create(StreamOrgWorkloadMetricsRequestSchema, {
+        ? create(StreamClusterWorkloadMetricsRequestSchema, {
+            clusterId,
             windowSeconds,
             stepSeconds: computeStepSeconds(windowSeconds),
           })
-        : create(StreamOrgWorkloadMetricsRequestSchema, {
+        : create(StreamClusterWorkloadMetricsRequestSchema, {
+            clusterId,
             start: timestampFromDate(startOfDay(this.dateFrom)),
             end: timestampFromDate(endOfDay(this.dateTo)),
             stepSeconds: computeStepSeconds(this.customRangeSeconds()),
           });
-    return this.metricsClient.streamOrgWorkloadMetrics(req);
+    return this.metricsClient.streamClusterWorkloadMetrics(req);
   }
 
   private customRangeSeconds(): number {
@@ -910,48 +845,18 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
     this.totalsUnavailable.set(r.metricsUnavailable);
 
-    if (this.selectedClusterId()) {
-      this.clusterTotals.set(totals);
-      this.nodeUsage.set(
-        r.nodes.map((n) => ({
-          name: n.node,
-          cpu: { used: n.cpu?.used ?? 0, total: n.cpu?.total ?? 0 },
-          memory: { used: n.memory?.used ?? 0, total: n.memory?.total ?? 0 },
-          pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
-        })),
-      );
-    } else {
-      this.orgTotals.set(totals);
-      this.clusterSummaries.set(
-        r.clusters.map((c) => ({
-          id: c.clusterId,
-          name: c.clusterName,
-          cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
-          memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
-          pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
-          unavailable: c.metricsUnavailable,
-        })),
-      );
-    }
+    this.clusterTotals.set(totals);
+    this.nodeUsage.set(
+      r.nodes.map((n) => ({
+        name: n.node,
+        cpu: { used: n.cpu?.used ?? 0, total: n.cpu?.total ?? 0 },
+        memory: { used: n.memory?.used ?? 0, total: n.memory?.total ?? 0 },
+        pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
+      })),
+    );
 
     if (r.timeSeries) {
       this.applyTimeSeries(r.timeSeries, r.refreshedAt);
-    }
-  }
-
-  private async loadClusters(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
-      );
-      this.clusters.set(
-        response.clusters.map((c: ListClustersResponse_ClusterSummary) => ({
-          id: c.id,
-          name: c.name,
-        })),
-      );
-    } catch {
-      // Non-fatal — cluster dropdown will be empty but the rest of the page still works.
     }
   }
 

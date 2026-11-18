@@ -10,7 +10,7 @@ See [FUN-8](../docs/funs/FUN-8.adoc) for design details.
 funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
-funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
+funops organization member add <organization> <user-id|email> [--permission admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
 funops organization quota get-clusters <organization>
@@ -37,7 +37,8 @@ which only deletes users nobody has signed in with.
 
 Adding someone who holds an unanswered invitation accepts it on their behalf.
 The invitation keeps the permission it was sent with unless `--permission`
-says otherwise; a new membership defaults to viewer. An invitation is not
+says otherwise; a new membership defaults to admin (the viewer role is
+temporarily disabled, so `--permission` only takes `admin`). An invitation is not
 membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
 

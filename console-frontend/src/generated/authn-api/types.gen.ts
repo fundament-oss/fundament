@@ -54,8 +54,9 @@ export type LoginMethodsResponse = {
      */
     password: boolean;
     /**
-     * Name of the identity provider for a "Log in with" button that
-     * starts /login. Absent means no button.
+     * Name of the identity provider. Present means the login page
+     * shows a "Log in" button that starts /login; absent means no
+     * button.
      *
      */
     provider_name?: string;
@@ -74,6 +75,17 @@ export type PasswordLoginRequest = {
 
 export type StatusResponse = {
     status?: string;
+};
+
+export type LogoutResponse = {
+    status?: string;
+    /**
+     * The identity provider's end-session URL, with the ID token as a
+     * hint and the console's login page to come back to. Absent when the
+     * provider has no end-session endpoint (Dex).
+     *
+     */
+    logout_url?: string;
 };
 
 export type ErrorResponse = {
@@ -281,7 +293,7 @@ export type HandleLogoutResponses = {
     /**
      * Logout successful
      */
-    200: StatusResponse;
+    200: LogoutResponse;
 };
 
 export type HandleLogoutResponse = HandleLogoutResponses[keyof HandleLogoutResponses];

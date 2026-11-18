@@ -43,57 +43,6 @@
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
     <nldd-toolbar accessible-label="Metrics">
-      <!-- Cluster filter -->
-      <nldd-toolbar-item slot="start">
-        <!-- A menu, not a native select: the same control as every other
-             filter, instead of the operating system's own popup. -->
-        <nldd-button
-          expandable
-          popup-type="menu"
-          appearance="secondary"
-          start-icon="kubernetes"
-          [attr.text]="clusterLabel()"
-        >
-          <nldd-menu
-            slot="popup"
-            accessible-label="Cluster"
-          >
-            <nldd-menu-item
-              type="radio"
-              text="All clusters"
-              [attr.selected]="selectedClusterId() === '' ? '' : null"
-              (select)="selectCluster('')"
-            ></nldd-menu-item>
-            @for (cluster of clusters(); track cluster.id) {
-              <nldd-menu-item
-                type="radio"
-                [attr.text]="cluster.name"
-                [attr.selected]="selectedClusterId() === cluster.id ? '' : null"
-                (select)="selectCluster(cluster.id)"
-              ></nldd-menu-item>
-            }
-          </nldd-menu>
-        </nldd-button>
-        <nldd-menu-group
-          slot="overflow"
-          text="Cluster"
-        >
-          <nldd-menu-item
-            type="radio"
-            text="All clusters"
-            [attr.selected]="selectedClusterId() === '' ? '' : null"
-            (select)="selectCluster('')"
-          ></nldd-menu-item>
-          @for (cluster of clusters(); track cluster.id) {
-            <nldd-menu-item
-              type="radio"
-              [attr.text]="cluster.name"
-              [attr.selected]="selectedClusterId() === cluster.id ? '' : null"
-              (select)="selectCluster(cluster.id)"
-            ></nldd-menu-item>
-          }
-        </nldd-menu-group>
-      </nldd-toolbar-item>
       <nldd-toolbar-item slot="start">
         <nldd-segmented-control
           width="fit-content"
@@ -225,18 +174,12 @@
       gap="24"
       sm-gap="16"
     >
-      <!-- Totals (all views) -->
+      <!-- Totals -->
       @if (currentTotals() || isLoading()) {
         <nldd-box>
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h2>
-                @if (selectedClusterId()) {
-                  Cluster totals
-                } @else {
-                  Organisation totals
-                }
-              </h2>
+              <h2>Cluster totals</h2>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
             @if (totalsUnavailable()) {
@@ -329,59 +272,6 @@
           </nldd-box>
         }
       </nldd-container>
-      <!-- Per-cluster breakdown — org-level, no cluster selected -->
-      @if (!selectedClusterId() && clusterSummaries().length > 0) {
-        <nldd-box>
-          <nldd-container padding="16">
-            <nldd-title size="5">
-              <h2>Per cluster</h2>
-            </nldd-title>
-            <nldd-spacer size="16"></nldd-spacer>
-            <!-- Cards rather than a table: three bars per cluster read as
-                 three bars, where a table row turns them into cells that
-                 happen to hold a bar. -->
-            <nldd-collection
-              layout="grid"
-              item-min-width="280px"
-              gap="16"
-            >
-              @for (c of clusterSummaries(); track c.id) {
-                <nldd-card background="base">
-                  <nldd-container padding="16">
-                    <nldd-title size="5">
-                      <h3>{{ c.name }}</h3>
-                    </nldd-title>
-                    <nldd-spacer size="16"></nldd-spacer>
-                    @if (c.unavailable) {
-                      <nldd-inline-dialog
-                        icon="analytics"
-                        icon-color="secondary"
-                        text="Metrics unavailable"
-                      ></nldd-inline-dialog>
-                    } @else {
-                      <nldd-container
-                        layout="stack"
-                        gap="16"
-                      >
-                        @for (metric of usageBars(c); track metric.label) {
-                          <nldd-progress-bar
-                            [attr.text]="metric.label"
-                            [attr.value]="metric.used"
-                            [attr.max]="metric.total"
-                            [attr.color]="metric.color"
-                            [attr.value-text]="metric.valueText"
-                            [attr.accessible-label]="metric.label + ' used in ' + c.name"
-                          ></nldd-progress-bar>
-                        }
-                      </nldd-container>
-                    }
-                  </nldd-container>
-                </nldd-card>
-              }
-            </nldd-collection>
-          </nldd-container>
-        </nldd-box>
-      }
       <!-- Per-node breakdown — cluster-level only -->
       @if (selectedClusterId()) {
         <nldd-box>

@@ -174,8 +174,13 @@ export default class AuthnApiService {
     }
   }
 
-  async logout(): Promise<void> {
-    const { error } = await this.oneAtATime((signal) =>
+  /**
+   * Ends the console session. Returns the identity provider's logout URL when
+   * there is one: the caller sends the browser there, so the provider ends its
+   * own session too and the next login asks for credentials again.
+   */
+  async logout(): Promise<string | undefined> {
+    const { data, error } = await this.oneAtATime((signal) =>
       handleLogout({ client: this.restClient, signal }),
     );
 
@@ -187,6 +192,8 @@ export default class AuthnApiService {
     this.currentUserSubject.next(undefined);
     localStorage.removeItem('auth_hint');
     this.organizationContext.clearOrganizationId();
+
+    return data?.logout_url || undefined;
   }
 
   isAuthenticated(): boolean {

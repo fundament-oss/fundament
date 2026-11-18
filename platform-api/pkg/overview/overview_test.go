@@ -152,9 +152,9 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 	assert.NotNil(t, resp.GetGeneratedAt())
 }
 
-// An organization is named only once it opted in (FUN-23), and one that did
-// not is not counted in the totals either: the totals add up the rows.
-func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
+// Until the fieldlab is over every live organization is listed (FUN-23),
+// whether or not listed_publicly is set, and the totals add up all of them.
+func TestOverviewListsEveryOrganization(t *testing.T) {
 	env := testpg.NewEnv(t, testDBPort)
 	seed := env.Seed(t)
 
@@ -167,15 +167,15 @@ func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
 	resp, _, body := getOverview(t, newServer(t, env))
 
 	require.NotNil(t, findOrganization(resp, "listed"))
-	assert.Nil(t, findOrganization(resp, "unlisted"))
-	assert.NotContains(t, body, "Unlisted Org")
+	require.NotNil(t, findOrganization(resp, "unlisted"), "listed_publicly is not read for now")
+	assert.Contains(t, body, "Unlisted Org")
 
 	var clusters int32
 	for _, o := range resp.GetOrganizations() {
 		clusters += o.GetClusters()
 	}
 	assert.Len(t, resp.GetOrganizations(), int(resp.GetTotals().GetOrganizations()))
-	assert.Equal(t, clusters, resp.GetTotals().GetClusters(), "the unlisted cluster is not counted")
+	assert.Equal(t, clusters, resp.GetTotals().GetClusters())
 }
 
 // The page shows names and counts only: nothing that names a cluster,

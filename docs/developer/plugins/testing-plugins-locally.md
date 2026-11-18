@@ -12,7 +12,7 @@ Run a plugin against the local platform: the platform stores its definition, a s
 │ marketplace-registry-api    │◄──────┤ just plugins publish        │
 │                             │       │                             │
 │ marketplace-catalog-api     ├──────►│ plugin-controller           │
-│                     relay :38080    │   runs plugin-<org>--<name> │
+│                     relays          │   runs plugin-<org>--<name> │
 │ kube-api-proxy              │       │                             │
 │ plugin-proxy                ├──────►│ (console reads the sandbox) │
 │             Secret plugin-sandbox-kubeconfig                      │
@@ -31,7 +31,7 @@ just plugins cluster-create
 just plugins deploy
 ```
 
-- `cluster-create` creates `k3d-fundament-plugin` and switches the kubectl context to it.
+- `cluster-create` creates `k3d-fundament-plugin` and adds its context to `.dev/kubeconfig`, like the platform cluster ([Getting started](../fundament/getting-started.md#run-the-platform)). An existing sandbox whose context is not in `.dev/kubeconfig` gets it from `just plugins cluster-start`.
 - `deploy` builds plugin-controller from source and deploys it.
 
 ## 2. Connect the clusters
@@ -43,8 +43,11 @@ just plugins sandbox-catalog
 
 ```text
 - kube-api-proxy is proxying to the sandbox (mock disabled)
-- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:38080
+- http://fundament-catalog-relay.fundament.svc:8080 in the sandbox relays to NodePort 30080
+- http://fundament-authn-relay.fundament.svc:8080 in the sandbox relays to NodePort 30081
 ```
+
+After restarting Docker, run `just plugin-sandbox-kubeconfig` and `just plugins sandbox-catalog` again: the containers get new addresses on the sandbox network. If `k3d-fundament-plugin-server-0` keeps restarting, its k3s cannot find its old node address; recreate the sandbox (`just plugins cluster-delete && just plugins cluster-create && just plugins deploy`) and run both again. The new sandbox has an empty registry and no installations, while the catalog keeps the published versions: push each plugin's image again with `just plugins publish <path>`, which then reports that the version already exists, and apply its installation again ([5. Install](#5-install)).
 
 ## 3. Log in with functl
 
@@ -78,6 +81,8 @@ Iterating on a plugin's own code? `functl plugin dev [dir]` replaces steps 4–6
 just plugins dev external-dns   # wraps: functl plugin dev plugins/external-dns
 functl plugin dev               # from a standalone plugin project
 ```
+
+From a standalone plugin project, first put `<fundament checkout>/.dev/kubeconfig` ahead of your own kubeconfig, as in [Getting started](../fundament/getting-started.md#run-the-platform): the sandbox's context is there.
 
 - `just plugins dev <path>` takes the plugin's path under `plugins/` (nested works: `storage/ceph-rook`) and passes extra flags through. Everything cluster-facing is named after the definition's `metadata.name`: the installation is `<organization>--<name>`.
 - Startup checks (each failure prints what to fix and links here): `docker`, `skaffold` and `kubectl` installed (plus `bun` for Vite plugins), Docker running, kube context `k3d-fundament-plugin` reachable, `plugin-controller` deployed with dev mode and unpinned hashes enabled and the current CRDs (`just plugins deploy`), and functl's organization matching the controller's `FUNDAMENT_ORGANIZATION_ID`.

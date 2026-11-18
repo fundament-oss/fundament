@@ -75,11 +75,11 @@ An environment that does not run `platform-public-api` leaves `platformApiUrl` e
 
 == Organizations opt in
 
+NOTE: *Temporarily off for the fieldlab.* `tenant.platform_overview()` does not read `listed_publicly` for now, so every live organization except the system organization is listed and counted. The column, its default and the test seed's `ListPublicly` stay, so opting in can come back by restoring the filter. Refining this after the fieldlab is in <<Deferred>>. The rest of this section describes the opt-in as designed.
+
 An organization is listed only once `tenant.organizations.listed_publicly` is set. It defaults to false, so a new organization, and every existing one, stays off the page until it opts in. Organizations that are not listed are not in the totals either: the totals add up the rows, so the page cannot be used to count who is hidden.
 
 For now a platform operator sets the column when an organization asks. A setting in the console's organization page is deferred. Relaxing the rule later, to listed by default, takes a new column default, which lists new organizations only. The existing ones keep false, and a false set on purpose cannot be told from one never set, so listing them too means asking them first.
-
-Whether organizations should be public at all, opted in or not, is for legal and the organizations to agree to (link:/adr/0019-data-protection-certification[ADR-0019] is in play). With nobody listed by default, running the public API in a test environment shows an empty page; listing a real organization waits for that sign-off.
 
 The seeded system organization owns the first-party plugins and is no tenant. `tenant.system_organization_id()` names it once, and every cross-organization query, public or staff, leaves it out through that function.
 
@@ -202,6 +202,7 @@ Open. Either way the code layout should be picked on purpose: marketplace has on
 
 * *Viewer kubeconfig.* Collect with Gardener's read-only `viewerkubeconfig` instead of admin credentials; see <<Options>>.
 * *Trends.* History of the snapshots, once the metrics follow-up to ADR-0025 settles where fleet-wide data lives.
+* *Opt-in after the fieldlab.* For the fieldlab `listed_publicly` is ignored, so every live organization except the system organization is listed (see <<Organizations opt in>>). Afterwards, decide how listing should work for good: restore the `listed_publicly` filter in `tenant.platform_overview()`, keep listing everyone and add an opt-out, or something in between. Restoring the filter hides every organization again, since nobody has set the column, so the organizations listed during the fieldlab have to be asked first.
 * *Opt-in setting in the console.* Let an organization's admins set `listed_publicly` themselves.
 * *Finding history in the view.* Resolved findings are kept; the staff view shows open ones only.
 * *Unlabeled shoots.* List shoots in Fundament's garden projects without the cluster id label, to report shoots nobody can trace back to a cluster.
