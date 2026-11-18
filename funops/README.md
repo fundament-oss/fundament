@@ -36,17 +36,18 @@ prints the IDs of the clusters it queued; deleted clusters and clusters that
 already have a sync waiting are left out. With a cluster ID, queuing nothing is
 an error.
 
-A sync writes the Kubernetes version and the worker pools, machine image
-included, from the database. A Shoot that differs from them, for example after
-a Gardener maintenance update, is set back to the database's values, so compare
-the two before running `--all`. Per cluster, the database:
+A sync writes the Kubernetes version and the worker pools from the database,
+with the machine image version from the cluster-worker's
+`GARDENER_MACHINE_IMAGE_VERSION` (and, on the local provider, the machine type
+from `GARDENER_DEFAULT_MACHINE_TYPE`). A Shoot that differs from them, for
+example after a Gardener maintenance update, is set back to those values, so
+compare the two before running `--all`. Per cluster, the database:
 
 ```
-psql "$DATABASE_URL" -c "SELECT c.id, c.kubernetes_version, p.machine_type, p.autoscale_min, p.autoscale_max FROM tenant.clusters c JOIN tenant.node_pools p ON p.cluster_id = c.id AND p.deleted IS NULL WHERE c.deleted IS NULL ORDER BY c.id"
+psql "$DATABASE_URL" -c "SELECT tenant.clusters.id, tenant.clusters.kubernetes_version, tenant.node_pools.machine_type, tenant.node_pools.autoscale_min, tenant.node_pools.autoscale_max FROM tenant.clusters JOIN tenant.node_pools ON tenant.node_pools.cluster_id = tenant.clusters.id AND tenant.node_pools.deleted IS NULL WHERE tenant.clusters.deleted IS NULL ORDER BY tenant.clusters.id"
 ```
 
-and the Shoots in the garden, whose image version should equal the
-cluster-worker's `GARDENER_MACHINE_IMAGE_VERSION`:
+and the Shoots in the garden:
 
 ```
 kubectl get shoots -A -l fundament.io/cluster-id -o custom-columns='CLUSTER:.metadata.labels.fundament\.io/cluster-id,VERSION:.spec.kubernetes.version,TYPE:.spec.provider.workers[*].machine.type,MIN:.spec.provider.workers[*].minimum,MAX:.spec.provider.workers[*].maximum,IMAGE:.spec.provider.workers[*].machine.image.version'
