@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -28,7 +27,7 @@ const OrganizationHeader = auth.OrganizationHeader
 // Fun-Organization header naming one of the caller's memberships. The JWT
 // carries the membership list, so no database round trip.
 func (s *Server) authenticate(ctx context.Context, _ string, header http.Header) (context.Context, error) {
-	if bearer, ok := bearerToken(header); ok && isWorkloadToken(bearer) {
+	if bearer, ok := auth.BearerToken(header); ok && isWorkloadToken(bearer) {
 		return s.authenticateWorkload(ctx, bearer, header)
 	}
 
@@ -69,15 +68,6 @@ func (s *Server) authenticateWorkload(ctx context.Context, bearer string, header
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid organization in workload token"))
 	}
 	return WithOrganizationID(ctx, organizationID), nil
-}
-
-func bearerToken(header http.Header) (string, bool) {
-	value := header.Get("Authorization")
-	token, ok := strings.CutPrefix(value, "Bearer ")
-	if !ok || token == "" {
-		return "", false
-	}
-	return token, true
 }
 
 // isWorkloadToken peeks at the audience without verifying the signature, only

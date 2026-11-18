@@ -26,7 +26,7 @@ externalUrls:
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; if empty, each API allows the frontend URLs above that call it)
-  console: "" # e.g., https://app.example.com (empty makes the marketplace's "Install plugin" button explain the hand-off instead of linking to it)
+  console: "" # e.g., https://app.example.com (required with kubeApiProxy, which takes the session cookie only from it; empty makes the marketplace's "Install plugin" button explain the hand-off instead of linking to it)
   consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
@@ -236,6 +236,9 @@ kubeApiProxy:
   replicas: 1
   resources: {}
   logLevel: info
+  # Comma-separated origins whose session cookie is accepted; empty means
+  # externalUrls.console. Add a dev server's origin here, never plugin-proxy.
+  cookieAllowedOrigins: ""
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
   # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets a local

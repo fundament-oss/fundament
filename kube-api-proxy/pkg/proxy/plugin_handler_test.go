@@ -338,7 +338,7 @@ func TestWorkloadTokenRejectedOnBothPaths(t *testing.T) {
 		logger:        discardLogger(),
 		authValidator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
 	}
-	assert.Equal(t, auth.TokenTypeUser, peekTokenType(r), "a non-plugin audience is routed to the user path")
+	assert.False(t, isPluginToken(r, secret), "a non-plugin audience is routed to the user path")
 	w = httptest.NewRecorder()
 	s.handleUserClusterProxy(w, r, clusterID)
 	assert.Equal(t, http.StatusUnauthorized, w.Code, "user path accepted a WorkloadToken")
