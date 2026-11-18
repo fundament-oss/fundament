@@ -41,7 +41,7 @@ Usage: include "fundament.db.pool" (dict "root" $ "service" "clusterWorker") | f
 */}}
 {{- define "fundament.db.pool" -}}
 {{- $own := (index .root.Values .service).dbPool | default dict -}}
-{{- $pool := merge (deepCopy $own) (deepCopy (.root.Values.db.pool | default dict)) -}}
+{{- $pool := mergeOverwrite (deepCopy (.root.Values.db.pool | default dict)) (deepCopy $own) -}}
 {{- if not (gt (int ($pool.maxConns | default 0)) 0) -}}
 {{- fail (printf "db.pool.maxConns (or %s.dbPool.maxConns) must be at least 1" .service) -}}
 {{- end -}}

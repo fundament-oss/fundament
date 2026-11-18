@@ -105,7 +105,7 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
-            {{- with $.Values.openfga.datastore }}
+            {{- with required "openfga.datastore is required" $.Values.openfga.datastore }}
             - name: OPENFGA_DATASTORE_MAX_OPEN_CONNS
               value: {{ required "openfga.datastore.maxOpenConns is required" .maxOpenConns | quote }}
             - name: OPENFGA_DATASTORE_MAX_IDLE_CONNS
