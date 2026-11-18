@@ -162,10 +162,6 @@ spec:
             - name: GARDENER_SHOOT_ANNOTATIONS
               value: {{ . | toJson | quote }}
             {{- end }}
-            {{- with $.Values.clusterWorker.gardenerDisabledExtensions }}
-            - name: GARDENER_DISABLED_EXTENSIONS
-              value: {{ . | toJson | quote }}
-            {{- end }}
             - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
               value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}

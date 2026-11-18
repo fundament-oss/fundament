@@ -303,13 +303,6 @@ clusterWorker:
   gardenerInfrastructureConfig: {} # -> spec.provider.infrastructureConfig
   gardenerControlPlaneConfig: {}   # -> spec.provider.controlPlaneConfig
   gardenerShootAnnotations: {}     # extra shoot annotations, e.g. cluster.metal-stack.io/tenant: fundament
-  # Gardener extension types switched off on every Shoot, e.g. [shoot-dns-service].
-  # With shoot-dns-service on, a cluster admin can publish DNS names under the
-  # shoot domain. Disable it when that domain sits under a domain browsers send
-  # platform cookies to (externalUrls.cookieDomain), or those names receive the cookies.
-  # Each type must be registered in the garden; existing shoots pick it up on
-  # their next sync.
-  gardenerDisabledExtensions: []
   # Delete clusters without waiting for what runs inside them: the timeouts that let
   # it clean up are removed. Pods are stopped without a grace period, and volumes and
   # custom resources are removed immediately, so anything they manage outside the

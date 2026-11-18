@@ -92,7 +92,10 @@ sequenceDiagram
   changed") is the time of the last change. See [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it reports clusters whose shoot is missing (see
   [Lost clusters](#lost-clusters)), finishes deleting the shoots of deleted clusters, and
-  lets the shoot-side handlers re-assert their resources. A shoot is deleted only once its
+  lets the shoot-side handlers re-assert their resources. It also switches the
+  `shoot-dns-service` extension off on every shoot that still has it on (never on the local
+  provider, whose Gardener does not register it), so cluster admins cannot publish DNS names
+  under the shoot domain. A shoot is deleted only once its
   cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
   of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
   a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
@@ -390,7 +393,6 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `GARDENER_MACHINE_IMAGE_NAME`, `GARDENER_MACHINE_IMAGE_VERSION`, `GARDENER_DEFAULT_MACHINE_TYPE` | | worker machines |
 | `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
 | `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
-| `GARDENER_DISABLED_EXTENSIONS` | | JSON array of Gardener extension types switched off on every shoot, e.g. `["shoot-dns-service"]` |
 | `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
 | `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `2m` | retry backoff: 1s after the first failure, doubling up to the cap |
 | `OUTBOX_MAX_RETRIES` | `15` | attempts before a row fails for good; with the backoff above about 16 minutes, enough to ride out a short outage of a Shoot or the garden |

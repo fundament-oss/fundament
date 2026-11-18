@@ -287,6 +287,11 @@ func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.
 	return false, nil
 }
 
+// EnforceShootSettings does nothing: the mock keeps no shoot spec to enforce.
+func (m *MockClient) EnforceShootSettings(ctx context.Context) error {
+	return nil
+}
+
 // ListShoots returns all shoots stored in memory (excludes fully deleted ones).
 func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 	m.mu.Lock()
