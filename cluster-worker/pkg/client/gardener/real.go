@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -72,6 +73,11 @@ type ProviderConfig struct {
 	// ShootAnnotations are extra annotations merged onto every Shoot, e.g. metal's
 	// cluster.metal-stack.io/tenant (required by the provider-metal admission validator).
 	ShootAnnotations map[string]string
+
+	// DisabledExtensions are Gardener extension types switched off on every
+	// Shoot, e.g. shoot-dns-service. Gardener enables some extensions on all
+	// Shoots by default; an entry with disabled set is the only way to opt out.
+	DisabledExtensions []string
 }
 
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
@@ -807,7 +813,26 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
+	r.disableExtensions(shoot)
+
 	return shoot, nil
+}
+
+// disableExtensions marks every configured extension type as disabled on the
+// Shoot. An existing entry of that type is replaced, dropping its provider
+// config; entries of other types are left alone.
+func (r *RealClient) disableExtensions(shoot *gardencorev1beta1.Shoot) {
+	for _, extensionType := range r.provider.DisabledExtensions {
+		disabled := gardencorev1beta1.Extension{Type: extensionType, Disabled: new(true)}
+		index := slices.IndexFunc(shoot.Spec.Extensions, func(e gardencorev1beta1.Extension) bool {
+			return e.Type == extensionType
+		})
+		if index >= 0 {
+			shoot.Spec.Extensions[index] = disabled
+			continue
+		}
+		shoot.Spec.Extensions = append(shoot.Spec.Extensions, disabled)
+	}
 }
 
 // cloudProfile returns the CloudProfile backing the cluster's catalog region,
@@ -932,5 +957,6 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 	shoot.Spec.Region = r.region(cluster)
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
 	shoot.Spec.Provider.Workers = workers
+	r.disableExtensions(shoot)
 	return nil
 }

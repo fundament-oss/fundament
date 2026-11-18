@@ -96,6 +96,10 @@ type GardenerConfig struct {
 	ControlPlaneConfig   string `env:"CONTROL_PLANE_CONFIG"`
 	ShootAnnotations     string `env:"SHOOT_ANNOTATIONS"`
 
+	// DisabledExtensions is a JSON array of Gardener extension types to switch
+	// off on every Shoot; see ProviderConfig.DisabledExtensions.
+	DisabledExtensions string `env:"DISABLED_EXTENSIONS"`
+
 	// ImmediateClusterDeletion deletes clusters without waiting for what runs
 	// inside them; see ProviderConfig.ImmediateClusterDeletion.
 	ImmediateClusterDeletion bool `env:"IMMEDIATE_CLUSTER_DELETION"`
@@ -425,6 +429,13 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 				return nil, fmt.Errorf("parse GARDENER_SHOOT_ANNOTATIONS: %w", err)
 			}
 			providerCfg.ShootAnnotations = anns
+		}
+		if g.DisabledExtensions != "" {
+			var extensionTypes []string
+			if err := json.Unmarshal([]byte(g.DisabledExtensions), &extensionTypes); err != nil {
+				return nil, fmt.Errorf("parse GARDENER_DISABLED_EXTENSIONS: %w", err)
+			}
+			providerCfg.DisabledExtensions = extensionTypes
 		}
 		providerCfg.ImmediateClusterDeletion = g.ImmediateClusterDeletion
 

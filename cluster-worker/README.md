@@ -390,6 +390,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `GARDENER_MACHINE_IMAGE_NAME`, `GARDENER_MACHINE_IMAGE_VERSION`, `GARDENER_DEFAULT_MACHINE_TYPE` | | worker machines |
 | `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
 | `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
+| `GARDENER_DISABLED_EXTENSIONS` | | JSON array of Gardener extension types switched off on every shoot, e.g. `["shoot-dns-service"]` |
 | `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
 | `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `2m` | retry backoff: 1s after the first failure, doubling up to the cap |
 | `OUTBOX_MAX_RETRIES` | `15` | attempts before a row fails for good; with the backoff above about 16 minutes, enough to ride out a short outage of a Shoot or the garden |

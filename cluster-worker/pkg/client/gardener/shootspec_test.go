@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"testing"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func testClient(provider *ProviderConfig) *RealClient {
@@ -113,4 +115,55 @@ func TestBuildShootSpec_LegacyClusterUsesProviderDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "metal", shoot.Spec.CloudProfile.Name)
 	require.Equal(t, "local", shoot.Spec.Region)
+}
+
+// Configured extension types are disabled on new Shoots; without configuration
+// the extensions list stays empty so Gardener's defaults apply.
+func TestBuildShootSpec_DisabledExtensions(t *testing.T) {
+	provider := NewProviderConfig()
+	shoot, err := testClient(&provider).buildShootSpec(testCluster())
+	require.NoError(t, err)
+	require.Empty(t, shoot.Spec.Extensions)
+
+	provider.DisabledExtensions = []string{"shoot-dns-service"}
+	shoot, err = testClient(&provider).buildShootSpec(testCluster())
+	require.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 1)
+	require.Equal(t, "shoot-dns-service", shoot.Spec.Extensions[0].Type)
+	require.NotNil(t, shoot.Spec.Extensions[0].Disabled)
+	require.True(t, *shoot.Spec.Extensions[0].Disabled)
+}
+
+// An existing Shoot whose extension entry was filled in by Gardener gets that
+// entry replaced by a disabled one; other extensions are kept, and a second
+// update changes nothing.
+func TestUpdateShootSpec_DisabledExtensions(t *testing.T) {
+	r := testClient(&ProviderConfig{
+		Type:               "metal",
+		CloudProfile:       "metal",
+		Region:             "local",
+		DisabledExtensions: []string{"shoot-dns-service"},
+	})
+	shoot := &gardencorev1beta1.Shoot{
+		Spec: gardencorev1beta1.ShootSpec{
+			Extensions: []gardencorev1beta1.Extension{
+				{Type: "other"},
+				{
+					Type:           "shoot-dns-service",
+					ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"syncProvidersFromShootSpecDNS":true}`)},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, r.updateShootSpec(shoot, testCluster()))
+	require.NoError(t, r.updateShootSpec(shoot, testCluster()))
+
+	require.Len(t, shoot.Spec.Extensions, 2)
+	require.Equal(t, "other", shoot.Spec.Extensions[0].Type)
+	require.Nil(t, shoot.Spec.Extensions[0].Disabled)
+	require.Equal(t, "shoot-dns-service", shoot.Spec.Extensions[1].Type)
+	require.NotNil(t, shoot.Spec.Extensions[1].Disabled)
+	require.True(t, *shoot.Spec.Extensions[1].Disabled)
+	require.Nil(t, shoot.Spec.Extensions[1].ProviderConfig)
 }
