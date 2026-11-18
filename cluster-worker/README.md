@@ -99,7 +99,8 @@ sequenceDiagram
 - **No tenant DNS.** Every sync writes the `shoot-dns-service` extension as disabled on the
   shoot (never on the local provider, whose Gardener does not register it), so cluster admins
   cannot publish DNS names under the shoot domain. `funops cluster sync --all` queues a sync
-  of every cluster, which brings existing shoots in line after an upgrade.
+  of every cluster that is not deleted and has none waiting, which brings existing shoots in
+  line after an upgrade.
 
 ## Cluster status
 
