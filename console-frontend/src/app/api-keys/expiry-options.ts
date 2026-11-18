@@ -13,9 +13,10 @@ export interface ExpiryOption {
 /** No expiry: sent as an empty duration, which the server takes as never. */
 export const NEVER = 'never';
 
-/** The duration typed in the field below the group. */
+/** A last day picked in the calendar below the group. */
 export const CUSTOM = 'custom';
 
+const SECOND = 1000;
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
@@ -33,13 +34,13 @@ const UNIT_MS: Record<string, number> = {
   µs: 1e-3,
   μs: 1e-3,
   ms: 1,
-  s: 1000,
+  s: SECOND,
   m: 60_000,
   h: HOUR,
 };
 
 /** The proto's own rule (apikey.proto), which is what `time.ParseDuration` reads. */
-export const DURATION = /^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$/;
+const DURATION = /^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$/;
 
 const DURATION_PART = /([0-9]+(?:[.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h)/g;
 
@@ -95,4 +96,38 @@ export function maximumLabel(maxExpiresIn: string): string {
   if (maximum === null) return maxExpiresIn;
   return (PRESETS.find((preset) => preset.ms === maximum) ?? maximumOption(maxExpiresIn, maximum))
     .label;
+}
+
+/** A local calendar date as ISO (yyyy-mm-dd), which is what the date picker reads and writes. */
+export function isoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** The latest day a custom expiry can fall on: the day the longest lifetime
+ *  runs out. null when there is no maximum to stop at, or none this console
+ *  can read, which leaves the limit to the server. */
+export function lastExpiryDate(maxExpiresIn: string | null, now: Date): string | null {
+  const maximum = maxExpiresIn ? parseDuration(maxExpiresIn) : null;
+  return maximum === null ? null : isoDate(new Date(now.getTime() + maximum));
+}
+
+/** When a key picked to last until `date` stops working: at the end of that
+ *  local day, or earlier when the maximum runs out during that day. */
+export function customExpiryMoment(date: string, maxExpiresIn: string | null, now: Date): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  const endOfDay = new Date(year, month - 1, day, 23, 59, 59);
+  const maximum = maxExpiresIn ? parseDuration(maxExpiresIn) : null;
+  if (maximum === null) return endOfDay;
+  return new Date(Math.min(endOfDay.getTime(), now.getTime() + maximum));
+}
+
+/** The duration the server is sent for `moment`, in whole seconds so it never
+ *  goes over the maximum. null when the moment has already passed: the server
+ *  refuses zero and a negative duration. */
+export function durationUntil(moment: Date, now: Date): string | null {
+  const seconds = Math.floor((moment.getTime() - now.getTime()) / SECOND);
+  return seconds > 0 ? `${seconds}s` : null;
 }

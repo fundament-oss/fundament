@@ -94,43 +94,39 @@
               </nldd-form-field-help-text>
             }
           </nldd-form-field>
+          <!-- A last day rather than a duration: people think in dates. The
+               console turns it into the duration the API takes when the form is
+               sent, so the time spent filling it in is not added on top. -->
           @if (selectedExpiry() === customExpiry) {
-            <nldd-form-field label="Custom duration">
-              <nldd-text-field
-                id="expiresIn"
-                [value]="newKeyExpiresIn()"
-                (input)="
-                  newKeyExpiresIn.set($any($event.target).value); newKeyExpiresInError.set(null)
-                "
-                (keyup.escape)="cancelCreating()"
-                [invalid]="!!newKeyExpiresInError()"
-                [attr.unmet]="newKeyExpiresInError() ? 'api-key-expires-in-refused' : null"
-              ></nldd-text-field>
+            <nldd-form-field label="Expires on">
+              <nldd-date-picker
+                id="expiresOn"
+                width="full"
+                min="today"
+                accessible-label="Expires on"
+                [translations]="datePickerTranslations"
+                [value]="newKeyExpiresOn()"
+                [attr.max]="lastExpiryDate()"
+                (change)="onExpiresOnChange($event)"
+                [invalid]="newKeyExpiresOnMissing() || !!newKeyExpiresOnError()"
+                [attr.unmet]="expiresOnUnmet()"
+              ></nldd-date-picker>
+              <!-- The calendar is no form control, so the browser cannot hold the
+                   submit back for a missing date: the component does, and names
+                   it here. -->
               <nldd-validation-list>
-                <!-- Empty would be a key that never expires, which is not what
-                     "Custom" asks for. -->
-                <nldd-validation-item
-                  id="api-key-expires-in-required"
-                  required
-                  match="\S"
-                  >Enter a duration.</nldd-validation-item
+                <nldd-validation-item id="api-key-expires-on-required"
+                  >Pick a day that has not ended yet.</nldd-validation-item
                 >
-                <!-- The proto's own rule (apikey.proto), so a typo is refused here
-                     rather than after a round trip. -->
-                <nldd-validation-item
-                  id="api-key-expires-in-format"
-                  [attr.match]="durationPattern"
-                  >Must be a duration such as 300s, 5m or 1h.</nldd-validation-item
-                >
-                <nldd-validation-item id="api-key-expires-in-refused">{{
-                  newKeyExpiresInError()
+                <nldd-validation-item id="api-key-expires-on-refused">{{
+                  newKeyExpiresOnError()
                 }}</nldd-validation-item>
               </nldd-validation-list>
               <nldd-form-field-help-text>
-                @if (maxExpiresIn()) {
-                  A duration, for example 300s, 5m or 1h, at most {{ maxExpiresIn() }}.
+                @if (customExpiryText(); as moment) {
+                  Expires {{ moment }}.
                 } @else {
-                  A duration, for example 300s, 5m or 1h.
+                  The key works until the end of the day you pick.
                 }
               </nldd-form-field-help-text>
             </nldd-form-field>

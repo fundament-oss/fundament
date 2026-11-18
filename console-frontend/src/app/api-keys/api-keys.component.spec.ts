@@ -9,6 +9,7 @@ import { APIKEY } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
 import AuthnApiService from '../authn-api.service';
 import OrganizationContextService from '../organization-context.service';
+import { isoDate } from './expiry-options';
 import {
   type APIKey,
   type ListAPIKeysResponse,
@@ -74,6 +75,12 @@ async function submit(component: ApiKeysComponent, name: string) {
 }
 
 describe('ApiKeysComponent', () => {
+  // A test that fakes the clock and fails before it puts it back must not
+  // leave the rest on that clock.
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('drops the token and the half-filled form when the sheet closes', async () => {
     const listAPIKeys = vi.fn(() => list(key));
     const fixture = await render({ listAPIKeys, createAPIKey: createdCall });
@@ -245,22 +252,10 @@ describe('ApiKeysComponent', () => {
     expect(component.newKeyNameError()).toBeNull();
   });
 
-  it('holds rules that refuse a malformed duration and an empty name', async () => {
+  it('holds a rule that refuses an empty name', async () => {
     const fixture = await render({ listAPIKeys: () => list() });
     fixture.componentInstance.startCreating();
-    fixture.componentInstance.newKeyExpiryChoice.set('custom');
     fixture.detectChanges();
-
-    const duration = document.body.querySelector<ValidationItem>('#api-key-expires-in-format');
-    expect(duration?.test('10 days')).toBe(false);
-    expect(duration?.test('5m')).toBe(true);
-    expect(duration?.test('1h30m')).toBe(true);
-
-    const durationRequired = document.body.querySelector<ValidationItem>(
-      '#api-key-expires-in-required',
-    );
-    expect(durationRequired?.test('')).toBe(false);
-    expect(durationRequired?.test('5m')).toBe(true);
 
     const name = document.body.querySelector<ValidationItem>('#api-key-name-required');
     expect(name?.test('')).toBe(false);
@@ -287,7 +282,9 @@ describe('ApiKeysComponent', () => {
     expect(createAPIKey.mock.calls[0][0]).toMatchObject({ expiresIn: '' });
   });
 
-  it('sends the chosen preset, and a custom duration as typed', async () => {
+  it('sends the chosen preset, and a picked day as the time until its end', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 18, 14, 30, 0));
     const createAPIKey = vi.fn(createdCall);
     const fixture = await render({ listAPIKeys: () => listWithMaximum('8760h'), createAPIKey });
     const { componentInstance: component } = fixture;
@@ -300,14 +297,50 @@ describe('ApiKeysComponent', () => {
     component.startCreating();
     component.newKeyName.set('ci-2');
     component.newKeyExpiryChoice.set('custom');
-    component.newKeyExpiresIn.set('45m');
+    component.newKeyExpiresOn.set('2026-11-19');
     await component.createApiKey(new Event('submit', { cancelable: true }));
+    vi.useRealTimers();
 
     expect(createAPIKey.mock.calls[0][0]).toMatchObject({ expiresIn: '720h' });
-    expect(createAPIKey.mock.calls[1][0]).toMatchObject({ expiresIn: '45m' });
+    // From 14:30 to 23:59:59 the next day.
+    expect(createAPIKey.mock.calls[1][0]).toMatchObject({
+      expiresIn: `${(24 + 9) * 3600 + 29 * 60 + 59}s`,
+    });
   });
 
-  it('puts a refused custom duration under its field, and a refused preset in the banner', async () => {
+  it('holds the create back, and says why, while no day is picked under custom', async () => {
+    const createAPIKey = vi.fn(createdCall);
+    const fixture = await render({ listAPIKeys: () => listWithMaximum('8760h'), createAPIKey });
+    const { componentInstance: component } = fixture;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('custom');
+    await component.createApiKey(new Event('submit', { cancelable: true }));
+    fixture.detectChanges();
+
+    expect(createAPIKey).not.toHaveBeenCalled();
+    expect(component.expiresOnUnmet()).toBe('api-key-expires-on-required');
+    const picker = document.body.querySelector('#expiresOn');
+    expect(picker?.getAttribute('unmet')).toBe('api-key-expires-on-required');
+  });
+
+  it('offers no day in the calendar past the one the maximum runs out on', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 18, 14, 30, 0));
+    const fixture = await render({ listAPIKeys: () => listWithMaximum('720h') });
+    const { componentInstance: component } = fixture;
+    component.startCreating();
+    component.newKeyExpiryChoice.set('custom');
+    fixture.detectChanges();
+    vi.useRealTimers();
+
+    const picker = document.body.querySelector('#expiresOn');
+    expect(picker?.getAttribute('max')).toBe('2026-12-18');
+    expect(picker?.getAttribute('min')).toBe('today');
+  });
+
+  it('puts a refused custom day under its field, and a refused preset in the banner', async () => {
     const refusal = new ConnectError(
       'validation error:\n - expires_in: must be at most 720h',
       Code.InvalidArgument,
@@ -321,9 +354,9 @@ describe('ApiKeysComponent', () => {
     component.startCreating();
     component.newKeyName.set('ci');
     component.newKeyExpiryChoice.set('custom');
-    component.newKeyExpiresIn.set('1000h');
+    component.newKeyExpiresOn.set(isoDate(new Date(Date.now() + 60 * 86_400_000)));
     await component.createApiKey(new Event('submit', { cancelable: true }));
-    expect(component.newKeyExpiresInError()).toBe('Must be at most 720h.');
+    expect(component.newKeyExpiresOnError()).toBe('Must be at most 720h.');
     expect(component.error()).toBeNull();
 
     component.newKeyExpiryChoice.set('8760h');
@@ -377,7 +410,7 @@ describe('ApiKeysComponent', () => {
     component.startCreating();
     component.newKeyName.set('ci');
     component.newKeyExpiryChoice.set('custom');
-    component.newKeyExpiresIn.set('1000h');
+    component.newKeyExpiresOn.set(isoDate(new Date(Date.now() + 60 * 86_400_000)));
     const pending = component.createApiKey(new Event('submit', { cancelable: true }));
     component.newKeyExpiryChoice.set('720h');
     response.error(
@@ -388,7 +421,7 @@ describe('ApiKeysComponent', () => {
     );
     await pending;
 
-    expect(component.newKeyExpiresInError()).toBeNull();
+    expect(component.newKeyExpiresOnError()).toBeNull();
     expect(component.error()).toBeNull();
   });
 
