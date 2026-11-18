@@ -49,6 +49,11 @@ func (c *ClusterSyncCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to queue cluster sync: %w", err)
 	}
 
+	// The query cannot tell these cases apart, and none of them queued a sync.
+	if c.Cluster != "" && len(queued) == 0 {
+		return fmt.Errorf("no sync queued for cluster %s: it does not exist, is deleted, or already has a sync waiting", c.Cluster)
+	}
+
 	ids := make([]string, 0, len(queued))
 	for i := range queued {
 		ids = append(ids, uuid.UUID(queued[i].Bytes).String())

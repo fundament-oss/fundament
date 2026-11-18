@@ -33,7 +33,8 @@ writes the cluster's Shoot again, as it does after a change to the cluster, and
 Gardener reconciles the Shoot when its spec changed. Run it with `--all` after
 deploying a release that changes what the worker writes to every Shoot. It
 prints the IDs of the clusters it queued; deleted clusters and clusters that
-already have a sync waiting are left out.
+already have a sync waiting are left out. With a cluster ID, queuing nothing is
+an error.
 
 Signing in never creates an organization. A new user shows up in
 `funops user list --without-organization`; `funops organization member add`

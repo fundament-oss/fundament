@@ -2,7 +2,9 @@
 -- Queues a sync of one cluster, or of every cluster when no id is given: the
 -- cluster-worker then writes the cluster's Shoot again, as it does after a
 -- change to the cluster. Deleted clusters are left out; their Shoots are on
--- the way out. A cluster that already has a sync waiting is left out too.
+-- the way out. A cluster that already has a sync waiting (a created or
+-- updated row still to run or to retry) is left out too. Two runs at the same
+-- time can both queue a cluster; the second sync then changes nothing.
 INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
 SELECT tenant.clusters.id, 'updated', 'manual'
 FROM tenant.clusters
@@ -12,7 +14,7 @@ WHERE tenant.clusters.deleted IS NULL
     SELECT 1
     FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
-      AND tenant.cluster_outbox.event = 'updated'
-      AND tenant.cluster_outbox.status = 'pending'
+      AND tenant.cluster_outbox.event IN ('created', 'updated')
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
   )
 RETURNING cluster_id;
