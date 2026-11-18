@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -73,6 +74,10 @@ type ProviderConfig struct {
 	// cluster.metal-stack.io/tenant (required by the provider-metal admission validator).
 	ShootAnnotations map[string]string
 }
+
+// tenantDNSExtension is the Gardener extension type that lets a cluster admin
+// publish DNS names under the shoot domain; see disableTenantDNS.
+const tenantDNSExtension = "shoot-dns-service"
 
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
 // Override fields as needed for other providers.
@@ -807,7 +812,43 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
+	r.disableTenantDNS(shoot)
+
 	return shoot, nil
+}
+
+// disableTenantDNS switches the shoot-dns-service extension off on the Shoot,
+// replacing an entry Gardener filled in. Gardener enables the extension on
+// every Shoot where it is registered, and an entry with disabled set is the
+// only way to opt out. It runs on every create and sync of a Shoot, so
+// `funops cluster sync --all` brings existing Shoots in line. With
+// it on, a cluster admin can publish DNS names under the shoot domain; a
+// platform cookie scoped to a parent of that domain is then sent to names a
+// tenant controls.
+//
+// The local provider is skipped: a local Gardener does not register the
+// extension, and Gardener rejects a Shoot that names an unregistered one.
+func (r *RealClient) disableTenantDNS(shoot *gardencorev1beta1.Shoot) {
+	if r.provider.Type == "local" {
+		return
+	}
+	isTenantDNS := func(e gardencorev1beta1.Extension) bool { return e.Type == tenantDNSExtension }
+	entries := 0
+	enabled := false
+	for i := range shoot.Spec.Extensions {
+		if e := &shoot.Spec.Extensions[i]; isTenantDNS(*e) {
+			entries++
+			enabled = enabled || e.Disabled == nil || !*e.Disabled
+		}
+	}
+	if entries == 1 && !enabled {
+		return
+	}
+	// Collapse every entry of the type into one disabled entry.
+	shoot.Spec.Extensions = append(
+		slices.DeleteFunc(shoot.Spec.Extensions, isTenantDNS),
+		gardencorev1beta1.Extension{Type: tenantDNSExtension, Disabled: new(true)},
+	)
 }
 
 // cloudProfile returns the CloudProfile backing the cluster's catalog region,
@@ -932,5 +973,6 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 	shoot.Spec.Region = r.region(cluster)
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
 	shoot.Spec.Provider.Workers = workers
+	r.disableTenantDNS(shoot)
 	return nil
 }
