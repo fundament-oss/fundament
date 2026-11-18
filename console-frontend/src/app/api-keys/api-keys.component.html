@@ -108,6 +108,7 @@
                 [value]="newKeyExpiresOn()"
                 [attr.max]="lastExpiryDate()"
                 (change)="onExpiresOnChange($event)"
+                (keyup.escape)="cancelCreating()"
                 [invalid]="newKeyExpiresOnMissing() || !!newKeyExpiresOnError()"
                 [attr.unmet]="expiresOnUnmet()"
               ></nldd-date-picker>

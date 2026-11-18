@@ -340,6 +340,26 @@ describe('ApiKeysComponent', () => {
     expect(picker?.getAttribute('min')).toBe('today');
   });
 
+  it('counts the last day in the calendar from when the form opens, not from an earlier one', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 18, 14, 30, 0));
+    const fixture = await render({ listAPIKeys: () => listWithMaximum('720h') });
+    const { componentInstance: component } = fixture;
+    component.startCreating();
+    component.newKeyExpiryChoice.set('custom');
+    fixture.detectChanges();
+    component.cancelCreating();
+    fixture.detectChanges();
+
+    vi.setSystemTime(new Date(2026, 10, 20, 9, 0, 0));
+    component.startCreating();
+    component.newKeyExpiryChoice.set('custom');
+    fixture.detectChanges();
+    vi.useRealTimers();
+
+    expect(component.lastExpiryDate()).toBe('2026-12-20');
+  });
+
   it('puts a refused custom day under its field, and a refused preset in the banner', async () => {
     const refusal = new ConnectError(
       'validation error:\n - expires_in: must be at most 720h',
@@ -356,12 +376,65 @@ describe('ApiKeysComponent', () => {
     component.newKeyExpiryChoice.set('custom');
     component.newKeyExpiresOn.set(isoDate(new Date(Date.now() + 60 * 86_400_000)));
     await component.createApiKey(new Event('submit', { cancelable: true }));
-    expect(component.newKeyExpiresOnError()).toBe('Must be at most 720h.');
+    expect(component.newKeyExpiresOnError()).toBe('Must be within 30 days from now.');
     expect(component.error()).toBeNull();
 
     component.newKeyExpiryChoice.set('8760h');
     await component.createApiKey(new Event('submit', { cancelable: true }));
-    expect(component.error()).toBe('This lifetime is not allowed. Must be at most 720h.');
+    expect(component.error()).toBe('This lifetime is not allowed. The longest allowed is 30 days.');
+  });
+
+  it('refetches the maximum when a picked day is refused, so the calendar stops where it holds', async () => {
+    let maximum = '8760h';
+    const listAPIKeys = vi.fn(() => listWithMaximum(maximum));
+    const fixture = await render({
+      listAPIKeys,
+      createAPIKey: () =>
+        throwError(
+          () =>
+            new ConnectError(
+              'validation error:\n - expires_in: must be at most 720h',
+              Code.InvalidArgument,
+            ),
+        ),
+    });
+    const { componentInstance: component } = fixture;
+    const fetches = listAPIKeys.mock.calls.length;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('custom');
+    component.newKeyExpiresOn.set(isoDate(new Date(Date.now() + 60 * 86_400_000)));
+    maximum = '720h';
+    await component.createApiKey(new Event('submit', { cancelable: true }));
+    await fixture.whenStable();
+
+    expect(listAPIKeys.mock.calls.length).toBe(fetches + 1);
+    expect(component.lastExpiryDate()).toBe(isoDate(new Date(Date.now() + 30 * 86_400_000)));
+    expect(component.newKeyExpiresOnError()).toBe('Must be within 30 days from now.');
+  });
+
+  it('says a refusal it cannot word in days as the server wrote it', async () => {
+    const fixture = await render({
+      listAPIKeys: () => listWithMaximum('8760h'),
+      createAPIKey: () =>
+        throwError(
+          () =>
+            new ConnectError(
+              'validation error:\n - expires_in: must be positive',
+              Code.InvalidArgument,
+            ),
+        ),
+    });
+    const { componentInstance: component } = fixture;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('custom');
+    component.newKeyExpiresOn.set(isoDate(new Date(Date.now() + 86_400_000)));
+    await component.createApiKey(new Event('submit', { cancelable: true }));
+
+    expect(component.newKeyExpiresOnError()).toBe('Must be positive.');
   });
 
   it('refetches the maximum when a preset is refused, and drops the pick it took away', async () => {
