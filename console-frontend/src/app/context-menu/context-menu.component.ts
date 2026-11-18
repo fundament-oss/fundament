@@ -137,7 +137,8 @@ export default class ContextMenuComponent {
         const base = `/projects/${context.projectId}`;
         const project = this.organizationData.getProjectById(context.projectId)?.project;
         // Roles has no count: the project summary the API returns does not
-        // carry one.
+        // carry one. No Metrics: the per-shoot Prometheus only covers
+        // kube-system, so the page was always empty (issue 1456).
         return [
           item(`${base}/general`, 'folder', 'Project overview'),
           item(`${base}/members`, 'person-2', 'Members', {
@@ -146,7 +147,6 @@ export default class ContextMenuComponent {
           item(`${base}/namespaces`, 'brackets-ellipsis', 'Namespaces', {
             count: project?.namespaceCount ?? null,
           }),
-          item(`${base}/metrics`, 'chart-x-y-axis-line', 'Metrics', { metrics: true }),
         ];
       }
       default:

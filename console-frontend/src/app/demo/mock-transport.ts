@@ -636,7 +636,7 @@ export default function createDemoTransport(): Transport {
               },
         clusters: level === 'org' ? fx.clusterUsage : [],
         nodes: level === 'cluster' ? fx.nodeUsage : [],
-        namespaces: level === 'project' ? fx.namespaceMetrics.slice(0, 1) : fx.namespaceMetrics,
+        namespaces: level === 'project' ? fx.namespaceMetrics.slice(0, 1) : [],
         timeSeries: timeSeries(windowSeconds, stepSeconds),
         refreshedAt: timestampFromDate(new Date()),
       });
@@ -646,14 +646,12 @@ export default function createDemoTransport(): Transport {
         await delay(80);
         return create(GetOrgWorkloadMetricsResponseSchema, {
           clusters: fx.clusterUsage,
-          namespaces: fx.namespaceMetrics,
         });
       },
       getClusterWorkloadMetrics: async () => {
         await delay();
         return create(GetClusterWorkloadMetricsResponseSchema, {
           nodes: fx.nodeUsage,
-          namespaces: fx.namespaceMetrics,
         });
       },
       getProjectWorkloadMetrics: async () => {

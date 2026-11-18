@@ -228,7 +228,7 @@ const routes: Routes = [
       {
         path: 'clusters/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-        data: { metricsScope: 'cluster', remountOnParamChange: true },
+        data: { remountOnParamChange: true },
       },
       // The detail page was the cluster's own address before the cluster had a
       // menu of its own; links to its editors still land on them.
@@ -395,10 +395,6 @@ const routes: Routes = [
       // does not exist. It needs a server-side aggregation query (Vali
       // count_over_time / sum by level) before it can be exposed; the component
       // is kept so that work has a starting point.
-      {
-        path: 'projects/:id/metrics',
-        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-      },
       // Plugin resource routes (project-level)
       {
         path: 'projects/:id/plugin-resources/:pluginName',
