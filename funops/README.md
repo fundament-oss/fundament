@@ -36,6 +36,22 @@ prints the IDs of the clusters it queued; deleted clusters and clusters that
 already have a sync waiting are left out. With a cluster ID, queuing nothing is
 an error.
 
+A sync writes the Kubernetes version and the worker pools, machine image
+included, from the database. A Shoot that differs from them, for example after
+a Gardener maintenance update, is set back to the database's values, so compare
+the two before running `--all`. Per cluster, the database:
+
+```
+psql "$DATABASE_URL" -c "SELECT c.id, c.kubernetes_version, p.machine_type, p.autoscale_min, p.autoscale_max FROM tenant.clusters c JOIN tenant.node_pools p ON p.cluster_id = c.id AND p.deleted IS NULL WHERE c.deleted IS NULL ORDER BY c.id"
+```
+
+and the Shoots in the garden, whose image version should equal the
+cluster-worker's `GARDENER_MACHINE_IMAGE_VERSION`:
+
+```
+kubectl get shoots -A -l fundament.io/cluster-id -o custom-columns='CLUSTER:.metadata.labels.fundament\.io/cluster-id,VERSION:.spec.kubernetes.version,TYPE:.spec.provider.workers[*].machine.type,MIN:.spec.provider.workers[*].minimum,MAX:.spec.provider.workers[*].maximum,IMAGE:.spec.provider.workers[*].machine.image.version'
+```
+
 Signing in never creates an organization. A new user shows up in
 `funops user list --without-organization`; `funops organization member add`
 puts them in one. For someone who has not signed in yet, pass `--create-user`
