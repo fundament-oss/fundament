@@ -7,6 +7,8 @@ See [FUN-8](../docs/funs/FUN-8.adoc) for design details.
 ## Commands
 
 ```
+funops cluster sync <cluster-id>
+funops cluster sync --all
 funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
@@ -24,6 +26,31 @@ funops plugin list [--status <status|all>]
 funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] [--feedback <text>]
 funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
 funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
+```
+
+`funops cluster sync` queues a sync of a cluster to Gardener: the cluster-worker
+writes the cluster's Shoot again, as it does after a change to the cluster, and
+Gardener reconciles the Shoot when its spec changed. Run it with `--all` after
+deploying a release that changes what the worker writes to every Shoot. It
+prints the IDs of the clusters it queued; deleted clusters and clusters that
+already have a sync waiting are left out. With a cluster ID, queuing nothing is
+an error.
+
+A sync writes the Kubernetes version and the worker pools from the database,
+with the machine image version from the cluster-worker's
+`GARDENER_MACHINE_IMAGE_VERSION` (and, on the local provider, the machine type
+from `GARDENER_DEFAULT_MACHINE_TYPE`). A Shoot that differs from them, for
+example after a Gardener maintenance update, is set back to those values, so
+compare the two before running `--all`. Per cluster, the database:
+
+```
+psql "$DATABASE_URL" -c "SELECT tenant.clusters.id, tenant.clusters.kubernetes_version, tenant.node_pools.machine_type, tenant.node_pools.autoscale_min, tenant.node_pools.autoscale_max FROM tenant.clusters JOIN tenant.node_pools ON tenant.node_pools.cluster_id = tenant.clusters.id AND tenant.node_pools.deleted IS NULL WHERE tenant.clusters.deleted IS NULL ORDER BY tenant.clusters.id"
+```
+
+and the Shoots in the garden:
+
+```
+kubectl get shoots -A -l fundament.io/cluster-id -o custom-columns='CLUSTER:.metadata.labels.fundament\.io/cluster-id,VERSION:.spec.kubernetes.version,TYPE:.spec.provider.workers[*].machine.type,MIN:.spec.provider.workers[*].minimum,MAX:.spec.provider.workers[*].maximum,IMAGE:.spec.provider.workers[*].machine.image.version'
 ```
 
 Signing in never creates an organization. A new user shows up in

@@ -96,6 +96,11 @@ sequenceDiagram
   cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
   of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
   a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
+- **No tenant DNS.** Every sync writes the `shoot-dns-service` extension as disabled on the
+  shoot (never on the local provider, whose Gardener does not register it), so cluster admins
+  cannot publish DNS names under the shoot domain. `funops cluster sync --all` queues a sync
+  of every cluster that is not deleted and has none waiting, which brings existing shoots in
+  line after an upgrade.
 
 ## Cluster status
 

@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"testing"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func testClient(provider *ProviderConfig) *RealClient {
@@ -113,4 +115,57 @@ func TestBuildShootSpec_LegacyClusterUsesProviderDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "metal", shoot.Spec.CloudProfile.Name)
 	require.Equal(t, "local", shoot.Spec.Region)
+}
+
+func requireTenantDNSDisabled(t *testing.T, extension *gardencorev1beta1.Extension) {
+	t.Helper()
+	require.Equal(t, "shoot-dns-service", extension.Type)
+	require.NotNil(t, extension.Disabled)
+	require.True(t, *extension.Disabled)
+	require.Nil(t, extension.ProviderConfig)
+}
+
+// A new Shoot has shoot-dns-service disabled, except on the local provider,
+// whose Gardener does not register the extension.
+func TestBuildShootSpec_DisablesTenantDNS(t *testing.T) {
+	local := NewProviderConfig()
+	shoot, err := testClient(&local).buildShootSpec(testCluster())
+	require.NoError(t, err)
+	require.Empty(t, shoot.Spec.Extensions)
+
+	metal := &ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"}
+	shoot, err = testClient(metal).buildShootSpec(testCluster())
+	require.NoError(t, err)
+	require.Len(t, shoot.Spec.Extensions, 1)
+	requireTenantDNSDisabled(t, &shoot.Spec.Extensions[0])
+}
+
+// An existing Shoot whose extension entry was filled in by Gardener gets that
+// entries replaced by one disabled entry; other extensions are kept as they
+// are, and a second update changes nothing.
+func TestUpdateShootSpec_DisablesTenantDNS(t *testing.T) {
+	r := testClient(&ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
+	other := gardencorev1beta1.Extension{
+		Type:           "other",
+		ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"keep":true}`)},
+	}
+	shoot := &gardencorev1beta1.Shoot{
+		Spec: gardencorev1beta1.ShootSpec{
+			Extensions: []gardencorev1beta1.Extension{
+				{Type: "shoot-dns-service", Disabled: new(true)},
+				other,
+				{
+					Type:           "shoot-dns-service",
+					ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"syncProvidersFromShootSpecDNS":true}`)},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, r.updateShootSpec(shoot, testCluster()))
+	require.NoError(t, r.updateShootSpec(shoot, testCluster()))
+
+	require.Len(t, shoot.Spec.Extensions, 2)
+	require.Equal(t, other, shoot.Spec.Extensions[0])
+	requireTenantDNSDisabled(t, &shoot.Spec.Extensions[1])
 }
