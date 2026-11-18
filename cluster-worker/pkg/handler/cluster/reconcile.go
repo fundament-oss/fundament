@@ -32,12 +32,6 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		return fmt.Errorf("list active clusters: %w", err)
 	}
 
-	// A failure here must not hold up the rest of the pass; the next pass
-	// tries again.
-	if err := h.gardener.EnforceShootSettings(ctx); err != nil {
-		h.logger.Error("failed to enforce shoot settings", "error", err)
-	}
-
 	shoots, err := h.gardener.ListShoots(ctx)
 	if err != nil {
 		h.logger.Error("failed to list shoots from Gardener", "error", err)

@@ -3,15 +3,11 @@ package gardener
 import (
 	"log/slog"
 	"testing"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func testClient(provider *ProviderConfig) *RealClient {
@@ -172,60 +168,4 @@ func TestUpdateShootSpec_DisablesTenantDNS(t *testing.T) {
 	require.Len(t, shoot.Spec.Extensions, 2)
 	require.Equal(t, other, shoot.Spec.Extensions[0])
 	requireTenantDNSDisabled(t, &shoot.Spec.Extensions[1])
-}
-
-// EnforceShootSettings disables shoot-dns-service on managed Shoots that have
-// it on, and writes neither a Shoot that already complies, nor one being
-// deleted, nor one this worker does not manage.
-func TestEnforceShootSettings(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, gardencorev1beta1.AddToScheme(scheme))
-
-	managed := map[string]string{LabelClusterID: uuid.New().String()}
-	enabled := listShootsTestShoot("enabled", managed)
-	enabled.Spec.Extensions = []gardencorev1beta1.Extension{{Type: "shoot-dns-service"}}
-	compliant := listShootsTestShoot("compliant", managed)
-	compliant.Spec.Extensions = []gardencorev1beta1.Extension{{Type: "shoot-dns-service", Disabled: new(true)}}
-	deleting := listShootsTestShoot("deleting", managed)
-	deleting.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-	deleting.Finalizers = []string{"gardener"}
-	foreign := listShootsTestShoot("foreign", nil)
-
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(enabled, compliant, deleting, foreign).Build()
-	r := &RealClient{
-		client:   c,
-		provider: ProviderConfig{Type: "metal"},
-		logger:   slog.Default(),
-	}
-
-	get := func(name string) *gardencorev1beta1.Shoot {
-		shoot := &gardencorev1beta1.Shoot{}
-		require.NoError(t, c.Get(t.Context(), client.ObjectKey{Namespace: enabled.Namespace, Name: name}, shoot))
-		return shoot
-	}
-	compliantVersion := get("compliant").ResourceVersion
-
-	require.NoError(t, r.EnforceShootSettings(t.Context()))
-
-	require.Len(t, get("enabled").Spec.Extensions, 1)
-	requireTenantDNSDisabled(t, &get("enabled").Spec.Extensions[0])
-	require.Equal(t, compliantVersion, get("compliant").ResourceVersion)
-	require.Empty(t, get("deleting").Spec.Extensions)
-	require.Empty(t, get("foreign").Spec.Extensions)
-}
-
-// The local provider's Shoots are left alone.
-func TestEnforceShootSettings_LocalProvider(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, gardencorev1beta1.AddToScheme(scheme))
-
-	shoot := listShootsTestShoot("local", map[string]string{LabelClusterID: uuid.New().String()})
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(shoot).Build()
-	r := &RealClient{client: c, provider: NewProviderConfig(), logger: slog.Default()}
-
-	require.NoError(t, r.EnforceShootSettings(t.Context()))
-
-	got := &gardencorev1beta1.Shoot{}
-	require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(shoot), got))
-	require.Empty(t, got.Spec.Extensions)
 }

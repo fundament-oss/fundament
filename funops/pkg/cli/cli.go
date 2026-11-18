@@ -13,6 +13,7 @@ type CLI struct {
 	Debug  bool         `help:"Enable debug logging."`
 	Output OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 
+	Cluster      ClusterCmd      `cmd:"" help:"Manage clusters."`
 	Organization OrganizationCmd `cmd:"" help:"Manage organizations and their members."`
 	Plugin       PluginCmd       `cmd:"" help:"Review submitted plugin versions."`
 	User         UserCmd         `cmd:"" help:"Manage users."`

@@ -7,6 +7,8 @@ See [FUN-8](../docs/funs/FUN-8.adoc) for design details.
 ## Commands
 
 ```
+funops cluster sync <cluster-id>
+funops cluster sync --all
 funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
@@ -25,6 +27,13 @@ funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [-
 funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
 funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
 ```
+
+`funops cluster sync` queues a sync of a cluster to Gardener: the cluster-worker
+writes the cluster's Shoot again, as it does after a change to the cluster, and
+Gardener reconciles the Shoot when its spec changed. Run it with `--all` after
+deploying a release that changes what the worker writes to every Shoot. It
+prints the IDs of the clusters it queued; deleted clusters and clusters that
+already have a sync waiting are left out.
 
 Signing in never creates an organization. A new user shows up in
 `funops user list --without-organization`; `funops organization member add`

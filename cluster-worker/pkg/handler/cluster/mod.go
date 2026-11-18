@@ -26,7 +26,6 @@ type ShootSyncer interface {
 	// there was one.
 	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (found bool, err error)
 	ListShoots(ctx context.Context) ([]gardener.ShootInfo, error)
-	EnforceShootSettings(ctx context.Context) error
 }
 
 // ShootStatusChecker provides the Gardener operations needed by the status path.

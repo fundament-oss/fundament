@@ -123,10 +123,6 @@ type Client interface {
 	// ListShoots returns all Shoots managed by this worker
 	ListShoots(ctx context.Context) ([]ShootInfo, error)
 
-	// EnforceShootSettings updates every managed Shoot that lacks a setting the
-	// worker applies to all Shoots, such as a disabled shoot-dns-service.
-	EnforceShootSettings(ctx context.Context) error
-
 	// GetShootStatus returns the current reconciliation status of a Shoot.
 	GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error)
 

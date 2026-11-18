@@ -818,18 +818,19 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 }
 
 // disableTenantDNS switches the shoot-dns-service extension off on the Shoot,
-// replacing an entry Gardener filled in and reporting whether the Shoot
-// changed. Gardener enables the extension on every Shoot where it is
-// registered, and an entry with disabled set is the only way to opt out. With
+// replacing an entry Gardener filled in. Gardener enables the extension on
+// every Shoot where it is registered, and an entry with disabled set is the
+// only way to opt out. It runs on every create and sync of a Shoot, so
+// `funops cluster sync --all` brings existing Shoots in line. With
 // it on, a cluster admin can publish DNS names under the shoot domain; a
 // platform cookie scoped to a parent of that domain is then sent to names a
 // tenant controls.
 //
 // The local provider is skipped: a local Gardener does not register the
 // extension, and Gardener rejects a Shoot that names an unregistered one.
-func (r *RealClient) disableTenantDNS(shoot *gardencorev1beta1.Shoot) bool {
+func (r *RealClient) disableTenantDNS(shoot *gardencorev1beta1.Shoot) {
 	if r.provider.Type == "local" {
-		return false
+		return
 	}
 	isTenantDNS := func(e gardencorev1beta1.Extension) bool { return e.Type == tenantDNSExtension }
 	entries := 0
@@ -841,55 +842,13 @@ func (r *RealClient) disableTenantDNS(shoot *gardencorev1beta1.Shoot) bool {
 		}
 	}
 	if entries == 1 && !enabled {
-		return false
+		return
 	}
 	// Collapse every entry of the type into one disabled entry.
 	shoot.Spec.Extensions = append(
 		slices.DeleteFunc(shoot.Spec.Extensions, isTenantDNS),
 		gardencorev1beta1.Extension{Type: tenantDNSExtension, Disabled: new(true)},
 	)
-	return true
-}
-
-// EnforceShootSettings brings every Shoot this worker manages in line with
-// the settings it applies to all Shoots, which today is disableTenantDNS. A
-// Shoot that already complies is not written, so Gardener does not reconcile it.
-func (r *RealClient) EnforceShootSettings(ctx context.Context) error {
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := r.client.List(ctx, shootList, client.HasLabels{LabelClusterID}); err != nil {
-		return fmt.Errorf("failed to list shoots: %w", err)
-	}
-
-	var errs []error
-	for i := range shootList.Items {
-		listed := &shootList.Items[i]
-		if listed.DeletionTimestamp != nil || !r.disableTenantDNS(listed.DeepCopy()) {
-			continue
-		}
-		key := client.ObjectKeyFromObject(listed)
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			shoot := &gardencorev1beta1.Shoot{}
-			if err := r.client.Get(ctx, key, shoot); err != nil {
-				return fmt.Errorf("re-read shoot: %w", err)
-			}
-			if !r.disableTenantDNS(shoot) {
-				return nil
-			}
-			if err := r.client.Update(ctx, shoot); err != nil {
-				return fmt.Errorf("write shoot: %w", err)
-			}
-			return nil
-		})
-		if err != nil {
-			errs = append(errs, fmt.Errorf("shoot %s: %w", key, err))
-			continue
-		}
-		r.logger.Info("disabled shoot-dns-service on shoot", "shoot", listed.Name, "namespace", listed.Namespace)
-	}
-	if err := errors.Join(errs...); err != nil {
-		return fmt.Errorf("enforce shoot settings: %w", err)
-	}
-	return nil
 }
 
 // cloudProfile returns the CloudProfile backing the cluster's catalog region,

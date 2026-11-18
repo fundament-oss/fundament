@@ -92,13 +92,14 @@ sequenceDiagram
   changed") is the time of the last change. See [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it reports clusters whose shoot is missing (see
   [Lost clusters](#lost-clusters)), finishes deleting the shoots of deleted clusters, and
-  lets the shoot-side handlers re-assert their resources. It also switches the
-  `shoot-dns-service` extension off on every shoot that still has it on (never on the local
-  provider, whose Gardener does not register it), so cluster admins cannot publish DNS names
-  under the shoot domain. A shoot is deleted only once its
+  lets the shoot-side handlers re-assert their resources. A shoot is deleted only once its
   cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
   of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
   a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
+- **No tenant DNS.** Every sync writes the `shoot-dns-service` extension as disabled on the
+  shoot (never on the local provider, whose Gardener does not register it), so cluster admins
+  cannot publish DNS names under the shoot domain. `funops cluster sync --all` queues a sync
+  of every cluster, which brings existing shoots in line after an upgrade.
 
 ## Cluster status
 
