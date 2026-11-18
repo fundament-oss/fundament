@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,6 +42,9 @@ type RunCmd struct {
 }
 
 func (c *RunCmd) Run(ctx context.Context, k kube) error {
+	if err := k.local(ctx); err != nil {
+		return err
+	}
 	breaker, err := breakerThreshold(ctx, k)
 	if err != nil {
 		return err
@@ -73,6 +78,9 @@ func (c *RunCmd) Run(ctx context.Context, k kube) error {
 
 	k6Err := c.k6(ctx, k, edge, run)
 	end := time.Now().Unix()
+	if k6Err != nil {
+		printK6Log(eventsFile(c.Out, c.Scenario))
+	}
 	stop()
 	wg.Wait()
 	if err := samples.Close(); err != nil {
@@ -104,6 +112,28 @@ func (c *RunCmd) Run(ctx context.Context, k kube) error {
 		return fmt.Errorf("load %s failed: %w", c.Scenario, err)
 	}
 	return nil
+}
+
+// printK6Log prints k6's own lines from the log it shares with the events,
+// such as a script error that stopped it before the run.
+func printK6Log(path string) {
+	f, err := os.Open(path) //nolint:gosec // a file of the run's own output directory
+	if err != nil {
+		return
+	}
+	defer func() { _ = f.Close() }()
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var lines []string
+	for sc.Scan() {
+		var e event
+		if json.Unmarshal(sc.Bytes(), &e) != nil || e.Kind == "" {
+			lines = append(lines, sc.Text())
+		}
+	}
+	if len(lines) > 0 {
+		fmt.Fprintf(os.Stderr, "\n== k6's log\n%s\n", strings.Join(lines[max(0, len(lines)-20):], "\n"))
+	}
 }
 
 // writeEndState writes the end state; an incomplete one holds only what the
@@ -184,7 +214,7 @@ func limitsFor(breaker time.Duration) (limits, error) {
 	l := limits{MaxOutage: maxOutage}
 	var errs [3]error
 	l.MaxLag, errs[0] = envLimitOr("MAX_LAG", breaker.Seconds())
-	l.MaxConn, errs[1] = envLimitOr("MAX_CONN", 0.9)
+	l.MaxConn, errs[1] = envShareOr("MAX_CONN", 0.9)
 	l.MaxGap, errs[2] = envLimitOr("MAX_GAP", 10)
 	if err := errors.Join(errs[:]...); err != nil {
 		return l, fmt.Errorf("limits: %w", err)
@@ -366,6 +396,9 @@ type VolumeCmd struct {
 func (c *VolumeCmd) Run(ctx context.Context, k kube) error {
 	if c.Rows <= 0 {
 		return fmt.Errorf("rows must be positive, not %d", c.Rows)
+	}
+	if err := k.local(ctx); err != nil {
+		return err
 	}
 	// A row names what it is about; outbox_ck_single_fk wants exactly one.
 	project, err := k.sql(ctx, "select id from tenant.projects where deleted is null order by created limit 1")

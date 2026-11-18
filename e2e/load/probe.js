@@ -38,7 +38,7 @@ const grantVisible = new Trend('grant_visible_ms', true);
 const unit = /^(\d+)(s|m|h)$/.exec(duration);
 if (!unit) throw new Error(`DURATION=${duration}: use one unit, such as 90s, 5m or 1h`);
 const seconds = Number(unit[1]) * { s: 1, m: 60, h: 3600 }[unit[2]];
-const minChecks = Math.floor(seconds * rate * 3 * setting('CHECK_SHARE', 0.5));
+const minChecks = Math.floor(seconds * rate * 3 * setting('CHECK_SHARE', 0.5, 1));
 
 export const options = {
   ...baseOptions,
@@ -98,12 +98,12 @@ export function reads() {
 }
 
 // Polls as Bart until seen(response) holds or GRANT_WAIT_S pass; returns
-// whether it held.
+// whether it held within them. A response that arrives later does not count.
 function bartUntil(b, pid, seen, name) {
   const start = Date.now();
   while (Date.now() - start < grantWait) {
     const r = rpc(name, URLS.org, 'organization.v1.ProjectService/ListProjectMembers', b.token, b.org, { projectId: pid }, [200, 403, 404], { timeout: '10s' });
-    if (seen(r)) {
+    if (seen(r) && Date.now() - start <= grantWait) {
       if (name === 'w:bart') grantVisible.add(Date.now() - start);
       return true;
     }

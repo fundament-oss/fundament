@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -71,6 +72,9 @@ type seeder struct {
 func (c *SeedCmd) Run(ctx context.Context, k kube) error {
 	if c.Teams < 1 || c.Per < 1 {
 		return fmt.Errorf("need at least one team of one participant, not %d of %d", c.Teams, c.Per)
+	}
+	if err := k.local(ctx); err != nil {
+		return err
 	}
 	password, err := k.secret(ctx, "db-fun-operator", "password")
 	if err != nil {
@@ -219,7 +223,7 @@ func (s *seeder) team(ctx context.Context, org, organizationID string, per int, 
 	first := people[0].JWT
 	clusters := organizationv1connect.NewClusterServiceClient(s.client(first, organizationID), s.api)
 	if *known == nil {
-		regions, err := retry(ctx, "ListRegions", func(ctx context.Context) (*organizationv1.ListRegionsResponse, error) {
+		regions, err := retry(ctx, "ListRegions", transient, func(ctx context.Context) (*organizationv1.ListRegionsResponse, error) {
 			return clusters.ListRegions(ctx, &organizationv1.ListRegionsRequest{})
 		})
 		if err != nil {
@@ -242,7 +246,7 @@ func (s *seeder) team(ctx context.Context, org, organizationID string, per int, 
 	for i := range people {
 		p := &people[i]
 		keys := organizationv1connect.NewAPIKeyServiceClient(s.client(p.JWT, organizationID), s.api)
-		key, err := retry(ctx, "CreateAPIKey", func(ctx context.Context) (*organizationv1.CreateAPIKeyResponse, error) {
+		key, err := retry(ctx, "CreateAPIKey", refused, func(ctx context.Context) (*organizationv1.CreateAPIKeyResponse, error) {
 			return keys.CreateAPIKey(ctx, organizationv1.CreateAPIKeyRequest_builder{
 				Name:      "agent-" + strconv.FormatInt(time.Now().UnixNano(), 36),
 				ExpiresIn: credentialTTL.String(),
@@ -281,29 +285,44 @@ func pickOffer(regions []*organizationv1.Region) (*offer, error) {
 }
 
 func ensureCluster(ctx context.Context, clusters organizationv1connect.ClusterServiceClient, name string, o *offer) (string, error) {
-	list, err := retry(ctx, "ListClusters", func(ctx context.Context) (*organizationv1.ListClustersResponse, error) {
+	list, err := retry(ctx, "ListClusters", transient, func(ctx context.Context) (*organizationv1.ListClustersResponse, error) {
 		return clusters.ListClusters(ctx, &organizationv1.ListClustersRequest{})
 	})
 	if err != nil {
 		return "", err
 	}
+	var id string
 	for _, c := range list.GetClusters() {
 		if c.GetName() == name {
-			return c.GetId(), nil
+			id = c.GetId()
 		}
 	}
-	created, err := retry(ctx, "CreateCluster", func(ctx context.Context) (*organizationv1.CreateClusterResponse, error) {
-		return clusters.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{Name: name, Region: o.region, KubernetesVersion: o.version}.Build())
+	if id == "" {
+		created, err := retry(ctx, "CreateCluster", refused, func(ctx context.Context) (*organizationv1.CreateClusterResponse, error) {
+			return clusters.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{Name: name, Region: o.region, KubernetesVersion: o.version}.Build())
+		})
+		if err != nil {
+			return "", err
+		}
+		id = created.GetClusterId()
+	}
+
+	// A seed cut short after the cluster gets its node pool on the next one.
+	pools, err := retry(ctx, "ListNodePools", transient, func(ctx context.Context) (*organizationv1.ListNodePoolsResponse, error) {
+		return clusters.ListNodePools(ctx, organizationv1.ListNodePoolsRequest_builder{ClusterId: id}.Build())
 	})
 	if err != nil {
 		return "", err
 	}
-	_, err = retry(ctx, "CreateNodePool", func(ctx context.Context) (*organizationv1.CreateNodePoolResponse, error) {
+	if slices.ContainsFunc(pools.GetNodePools(), func(p *organizationv1.NodePool) bool { return p.GetName() == "pool" }) {
+		return id, nil
+	}
+	_, err = retry(ctx, "CreateNodePool", refused, func(ctx context.Context) (*organizationv1.CreateNodePoolResponse, error) {
 		return clusters.CreateNodePool(ctx, organizationv1.CreateNodePoolRequest_builder{
-			ClusterId: created.GetClusterId(), Name: "pool", MachineType: o.machineType, AutoscaleMin: 1, AutoscaleMax: 3,
+			ClusterId: id, Name: "pool", MachineType: o.machineType, AutoscaleMin: 1, AutoscaleMax: 3,
 		}.Build())
 	})
-	return created.GetClusterId(), err
+	return id, err
 }
 
 // session signs the claims authn-api puts in a session token.
@@ -344,17 +363,17 @@ func (i identity) RoundTrip(r *http.Request) (*http.Response, error) {
 	return i.base.RoundTrip(r) //nolint:wrapcheck // a RoundTripper passes its transport's error on
 }
 
-// retry repeats a call for up to a minute while it fails transiently: a new
+// retry repeats a call for up to a minute while again(err) holds: a new
 // organization's grants reach OpenFGA through the authz outbox, so a call may
 // be refused or unavailable for a moment.
-func retry[T any](ctx context.Context, what string, call func(context.Context) (T, error)) (T, error) {
+func retry[T any](ctx context.Context, what string, again func(error) bool, call func(context.Context) (T, error)) (T, error) {
 	deadline := time.Now().Add(time.Minute)
 	for {
 		v, err := call(ctx)
 		if err == nil {
 			return v, nil
 		}
-		if !transient(err) || time.Now().After(deadline) {
+		if !again(err) || time.Now().After(deadline) {
 			return v, fmt.Errorf("%s: %w", what, err)
 		}
 		select {
@@ -365,6 +384,19 @@ func retry[T any](ctx context.Context, what string, call func(context.Context) (
 	}
 }
 
+// refused holds for a create refused before it acted: by authorization, or
+// by the circuit breaker or proxy. After any other error the object may
+// exist, and creating it again would add a second one.
+func refused(err error) bool {
+	switch connect.CodeOf(err) {
+	case connect.CodePermissionDenied, connect.CodeUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// transient holds for a read that may succeed when tried again.
 func transient(err error) bool {
 	switch connect.CodeOf(err) {
 	case connect.CodePermissionDenied, connect.CodeUnavailable, connect.CodeUnknown, connect.CodeInternal, connect.CodeDeadlineExceeded:

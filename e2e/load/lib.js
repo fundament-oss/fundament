@@ -139,16 +139,17 @@ export function pageView(s) {
 
 // A number from the environment. A threshold that is not a number would make
 // its comparison false and pass, so any such value stops the run instead.
-export function setting(name, fallback) {
+export function setting(name, fallback, max = Infinity) {
   const raw = __ENV[name];
   if (raw === undefined || raw === '') return fallback;
   const value = Number(raw);
   if (!Number.isFinite(value) || value < 0) throw new Error(`${name}=${raw} is not a non-negative number`);
+  if (value > max) throw new Error(`${name}=${raw} is above ${max}`);
   return value;
 }
 
 // Share of requests that may fail with an unexpected status.
-export const failRate = `rate<=${setting('FAIL_RATE', 0)}`;
+export const failRate = `rate<=${setting('FAIL_RATE', 0, 1)}`;
 
 // p95 per call name, within one scenario when given, under P95_MS. Latency
 // depends on the machine k6 shares with the cluster, so without P95_MS the

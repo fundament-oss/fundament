@@ -217,3 +217,14 @@ func TestEnvLimit(t *testing.T) {
 		assert.Error(t, err, bad)
 	}
 }
+
+func TestEnvShare(t *testing.T) {
+	t.Setenv("LOAD_TEST_SHARE", "")
+	v, err := envShareOr("LOAD_TEST_SHARE", 0.9)
+	require.NoError(t, err)
+	assert.InDelta(t, 0.9, v, 0)
+
+	t.Setenv("LOAD_TEST_SHARE", "1.5")
+	_, err = envShareOr("LOAD_TEST_SHARE", 0.9)
+	assert.Error(t, err)
+}

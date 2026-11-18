@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,4 +42,13 @@ func TestPickOfferTakesTheNewestVersion(t *testing.T) {
 
 	_, err = pickOffer(nil)
 	require.Error(t, err)
+}
+
+// A create is tried again only when it was refused before it acted.
+func TestCreateRetriesOnlyRefusals(t *testing.T) {
+	assert.True(t, refused(connect.NewError(connect.CodePermissionDenied, nil)))
+	assert.True(t, refused(connect.NewError(connect.CodeUnavailable, nil)))
+	assert.False(t, refused(connect.NewError(connect.CodeUnknown, nil)))
+	assert.False(t, refused(connect.NewError(connect.CodeInternal, nil)))
+	assert.True(t, transient(connect.NewError(connect.CodeInternal, nil)))
 }

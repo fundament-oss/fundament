@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os/exec"
 	"strings"
 )
@@ -23,6 +25,30 @@ func newKube(kubeContext, namespace string) (kube, error) {
 		return kube{}, fmt.Errorf("context %q is not a local k3d cluster", kubeContext)
 	}
 	return kube{context: kubeContext, namespace: namespace}, nil
+}
+
+// local checks that the context's API server listens on this machine and
+// that its k3d node runs here in docker, so a context merely named k3d-*
+// cannot point the tool elsewhere.
+func (k kube) local(ctx context.Context) error {
+	server, err := output(ctx, "kubectl", "config", "view", "--minify", "--context", k.context, "-o", "jsonpath={.clusters[0].cluster.server}")
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(server)
+	if err != nil {
+		return fmt.Errorf("context %s: server %q: %w", k.context, server, err)
+	}
+	ip := net.ParseIP(u.Hostname())
+	onThisMachine := u.Hostname() == "localhost" || ip != nil && (ip.IsLoopback() || ip.IsUnspecified())
+	if !onThisMachine {
+		return fmt.Errorf("context %s talks to %s, not to this machine", k.context, server)
+	}
+	running, err := output(ctx, "docker", "inspect", "-f", "{{.State.Running}}", "k3d-"+k.cluster()+"-server-0")
+	if err != nil || running != "true" {
+		return fmt.Errorf("context %s: no running k3d node k3d-%s-server-0 on this machine", k.context, k.cluster())
+	}
+	return nil
 }
 
 // cluster is the k3d cluster's name, which also names its docker network and nodes.

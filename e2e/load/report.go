@@ -50,6 +50,15 @@ func envLimitOr(name string, fallback float64) (float64, error) {
 	return *value, nil
 }
 
+// envShareOr reads a share, from 0 to 1.
+func envShareOr(name string, fallback float64) (float64, error) {
+	value, err := envLimitOr(name, fallback)
+	if err == nil && value > 1 {
+		err = fmt.Errorf("%s=%g is a share: at most 1", name, value)
+	}
+	return value, err
+}
+
 // event is a line lib.js logs: a fail, an ok or a failed check.
 type event struct {
 	T      int64  `json:"t"`
