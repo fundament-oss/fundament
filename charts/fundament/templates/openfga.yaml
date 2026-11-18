@@ -107,11 +107,11 @@ spec:
                   key: uri
             {{- with $.Values.openfga.datastore }}
             - name: OPENFGA_DATASTORE_MAX_OPEN_CONNS
-              value: {{ .maxOpenConns | quote }}
+              value: {{ required "openfga.datastore.maxOpenConns is required" .maxOpenConns | quote }}
             - name: OPENFGA_DATASTORE_MAX_IDLE_CONNS
-              value: {{ .maxIdleConns | quote }}
+              value: {{ required "openfga.datastore.maxIdleConns is required" .maxIdleConns | quote }}
             - name: OPENFGA_DATASTORE_CONN_MAX_IDLE_TIME
-              value: {{ .connMaxIdleTime | quote }}
+              value: {{ required "openfga.datastore.connMaxIdleTime is required" .connMaxIdleTime | quote }}
             {{- end }}
             - name: OPENFGA_PLAYGROUND_ENABLED
               value: {{ $.Values.openfga.playground.enabled | quote }}

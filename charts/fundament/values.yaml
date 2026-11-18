@@ -140,13 +140,20 @@ db:
   # Each service's connection pool. Unbounded, a pool grows to the node's core
   # count and keeps idle connections for 30 minutes; a few busy services then
   # fill max_connections and every new pod, from a rollout, a restart or a
-  # drain, fails to connect. Only the busiest services fill their pool, so at
-  # one replica the default max_connections of 100 holds. Each extra replica
-  # adds up to maxConns per service: raise max_connections with it, via
-  # db.postgresql.parameters (two replicas need about 300).
+  # drain, fails to connect. A service's dbPool (e.g. clusterWorker.dbPool)
+  # overrides these fields for that service.
   pool:
     maxConns: 10
     maxConnIdleTime: 5m
+  # max_connections must hold every pool on every pod, during a rollout too:
+  # per enabled service (replicas + 1) × maxConns, twice for
+  # marketplace-catalog-api, which has two pools, plus maxConns for
+  # cluster-worker-inventory, (openfga.replicas + 1) × maxOpenConns, and 10 for
+  # superuser slots, jobs and psql. All services at one replica need 300.
+  # Changing max_connections restarts Postgres: CNPG rolls the instances.
+  postgresql:
+    parameters:
+      max_connections: "400"
   storageSize: 1Gi
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
   # Changing this restarts Postgres: CNPG rolls the instances.

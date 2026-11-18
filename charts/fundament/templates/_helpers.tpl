@@ -34,12 +34,33 @@ Database host (CNPG read-write service)
 {{- end }}
 
 {{/*
-Pool settings appended to each service's database URI (db.pool). Only the
-services read these URIs, through pgx; psql and libpq refuse pool_* parameters.
+A service's connection pool as JSON: db.pool, with the service's own dbPool
+over it. Rendering fails on a missing field, which pgx would refuse at start.
+
+Usage: include "fundament.db.pool" (dict "root" $ "service" "clusterWorker") | fromJson
 */}}
-{{- define "fundament.db.poolParams" -}}
-{{- with .Values.db.pool -}}
-?pool_max_conns={{ int .maxConns }}&pool_max_conn_idle_time={{ .maxConnIdleTime }}
+{{- define "fundament.db.pool" -}}
+{{- $own := (index .root.Values .service).dbPool | default dict -}}
+{{- $pool := merge (deepCopy $own) (deepCopy (.root.Values.db.pool | default dict)) -}}
+{{- if not (gt (int ($pool.maxConns | default 0)) 0) -}}
+{{- fail (printf "db.pool.maxConns (or %s.dbPool.maxConns) must be at least 1" .service) -}}
+{{- end -}}
+{{- $_ := required (printf "db.pool.maxConnIdleTime (or %s.dbPool.maxConnIdleTime) is required" .service) $pool.maxConnIdleTime -}}
+{{- toJson $pool -}}
+{{- end }}
+
+{{/*
+A database role's URI. With a service, it carries that service's pool
+settings; only the services read these URIs, through pgx, and psql and libpq
+refuse pool_* parameters.
+
+Usage: include "fundament.db.uri" (dict "root" $ "user" "fun_authn_api" "password" $p "service" "authnApi")
+*/}}
+{{- define "fundament.db.uri" -}}
+postgresql://{{ .user }}:{{ .password }}@{{ include "fundament.db.host" .root }}:5432/fundament
+{{- with .service -}}
+{{- $pool := include "fundament.db.pool" (dict "root" $.root "service" .) | fromJson -}}
+?pool_max_conns={{ int $pool.maxConns }}&pool_max_conn_idle_time={{ $pool.maxConnIdleTime }}
 {{- end -}}
 {{- end }}
 
