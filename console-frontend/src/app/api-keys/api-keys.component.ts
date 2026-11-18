@@ -90,9 +90,10 @@ const getExpiresInRefusal = (err: unknown): string | null => {
   return match ? match[1].trim() : null;
 };
 
-/** The maximum a refusal names, such as "720h"; null for any other reason. */
+/** The maximum a refusal names, such as "720h"; null for any other reason. A
+ *  duration over it is "at most", and never is "set, at most" (apikey_create.go). */
 const refusedMaximum = (reason: string): string | null =>
-  /^must be at most (\S+)$/.exec(reason)?.[1] ?? null;
+  /^must be (?:set, )?at most (\S+)$/.exec(reason)?.[1] ?? null;
 
 const asSentence = (reason: string): string =>
   `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`;

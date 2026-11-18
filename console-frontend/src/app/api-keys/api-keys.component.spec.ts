@@ -414,6 +414,28 @@ describe('ApiKeysComponent', () => {
     expect(component.newKeyExpiresOnError()).toBe('Must be within 30 days from now.');
   });
 
+  it('words a refused never in days as well, when a maximum came after the list', async () => {
+    const fixture = await render({
+      listAPIKeys: () => list(),
+      createAPIKey: () =>
+        throwError(
+          () =>
+            new ConnectError(
+              'validation error:\n - expires_in: must be set, at most 720h',
+              Code.InvalidArgument,
+            ),
+        ),
+    });
+    const { componentInstance: component } = fixture;
+
+    component.startCreating();
+    component.newKeyName.set('ci');
+    component.newKeyExpiryChoice.set('never');
+    await component.createApiKey(new Event('submit', { cancelable: true }));
+
+    expect(component.error()).toBe('This lifetime is not allowed. The longest allowed is 30 days.');
+  });
+
   it('says a refusal it cannot word in days as the server wrote it', async () => {
     const fixture = await render({
       listAPIKeys: () => listWithMaximum('8760h'),
