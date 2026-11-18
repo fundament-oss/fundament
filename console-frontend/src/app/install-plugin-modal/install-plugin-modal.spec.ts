@@ -314,7 +314,7 @@ describe('InstallPluginModalComponent uninstall confirmation', () => {
     const component = fixture.componentInstance;
     const emitted: string[] = [];
     component.uninstall.subscribe((id) => emitted.push(id));
-    return { component, emitted };
+    return { fixture, component, emitted };
   }
 
   it('asks for confirmation instead of uninstalling right away', () => {
@@ -336,14 +336,31 @@ describe('InstallPluginModalComponent uninstall confirmation', () => {
     expect(component.pendingUninstall()).toBeNull();
   });
 
-  it('does not uninstall when the cluster stopped offering it meanwhile', () => {
-    const { component, emitted } = buildWithCluster(null);
+  // A poll can change the row while the dialog is open: the confirmation must
+  // look at the row as it is now, not as it was when the dialog opened.
+  it.each([
+    ['moved to uninstalling', [{ ...installed, phase: 'Terminating' }]],
+    ['lost the plugin', [{ ...installed, phase: null }]],
+    ['was dropped from the list', []],
+  ])('does not uninstall when the cluster %s meanwhile', (_, clusters) => {
+    const { fixture, component, emitted } = buildWithCluster('Running');
 
     component.onUninstall(installed);
+    fixture.componentRef.setInput('clusters', clusters);
     component.confirmUninstall();
 
     expect(emitted).toEqual([]);
     expect(component.pendingUninstall()).toBeNull();
+  });
+
+  it('still uninstalls when the installation failed meanwhile', () => {
+    const { fixture, component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    fixture.componentRef.setInput('clusters', [{ ...installed, phase: 'Failed' }]);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual(['c1']);
   });
 
   it('closing the sheet drops a pending confirmation', () => {
