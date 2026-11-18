@@ -21,9 +21,10 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// A session ends SessionMaxAge after its login, however often it is
-	// refreshed. API-key tokens are not sessions: the key is exchanged again.
+	// refreshed. Only interactive logins are sessions; any other token, such
+	// as an exchanged API key, is minted again from its source.
 	now := time.Now()
-	if claims.AuthTime == nil || slices.Contains(claims.AMR, amrAPIKey) ||
+	if claims.AuthTime == nil || !isInteractiveLogin(claims.AMR) ||
 		!now.Before(claims.AuthTime.Add(s.config.SessionMaxAge)) {
 		s.writeErrorJSON(w, http.StatusUnauthorized, "Unauthorized")
 		return
@@ -60,9 +61,11 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// The lookups take time; near the limit they can carry the session past it.
+	// Under a second left would truncate to a zero cookie Max-Age, which the
+	// browser reads as a session cookie.
 	now = time.Now()
 	exp := s.sessionExpiry(sess, now)
-	if !exp.After(now) {
+	if exp.Sub(now) < time.Second {
 		s.writeErrorJSON(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -82,4 +85,9 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		s.logger.Error("failed to write JSON response", "error", err)
 	}
+}
+
+// isInteractiveLogin reports whether amr records a user login.
+func isInteractiveLogin(amr []string) bool {
+	return slices.Contains(amr, amrOIDC) || slices.Contains(amr, amrPassword)
 }

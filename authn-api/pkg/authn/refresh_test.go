@@ -240,8 +240,8 @@ func TestHandleRefresh_ExpiryCappedAtMaxAge(t *testing.T) {
 	assert.InDelta(t, (10 * time.Minute).Seconds(), cookies[0].MaxAge, 5)
 }
 
-// Sessions refresh cannot extend: past the maximum age, minted before
-// auth_time existed, or an API-key exchange, which is not a session at all.
+// Sessions refresh cannot extend: past the maximum age, with under a second
+// left, minted before auth_time existed, or not from an interactive login.
 func TestHandleRefresh_RefusesEndedSessions(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -250,7 +250,10 @@ func TestHandleRefresh_RefusesEndedSessions(t *testing.T) {
 	}{
 		{"auth_time past the maximum age", jwt.NewNumericDate(time.Now().Add(-refreshTestMaxAge - time.Minute)), []string{amrOIDC}},
 		{"no auth_time", nil, []string{amrOIDC}},
+		{"under a second left", jwt.NewNumericDate(time.Now().Truncate(time.Second).Add(-refreshTestMaxAge + time.Second)), []string{amrOIDC}},
 		{"API-key token", jwt.NewNumericDate(time.Now()), []string{amrAPIKey}},
+		{"no amr", jwt.NewNumericDate(time.Now()), nil},
+		{"unknown method", jwt.NewNumericDate(time.Now()), []string{"mfa"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
