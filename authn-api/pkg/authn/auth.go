@@ -99,6 +99,9 @@ type AuthnServer struct {
 
 // New creates a new AuthnServer.
 func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup, shootVerifier shootverify.Verifier) (*AuthnServer, error) {
+	if cfg.TokenExpiry <= 0 {
+		return nil, fmt.Errorf("token expiry must be positive, got %s", cfg.TokenExpiry)
+	}
 	// A session shorter than one token would cap every login token below
 	// TokenExpiry, which the login cookie and expires_in assume.
 	if cfg.SessionMaxAge < cfg.TokenExpiry {

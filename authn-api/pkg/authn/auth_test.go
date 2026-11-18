@@ -134,7 +134,21 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
 
-func TestNew_RejectsSessionShorterThanToken(t *testing.T) {
-	_, err := New(discardLogger(), &Config{TokenExpiry: 24 * time.Hour, SessionMaxAge: time.Hour}, nil, nil, nil, nil, nil, nil, nil)
-	require.ErrorContains(t, err, "shorter than token expiry")
+func TestNew_RejectsInvalidLifetimes(t *testing.T) {
+	tests := []struct {
+		name          string
+		tokenExpiry   time.Duration
+		sessionMaxAge time.Duration
+		wantErr       string
+	}{
+		{"session shorter than token", 24 * time.Hour, time.Hour, "shorter than token expiry"},
+		{"zero lifetimes", 0, 0, "token expiry must be positive"},
+		{"negative token expiry", -time.Hour, time.Hour, "token expiry must be positive"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := New(discardLogger(), &Config{TokenExpiry: tc.tokenExpiry, SessionMaxAge: tc.sessionMaxAge}, nil, nil, nil, nil, nil, nil, nil)
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
 }
