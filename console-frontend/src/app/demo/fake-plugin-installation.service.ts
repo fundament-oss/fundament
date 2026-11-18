@@ -35,7 +35,7 @@ interface DemoInstall {
 
 function toItem(install: DemoInstall): PluginInstallationItem {
   const running = install.startedAt === null || Date.now() - install.startedAt > INSTALL_MS;
-  // Qualify metadata.name the same way the real API does: plugin-details reads it
+  // Qualify metadata.name the same way the real API does: the console reads it
   // back through pluginResourceName(organizationName, pluginName) to find this row.
   const resourceName = pluginResourceName(install.organizationName, install.pluginName);
   return {
@@ -170,7 +170,13 @@ export default class FakePluginInstallationService implements Pick<
     definitionHash: string,
   ): Promise<void> {
     await this.uninstallPlugin(clusterId, pluginResourceName(organizationName, pluginName));
-    await this.installPlugin(clusterId, organizationName, pluginName, pluginVersion, definitionHash);
+    await this.installPlugin(
+      clusterId,
+      organizationName,
+      pluginName,
+      pluginVersion,
+      definitionHash,
+    );
   }
 
   // Real callers pass the installation (resource) name — e.g.

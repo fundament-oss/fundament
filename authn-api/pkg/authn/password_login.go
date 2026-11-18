@@ -68,6 +68,7 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 	)
 
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	s.setIDTokenCookie(w, rawIDToken)
 	if err := s.writeJSON(w, http.StatusOK, authnhttp.TokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",

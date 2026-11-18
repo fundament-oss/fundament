@@ -216,6 +216,20 @@ const routes: Routes = [
         loadComponent: () =>
           import('./cluster-projects/cluster-projects.component').then((m) => m.default),
       },
+      {
+        // A plugin is installed per cluster, so the plugins are a page of the
+        // cluster: what runs on it, and what can be added to it.
+        path: 'clusters/:id/plugins',
+        loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
+        // Both pages read the cluster once, as they open (see
+        // RemountOnParamChangeStrategy).
+        data: { pluginsView: 'cluster', remountOnParamChange: true },
+      },
+      {
+        path: 'clusters/:id/metrics',
+        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
+        data: { metricsScope: 'cluster', remountOnParamChange: true },
+      },
       // The detail page was the cluster's own address before the cluster had a
       // menu of its own; links to its editors still land on them.
       ...['nodes', 'namespaces'].map((editor) => ({
@@ -342,17 +356,30 @@ const routes: Routes = [
         pathMatch: 'full',
       },
       {
+        // Plugins and metrics were organization pages before they moved to the
+        // cluster they are about; old links land on the clusters to pick from.
         path: 'plugins',
-        loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
+        redirectTo: 'clusters',
+        pathMatch: 'full',
       },
       {
-        path: 'plugins/:id',
-        loadComponent: () =>
-          import('./plugin-details/plugin-details.component').then((m) => m.default),
+        // Installing a plugin, on whichever clusters, as a page of its own: the
+        // marketplace's "Install plugin" button lands here.
+        path: 'plugins/:pluginId/install',
+        loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
+        data: { pluginsView: 'install', remountOnParamChange: true },
+      },
+      {
+        // The plugin page is gone; a link to a plugin (with or without the old
+        // ?install=1) is about doing something with it, which is installing.
+        path: 'plugins/:pluginId',
+        redirectTo: 'plugins/:pluginId/install',
+        pathMatch: 'full',
       },
       {
         path: 'metrics',
-        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
+        redirectTo: 'clusters',
+        pathMatch: 'full',
       },
       {
         path: 'logs',

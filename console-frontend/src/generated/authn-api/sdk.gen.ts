@@ -84,6 +84,10 @@ export const handleRefresh = <ThrowOnError extends boolean = false>(options?: Op
 /**
  * Logout user
  *
- * Clears the authentication cookie to log out the user.
+ * Clears the authentication cookie to log out the user. When the
+ * identity provider supports RP-initiated logout, the response also
+ * carries the URL that ends the session there, which the browser
+ * navigates to next.
+ *
  */
 export const handleLogout = <ThrowOnError extends boolean = false>(options?: Options<HandleLogoutData, ThrowOnError>) => (options?.client ?? client).post<HandleLogoutResponses, HandleLogoutErrors, ThrowOnError>({ url: '/logout', ...options });

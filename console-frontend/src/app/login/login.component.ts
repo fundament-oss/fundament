@@ -116,15 +116,17 @@ export default class LoginComponent implements OnInit {
   readonly methods = signal<LoginMethodsResponse | null>(null);
 
   /**
-   * The button to the identity provider, when there is one. It comes back to
-   * this page, hand-off and all: with the cookie set by then, `ngOnInit` sends
-   * the visitor on the way the password form would.
+   * The button to the identity provider, when there is one. It says only
+   * "Log in": the provider's name means nothing to most visitors, and the
+   * identity provider shows its own choices once they are there. It comes back
+   * to this page, hand-off and all: with the cookie set by then, `ngOnInit`
+   * sends the visitor on the way the password form would.
    */
   readonly ssoLogin = computed(() => {
     const name = this.methods()?.provider_name;
     if (!name) return null;
     return {
-      text: `Log in with ${name}`,
+      text: 'Log in',
       url: this.apiService.ssoLoginUrl(window.location.href),
       note: name === FIELDLAB_PROVIDER ? FIELDLAB_NOTE : null,
     };

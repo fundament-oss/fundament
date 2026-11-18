@@ -32,9 +32,19 @@ type LoginMethodsResponse struct {
 	// Password Whether /login/password works (Dex's static users)
 	Password bool `json:"password"`
 
-	// ProviderName Name of the identity provider for a "Log in with" button that
-	// starts /login. Absent means no button.
+	// ProviderName Name of the identity provider. Present means the login page
+	// shows a "Log in" button that starts /login; absent means no
+	// button.
 	ProviderName *string `json:"provider_name,omitempty"`
+}
+
+// LogoutResponse defines model for LogoutResponse.
+type LogoutResponse struct {
+	// LogoutUrl The identity provider's end-session URL, with the ID token as a
+	// hint and the console's login page to come back to. Absent when the
+	// provider has no end-session endpoint (Dex).
+	LogoutUrl *string `json:"logout_url,omitempty"`
+	Status    *string `json:"status,omitempty"`
 }
 
 // PasswordLoginRequest defines model for PasswordLoginRequest.
@@ -676,7 +686,7 @@ type HandleLogout200ResponseHeaders struct {
 }
 
 type HandleLogout200JSONResponse struct {
-	Body    StatusResponse
+	Body    LogoutResponse
 	Headers HandleLogout200ResponseHeaders
 }
 

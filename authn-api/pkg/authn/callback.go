@@ -67,6 +67,7 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	s.setIDTokenCookie(w, rawIDToken)
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }
 

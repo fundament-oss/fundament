@@ -170,10 +170,12 @@ authnApi:
   sandboxKubeconfigSecret: ""
   # oidc: an external identity provider in place of the chart's Dex, such as
   # Fundament SSO (Keycloak). Set issuer and turn dex.enabled off. authn-api
-  # then signs everyone in through the provider, behind a "Log in with
-  # <displayName>" button, and the console drops the password form: only Dex
-  # offers the password grant it needs. The provider's client must accept
-  # exactly <externalUrls.authn>/callback as redirect URI.
+  # then signs everyone in through the provider, behind a "Log in" button
+  # that a non-empty displayName turns on, and the console drops the password
+  # form: only Dex offers the password grant it needs. The provider's client
+  # must accept exactly <externalUrls.authn>/callback as redirect URI, and
+  # <externalUrls.console>/login as post-logout redirect URI: logout sends the
+  # browser to the provider's end-session endpoint so its session ends too.
   # authn-api stores the provider's `sub` as each user's external_ref, so
   # switching providers later turns every user into a new identity whose
   # email is already taken.

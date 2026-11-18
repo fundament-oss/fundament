@@ -58,6 +58,10 @@ type Config struct {
 	// button, which starts /login. Empty means no button: with Dex, the
 	// password form is the way in.
 	OIDCDisplayName string
+	// EndSessionURL is the identity provider's end_session_endpoint from its
+	// discovery document. Logout sends the browser there so the provider ends
+	// its own session too. Empty when the provider has none (Dex).
+	EndSessionURL string
 }
 
 // authzEvaluator is the subset of authz.Client used by handlers — extracted

@@ -42,8 +42,8 @@ type config struct {
 	// OIDCScopes: Dex adds a groups claim on request; Keycloak refuses a scope
 	// it does not define, so an external provider leaves "groups" out.
 	OIDCScopes []string `env:"OIDC_SCOPES" envDefault:"openid,profile,email,groups"`
-	// OIDCDisplayName names the identity provider on the console's "Log in
-	// with" button. Empty means no button.
+	// OIDCDisplayName names the identity provider. Non-empty turns on the
+	// console's "Log in" button; empty means no button.
 	OIDCDisplayName string `env:"OIDC_DISPLAY_NAME"`
 	// PasswordLoginEnabled serves /login/password, which needs the password
 	// grant only Dex offers here.
@@ -135,6 +135,15 @@ func run() error {
 
 	logger.Debug("OIDC provider connected")
 
+	// RP-initiated logout: Keycloak advertises where to end its session, Dex
+	// does not, which leaves logout clearing only Fundament's own cookie.
+	var providerMetadata struct {
+		EndSessionEndpoint string `json:"end_session_endpoint"`
+	}
+	if err := provider.Claims(&providerMetadata); err != nil {
+		return fmt.Errorf("failed to read OIDC provider metadata: %w", err)
+	}
+
 	endpoint := provider.Endpoint()
 
 	// Override the token URL to use internal discovery URL instead of issuer
@@ -220,6 +229,7 @@ func run() error {
 		AllowedReturnOrigins: append([]string{cfg.FrontendURL}, cfg.CORSAllowedOrigins...),
 		PasswordLoginEnabled: cfg.PasswordLoginEnabled,
 		OIDCDisplayName:      cfg.OIDCDisplayName,
+		EndSessionURL:        providerMetadata.EndSessionEndpoint,
 	}
 	if !shootVerifierCfg.UsesGardener() {
 		authnCfg.WorkloadSubjects = map[string]string{

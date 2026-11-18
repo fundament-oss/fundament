@@ -1041,6 +1041,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   pluginDisplayName = pluginDisplayName;
 
+  /** An address under this cluster, e.g. clusterPath('/plugins'). Read off the
+   *  route, so it is right before the cluster itself has loaded. */
+  clusterPath(sub: string): string {
+    return `/clusters/${this.route.snapshot.params['id']}${sub}`;
+  }
+
   getEventDetails = getEventDetails;
 
   formatEventMessage = formatEventMessage;

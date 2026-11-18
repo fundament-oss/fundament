@@ -432,7 +432,7 @@ func toProtoBackend(b logs.Backend) organizationv1.LogBackend {
 }
 
 func mapLogError(err error) error {
-	if errors.Is(err, logs.ErrPodRequired) {
+	if errors.Is(err, logs.ErrNamespaceRequired) {
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	return connect.NewError(connect.CodeInternal, err)
@@ -487,7 +487,7 @@ func classifyLogError(err error) logErrorKind {
 	switch {
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		return logErrorCanceled
-	case errors.Is(err, logs.ErrPodRequired):
+	case errors.Is(err, logs.ErrNamespaceRequired):
 		return logErrorCaller
 	}
 

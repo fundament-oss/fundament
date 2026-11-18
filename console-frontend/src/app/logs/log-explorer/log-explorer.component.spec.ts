@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { NEVER } from 'rxjs';
+import { NEVER, throwError } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { vi } from 'vitest';
-import LogExplorerComponent from './log-explorer.component';
+import LogExplorerComponent, { containersOf } from './log-explorer.component';
 import { LogsApiService, type LogHistogram, type LogQueryResult } from '../logs.service';
 import { ShootPodsService } from '../shoot-pods.service';
 import type { HistogramBucket, LogLevel } from '../log.types';
-import { LogBackend } from '../../../generated/v1/logs_pb';
+import { LogBackend, LogSource } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { NotificationService } from '../../notification.service';
 import PageNavService from '../../page-nav.service';
@@ -46,12 +47,13 @@ function build(opts: { backend?: LogBackend; exact?: boolean } = {}) {
     tail: vi.fn(() => NEVER),
     labels: vi.fn(async () => ({ namespaces: [], pods: [], containers: [], backend })),
   };
+  const notifications = { error: vi.fn(), info: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: LogsApiService, useValue: logsApi },
       { provide: TitleService, useValue: { setTitle: () => {} } },
       { provide: ConfigService, useValue: { getConfig: () => ({}) } },
-      { provide: NotificationService, useValue: { error: () => {}, info: () => {} } },
+      { provide: NotificationService, useValue: notifications },
       { provide: PageNavService, useValue: { backText: () => null } },
       { provide: PluginInstallationService, useValue: {} },
       { provide: ShootPodsService, useValue: {} },
@@ -65,7 +67,7 @@ function build(opts: { backend?: LogBackend; exact?: boolean } = {}) {
     await component['loadLogs']();
     await settle();
   };
-  return { component, logsApi, load };
+  return { component, logsApi, load, notifications };
 }
 
 describe('LogExplorerComponent level counts', () => {
@@ -194,5 +196,84 @@ describe('LogExplorerComponent level selection', () => {
     component.toggleLevel('WARN');
 
     expect(component.isAllLevelsSelected()).toBe(true);
+  });
+});
+
+describe('LogExplorerComponent plugin logs', () => {
+  it('reads every pod of the plugin when no pod is picked', async () => {
+    const { component, logsApi, load } = build({ backend: LogBackend.KUBERNETES });
+    component.sourceMode.set('live');
+    component.selectedNamespace.set('plugin-cert-manager');
+    await load();
+
+    expect(logsApi.query).toHaveBeenCalledWith(
+      expect.objectContaining({
+        namespace: 'plugin-cert-manager',
+        pod: undefined,
+        source: LogSource.PLUGIN,
+      }),
+    );
+    expect(component.podLabel()).toBe('All pods');
+  });
+
+  it('does not query before a plugin is picked', async () => {
+    const { component, logsApi, load } = build({ backend: LogBackend.KUBERNETES });
+    component.sourceMode.set('live');
+    await load();
+
+    expect(logsApi.query).not.toHaveBeenCalled();
+  });
+
+  it('asks for a plugin instead of streaming without one', () => {
+    const { component, logsApi, notifications } = build();
+    component.sourceMode.set('live');
+
+    component.setStreamState('streaming');
+
+    expect(logsApi.tail).not.toHaveBeenCalled();
+    expect(notifications.info).toHaveBeenCalledWith('Select a plugin first');
+    expect(component.streamState()).toBe('off');
+  });
+
+  it('asks for a namespace on the pod-log fallback', () => {
+    const { component, logsApi, notifications } = build({ backend: LogBackend.KUBERNETES });
+    component.backend.set(LogBackend.KUBERNETES);
+
+    component.setStreamState('streaming');
+
+    expect(logsApi.tail).not.toHaveBeenCalled();
+    expect(notifications.info).toHaveBeenCalledWith('Select a namespace first');
+  });
+
+  it('says why a refused stream stopped rather than that it disconnected', () => {
+    const { component, logsApi, notifications } = build();
+    logsApi.tail.mockReturnValueOnce(
+      throwError(
+        () => new ConnectError('kubernetes log backend requires a namespace', Code.InvalidArgument),
+      ),
+    );
+
+    component.setStreamState('streaming');
+
+    expect(notifications.error).toHaveBeenCalledWith('kubernetes log backend requires a namespace');
+    expect(component.streamState()).toBe('off');
+  });
+
+  it('reports a dropped stream as disconnected', () => {
+    const { component, logsApi, notifications } = build();
+    logsApi.tail.mockReturnValueOnce(throwError(() => new Error('network')));
+
+    component.setStreamState('streaming');
+
+    expect(notifications.error).toHaveBeenCalledWith('Live tail disconnected');
+  });
+
+  it('offers every container of every pod, each once', () => {
+    expect(
+      containersOf([
+        { name: 'web-0', containers: ['app', 'sidecar'] },
+        { name: 'web-1', containers: ['app'] },
+      ]),
+    ).toEqual(['app', 'sidecar']);
   });
 });
