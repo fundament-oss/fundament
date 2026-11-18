@@ -27,9 +27,9 @@
   '';
 
   # Docker publishes container ports through DNAT and FORWARD, past the NixOS
-  # firewall, and the k3d registry, Postgres and Gardener's registry publish on
-  # every address. Nothing outside the VM may open a connection to them: on a
-  # cloud host the uplink is the internet.
+  # firewall, and Gardener's registry publishes on every address. Nothing outside
+  # the VM may open a connection to a container: on a cloud host the uplink is the
+  # internet.
   systemd.services.docker-uplink-filter = {
     description = "Drop new connections from the uplink to containers";
     after = [ "docker.service" ];

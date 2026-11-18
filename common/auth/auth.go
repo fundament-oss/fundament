@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -66,7 +67,11 @@ type Validator struct {
 	cookieName       string
 	expectedIssuer   string
 	expectedAudience TokenType // empty = accept any audience (legacy)
-	logger           *slog.Logger
+	// cookieOrigins, when restrictCookieOrigins is set, are the only origins
+	// whose requests may authenticate with the cookie.
+	cookieOrigins         []string
+	restrictCookieOrigins bool
+	logger                *slog.Logger
 }
 
 // NewValidator creates a Validator pinned to a cookie name and issuer. Tokens
@@ -94,22 +99,73 @@ func NewValidatorForAudience(jwtSecret []byte, cookieName, expectedIssuer string
 	return v
 }
 
+// WithCookieOrigins makes Validate accept the auth cookie only from these
+// origins; bearer tokens are unaffected. The cookie rides along on any same-site
+// request, so a service reachable from other same-site pages (plugin pages on
+// plugin-proxy) uses this to tell the console's requests apart. Empty refuses
+// every cookie request.
+func (v *Validator) WithCookieOrigins(origins []string) *Validator {
+	v.restrictCookieOrigins = true
+	v.cookieOrigins = make([]string, 0, len(origins))
+	for _, entry := range origins {
+		if strings.TrimSpace(entry) == "" {
+			continue
+		}
+		origin, ok := NormalizeOrigin(entry)
+		if !ok {
+			v.logger.Error("ignoring allowed cookie origin that is not an absolute http(s) URL", "origin", entry)
+			continue
+		}
+		if !slices.Contains(v.cookieOrigins, origin) {
+			v.cookieOrigins = append(v.cookieOrigins, origin)
+		}
+	}
+	return v
+}
+
+// BearerToken returns the token of a "Bearer" Authorization header. Validate
+// reads the auth cookie only when this reports false.
+func BearerToken(header http.Header) (string, bool) {
+	token, ok := strings.CutPrefix(header.Get("Authorization"), "Bearer ")
+	if !ok || token == "" {
+		return "", false
+	}
+	return token, true
+}
+
 // Validate validates a JWT from the Authorization header,
 // falling back to the auth cookie if no Authorization header is present.
 func (v *Validator) Validate(header http.Header) (*Claims, error) {
-	// First try Authorization header
-	authHeader := header.Get("Authorization")
-	if len(authHeader) >= 8 && authHeader[:7] == "Bearer " {
-		return v.validateBearer(header)
+	if token, ok := BearerToken(header); ok {
+		return v.validateToken(token)
 	}
 
-	// Fall back to cookie from Cookie header
 	tokenString := v.extractCookieToken(header)
 	if tokenString == "" {
 		return nil, fmt.Errorf("no authorization header or auth cookie found")
 	}
 
+	if v.restrictCookieOrigins && !v.cookieOriginAllowed(header) {
+		v.logger.Debug("auth cookie refused from origin", "origin", header.Get("Origin"))
+		return nil, errors.New("auth cookie not accepted from this origin")
+	}
+
 	return v.validateToken(tokenString)
+}
+
+// cookieOriginAllowed reports whether the request comes from an allowed origin.
+// Browsers omit Origin on same-origin GET and HEAD; Sec-Fetch-Site tells those
+// apart from navigations, which also carry none.
+func (v *Validator) cookieOriginAllowed(header http.Header) bool {
+	if len(v.cookieOrigins) == 0 {
+		return false
+	}
+	raw := header.Get("Origin")
+	if raw == "" {
+		return header.Get("Sec-Fetch-Site") == "same-origin"
+	}
+	origin, ok := NormalizeOrigin(raw)
+	return ok && slices.Contains(v.cookieOrigins, origin)
 }
 
 // extractCookieToken extracts the auth token from the Cookie header.
@@ -173,17 +229,4 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 
 	v.logger.Debug("token validated", "user_id", claims.Subject, "organization_ids", claims.OrganizationIDs)
 	return claims, nil
-}
-
-// validateBearer validates a JWT from the Authorization header.
-// Returns an error if the header is missing or the token is invalid.
-func (v *Validator) validateBearer(header http.Header) (*Claims, error) {
-	authHeader := header.Get("Authorization")
-	if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
-		v.logger.Debug("missing or invalid authorization header")
-		return nil, fmt.Errorf("missing or invalid authorization header")
-	}
-
-	tokenString := authHeader[7:]
-	return v.validateToken(tokenString)
 }

@@ -199,7 +199,11 @@ paths:
       tags:
         - Authentication
       summary: Logout user
-      description: Clears the authentication cookie to log out the user.
+      description: |
+        Clears the authentication cookie to log out the user. When the
+        identity provider supports RP-initiated logout, the response also
+        carries the URL that ends the session there, which the browser
+        navigates to next.
       operationId: handleLogout
       responses:
         "200":
@@ -210,7 +214,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusResponse"
+                $ref: "#/components/schemas/LogoutResponse"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
 
@@ -362,8 +366,9 @@ components:
         provider_name:
           type: string
           description: |
-            Name of the identity provider for a "Log in with" button that
-            starts /login. Absent means no button.
+            Name of the identity provider. Present means the login page
+            shows a "Log in" button that starts /login; absent means no
+            button.
           example: Pleio
 
     PasswordLoginRequest:
@@ -388,6 +393,20 @@ components:
         status:
           type: string
           example: ok
+
+    LogoutResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        logout_url:
+          type: string
+          description: |
+            The identity provider's end-session URL, with the ID token as a
+            hint and the console's login page to come back to. Absent when the
+            provider has no end-session endpoint (Dex).
+          example: https://login.fundamentsso.nl/realms/fundamentsso/protocol/openid-connect/logout?client_id=fundament-poc
 
     ErrorResponse:
       type: object

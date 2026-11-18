@@ -15,11 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/common/auth"
 )
 
-// signWith produces an HS256-signed token with the given audiences. Non-test
-// callers should never mint tokens this way; peekTokenType only inspects the
-// audience without verifying the signature, so the exact bytes are what matter
-// for this test.
-func signWith(t *testing.T, aud jwt.ClaimStrings) string {
+func signWith(t *testing.T, secret []byte, aud jwt.ClaimStrings) string {
 	t.Helper()
 	c := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -29,29 +25,27 @@ func signWith(t *testing.T, aud jwt.ClaimStrings) string {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
 	}
-	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString([]byte("ignored"))
+	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(secret)
 	require.NoError(t, err)
 	return s
 }
 
-func TestPeekTokenType(t *testing.T) {
-	pluginTok := signWith(t, jwt.ClaimStrings{auth.TokenTypePlugin})
-	userTok := signWith(t, jwt.ClaimStrings{auth.TokenTypeUser})
-	mixedTok := signWith(t, jwt.ClaimStrings{auth.TokenTypeUser, auth.TokenTypePlugin})
+func TestIsPluginToken(t *testing.T) {
+	secret := []byte("secret")
 
 	cases := []struct {
 		name       string
 		authHeader string
 		cookie     *http.Cookie
-		want       auth.TokenType
+		want       bool
 	}{
-		{"no auth", "", nil, ""},
-		{"malformed bearer", "Bearer not.a.jwt", nil, ""},
-		{"plugin bearer", "Bearer " + pluginTok, nil, auth.TokenTypePlugin},
-		{"user bearer", "Bearer " + userTok, nil, auth.TokenTypeUser},
-		{"mixed audience is plugin", "Bearer " + mixedTok, nil, auth.TokenTypePlugin},
-		{"cookie only", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: "irrelevant"}, auth.TokenTypeUser}, //nolint:gosec // request cookie in a test
-		{"empty cookie value", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: ""}, ""},                    //nolint:gosec // request cookie in a test
+		{"no auth", "", nil, false},
+		{"malformed bearer", "Bearer not.a.jwt", nil, false},
+		{"plugin bearer", "Bearer " + signWith(t, secret, jwt.ClaimStrings{auth.TokenTypePlugin}), nil, true},
+		{"plugin audience with a forged signature", "Bearer " + signWith(t, []byte("other"), jwt.ClaimStrings{auth.TokenTypePlugin}), nil, false},
+		{"user bearer", "Bearer " + signWith(t, secret, jwt.ClaimStrings{auth.TokenTypeUser}), nil, false},
+		{"mixed audience is plugin", "Bearer " + signWith(t, secret, jwt.ClaimStrings{auth.TokenTypeUser, auth.TokenTypePlugin}), nil, true},
+		{"cookie only", "", &http.Cookie{Name: auth.ConsoleAuthCookieName, Value: signWith(t, secret, jwt.ClaimStrings{auth.TokenTypePlugin})}, false}, //nolint:gosec // request cookie in a test
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -62,7 +56,7 @@ func TestPeekTokenType(t *testing.T) {
 			if tc.cookie != nil {
 				r.AddCookie(tc.cookie)
 			}
-			assert.Equal(t, tc.want, peekTokenType(r))
+			assert.Equal(t, tc.want, isPluginToken(r, secret))
 		})
 	}
 }

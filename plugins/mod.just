@@ -38,6 +38,13 @@ cluster-start:
     if ! k3d cluster list {{ cluster }} > /dev/null 2>&1; then
         just plugins cluster-create
     else
+        # Port bindings are fixed at create time; see cluster-start in the root Justfile.
+        if docker inspect k3d-{{ cluster }}-serverlb {{ registry }} \
+            --format '{{{{ range $p, $b := .HostConfig.PortBindings }}{{{{ range $b }}[{{{{ .HostIp }}]{{{{ end }}{{{{ end }}' 2>/dev/null \
+            | grep -qE '\[(0\.0\.0\.0|::)?\]'; then
+            echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just plugins cluster-delete && just plugins cluster-create && just plugins deploy && just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
+            exit 1
+        fi
         k3d cluster start {{ cluster }}
         # k3d writes the context only at create; merge adds a missing entry and refreshes the
         # API port, which changes on restart.
@@ -53,12 +60,13 @@ cluster-stop:
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}
 
+# The relays sit on the cluster's docker network and block its removal, so they go first.
 # Delete the local K3D cluster, its registry and the sandbox-catalog relays
 cluster-delete:
     -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
+    @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
-    @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
 
 # Loop-backed block devices for a storage plugin; run without arguments for usage
 storage-disks *args:
@@ -103,64 +111,59 @@ status:
     kubectl --context {{ kube_context }} get plugininstallations
 
 
-# Local dev only: the two k3d clusters are network-isolated (FUN-19, FUN-22). We
-# expose the catalog and authn-api as NodePorts in the management cluster and run a
-# small relay container per service on the management cluster's docker network
-# that publishes a host port; the sandbox controller reaches them via
-# host.k3d.internal (pluginController.catalogApiUrl and authnApiUrl in
-# plugins/sandbox/values.yaml are http://host.k3d.internal:38080 and :38081).
+# Local dev only: the two k3d clusters are network-isolated (FUN-19, FUN-22). The
+# catalog and authn-api are NodePorts in the management cluster; one relay container
+# per service sits on both clusters' docker networks and publishes no host port, so
+# nothing outside docker reaches it. The sandbox addresses each relay through a Service
+# with an EndpointSlice (sandbox/relay-services.yaml), the fixed names in
+# pluginController.catalogApiUrl and authnApiUrl of plugins/sandbox/values.yaml.
 #
-# We deliberately do NOT bridge the sandbox k3d nodes onto the management network:
-# multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
-# which stops plugins pulling their images. Only the relay container is bridged.
-# Re-run this after recreating either cluster (the node IP is resolved fresh).
-# Wire the sandbox plugin-controller to marketplace-catalog-api in k3d-fundament
+# Only the relay containers are multi-homed: multi-homing a sandbox node breaks its
+# registry-mirror DNS (plugin-registry.localhost), which stops plugins pulling their
+# images. Re-run this, with plugin-sandbox-kubeconfig, after recreating either cluster or
+# restarting docker: the relays' addresses on the sandbox network are resolved fresh.
+# Wire the sandbox plugin-controller to marketplace-catalog-api and authn-api in k3d-fundament
 sandbox-catalog:
     #!/usr/bin/env bash
     set -euo pipefail
-    HOSTPORT=38080
-    NODEPORT=30080
-    RELAY=fun-catalog-relay
-    AUTHN_HOSTPORT=38081
-    AUTHN_NODEPORT=30081
-    AUTHN_RELAY=fun-authn-relay
+    sandbox_net=k3d-{{ cluster }}
 
-    # 0. Clean up what the pre-catalog recipe left behind: the old Service holds
-    #    the same fixed nodePort, and the old relay still binds HOSTPORT under a
-    #    name the rm below no longer matches. Both make this recipe fail.
+    # 0. A leftover organization-api-sandbox-np Service holds the same fixed nodePort,
+    #    and a leftover fun-orgapi-relay a host port; remove them.
     kubectl --context k3d-fundament delete service organization-api-sandbox-np \
         -n fundament --ignore-not-found
     docker rm -f fun-orgapi-relay >/dev/null 2>&1 || true
 
-    # 1. Expose marketplace-catalog-api's Connect port as a NodePort in the mgmt cluster.
-    #    Path is relative to plugins/ (this Justfile's dir), like the skaffold recipes.
+    # 1. Expose marketplace-catalog-api's Connect port and authn-api as NodePorts in the
+    #    mgmt cluster. Paths are relative to plugins/ (this Justfile's dir).
     kubectl --context k3d-fundament apply -f sandbox/marketplace-catalog-api-nodeport.yaml
     kubectl --context k3d-fundament apply -f sandbox/authn-api-nodeport.yaml
 
-    # 2. Resolve a management-cluster node IP on its docker network.
-    node_ip=$(docker inspect k3d-fundament-server-0 \
-        --format '{{{{ (index .NetworkSettings.Networks "k3d-fundament").IPAddress }}')
-    if [ -z "$node_ip" ]; then
-        echo "Error: could not resolve k3d-fundament-server-0 IP on the k3d-fundament network"
-        exit 1
-    fi
+    # 2. The Services the sandbox addresses the relays by.
+    kubectl --context {{ kube_context }} get namespace fundament >/dev/null 2>&1 \
+        || kubectl --context {{ kube_context }} create namespace fundament >/dev/null
+    kubectl --context {{ kube_context }} apply -f sandbox/relay-services.yaml >/dev/null
 
-    # 3. (Re)start the relay: host 0.0.0.0:HOSTPORT -> node_ip:NODEPORT, attached to
-    #    the management network. Only this container is multi-homed; the k3d nodes
-    #    are left alone so the plugin registry mirror keeps working.
-    docker rm -f "$RELAY" >/dev/null 2>&1 || true
-    docker run -d --name "$RELAY" --network k3d-fundament --restart unless-stopped \
-        -p "0.0.0.0:${HOSTPORT}:8080" \
-        alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${NODEPORT}" >/dev/null
-    docker rm -f "$AUTHN_RELAY" >/dev/null 2>&1 || true
-    docker run -d --name "$AUTHN_RELAY" --network k3d-fundament --restart unless-stopped \
-        -p "0.0.0.0:${AUTHN_HOSTPORT}:8080" \
-        alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${AUTHN_NODEPORT}" >/dev/null
-
-    echo "- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
-    echo "  (matches pluginController.catalogApiUrl in plugins/sandbox/values.yaml)"
-    echo "- authn-api reachable from the sandbox at http://host.k3d.internal:${AUTHN_HOSTPORT}"
-    echo "  (matches pluginController.authnApiUrl in plugins/sandbox/values.yaml)"
+    # 3. (Re)start each relay: sandbox network :8080 -> k3d-fundament-server-0:NODEPORT.
+    #    Docker's DNS on k3d-fundament resolves the node per connection.
+    relay() { # container nodeport service
+        local name=$1 nodeport=$2 service=$3 ip
+        docker rm -f "$name" >/dev/null 2>&1 || true
+        docker run -d --name "$name" --network k3d-fundament --restart unless-stopped \
+            alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:k3d-fundament-server-0:${nodeport}" >/dev/null
+        docker network connect "$sandbox_net" "$name"
+        ip=$(docker inspect "$name" --format "{{{{ (index .NetworkSettings.Networks \"$sandbox_net\").IPAddress }}")
+        if [ -z "$ip" ]; then
+            echo "Error: could not resolve $name's IP on the $sandbox_net network" >&2
+            exit 1
+        fi
+        printf '{"apiVersion":"discovery.k8s.io/v1","kind":"EndpointSlice","metadata":{"name":"%s","namespace":"fundament","labels":{"kubernetes.io/service-name":"%s","endpointslice.kubernetes.io/managed-by":"just-plugins-sandbox-catalog"}},"addressType":"IPv4","ports":[{"name":"http","port":8080,"protocol":"TCP"}],"endpoints":[{"addresses":["%s"]}]}' \
+            "$service" "$service" "$ip" | kubectl --context {{ kube_context }} apply -f - >/dev/null
+        echo "- http://$service.fundament.svc:8080 in the sandbox relays to NodePort $nodeport"
+    }
+    relay fun-catalog-relay 30080 fundament-catalog-relay
+    relay fun-authn-relay 30081 fundament-authn-relay
+    echo "  (pluginController.catalogApiUrl and authnApiUrl in plugins/sandbox/values.yaml)"
 
 # Publishes the pushed digest to marketplace-registry-api via `functl plugin publish`
 # (FUN-20). Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:

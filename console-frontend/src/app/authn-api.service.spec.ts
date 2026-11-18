@@ -14,14 +14,14 @@ import { ConfigService } from './config.service';
  */
 function heldFetch() {
   const sent: string[] = [];
-  const waiting: ((status: number) => void)[] = [];
+  const waiting: ((status: number, body?: string) => void)[] = [];
   const fetch = vi.fn(
     (request: Request) =>
       new Promise<Response>((resolve, reject) => {
         sent.push(new URL(request.url).pathname);
-        const answer = (status: number) =>
+        const answer = (status: number, body = '{}') =>
           resolve(
-            new Response(status === 200 ? '{}' : '{"error":"Unauthorized"}', {
+            new Response(status === 200 ? body : '{"error":"Unauthorized"}', {
               status,
               headers: { 'Content-Type': 'application/json' },
             }),
@@ -35,7 +35,11 @@ function heldFetch() {
         });
       }),
   );
-  return { fetch, sent, answer: (status = 200) => waiting.shift()!(status) };
+  return {
+    fetch,
+    sent,
+    answer: (status = 200, body?: string) => waiting.shift()!(status, body),
+  };
 }
 
 /** Lets every request that is free to go out do so. */
@@ -144,6 +148,22 @@ describe('AuthnApiService', () => {
 
     held.answer();
     await loggingOut;
+  });
+
+  it("hands back the identity provider's logout URL", async () => {
+    const loggingOut = service.logout();
+    await settle();
+    held.answer(200, '{"status":"ok","logout_url":"https://idp.test/logout?client_id=console"}');
+
+    expect(await loggingOut).toBe('https://idp.test/logout?client_id=console');
+  });
+
+  it('has no logout URL when the identity provider has none', async () => {
+    const loggingOut = service.logout();
+    await settle();
+    held.answer(200, '{"status":"ok"}');
+
+    expect(await loggingOut).toBeUndefined();
   });
 
   it('starts a provider login at authn-api, returning to the page it came from', () => {

@@ -23,6 +23,30 @@ import { PluginIconComponent } from '../icons';
 import connectErrorMessage from '../../connect/error';
 import DeveloperLinkComponent from '../developer-link.component';
 
+/** The sidebar entry for plugins filed under no category. Not a UUID, so it
+ *  can never collide with a real category id. */
+export const UNCATEGORIZED = 'uncategorized';
+
+/** Whether a plugin is in none of the listed categories. An id that is not
+ *  listed (a category deleted since) does not count as a category. */
+export function isUncategorized(
+  plugin: Pick<MarketplacePluginSummary, 'categoryIds'>,
+  listed: ReadonlySet<string>,
+): boolean {
+  return !plugin.categoryIds.some((id) => listed.has(id));
+}
+
+/** The categories worth a sidebar entry: those with at least one plugin in
+ *  the catalog. An empty one only ever says 0, and drags the hero's count up. */
+export function browseCategories(
+  categories: Category[],
+  plugins: Pick<MarketplacePluginSummary, 'categoryIds'>[],
+): Category[] {
+  return categories.filter((category) =>
+    plugins.some((plugin) => plugin.categoryIds.includes(category.id)),
+  );
+}
+
 @Component({
   selector: 'app-marketplace-index',
   imports: [
@@ -60,8 +84,23 @@ export default class MarketplaceIndexComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  // 'all' or a category id.
+  // 'all', UNCATEGORIZED or a category id.
   selectedCategory = signal<string>('all');
+
+  protected readonly UNCATEGORIZED = UNCATEGORIZED;
+
+  private listedCategoryIds = computed(
+    () => new Set(this.categories().map((category) => category.id)),
+  );
+
+  /** The categories the sidebar and the hero show: the non-empty ones. */
+  shownCategories = computed(() => browseCategories(this.categories(), this.plugins()));
+
+  /** Whether any plugin is in no category, which earns it an entry: without
+   *  one, "All plugins" counts plugins that no category below it does. */
+  hasUncategorized = computed(() =>
+    this.plugins().some((plugin) => isUncategorized(plugin, this.listedCategoryIds())),
+  );
 
   // Search query, driven by the ?q= URL param set from the top-nav search box.
   searchQuery = signal<string>('');
@@ -93,7 +132,9 @@ export default class MarketplaceIndexComponent implements OnInit {
   // the list together rather than one replacing the other.
   private matchesFilters = (plugin: MarketplacePluginSummary): boolean => {
     const selected = this.selectedCategory();
-    if (selected !== 'all' && !plugin.categoryIds.includes(selected)) {
+    if (selected === UNCATEGORIZED) {
+      if (!isUncategorized(plugin, this.listedCategoryIds())) return false;
+    } else if (selected !== 'all' && !plugin.categoryIds.includes(selected)) {
       return false;
     }
     return this.matchesSearch(plugin);
@@ -128,6 +169,10 @@ export default class MarketplaceIndexComponent implements OnInit {
   // Counts track the active search, so the sidebar shows where the hits are
   // rather than a static catalogue total that contradicts the visible results.
   categoryCount(categoryId: string): number {
+    if (categoryId === UNCATEGORIZED) {
+      const listed = this.listedCategoryIds();
+      return this.searchMatches().filter((plugin) => isUncategorized(plugin, listed)).length;
+    }
     return this.searchMatches().filter((plugin) => plugin.categoryIds.includes(categoryId)).length;
   }
 
@@ -144,6 +189,7 @@ export default class MarketplaceIndexComponent implements OnInit {
   selectedCategoryName = computed(() => {
     const selected = this.selectedCategory();
     if (selected === 'all') return 'All plugins';
+    if (selected === UNCATEGORIZED) return 'Uncategorized';
     return this.categories().find((category) => category.id === selected)?.name ?? selected;
   });
 

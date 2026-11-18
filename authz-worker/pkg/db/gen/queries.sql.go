@@ -27,7 +27,8 @@ SELECT
     created,
     retries
 FROM authz.outbox
-WHERE status IN ('pending', 'retrying')
+WHERE processed IS NULL
+  AND status IN ('pending', 'retrying')
   AND (retry_after IS NULL OR retry_after <= now())
 ORDER BY created ASC
 LIMIT 1
@@ -49,7 +50,10 @@ type GetAndLockNextOutboxRowRow struct {
 }
 
 // Fetches the next unprocessed outbox row, skipping rows scheduled for later retry
-// or that have permanently failed.
+// or that have permanently failed. Only processed rows have processed set, so the
+// processed IS NULL condition selects nothing new; it lets the claim use the
+// partial index outbox_idx_unprocessed instead of scanning every row the outbox
+// ever held.
 func (q *Queries) GetAndLockNextOutboxRow(ctx context.Context) (GetAndLockNextOutboxRowRow, error) {
 	row := q.db.QueryRow(ctx, getAndLockNextOutboxRow)
 	var i GetAndLockNextOutboxRowRow

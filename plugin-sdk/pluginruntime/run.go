@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	pluginerrors "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/errors"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/health"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
@@ -77,7 +78,7 @@ func run(plugin Plugin, opts ...RunOption) error {
 		func() PluginStatus { return h.CurrentStatus() },
 		uninstallFn,
 	)
-	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)
+	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler, connectlimit.ReadMaxBytes())
 	mux.Handle(path, rpcHandler)
 
 	if cp, ok := plugin.(ConsoleProvider); ok {

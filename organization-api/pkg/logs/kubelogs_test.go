@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -49,10 +50,232 @@ func TestKubeClient_Query(t *testing.T) {
 	assert.Equal(t, "api-1", entries[0].Pod)
 }
 
-func TestKubeClient_QueryRequiresPod(t *testing.T) {
+func TestKubeClient_QueryRequiresNamespace(t *testing.T) {
 	c := NewKubeClient("http://example", nil)
-	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "prod"})
-	require.ErrorIs(t, err, ErrPodRequired)
+	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Pod: "api-1"})
+	require.ErrorIs(t, err, ErrNamespaceRequired)
+	_, err = c.Tail(context.Background(), &QueryParams{ClusterID: "c"})
+	require.ErrorIs(t, err, ErrNamespaceRequired)
+}
+
+// fanOutServer serves a namespace listing and a log per pod and container.
+// "web-0" has two containers, "web-1" one, and "web-2" is still Pending, so
+// its log must not be asked for.
+func fanOutServer(t *testing.T, logs map[string]string) (*httptest.Server, *[]string) {
+	t.Helper()
+	var asked []string
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/clusters/c/api/v1/namespaces/plugin-cert-manager/pods" {
+			_, _ = w.Write([]byte(`{"items":[
+				{"metadata":{"name":"web-0"},"spec":{"containers":[{"name":"app"},{"name":"sidecar"}]},"status":{"phase":"Running"}},
+				{"metadata":{"name":"web-1"},"spec":{"containers":[{"name":"app"}]},"status":{"phase":"Running"}},
+				{"metadata":{"name":"web-2"},"spec":{"containers":[{"name":"app"}]},"status":{"phase":"Pending"}}
+			]}`))
+			return
+		}
+		pod := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/clusters/c/api/v1/namespaces/plugin-cert-manager/pods/"), "/log")
+		key := pod + "/" + r.URL.Query().Get("container")
+		mu.Lock()
+		asked = append(asked, key)
+		mu.Unlock()
+		body, ok := logs[key]
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &asked
+}
+
+func TestKubeClient_QueryWithoutPodReadsEveryPod(t *testing.T) {
+	srv, asked := fanOutServer(t, map[string]string{
+		"web-0/app":     "2023-11-14T22:13:20Z first\n2023-11-14T22:13:23Z fourth\n",
+		"web-0/sidecar": "2023-11-14T22:13:22Z third\n",
+		"web-1/app":     "2023-11-14T22:13:21Z second\n2023-11-14T22:13:24Z fifth\n",
+	})
+
+	c := NewKubeClient(srv.URL, nil)
+	entries, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "plugin-cert-manager", Limit: 4})
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []string{"web-0/app", "web-0/sidecar", "web-1/app"}, *asked)
+	// Merged newest first across pods, then cut to the limit.
+	messages := make([]string, 0, len(entries))
+	for _, e := range entries {
+		messages = append(messages, e.Message)
+	}
+	assert.Equal(t, []string{"fifth", "fourth", "third", "second"}, messages)
+	assert.Equal(t, "web-1", entries[0].Pod)
+	assert.Equal(t, "sidecar", entries[2].Container)
+}
+
+func TestKubeClient_QueryWithoutPodNarrowsToContainer(t *testing.T) {
+	srv, asked := fanOutServer(t, map[string]string{
+		"web-0/app": "2023-11-14T22:13:20Z one\n",
+		"web-1/app": "2023-11-14T22:13:21Z two\n",
+	})
+
+	c := NewKubeClient(srv.URL, nil)
+	entries, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "plugin-cert-manager", Container: "app"})
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []string{"web-0/app", "web-1/app"}, *asked)
+	assert.Len(t, entries, 2)
+}
+
+// One pod that cannot be read must not hide the others.
+func TestKubeClient_QueryWithoutPodSkipsUnreadablePods(t *testing.T) {
+	srv, _ := fanOutServer(t, map[string]string{
+		"web-1/app": "2023-11-14T22:13:21Z still here\n",
+	})
+
+	c := NewKubeClient(srv.URL, nil)
+	entries, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "plugin-cert-manager"})
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "still here", entries[0].Message)
+}
+
+func TestKubeClient_QueryWithoutPodFailsWhenNoPodCanBeRead(t *testing.T) {
+	srv, _ := fanOutServer(t, map[string]string{})
+
+	c := NewKubeClient(srv.URL, nil)
+	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "plugin-cert-manager"})
+	var statusErr *StatusError
+	require.ErrorAs(t, err, &statusErr)
+}
+
+// With a filter, the pods share the MaxLimit fetch rather than each reading
+// all of it.
+func TestKubeClient_QueryWithoutPodSharesTheFilteredFetch(t *testing.T) {
+	var mu sync.Mutex
+	var tailLines []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/pods") {
+			_, _ = w.Write([]byte(`{"items":[
+				{"metadata":{"name":"a"},"spec":{"containers":[{"name":"app"}]},"status":{"phase":"Running"}},
+				{"metadata":{"name":"b"},"spec":{"containers":[{"name":"app"}]},"status":{"phase":"Running"}}
+			]}`))
+			return
+		}
+		mu.Lock()
+		tailLines = append(tailLines, r.URL.Query().Get("tailLines"))
+		mu.Unlock()
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewKubeClient(srv.URL, nil)
+	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "ns", Search: "boom", Limit: 50})
+	require.NoError(t, err)
+
+	want := strconv.Itoa(MaxLimit / 2)
+	assert.Equal(t, []string{want, want}, tailLines)
+}
+
+// collectTail reads n entries off a tail, failing the test if they do not come.
+func collectTail(t *testing.T, ch <-chan TailEvent, n int) []string {
+	t.Helper()
+	var messages []string
+	for len(messages) < n {
+		select {
+		case ev, ok := <-ch:
+			require.True(t, ok, "tail closed after %v", messages)
+			require.NoError(t, ev.Err)
+			messages = append(messages, ev.Entry.Message)
+		case <-time.After(5 * time.Second):
+			require.Failf(t, "tail went quiet", "got %v", messages)
+		}
+	}
+	return messages
+}
+
+func TestKubeClient_TailWithoutPodMergesEveryPod(t *testing.T) {
+	srv, _ := fanOutServer(t, map[string]string{
+		"web-0/app":     "2023-11-14T22:13:20Z from web-0\n",
+		"web-0/sidecar": "2023-11-14T22:13:21Z from the sidecar\n",
+		"web-1/app":     "2023-11-14T22:13:22Z from web-1\n",
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c := NewKubeClient(srv.URL, nil)
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c", Namespace: "plugin-cert-manager"})
+	require.NoError(t, err)
+
+	messages := collectTail(t, ch, 3)
+	assert.ElementsMatch(t, []string{"from web-0", "from the sidecar", "from web-1"}, messages)
+
+	// The tail is about the namespace, so it stays open until the caller ends it.
+	// Cancelling closes it without an error.
+	cancel()
+	for ev := range ch {
+		require.NoError(t, ev.Err)
+	}
+}
+
+// A pod that was still starting when the tail opened is followed once it runs.
+func TestKubeClient_TailWithoutPodFollowsPodsThatStartLater(t *testing.T) {
+	var mu sync.Mutex
+	phase := "Pending"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/pods") {
+			mu.Lock()
+			current := phase
+			phase = "Running"
+			mu.Unlock()
+			_, _ = w.Write([]byte(`{"items":[{"metadata":{"name":"late"},"spec":{"containers":[{"name":"app"}]},"status":{"phase":"` + current + `"}}]}`))
+			return
+		}
+		_, _ = w.Write([]byte("2023-11-14T22:13:20Z up now\n"))
+	}))
+	t.Cleanup(srv.Close)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	c := NewKubeClient(srv.URL, nil)
+	c.relistInterval = 10 * time.Millisecond
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c", Namespace: "ns"})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"up now"}, collectTail(t, ch, 1))
+}
+
+// A listing that fails ends the tail, with the error as its last event.
+func TestKubeClient_TailWithoutPodEndsWhenTheListingFails(t *testing.T) {
+	var mu sync.Mutex
+	listings := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/pods") {
+			mu.Lock()
+			listings++
+			first := listings == 1
+			mu.Unlock()
+			if !first {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			_, _ = w.Write([]byte(`{"items":[]}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewKubeClient(srv.URL, nil)
+	c.relistInterval = 10 * time.Millisecond
+	ch, err := c.Tail(context.Background(), &QueryParams{ClusterID: "c", Namespace: "ns"})
+	require.NoError(t, err)
+
+	var events []TailEvent
+	for ev := range ch {
+		events = append(events, ev)
+	}
+	require.Len(t, events, 1)
+	var statusErr *StatusError
+	require.ErrorAs(t, events[0].Err, &statusErr)
+	assert.Equal(t, http.StatusForbidden, statusErr.StatusCode)
 }
 
 func TestKubeClient_QueryHTTPError(t *testing.T) {

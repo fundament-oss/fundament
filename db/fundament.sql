@@ -1179,7 +1179,11 @@ CREATE OR REPLACE FUNCTION authn.api_key_update_last_used (IN p_id uuid)
 	AS 
 $function$
 BEGIN
-	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
+	-- Every token exchange calls this; last_used only tells a user roughly when
+	-- a key was used, so it is written at most once a minute.
+	UPDATE authn.api_keys SET last_used = NOW()
+	WHERE id = p_id
+	  AND (last_used IS NULL OR last_used < NOW() - interval '1 minute');
 END;
 $function$;
 -- ddl-end --
@@ -2616,8 +2620,12 @@ CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
 	AS 
 $function$
 BEGIN
-    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
-    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+    -- Only the columns authz-worker's api key handler reads (GetApiKeyByID)
+    -- decide a key's tuples. last_used changes on token exchanges and must
+    -- not queue work for the worker.
+    IF TG_OP = 'INSERT'
+        OR (NEW.organization_id, NEW.user_id, NEW.expires, NEW.revoked, NEW.deleted)
+            IS DISTINCT FROM (OLD.organization_id, OLD.user_id, OLD.expires, OLD.revoked, OLD.deleted) THEN
         INSERT INTO authz.outbox (api_key_id)
         VALUES (COALESCE(NEW.id, OLD.id));
     END IF;

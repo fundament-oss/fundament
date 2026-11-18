@@ -16,7 +16,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
 import { Code, ConnectError } from '@connectrpc/connect';
-import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
+import { type Timestamp, timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -38,12 +38,15 @@ import {
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
 import AutofocusDirective from '../autofocus.directive';
+import datePickerTranslations from '../utils/nldd-translations';
 import {
   CUSTOM,
-  DURATION,
   NEVER,
+  customExpiryMoment,
   defaultExpiry,
+  durationUntil,
   expiryOptions,
+  lastExpiryDate,
   maximumLabel,
 } from './expiry-options';
 
@@ -54,6 +57,7 @@ import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/container';
+import '@nldd/design-system/date-picker';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
@@ -78,15 +82,21 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
 
-/** The server's reason for refusing the lifetime, worded for under the field;
- *  null when the refusal is about something else. */
+/** The server's reason for refusing the lifetime, as it wrote it; null when
+ *  the refusal is about something else. */
 const getExpiresInRefusal = (err: unknown): string | null => {
   if (!(err instanceof ConnectError) || err.code !== Code.InvalidArgument) return null;
   const match = /expires_in: ([^\n[]+)/.exec(err.rawMessage);
-  if (!match) return null;
-  const reason = match[1].trim();
-  return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`;
+  return match ? match[1].trim() : null;
 };
+
+/** The maximum a refusal names, such as "720h"; null for any other reason. A
+ *  duration over it is "at most", and never is "set, at most" (apikey_create.go). */
+const refusedMaximum = (reason: string): string | null =>
+  /^must be (?:set, )?at most (\S+)$/.exec(reason)?.[1] ?? null;
+
+const asSentence = (reason: string): string =>
+  `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`;
 
 /** What went wrong, without the `[code]` prefix Connect puts in front of its message. */
 const errorText = (err: unknown): string => {
@@ -183,10 +193,14 @@ export default class ApiKeysComponent {
    *  answer may land after the form was opened. */
   newKeyExpiryChoice = signal<string | null>(null);
 
-  /** The duration typed under "Custom…". */
-  newKeyExpiresIn = signal('');
+  /** The last day picked under "Custom…", as ISO; empty until one is. */
+  newKeyExpiresOn = signal('');
 
-  newKeyExpiresInError = signal<string | null>(null);
+  /** A submit found no day under "Custom…" that has not ended yet. */
+  newKeyExpiresOnMissing = signal(false);
+
+  /** The server's refusal of the lifetime the picked day came to. */
+  newKeyExpiresOnError = signal<string | null>(null);
 
   /** Longest lifetime the server allows, such as "8760h"; empty when keys may
    *  never expire, and null until a list has said which. */
@@ -208,17 +222,48 @@ export default class ApiKeysComponent {
     return max ? maximumLabel(max) : null;
   });
 
-  /** What the create sends: an empty duration is a key that never expires. */
-  expiresInToSend = computed(() => {
+  /** The moment the calendar's last day counts from. Set when the form opens,
+   *  when a lifetime is picked and when a submit finds no day, not per minute:
+   *  a list can come long before the form opens, and a form left open past
+   *  midnight gets a fresh last day on its next submit. The duration sent is
+   *  worked out from the moment of sending either way. */
+  private calendarNow = signal(new Date());
+
+  /** The latest day the calendar offers. */
+  lastExpiryDate = computed(() => lastExpiryDate(this.maxExpiresIn(), this.calendarNow()));
+
+  /** When the picked day makes the key stop working, worded for under the
+   *  calendar; null until a day is picked. */
+  customExpiryText = computed(() => {
+    const date = this.newKeyExpiresOn();
+    if (!date) return null;
+    return formatDateTime(
+      timestampFromDate(customExpiryMoment(date, this.maxExpiresIn(), new Date())),
+    );
+  });
+
+  /** Which line under the calendar the app names: a day still to pick goes
+   *  before what the server said about the last one. */
+  expiresOnUnmet = computed(() => {
+    if (this.newKeyExpiresOnMissing()) return 'api-key-expires-on-required';
+    return this.newKeyExpiresOnError() ? 'api-key-expires-on-refused' : null;
+  });
+
+  /** What the create sends: an empty duration is a key that never expires. A
+   *  picked day is turned into a duration from `now`, the moment of sending,
+   *  and is null when there is no day yet or it has already ended. */
+  expiresInToSend(now = new Date()): string | null {
     const choice = this.selectedExpiry();
     if (choice === NEVER) return '';
-    if (choice === CUSTOM) return this.newKeyExpiresIn();
-    return choice;
-  });
+    if (choice !== CUSTOM) return choice;
+    const date = this.newKeyExpiresOn();
+    if (!date) return null;
+    return durationUntil(customExpiryMoment(date, this.maxExpiresIn(), now), now);
+  }
 
   readonly customExpiry = CUSTOM;
 
-  readonly durationPattern = DURATION.source;
+  readonly datePickerTranslations = datePickerTranslations;
 
   // Modal state
   showRevokeModal = signal(false);
@@ -413,11 +458,13 @@ export default class ApiKeysComponent {
 
   startCreating() {
     this.isCreating.set(true);
+    this.calendarNow.set(new Date());
     this.newKeyName.set('');
     this.newKeyNameError.set(null);
     this.newKeyExpiryChoice.set(null);
-    this.newKeyExpiresIn.set('');
-    this.newKeyExpiresInError.set(null);
+    this.newKeyExpiresOn.set('');
+    this.newKeyExpiresOnMissing.set(false);
+    this.newKeyExpiresOnError.set(null);
     this.error.set(null);
   }
 
@@ -426,8 +473,9 @@ export default class ApiKeysComponent {
     this.newKeyName.set('');
     this.newKeyNameError.set(null);
     this.newKeyExpiryChoice.set(null);
-    this.newKeyExpiresIn.set('');
-    this.newKeyExpiresInError.set(null);
+    this.newKeyExpiresOn.set('');
+    this.newKeyExpiresOnMissing.set(false);
+    this.newKeyExpiresOnError.set(null);
     this.error.set(null);
   }
 
@@ -437,6 +485,13 @@ export default class ApiKeysComponent {
     event.preventDefault();
     if (this.creating()) return;
 
+    const expiresIn = this.expiresInToSend();
+    if (expiresIn === null) {
+      this.calendarNow.set(new Date());
+      this.newKeyExpiresOnMissing.set(true);
+      return;
+    }
+
     // A logout or another organization while the call is out: its token is not
     // for whoever is signed in by then. The live owner, not `owner`, which a
     // logout leaves standing.
@@ -445,13 +500,14 @@ export default class ApiKeysComponent {
     this.creating.set(true);
     this.error.set(null);
     this.newKeyNameError.set(null);
-    this.newKeyExpiresInError.set(null);
+    this.newKeyExpiresOnError.set(null);
 
     const request = create(CreateAPIKeyRequestSchema, {
       name: this.newKeyName().trim(),
-      expiresIn: this.expiresInToSend(),
+      expiresIn,
     });
     const expiry = this.selectedExpiry();
+    const expiresOn = this.newKeyExpiresOn();
 
     try {
       const response = await withIdempotency(
@@ -474,14 +530,14 @@ export default class ApiKeysComponent {
       this.isCreating.set(false);
       this.newKeyName.set('');
       this.newKeyExpiryChoice.set(null);
-      this.newKeyExpiresIn.set('');
+      this.newKeyExpiresOn.set('');
 
       // Reload the list to show the new key
       await this.loadApiKeys();
     } catch (err) {
       // A refusal, though, is about a form the close already threw away.
       if (this.currentOwner() === owner && this.visit === visit)
-        this.showCreateError(err, { ...request, expiry });
+        this.showCreateError(err, { name: request.name, expiry, expiresOn });
     } finally {
       this.creating.set(false);
     }
@@ -492,7 +548,7 @@ export default class ApiKeysComponent {
    *  that has been changed since is about nothing on screen, and goes. */
   private showCreateError(
     err: unknown,
-    submitted: { name: string; expiresIn: string; expiry: string },
+    submitted: { name: string; expiry: string; expiresOn: string },
   ) {
     if (isAborted(err)) return;
     if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
@@ -506,22 +562,35 @@ export default class ApiKeysComponent {
     }
     const expiresInRefusal = getExpiresInRefusal(err);
     if (expiresInRefusal) {
-      // A preset is refused only when the maximum is not the one the options
-      // were made for: it changed since the list came, or no list has come. A
-      // fresh list brings the options that hold now. It clears the banner as it
-      // starts, so it goes first.
-      if (submitted.expiry !== CUSTOM) this.loadApiKeys();
+      // The options and the calendar both stop at the maximum the list
+      // brought, so a refused lifetime means that maximum is not the one that
+      // holds: it changed since the list came, or no list has come. A fresh
+      // list brings the options and the last day that hold now. It clears the
+      // banner as it starts, so it goes first.
+      this.loadApiKeys();
       if (
         this.selectedExpiry() !== submitted.expiry ||
-        this.expiresInToSend() !== submitted.expiresIn
+        (submitted.expiry === CUSTOM && this.newKeyExpiresOn() !== submitted.expiresOn)
       ) {
         return;
       }
-      // Only a typed duration has a field to put the refusal under.
+      // Worded like the options, "30 days" rather than the server's "720h".
+      const maximum = refusedMaximum(expiresInRefusal);
+      // Only a picked day has a field to put the refusal under.
       if (submitted.expiry === CUSTOM) {
-        this.newKeyExpiresInError.set(expiresInRefusal);
+        this.newKeyExpiresOnError.set(
+          maximum
+            ? `Must be within ${maximumLabel(maximum)} from now.`
+            : asSentence(expiresInRefusal),
+        );
       } else {
-        this.error.set(`This lifetime is not allowed. ${expiresInRefusal}`);
+        this.error.set(
+          `This lifetime is not allowed. ${
+            maximum
+              ? `The longest allowed is ${maximumLabel(maximum)}.`
+              : asSentence(expiresInRefusal)
+          }`,
+        );
       }
       return;
     }
@@ -531,7 +600,17 @@ export default class ApiKeysComponent {
   onExpiryChange(event: Event) {
     const { value } = (event as CustomEvent<{ value: string }>).detail;
     this.newKeyExpiryChoice.set(value);
-    this.newKeyExpiresInError.set(null);
+    this.calendarNow.set(new Date());
+    this.newKeyExpiresOnMissing.set(false);
+    this.newKeyExpiresOnError.set(null);
+  }
+
+  onExpiresOnChange(event: Event) {
+    const { value } = (event as CustomEvent<{ value?: string }>).detail ?? {};
+    if (!value) return;
+    this.newKeyExpiresOn.set(value);
+    this.newKeyExpiresOnMissing.set(false);
+    this.newKeyExpiresOnError.set(null);
   }
 
   async copyToken() {

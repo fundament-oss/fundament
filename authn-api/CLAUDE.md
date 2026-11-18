@@ -60,11 +60,11 @@ This is a Go authentication service using:
 
 **HTTP (browser auth):**
 - `GET /login` - Initiates OIDC login flow (with PKCE)
-- `GET /login/methods` - Tells the console's login page whether to show the password form and/or a "Log in with <provider>" button
+- `GET /login/methods` - Tells the console's login page whether to show the password form and/or a "Log in" button for the identity provider
 - `POST /login/password` - Direct password authentication via OIDC password grant (Dex only; 404 when `PASSWORD_LOGIN_ENABLED=false`)
 - `GET /callback` - Handles OIDC redirect
 - `POST /refresh` - Refreshes JWT token
-- `POST /logout` - Clears auth cookie
+- `POST /logout` - Clears the auth cookie, and returns the identity provider's end-session URL (`logout_url`, with the ID token kept in the `fundament_id_token` cookie as `id_token_hint`) when the provider advertises one, so the provider's session ends too
 
 **RPC (Connect):**
 - `GetUserInfo` - Returns user info from valid JWT
@@ -88,7 +88,7 @@ Optional with defaults:
 - `OIDC_CLIENT_ID` (authn-api)
 - `OIDC_CLIENT_SECRET` - for a confidential client (Fundament SSO / Keycloak); empty for Dex's public client
 - `OIDC_SCOPES` (openid,profile,email,groups) - set it for an external provider, as the Helm chart does (`authnApi.oidc.scopes`, default openid,profile,email): Keycloak refuses `groups`, which it does not define
-- `OIDC_DISPLAY_NAME` - name on the console's "Log in with" button; empty means no button
+- `OIDC_DISPLAY_NAME` - name of the identity provider; non-empty turns on the console's "Log in" button, empty means no button
 - `PASSWORD_LOGIN_ENABLED` (true) - serves `/login/password`; false with an external provider, which then needs `OIDC_DISPLAY_NAME`
 - `OIDC_REDIRECT_URL` (https://authn.fundament.localhost:8443/callback)
 - `FRONTEND_URL` (https://console.fundament.localhost:8443)

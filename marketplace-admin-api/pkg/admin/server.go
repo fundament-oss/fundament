@@ -12,6 +12,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-admin-api/pkg/db/gen"
@@ -64,13 +65,13 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
 		loggingInterceptor,
 	)
 
-	mux.Handle(adminv1connect.NewReviewServiceHandler(s, interceptors))
+	mux.Handle(adminv1connect.NewReviewServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	// Unauthenticated, as on every other surface here: the descriptors are
 	// public and grpcurl carries no token.
 	reflector := grpcreflect.NewStaticReflector("admin.v1.ReviewService")
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))
 
 	// No organization header: this surface is authenticated but never
 	// organization-scoped.

@@ -186,6 +186,14 @@ export default class App implements OnInit {
    *  plugins page is still the catalog (see injectBrowsePluginsUrl). */
   protected browsePluginsUrl = injectBrowsePluginsUrl();
 
+  /** Where "Install plugins…" leads without a marketplace: plugins are a page
+   *  of a cluster, so the plugins of the cluster you are on (a project's
+   *  included), or the clusters to pick one from. */
+  protected installPluginsPath = computed(() => {
+    const clusterId = this.navContext.clusterId();
+    return clusterId ? `/clusters/${clusterId}/plugins` : '/clusters';
+  });
+
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
@@ -763,11 +771,18 @@ export default class App implements OnInit {
 
   async handleLogout() {
     try {
-      await this.apiService.logout();
+      const providerLogoutUrl = await this.apiService.logout();
       this.organizationContextService.clearOrganizationId();
       this.organizationDataService.clearAll();
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
+      // The identity provider ends its own session there and sends the browser
+      // back to /login, so the next login asks for credentials again. Replace,
+      // not assign: Back must not return to the page that was signed out of.
+      if (providerLogoutUrl) {
+        window.location.replace(providerLogoutUrl);
+        return;
+      }
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console

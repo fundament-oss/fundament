@@ -21,8 +21,11 @@ import (
 type Config struct {
 	JWTSecret          []byte
 	CORSAllowedOrigins []string
-	Mode               string // "mock" (default) or "real"
-	GardenerClient     *gardener.Client
+	// CookieAllowedOrigins are the origins whose cookie-borne UserToken is
+	// accepted; empty refuses every cookie request. Bearer requests ignore it.
+	CookieAllowedOrigins []string
+	Mode                 string // "mock" (default) or "real"
+	GardenerClient       *gardener.Client
 	// PluginSandboxKubeconfig, when set in mock mode, replaces MockClient with
 	// a proxy that forwards every request to a locally-running plugin sandbox
 	// cluster identified by the kubeconfig at this path. Ignored otherwise.
@@ -71,12 +74,13 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 	}
 
 	s := &Server{
-		logger:        logger,
-		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		authz:         authzClient,
-		store:         store,
-		tokenCache:    tokenCache,
-		kubeHandler:   kubeHandler,
+		logger: logger,
+		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger).
+			WithCookieOrigins(cfg.CookieAllowedOrigins),
+		authz:       authzClient,
+		store:       store,
+		tokenCache:  tokenCache,
+		kubeHandler: kubeHandler,
 	}
 
 	s.namespaces = newNamespaceLister(cfg, tokenCache, authzClient, kubeHandler, logger)

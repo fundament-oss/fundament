@@ -24,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -41,8 +42,8 @@ type config struct {
 	// OIDCScopes: Dex adds a groups claim on request; Keycloak refuses a scope
 	// it does not define, so an external provider leaves "groups" out.
 	OIDCScopes []string `env:"OIDC_SCOPES" envDefault:"openid,profile,email,groups"`
-	// OIDCDisplayName names the identity provider on the console's "Log in
-	// with" button. Empty means no button.
+	// OIDCDisplayName names the identity provider. Non-empty turns on the
+	// console's "Log in" button; empty means no button.
 	OIDCDisplayName string `env:"OIDC_DISPLAY_NAME"`
 	// PasswordLoginEnabled serves /login/password, which needs the password
 	// grant only Dex offers here.
@@ -134,6 +135,15 @@ func run() error {
 
 	logger.Debug("OIDC provider connected")
 
+	// RP-initiated logout: Keycloak advertises where to end its session, Dex
+	// does not, which leaves logout clearing only Fundament's own cookie.
+	var providerMetadata struct {
+		EndSessionEndpoint string `json:"end_session_endpoint"`
+	}
+	if err := provider.Claims(&providerMetadata); err != nil {
+		return fmt.Errorf("failed to read OIDC provider metadata: %w", err)
+	}
+
 	endpoint := provider.Endpoint()
 
 	// Override the token URL to use internal discovery URL instead of issuer
@@ -219,6 +229,7 @@ func run() error {
 		AllowedReturnOrigins: append([]string{cfg.FrontendURL}, cfg.CORSAllowedOrigins...),
 		PasswordLoginEnabled: cfg.PasswordLoginEnabled,
 		OIDCDisplayName:      cfg.OIDCDisplayName,
+		EndSessionURL:        providerMetadata.EndSessionEndpoint,
 	}
 	if !shootVerifierCfg.UsesGardener() {
 		authnCfg.WorkloadSubjects = map[string]string{
@@ -269,35 +280,7 @@ func run() error {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	// Connect RPC handler for GetUserInfo
-	loggingInterceptor := logging.UnaryServerInterceptor(
-		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
-			logger.Log(ctx, slog.Level(level), msg, fields...)
-		}),
-		logging.WithLogOnEvents(logging.FinishCall),
-	)
-
-	interceptors := connect.WithInterceptors(
-		connectrecovery.NewInterceptor(logger),
-		validate.NewInterceptor(),
-		loggingInterceptor,
-	)
-
-	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors)
-	mux.Handle(path, handler)
-
-	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors)
-	mux.Handle(tokenPath, tokenHandler)
-
-	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
-	reflector := grpcreflect.NewStaticReflector(
-		"authn.v1.AuthnService",
-		"authn.v1.TokenService",
-	)
-	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
-	mux.Handle(reflectPath, reflectHandler)
-	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
-	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
+	registerRPCHandlers(mux, server, logger)
 
 	// HTTP endpoints for authentication flow (registers routes on mux)
 	_ = authnhttp.HandlerFromMux(server, mux)
@@ -326,4 +309,36 @@ func run() error {
 	}
 
 	return nil
+}
+
+// registerRPCHandlers mounts the Connect services and gRPC reflection on mux.
+func registerRPCHandlers(mux *http.ServeMux, server *authn.AuthnServer, logger *slog.Logger) {
+	loggingInterceptor := logging.UnaryServerInterceptor(
+		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
+			logger.Log(ctx, slog.Level(level), msg, fields...)
+		}),
+		logging.WithLogOnEvents(logging.FinishCall),
+	)
+
+	interceptors := connect.WithInterceptors(
+		connectrecovery.NewInterceptor(logger),
+		validate.NewInterceptor(),
+		loggingInterceptor,
+	)
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server, interceptors, connectlimit.ReadMaxBytes())
+	mux.Handle(path, handler)
+
+	tokenPath, tokenHandler := authnv1connect.NewTokenServiceHandler(server, interceptors, connectlimit.ReadMaxBytes())
+	mux.Handle(tokenPath, tokenHandler)
+
+	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
+	reflector := grpcreflect.NewStaticReflector(
+		"authn.v1.AuthnService",
+		"authn.v1.TokenService",
+	)
+	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes())
+	mux.Handle(reflectPath, reflectHandler)
+	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes())
+	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
 }

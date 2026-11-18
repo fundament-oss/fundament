@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
@@ -73,22 +74,30 @@ func (s *Server) kubeProxyInternalURL() string {
 	return s.config.KubeAPIProxyURL
 }
 
-// callerAuthHeaders extracts the caller's credential headers for forwarding to
-// the kube-api-proxy: Authorization for token clients (functl), Cookie for
-// the browser session. The proxy authenticates either and enforces per-user
-// Kubernetes authorization.
+// callerAuthHeaders returns the caller's credentials for forwarding to the
+// kube-api-proxy, which enforces per-user Kubernetes authorization.
 func callerAuthHeaders(ctx context.Context) http.Header {
-	out := http.Header{}
 	info, ok := connect.CallInfoForHandlerContext(ctx)
 	if !ok {
-		return out
+		return http.Header{}
 	}
-	h := info.RequestHeader()
-	for _, name := range []string{"Authorization", "Cookie"} {
-		if values := h.Values(name); len(values) > 0 {
-			out[name] = values
+	return forwardedAuthHeaders(info.RequestHeader())
+}
+
+// forwardedAuthHeaders turns the caller's bearer token or session cookie into
+// a bearer header. The proxy takes the cookie only with a browser Origin, which
+// a server-side call has none of.
+func forwardedAuthHeaders(h http.Header) http.Header {
+	out := http.Header{}
+	token, ok := auth.BearerToken(h)
+	if !ok {
+		c, err := (&http.Request{Header: h}).Cookie(auth.ConsoleAuthCookieName)
+		if err != nil || c.Value == "" {
+			return out
 		}
+		token = c.Value
 	}
+	out.Set("Authorization", "Bearer "+token)
 	return out
 }
 
@@ -110,7 +119,7 @@ func (s *Server) logClientForSource(
 	ctx context.Context,
 	clusterID uuid.UUID,
 	source organizationv1.LogSource,
-	auth http.Header,
+	authHeader http.Header,
 ) (logs.Client, error) {
 	if source != organizationv1.LogSource_LOG_SOURCE_PLUGIN {
 		return s.logsClientFor(ctx, clusterID)
@@ -125,7 +134,7 @@ func (s *Server) logClientForSource(
 	if base == "" {
 		return nil, fmt.Errorf("plugin logs need a kube-api-proxy URL: %w", gardener.ErrNotFound)
 	}
-	return logs.NewKubeClient(base, auth), nil
+	return logs.NewKubeClient(base, authHeader), nil
 }
 
 // QueryLogs returns a bounded set of log entries for a cluster.
@@ -432,7 +441,7 @@ func toProtoBackend(b logs.Backend) organizationv1.LogBackend {
 }
 
 func mapLogError(err error) error {
-	if errors.Is(err, logs.ErrPodRequired) {
+	if errors.Is(err, logs.ErrNamespaceRequired) {
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	return connect.NewError(connect.CodeInternal, err)
@@ -487,7 +496,7 @@ func classifyLogError(err error) logErrorKind {
 	switch {
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		return logErrorCanceled
-	case errors.Is(err, logs.ErrPodRequired):
+	case errors.Is(err, logs.ErrNamespaceRequired):
 		return logErrorCaller
 	}
 

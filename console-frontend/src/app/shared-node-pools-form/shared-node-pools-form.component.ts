@@ -174,12 +174,13 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    *  quota's "in use". Empty in the create wizard. */
   private originals: ReadonlyMap<string, PoolDraft> = new Map();
 
-  /** The pool groups loaded from `initialData`, renamed or not. Their machine
-   *  type is fixed, as the user docs say: saving another one would not convert
-   *  the pool but replace it, rolling its nodes to the new type one by one. */
+  /** The pool groups loaded from `initialData`. Their name and machine type are
+   *  fixed, as the user docs say: saving matches pools by name, so another name
+   *  or type would not change the pool but replace it and its nodes. */
   private loadedPools = new WeakSet<AbstractControl>();
 
-  /** Whether the pool at `index` exists already, so its machine type is fixed. */
+  /** Whether the pool at `index` exists already, so its name and machine type
+   *  are fixed. */
   isExistingPool(index: number): boolean {
     return this.loadedPools.has(this.nodePools.at(index));
   }
@@ -346,11 +347,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     const control = this.nodePools.at(index).get('machineType');
     if (!control?.hasError('noQuota')) return '';
     if (this.isExistingPool(index)) {
-      // The quota counts a pool by its name: renamed, it is a new pool.
-      const name = this.nodePools.at(index).get('name')?.value;
-      return this.originals.has(name)
-        ? `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`
-        : `The organization has no quota for ${control.value} nodes, and a renamed pool counts as a new one. Keep its name, or ask a platform operator to set a quota.`;
+      return `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`;
     }
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
@@ -393,6 +390,11 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       // not move them the way they move a pool nobody touched yet.
       if (existing) {
         this.loadedPools.add(group);
+        // Its name is read-only, so a rule it breaks could not be fixed and
+        // would block every save. The API takes names the form would not.
+        const name = group.get('name');
+        name?.clearValidators();
+        name?.updateValueAndValidity();
       } else {
         Object.values(group.controls).forEach((control) => control.markAsDirty());
       }
@@ -440,6 +442,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   }
 
   onNodePoolNameInput(index: number, event: Event) {
+    if (this.isExistingPool(index)) return;
     const value = (event as CustomEvent<{ value: string }>).detail.value;
     this.nodePools.at(index).get('name')?.setValue(value);
     this.nodePools.at(index).get('name')?.markAsDirty();

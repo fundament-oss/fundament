@@ -16,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/circuitbreaker"
+	"github.com/fundament-oss/fundament/common/connectlimit"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -152,10 +153,10 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	)
 	interceptors := connect.WithInterceptors(chain...)
 
-	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(s, interceptors)
+	orgPath, orgHandler := organizationv1connect.NewOrganizationServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(orgPath, orgHandler)
 
-	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(s, interceptors)
+	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(clusterPath, clusterHandler)
 
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)
@@ -169,34 +170,34 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.MetricsService",
 		"organization.v1.LogsService",
 	)
-	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
+	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes())
 	mux.Handle(reflectPath, reflectHandler)
-	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector)
+	reflectPathAlpha, reflectHandlerAlpha := grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes())
 	mux.Handle(reflectPathAlpha, reflectHandlerAlpha)
 
-	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(s, interceptors)
+	projectPath, projectHandler := organizationv1connect.NewProjectServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(projectPath, projectHandler)
 
-	namespacePath, namespaceHandler := organizationv1connect.NewNamespaceServiceHandler(s, interceptors)
+	namespacePath, namespaceHandler := organizationv1connect.NewNamespaceServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(namespacePath, namespaceHandler)
 
-	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(s, interceptors)
+	memberPath, memberHandler := organizationv1connect.NewMemberServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(memberPath, memberHandler)
 
-	invitePath, inviteHandler := organizationv1connect.NewInviteServiceHandler(s, interceptors)
+	invitePath, inviteHandler := organizationv1connect.NewInviteServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(invitePath, inviteHandler)
 
-	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors)
+	apiKeyPath, apiKeyHandler := organizationv1connect.NewAPIKeyServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(apiKeyPath, apiKeyHandler)
 
-	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
+	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors, connectlimit.ReadMaxBytes())
 	mux.Handle(metricsPath, metricsHandler)
 
 	// A log response is the one payload here built entirely from
 	// tenant-controlled content, so it gets an explicit transport ceiling on top
 	// of the entry limit and per-entry field cap.
 	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(
-		s, interceptors, connect.WithSendMaxBytes(maxLogsResponseBytes),
+		s, interceptors, connectlimit.ReadMaxBytes(), connect.WithSendMaxBytes(maxLogsResponseBytes),
 	)
 	mux.Handle(logsPath, logsHandler)
 
