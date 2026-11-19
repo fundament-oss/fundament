@@ -12,6 +12,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
@@ -23,8 +24,9 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 	secret := []byte("test-secret")
 	server := &AuthnServer{
 		config: &Config{
-			JWTSecret:   secret,
-			TokenExpiry: 15 * time.Minute,
+			JWTSecret:     secret,
+			TokenExpiry:   15 * time.Minute,
+			SessionMaxAge: time.Hour,
 		},
 	}
 
@@ -34,7 +36,7 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 		Name:            "alice",
 	}
 
-	tokenStr, err := server.generateJWT(u, []string{"admin"})
+	tokenStr, err := server.generateJWT(u, []string{"admin"}, newSession(amrOIDC))
 	require.NoError(t, err)
 
 	parsed, err := jwt.ParseWithClaims(tokenStr, &auth.Claims{}, func(_ *jwt.Token) (any, error) {
@@ -46,6 +48,9 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 	require.True(t, ok, "claims type assertion failed")
 	require.Len(t, claims.Audience, 1)
 	require.Equal(t, auth.TokenTypeUser, claims.Audience[0])
+	require.NotNil(t, claims.AuthTime)
+	assert.WithinDuration(t, time.Now(), claims.AuthTime.Time, time.Minute)
+	assert.Equal(t, []string{amrOIDC}, claims.AMR)
 }
 
 // TestGetUserInfo_RejectsPluginToken verifies that a PluginToken presented to
@@ -127,4 +132,23 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	_, err = client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+func TestNew_RejectsInvalidLifetimes(t *testing.T) {
+	tests := []struct {
+		name          string
+		tokenExpiry   time.Duration
+		sessionMaxAge time.Duration
+		wantErr       string
+	}{
+		{"session shorter than token", 24 * time.Hour, time.Hour, "shorter than token expiry"},
+		{"zero lifetimes", 0, 0, "token expiry must be positive"},
+		{"negative token expiry", -time.Hour, time.Hour, "token expiry must be positive"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := New(discardLogger(), &Config{TokenExpiry: tc.tokenExpiry, SessionMaxAge: tc.sessionMaxAge}, nil, nil, nil, nil, nil, nil, nil)
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
 }

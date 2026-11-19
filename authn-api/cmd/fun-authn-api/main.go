@@ -55,6 +55,7 @@ type config struct {
 	DatabaseURL          string        `env:"DATABASE_URL,required,notEmpty"`
 	ListenAddr           string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry          time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	SessionMaxAge        time.Duration `env:"SESSION_MAX_AGE" envDefault:"720h"`
 	LogLevel             slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins   []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,https://console.fundament.localhost:8443"`
 	PluginProxyURL       string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8081"`
@@ -216,11 +217,12 @@ func run() error {
 	}
 
 	authnCfg := &authn.Config{
-		TokenExpiry:  cfg.TokenExpiry,
-		JWTSecret:    []byte(cfg.JWTSecret),
-		CookieDomain: cfg.CookieDomain,
-		CookieSecure: cfg.CookieSecure,
-		FrontendURL:  cfg.FrontendURL,
+		TokenExpiry:   cfg.TokenExpiry,
+		SessionMaxAge: cfg.SessionMaxAge,
+		JWTSecret:     []byte(cfg.JWTSecret),
+		CookieDomain:  cfg.CookieDomain,
+		CookieSecure:  cfg.CookieSecure,
+		FrontendURL:   cfg.FrontendURL,
 		// The browser origins allowed to call authn with the session cookie are
 		// also the ones a login may return to, so there is one list rather than
 		// two that can disagree (see pkg/authn/return_to.go). FrontendURL is

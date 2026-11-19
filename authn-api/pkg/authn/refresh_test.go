@@ -29,6 +29,8 @@ import (
 
 var refreshTestSecret = []byte("refresh-test-secret-refresh-test")
 
+const refreshTestMaxAge = 30 * 24 * time.Hour
+
 func createTestDatabase(t *testing.T, name string) {
 	t.Helper()
 
@@ -82,7 +84,7 @@ func newRefreshEnv(t *testing.T) *refreshEnv {
 	require.NoError(t, err)
 	t.Cleanup(servicePool.Close)
 
-	cfg := &Config{JWTSecret: refreshTestSecret, TokenExpiry: time.Hour, CookieDomain: "localhost"}
+	cfg := &Config{JWTSecret: refreshTestSecret, TokenExpiry: time.Hour, SessionMaxAge: refreshTestMaxAge, CookieDomain: "localhost"}
 	logger := discardLogger()
 	server := &AuthnServer{
 		config:        cfg,
@@ -106,9 +108,17 @@ func seedUser(t *testing.T, env *refreshEnv, name string, deleted bool) uuid.UUI
 	return id
 }
 
-// mintUserToken mirrors generateJWT: a console user token whose Name claim is
-// deliberately stale, so a 200 can only mean the account was re-read.
+// mintUserToken mirrors generateJWT for an OIDC login that just happened: a
+// console user token whose Name claim is deliberately stale, so a 200 can only
+// mean the account was re-read.
 func mintUserToken(t *testing.T, userID uuid.UUID) string {
+	t.Helper()
+	return mintSessionToken(t, userID, jwt.NewNumericDate(time.Now()), []string{amrOIDC})
+}
+
+// mintSessionToken is mintUserToken with a chosen auth_time and amr; a nil
+// authTime leaves the claim out, as tokens minted before it existed do.
+func mintSessionToken(t *testing.T, userID uuid.UUID, authTime *jwt.NumericDate, amr []string) string {
 	t.Helper()
 
 	now := time.Now()
@@ -120,7 +130,9 @@ func mintUserToken(t *testing.T, userID uuid.UUID) string {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},
-		Name: "Stale Name",
+		Name:     "Stale Name",
+		AuthTime: authTime,
+		AMR:      amr,
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(refreshTestSecret)
 	require.NoError(t, err)
@@ -178,4 +190,94 @@ func TestHandleRefresh_DatabaseOutageIs503(t *testing.T) {
 
 	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
 	assert.Empty(t, rec.Result().Cookies())
+}
+
+func parseRefreshed(t *testing.T, rec *httptest.ResponseRecorder) (*auth.Claims, authnhttp.RefreshResponse) {
+	t.Helper()
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var resp authnhttp.RefreshResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	claims := &auth.Claims{}
+	_, err := jwt.ParseWithClaims(resp.AccessToken, claims, func(*jwt.Token) (any, error) { return refreshTestSecret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	require.NoError(t, err)
+	return claims, resp
+}
+
+// A refresh extends the session but keeps when and how it started, so the
+// maximum age counts from the login, not from the last refresh.
+func TestHandleRefresh_KeepsAuthTime(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	authTime := jwt.NewNumericDate(time.Now().Add(-48 * time.Hour))
+
+	rec := postRefresh(env.server, mintSessionToken(t, userID, authTime, []string{amrPassword}))
+
+	claims, resp := parseRefreshed(t, rec)
+	require.NotNil(t, claims.AuthTime)
+	assert.Equal(t, authTime.Unix(), claims.AuthTime.Unix())
+	assert.Equal(t, []string{amrPassword}, claims.AMR)
+	assert.WithinDuration(t, time.Now().Add(time.Hour), claims.ExpiresAt.Time, time.Minute)
+	assert.Equal(t, int(time.Hour.Seconds()), resp.ExpiresIn)
+}
+
+// Close to the maximum age, the refreshed token expires at the limit rather
+// than a full TokenExpiry later.
+func TestHandleRefresh_ExpiryCappedAtMaxAge(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	authTime := time.Now().Add(-refreshTestMaxAge + 10*time.Minute)
+
+	rec := postRefresh(env.server, mintSessionToken(t, userID, jwt.NewNumericDate(authTime), []string{amrOIDC}))
+
+	claims, resp := parseRefreshed(t, rec)
+	limit := authTime.Add(refreshTestMaxAge)
+	assert.WithinDuration(t, limit, claims.ExpiresAt.Time, time.Second)
+	assert.InDelta(t, (10 * time.Minute).Seconds(), resp.ExpiresIn, 5)
+	cookies := rec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	assert.InDelta(t, (10 * time.Minute).Seconds(), cookies[0].MaxAge, 5)
+}
+
+// Sessions refresh cannot extend: past the maximum age, with under a second
+// left, minted before auth_time existed, or not from an interactive login.
+func TestHandleRefresh_RefusesEndedSessions(t *testing.T) {
+	tests := []struct {
+		name     string
+		authTime *jwt.NumericDate
+		amr      []string
+	}{
+		{"auth_time past the maximum age", jwt.NewNumericDate(time.Now().Add(-refreshTestMaxAge - time.Minute)), []string{amrOIDC}},
+		{"no auth_time", nil, []string{amrOIDC}},
+		{"under a second left", jwt.NewNumericDate(time.Now().Truncate(time.Second).Add(-refreshTestMaxAge + time.Second)), []string{amrOIDC}},
+		{"API-key token", jwt.NewNumericDate(time.Now()), []string{amrAPIKey}},
+		{"no amr", jwt.NewNumericDate(time.Now()), nil},
+		{"unknown method", jwt.NewNumericDate(time.Now()), []string{"mfa"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newRefreshEnv(t)
+			userID := seedUser(t, env, "Alice", false)
+
+			rec := postRefresh(env.server, mintSessionToken(t, userID, tc.authTime, tc.amr))
+
+			assert.Equal(t, http.StatusUnauthorized, rec.Code)
+			assert.Empty(t, rec.Result().Cookies())
+		})
+	}
+}
+
+// A token from ExchangeToken is refused by refresh: the key holder exchanges
+// the key again, so revoking it ends their access.
+func TestHandleRefresh_RefusesExchangedAPIKeyToken(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+
+	token, err := env.server.generateAPIKeyJWT(&user{ID: userID, Name: "Alice"})
+	require.NoError(t, err)
+
+	rec := postRefresh(env.server, token)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

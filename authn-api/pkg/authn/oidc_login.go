@@ -163,7 +163,7 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 		ExternalRef:     row.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
+	accessToken, err := s.generateJWT(u, claims.Groups, newSession(loginMethod))
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
 		return nil, "", fmt.Errorf("generating JWT: %w", err)
@@ -218,7 +218,7 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 		ExternalRef:     claims.Sub,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
+	accessToken, err := s.generateJWT(u, claims.Groups, newSession(loginMethod))
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
 		return nil, "", fmt.Errorf("generating JWT: %w", err)
@@ -252,7 +252,7 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 		ExternalRef:     row.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
+	accessToken, err := s.generateJWT(u, claims.Groups, newSession(loginMethod))
 	if err != nil {
 		s.logger.Error("failed to generate token", "error", err)
 		return nil, "", fmt.Errorf("generating JWT: %w", err)
