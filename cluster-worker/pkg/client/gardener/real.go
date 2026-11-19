@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/google/uuid"
+	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -813,8 +815,65 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 	}
 
 	r.disableTenantDNS(shoot)
+	disableAutoUpdate(shoot)
 
 	return shoot, nil
+}
+
+// disableAutoUpdate switches Gardener's maintenance auto-updates off. Gardener
+// defaults both to on for a Shoot that leaves them unset, and then moves the
+// Kubernetes patch version and the machine image forward in every maintenance
+// window: the version drifts from the one in the database, and a new image
+// replaces every node. Gardener still updates a version that has expired in
+// the CloudProfile. Other maintenance settings, like the time window, are kept.
+func disableAutoUpdate(shoot *gardencorev1beta1.Shoot) {
+	if shoot.Spec.Maintenance == nil {
+		shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{}
+	}
+	shoot.Spec.Maintenance.AutoUpdate = &gardencorev1beta1.MaintenanceAutoUpdate{
+		KubernetesVersion:   false,
+		MachineImageVersion: new(false),
+	}
+}
+
+// newerVersion returns current when it is a higher version than desired, and
+// desired otherwise. A sync never moves a Shoot back: Gardener rejects a lower
+// Kubernetes version, and accepts a lower machine image, which replaces every
+// node. The database can hold an older version than the Shoot runs: Gardener's
+// maintenance moved Shoots forward before auto-updates were switched off, and
+// still force-updates a version once it expires in the CloudProfile or is
+// removed from it, which can move to the next minor version.
+// A version that is no semantic version is left for Gardener to judge.
+func newerVersion(desired, current string) string {
+	d, c := "v"+strings.TrimPrefix(desired, "v"), "v"+strings.TrimPrefix(current, "v")
+	if semver.IsValid(d) && semver.IsValid(c) && semver.Compare(c, d) > 0 {
+		return current
+	}
+	return desired
+}
+
+// keepNewerImages keeps a worker's machine image version where the existing
+// Shoot runs a higher version of the same image in the worker of that name,
+// and returns the workers it kept a version for, as "worker=version".
+func keepNewerImages(workers, existing []gardencorev1beta1.Worker) []string {
+	running := make(map[string]*gardencorev1beta1.ShootMachineImage, len(existing))
+	for i := range existing {
+		running[existing[i].Name] = existing[i].Machine.Image
+	}
+	var kept []string
+	for i := range workers {
+		image := workers[i].Machine.Image
+		old := running[workers[i].Name]
+		if image == nil || image.Version == nil || old == nil || old.Version == nil || old.Name != image.Name {
+			continue
+		}
+		version := newerVersion(*image.Version, *old.Version)
+		if version != *image.Version {
+			kept = append(kept, workers[i].Name+"="+version)
+		}
+		image.Version = new(version)
+	}
+	return kept
 }
 
 // disableTenantDNS switches the shoot-dns-service extension off on the Shoot,
@@ -970,9 +1029,27 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 	}
 	shoot.Annotations[AnnotationClusterName] = cluster.Name
 
+	version := newerVersion(cluster.KubernetesVersion, shoot.Spec.Kubernetes.Version)
+	if version != cluster.KubernetesVersion {
+		r.logger.Warn("shoot runs a newer kubernetes version than the database; keeping it",
+			"shoot", shoot.Name,
+			"cluster_id", cluster.ID,
+			"database_version", cluster.KubernetesVersion,
+			"shoot_version", version)
+	}
+	kept := keepNewerImages(workers, shoot.Spec.Provider.Workers)
+	if len(kept) > 0 {
+		r.logger.Warn("shoot workers run a newer machine image than configured; keeping it",
+			"shoot", shoot.Name,
+			"cluster_id", cluster.ID,
+			"configured_version", r.provider.MachineImageVersion,
+			"workers", kept)
+	}
+
 	shoot.Spec.Region = r.region(cluster)
-	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
+	shoot.Spec.Kubernetes.Version = version
 	shoot.Spec.Provider.Workers = workers
 	r.disableTenantDNS(shoot)
+	disableAutoUpdate(shoot)
 	return nil
 }

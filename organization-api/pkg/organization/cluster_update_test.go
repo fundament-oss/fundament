@@ -116,3 +116,92 @@ func Test_Cluster_Update_NotFound(t *testing.T) {
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
 }
+
+func Test_Cluster_Update_RejectsDowngrade(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	createRes, err := client.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.29",
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.UpdateCluster(ctx, organizationv1.UpdateClusterRequest_builder{
+		ClusterId:         createRes.GetClusterId(),
+		KubernetesVersion: new("1.28"),
+	}.Build())
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
+
+	getRes, err := client.GetCluster(ctx, organizationv1.GetClusterRequest_builder{
+		ClusterId: createRes.GetClusterId(),
+	}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, "1.29", getRes.GetCluster().GetKubernetesVersion())
+}
+
+func Test_Cluster_Update_Deleted(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	createRes, err := client.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.DeleteCluster(ctx, organizationv1.DeleteClusterRequest_builder{
+		ClusterId: createRes.GetClusterId(),
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.UpdateCluster(ctx, organizationv1.UpdateClusterRequest_builder{
+		ClusterId:         createRes.GetClusterId(),
+		KubernetesVersion: new("1.29"),
+	}.Build())
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+}
