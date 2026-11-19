@@ -251,7 +251,8 @@ func (b0 GetPluginResponse_builder) Build() *GetPluginResponse {
 }
 
 // Reserves the name within the caller's organization and creates the listing.
-// Only the essentials; UpdatePlugin fills in the rest.
+// The definition.yaml-owned fields seed the listing until its first approved
+// version replaces them; UpdatePlugin fills in the rest.
 type CreatePluginRequest struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Name             string                 `protobuf:"bytes,10,opt,name=name"`
@@ -507,18 +508,15 @@ func (b0 CreatePluginResponse_builder) Build() *CreatePluginResponse {
 }
 
 // A full replacement: omitted repeated fields are cleared, not preserved.
-// No name — it is immutable once reserved.
+// No name — it is immutable once reserved. display_name, description_short,
+// tags, repository_url and license are owned by definition.yaml and synced
+// from the newest approved version, so they are not editable here.
 type UpdatePluginRequest struct {
 	state                             protoimpl.MessageState   `protogen:"opaque.v1"`
 	xxx_hidden_PluginId               string                   `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId"`
-	xxx_hidden_DisplayName            string                   `protobuf:"bytes,20,opt,name=display_name,json=displayName"`
-	xxx_hidden_DescriptionShort       string                   `protobuf:"bytes,30,opt,name=description_short,json=descriptionShort"`
 	xxx_hidden_Description            string                   `protobuf:"bytes,40,opt,name=description"`
 	xxx_hidden_CategoryIds            []string                 `protobuf:"bytes,50,rep,name=category_ids,json=categoryIds"`
-	xxx_hidden_Tags                   []string                 `protobuf:"bytes,60,rep,name=tags"`
 	xxx_hidden_Image                  string                   `protobuf:"bytes,70,opt,name=image"`
-	xxx_hidden_RepositoryUrl          string                   `protobuf:"bytes,80,opt,name=repository_url,json=repositoryUrl"`
-	xxx_hidden_License                string                   `protobuf:"bytes,90,opt,name=license"`
 	xxx_hidden_DocumentationLinks     *[]*v1.DocumentationLink `protobuf:"bytes,100,rep,name=documentation_links,json=documentationLinks"`
 	xxx_hidden_Features               *[]*v1.FeatureBlock      `protobuf:"bytes,110,rep,name=features"`
 	xxx_hidden_Visibility             PluginVisibility         `protobuf:"varint,120,opt,name=visibility,enum=registry.v1.PluginVisibility"`
@@ -561,20 +559,6 @@ func (x *UpdatePluginRequest) GetPluginId() string {
 	return ""
 }
 
-func (x *UpdatePluginRequest) GetDisplayName() string {
-	if x != nil {
-		return x.xxx_hidden_DisplayName
-	}
-	return ""
-}
-
-func (x *UpdatePluginRequest) GetDescriptionShort() string {
-	if x != nil {
-		return x.xxx_hidden_DescriptionShort
-	}
-	return ""
-}
-
 func (x *UpdatePluginRequest) GetDescription() string {
 	if x != nil {
 		return x.xxx_hidden_Description
@@ -589,30 +573,9 @@ func (x *UpdatePluginRequest) GetCategoryIds() []string {
 	return nil
 }
 
-func (x *UpdatePluginRequest) GetTags() []string {
-	if x != nil {
-		return x.xxx_hidden_Tags
-	}
-	return nil
-}
-
 func (x *UpdatePluginRequest) GetImage() string {
 	if x != nil {
 		return x.xxx_hidden_Image
-	}
-	return ""
-}
-
-func (x *UpdatePluginRequest) GetRepositoryUrl() string {
-	if x != nil {
-		return x.xxx_hidden_RepositoryUrl
-	}
-	return ""
-}
-
-func (x *UpdatePluginRequest) GetLicense() string {
-	if x != nil {
-		return x.xxx_hidden_License
 	}
 	return ""
 }
@@ -667,14 +630,6 @@ func (x *UpdatePluginRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
 
-func (x *UpdatePluginRequest) SetDisplayName(v string) {
-	x.xxx_hidden_DisplayName = v
-}
-
-func (x *UpdatePluginRequest) SetDescriptionShort(v string) {
-	x.xxx_hidden_DescriptionShort = v
-}
-
 func (x *UpdatePluginRequest) SetDescription(v string) {
 	x.xxx_hidden_Description = v
 }
@@ -683,20 +638,8 @@ func (x *UpdatePluginRequest) SetCategoryIds(v []string) {
 	x.xxx_hidden_CategoryIds = v
 }
 
-func (x *UpdatePluginRequest) SetTags(v []string) {
-	x.xxx_hidden_Tags = v
-}
-
 func (x *UpdatePluginRequest) SetImage(v string) {
 	x.xxx_hidden_Image = v
-}
-
-func (x *UpdatePluginRequest) SetRepositoryUrl(v string) {
-	x.xxx_hidden_RepositoryUrl = v
-}
-
-func (x *UpdatePluginRequest) SetLicense(v string) {
-	x.xxx_hidden_License = v
 }
 
 func (x *UpdatePluginRequest) SetDocumentationLinks(v []*v1.DocumentationLink) {
@@ -726,17 +669,11 @@ func (x *UpdatePluginRequest) SetAuthorUrl(v string) {
 type UpdatePluginRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	PluginId         string
-	DisplayName      string
-	DescriptionShort string
-	Description      string
-	CategoryIds      []string
-	// Tag names, not ids — the server upserts them.
-	Tags []string
+	PluginId    string
+	Description string
+	CategoryIds []string
 	// Listing artwork, not a container image.
-	Image         string
-	RepositoryUrl string
-	License       string
+	Image string
 	// A link with no id is created; one carrying an id updates that link in
 	// place, keeping its id. Links the request omits are soft-deleted.
 	DocumentationLinks []*v1.DocumentationLink
@@ -755,14 +692,9 @@ func (b0 UpdatePluginRequest_builder) Build() *UpdatePluginRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_PluginId = b.PluginId
-	x.xxx_hidden_DisplayName = b.DisplayName
-	x.xxx_hidden_DescriptionShort = b.DescriptionShort
 	x.xxx_hidden_Description = b.Description
 	x.xxx_hidden_CategoryIds = b.CategoryIds
-	x.xxx_hidden_Tags = b.Tags
 	x.xxx_hidden_Image = b.Image
-	x.xxx_hidden_RepositoryUrl = b.RepositoryUrl
-	x.xxx_hidden_License = b.License
 	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
 	x.xxx_hidden_Features = &b.Features
 	x.xxx_hidden_Visibility = b.Visibility
@@ -1775,20 +1707,14 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"visibility\"C\n" +
 	"\x14CreatePluginResponse\x12+\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xad\x06\n" +
+	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xb0\x05\n" +
 	"\x13UpdatePluginRequest\x12%\n" +
 	"\tplugin_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\x12-\n" +
-	"\fdisplay_name\x18\x14 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vdisplayName\x125\n" +
-	"\x11description_short\x18\x1e \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x10descriptionShort\x12*\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\x12*\n" +
 	"\vdescription\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\vdescription\x122\n" +
 	"\fcategory_ids\x182 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
-	"\"\x05r\x03\xb0\x01\x01R\vcategoryIds\x12\x1c\n" +
-	"\x04tags\x18< \x03(\tB\b\xbaH\x05\x92\x01\x02\x10\x14R\x04tags\x12!\n" +
-	"\x05image\x18F \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\x05image\x122\n" +
-	"\x0erepository_url\x18P \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\rrepositoryUrl\x12!\n" +
-	"\alicense\x18Z \x01(\tB\a\xbaH\x04r\x02\x18@R\alicense\x12\\\n" +
+	"\"\x05r\x03\xb0\x01\x01R\vcategoryIds\x12!\n" +
+	"\x05image\x18F \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\x05image\x12\\\n" +
 	"\x13documentation_links\x18d \x03(\v2!.marketplace.v1.DocumentationLinkB\b\xbaH\x05\x92\x01\x02\x10\x14R\x12documentationLinks\x12B\n" +
 	"\bfeatures\x18n \x03(\v2\x1c.marketplace.v1.FeatureBlockB\b\xbaH\x05\x92\x01\x02\x10\x14R\bfeatures\x12I\n" +
 	"\n" +
@@ -1800,7 +1726,7 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"\vauthor_name\x18\x8c\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\n" +
 	"authorName\x12+\n" +
 	"\n" +
-	"author_url\x18\x96\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\tauthorUrl\"C\n" +
+	"author_url\x18\x96\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\tauthorUrlJ\x04\b\x14\x10\x15J\x04\b\x1e\x10\x1fJ\x04\b<\x10=J\x04\bP\x10QJ\x04\bZ\x10[R\fdisplay_nameR\x11description_shortR\x04tagsR\x0erepository_urlR\alicense\"C\n" +
 	"\x14UpdatePluginResponse\x12+\n" +
 	"\x06plugin\x18\n" +
 	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"<\n" +

@@ -158,16 +158,12 @@ func (s *Server) UpdatePlugin(
 	qtx := s.queries.WithTx(tx)
 
 	updated, err := qtx.PluginUpdate(ctx, db.PluginUpdateParams{
-		ID:               pluginID,
-		DisplayName:      req.GetDisplayName(),
-		DescriptionShort: req.GetDescriptionShort(),
-		Description:      req.GetDescription(),
-		Image:            req.GetImage(),
-		RepositoryUrl:    textOrNull(req.GetRepositoryUrl()),
-		AuthorName:       textOrNull(req.GetAuthorName()),
-		AuthorUrl:        textOrNull(req.GetAuthorUrl()),
-		License:          req.GetLicense(),
-		Visibility:       visibilityToDB(req.GetVisibility()),
+		ID:          pluginID,
+		Description: req.GetDescription(),
+		Image:       req.GetImage(),
+		AuthorName:  textOrNull(req.GetAuthorName()),
+		AuthorUrl:   textOrNull(req.GetAuthorUrl()),
+		Visibility:  visibilityToDB(req.GetVisibility()),
 	})
 	if err != nil {
 		return nil, s.writeError(ctx, err, "updating plugin")
@@ -180,9 +176,6 @@ func (s *Server) UpdatePlugin(
 
 	// A full replacement: everything the request omits is cleared.
 	if err := s.replaceCategories(ctx, qtx, pluginID, req.GetCategoryIds()); err != nil {
-		return nil, err
-	}
-	if err := s.replaceTags(ctx, qtx, pluginID, req.GetTags()); err != nil {
 		return nil, err
 	}
 	if err := s.replaceAllowedOrganizations(ctx, qtx, pluginID, req.GetAllowedOrganizationIds()); err != nil {

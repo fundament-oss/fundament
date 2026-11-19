@@ -16,6 +16,7 @@ import (
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 
+	"github.com/fundament-oss/fundament/common/pluginlisting"
 	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/scaffold"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
@@ -450,33 +451,19 @@ func resolvePluginID(ctx context.Context, pubClient registryv1connect.Publicatio
 // propagate instead of being answered with a CreatePlugin.
 var errListingNotFound = errors.New("listing not found")
 
-// createPlugin reserves the listing, seeded from the manifest's metadata. The
-// listing copy (display name, descriptions, tags) is authored properly through
-// the developer portal afterwards; this is just enough to publish against.
+// createPlugin reserves the listing, seeded with the fields definition.yaml
+// owns; each approved version re-syncs them. The long description and the
+// rest of the listing are authored through the developer portal.
 func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def *pluginruntime.PluginDefinition) (string, error) {
-	displayName := def.Metadata.DisplayName
-	if displayName == "" {
-		displayName = def.Metadata.Name
-	}
-	// Truncate on rune boundaries: the field's max_len counts characters, and
-	// a byte cut inside a multi-byte rune would fail protobuf marshalling.
-	descriptionShort := def.Metadata.Description
-	if runes := []rune(descriptionShort); len(runes) > 255 {
-		descriptionShort = string(runes[:255])
-	}
-	tags := def.Metadata.Tags
-	if len(tags) > 20 {
-		tags = tags[:20]
-	}
+	listing := pluginlisting.FromDefinition(def)
 
 	resp, err := pubClient.CreatePlugin(ctx, registryv1.CreatePluginRequest_builder{
 		Name:             def.Metadata.Name,
-		DisplayName:      displayName,
-		DescriptionShort: descriptionShort,
-		Description:      def.Metadata.Description,
-		Tags:             tags,
-		RepositoryUrl:    def.Metadata.URLs.Repository,
-		License:          def.Metadata.License,
+		DisplayName:      listing.DisplayName,
+		DescriptionShort: listing.DescriptionShort,
+		Tags:             listing.Tags,
+		RepositoryUrl:    listing.RepositoryURL,
+		License:          listing.License,
 		Visibility:       registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 	}.Build())
 	if err != nil {

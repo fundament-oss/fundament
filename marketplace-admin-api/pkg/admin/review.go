@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/pluginlisting"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/marketplace-admin-api/pkg/db/gen"
 	adminv1 "github.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1"
@@ -224,6 +225,12 @@ func (s *Server) decide(ctx context.Context, submissionID uuid.UUID, d decision)
 			errors.New("plugin version is no longer in status pending"))
 	}
 
+	if d.status == dbconst.PluginDefinitionStatus_Approved {
+		if err := s.syncListing(ctx, qtx, row.PluginDefinitionID); err != nil {
+			return nil, err
+		}
+	}
+
 	rejectionReason := pgtype.Text{}
 	if d.rejectionReason != "" {
 		rejectionReason = pgtype.Text{String: d.rejectionReason, Valid: true}
@@ -255,6 +262,64 @@ func (s *Server) decide(ctx context.Context, submissionID uuid.UUID, d decision)
 		return nil, submissionLookupError(err)
 	}
 	return s.submissionWithRoundStatus(ctx, submissionRowFromGet(&decided))
+}
+
+// syncListing copies the definition.yaml-owned fields of a just-approved
+// version onto its listing, unless a newer version is already published.
+func (s *Server) syncListing(ctx context.Context, qtx *db.Queries, versionID uuid.UUID) error {
+	version, err := qtx.PluginVersionGetManifest(ctx, db.PluginVersionGetManifestParams{ID: versionID})
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("loading approved manifest: %w", err))
+	}
+
+	if _, err := qtx.PluginLockForSync(ctx, db.PluginLockForSyncParams{ID: version.PluginID}); err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("locking plugin listing: %w", err))
+	}
+
+	others, err := qtx.PluginVersionsPublishedExcept(ctx, db.PluginVersionsPublishedExceptParams{
+		PluginID: version.PluginID, ID: versionID,
+	})
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("listing published versions: %w", err))
+	}
+	if !pluginlisting.IsNewest(version.PluginVersion, others) {
+		return nil
+	}
+
+	fields, err := pluginlisting.FromManifest(version.Manifest)
+	if err != nil {
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cannot approve: %w", err))
+	}
+
+	if err := qtx.PluginListingSync(ctx, db.PluginListingSyncParams{
+		ID:               version.PluginID,
+		DisplayName:      fields.DisplayName,
+		DescriptionShort: fields.DescriptionShort,
+		RepositoryUrl:    pgtype.Text{String: fields.RepositoryURL, Valid: fields.RepositoryURL != ""},
+		License:          fields.License,
+	}); err != nil {
+		return s.writeError(ctx, err, "syncing listing")
+	}
+
+	if err := qtx.PluginTagsDeleteByPluginID(ctx, db.PluginTagsDeleteByPluginIDParams{PluginID: version.PluginID}); err != nil {
+		return s.writeError(ctx, err, "clearing tags")
+	}
+	for _, name := range fields.Tags {
+		// Insert-then-select: either this call created the tag or a committed
+		// one already exists, so the select finds it in both cases.
+		if err := qtx.TagInsertIfMissing(ctx, db.TagInsertIfMissingParams{Name: name}); err != nil {
+			return s.writeError(ctx, err, "creating tag")
+		}
+		tagID, err := qtx.TagGetByName(ctx, db.TagGetByNameParams{Name: name})
+		if err != nil {
+			return s.writeError(ctx, err, "resolving tag")
+		}
+		if err := qtx.PluginTagInsert(ctx, db.PluginTagInsertParams{PluginID: version.PluginID, TagID: tagID}); err != nil {
+			return s.writeError(ctx, err, "attaching tag")
+		}
+	}
+
+	return nil
 }
 
 // adminSubmissionRow is the shape the list and get rows share.

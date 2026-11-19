@@ -766,45 +766,34 @@ func (q *Queries) PluginTagsListByPluginIDs(ctx context.Context, arg PluginTagsL
 
 const pluginUpdate = `-- name: PluginUpdate :execrows
 UPDATE appstore.plugins SET
-	display_name = $1::text,
-	description_short = $2::text,
-	description = $3::text,
-	image = $4::text,
-	repository_url = $5::text,
-	author_name = $6::text,
-	author_url = $7::text,
-	license = $8::text,
-	visibility = $9::text,
+	description = $1::text,
+	image = $2::text,
+	author_name = $3::text,
+	author_url = $4::text,
+	visibility = $5::text,
 	updated = now()
-WHERE id = $10::uuid
+WHERE id = $6::uuid
   AND deleted IS NULL
 `
 
 type PluginUpdateParams struct {
-	DisplayName      string
-	DescriptionShort string
-	Description      string
-	Image            string
-	RepositoryUrl    pgtype.Text
-	AuthorName       pgtype.Text
-	AuthorUrl        pgtype.Text
-	License          string
-	Visibility       string
-	ID               uuid.UUID
+	Description string
+	Image       string
+	AuthorName  pgtype.Text
+	AuthorUrl   pgtype.Text
+	Visibility  string
+	ID          uuid.UUID
 }
 
-// name is absent: it is immutable once reserved (FUN-5). Zero rows means the
+// name is absent: it is immutable once reserved (FUN-5). So are the fields
+// definition.yaml owns, which are synced on approval. Zero rows means the
 // listing was soft-deleted after the handler looked it up.
 func (q *Queries) PluginUpdate(ctx context.Context, arg PluginUpdateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, pluginUpdate,
-		arg.DisplayName,
-		arg.DescriptionShort,
 		arg.Description,
 		arg.Image,
-		arg.RepositoryUrl,
 		arg.AuthorName,
 		arg.AuthorUrl,
-		arg.License,
 		arg.Visibility,
 		arg.ID,
 	)

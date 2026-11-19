@@ -13,6 +13,88 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const pluginListingSync = `-- name: PluginListingSync :exec
+UPDATE appstore.plugins SET
+	display_name = $1::text,
+	description_short = $2::text,
+	repository_url = $3::text,
+	license = $4::text,
+	updated = now()
+WHERE id = $5::uuid
+  AND deleted IS NULL
+`
+
+type PluginListingSyncParams struct {
+	DisplayName      string
+	DescriptionShort string
+	RepositoryUrl    pgtype.Text
+	License          string
+	ID               uuid.UUID
+}
+
+func (q *Queries) PluginListingSync(ctx context.Context, arg PluginListingSyncParams) error {
+	_, err := q.db.Exec(ctx, pluginListingSync,
+		arg.DisplayName,
+		arg.DescriptionShort,
+		arg.RepositoryUrl,
+		arg.License,
+		arg.ID,
+	)
+	return err
+}
+
+const pluginLockForSync = `-- name: PluginLockForSync :one
+SELECT id
+FROM appstore.plugins
+WHERE id = $1::uuid
+  AND deleted IS NULL
+FOR UPDATE
+`
+
+type PluginLockForSyncParams struct {
+	ID uuid.UUID
+}
+
+// Serializes concurrent approvals of one plugin, so each sees the other's
+// published version before deciding which is newest.
+func (q *Queries) PluginLockForSync(ctx context.Context, arg PluginLockForSyncParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, pluginLockForSync, arg.ID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const pluginTagInsert = `-- name: PluginTagInsert :exec
+INSERT INTO appstore.plugins_tags (plugin_id, tag_id)
+VALUES ($1::uuid, $2::uuid)
+ON CONFLICT DO NOTHING
+`
+
+type PluginTagInsertParams struct {
+	PluginID uuid.UUID
+	TagID    uuid.UUID
+}
+
+func (q *Queries) PluginTagInsert(ctx context.Context, arg PluginTagInsertParams) error {
+	_, err := q.db.Exec(ctx, pluginTagInsert, arg.PluginID, arg.TagID)
+	return err
+}
+
+const pluginTagsDeleteByPluginID = `-- name: PluginTagsDeleteByPluginID :exec
+DELETE FROM appstore.plugins_tags
+WHERE plugin_id = $1::uuid
+`
+
+type PluginTagsDeleteByPluginIDParams struct {
+	PluginID uuid.UUID
+}
+
+// An edge, not an entity: replacement removes it outright.
+func (q *Queries) PluginTagsDeleteByPluginID(ctx context.Context, arg PluginTagsDeleteByPluginIDParams) error {
+	_, err := q.db.Exec(ctx, pluginTagsDeleteByPluginID, arg.PluginID)
+	return err
+}
+
 const pluginVersionApprove = `-- name: PluginVersionApprove :execrows
 UPDATE appstore.plugin_definitions SET
 	status = 'approved',
@@ -38,6 +120,34 @@ func (q *Queries) PluginVersionApprove(ctx context.Context, arg PluginVersionApp
 	return result.RowsAffected(), nil
 }
 
+const pluginVersionGetManifest = `-- name: PluginVersionGetManifest :one
+
+SELECT plugin_id, plugin_version, manifest
+FROM appstore.plugin_definitions
+WHERE id = $1::uuid
+  AND deleted IS NULL
+`
+
+type PluginVersionGetManifestParams struct {
+	ID uuid.UUID
+}
+
+type PluginVersionGetManifestRow struct {
+	PluginID      uuid.UUID
+	PluginVersion string
+	Manifest      []byte
+}
+
+// Listing sync on approval: the fields definition.yaml owns are copied from
+// the approved manifest onto the listing when that version is the newest
+// published one (common/pluginlisting).
+func (q *Queries) PluginVersionGetManifest(ctx context.Context, arg PluginVersionGetManifestParams) (PluginVersionGetManifestRow, error) {
+	row := q.db.QueryRow(ctx, pluginVersionGetManifest, arg.ID)
+	var i PluginVersionGetManifestRow
+	err := row.Scan(&i.PluginID, &i.PluginVersion, &i.Manifest)
+	return i, err
+}
+
 const pluginVersionSetStatus = `-- name: PluginVersionSetStatus :execrows
 UPDATE appstore.plugin_definitions SET status = $1::text
 WHERE id = $2::uuid
@@ -58,6 +168,40 @@ func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionS
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const pluginVersionsPublishedExcept = `-- name: PluginVersionsPublishedExcept :many
+SELECT plugin_version
+FROM appstore.plugin_definitions
+WHERE plugin_id = $1::uuid
+  AND id <> $2::uuid
+  AND published IS NOT NULL
+  AND deleted IS NULL
+`
+
+type PluginVersionsPublishedExceptParams struct {
+	PluginID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) PluginVersionsPublishedExcept(ctx context.Context, arg PluginVersionsPublishedExceptParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, pluginVersionsPublishedExcept, arg.PluginID, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var plugin_version string
+		if err := rows.Scan(&plugin_version); err != nil {
+			return nil, err
+		}
+		items = append(items, plugin_version)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const submissionDecide = `-- name: SubmissionDecide :execrows
@@ -278,4 +422,37 @@ func (q *Queries) SubmissionList(ctx context.Context) ([]SubmissionListRow, erro
 		return nil, err
 	}
 	return items, nil
+}
+
+const tagGetByName = `-- name: TagGetByName :one
+SELECT id
+FROM appstore.tags
+WHERE name = $1::text
+  AND deleted IS NULL
+`
+
+type TagGetByNameParams struct {
+	Name string
+}
+
+func (q *Queries) TagGetByName(ctx context.Context, arg TagGetByNameParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, tagGetByName, arg.Name)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const tagInsertIfMissing = `-- name: TagInsertIfMissing :exec
+INSERT INTO appstore.tags (name) VALUES ($1::text)
+ON CONFLICT (name, deleted) DO NOTHING
+`
+
+type TagInsertIfMissingParams struct {
+	Name string
+}
+
+// DO NOTHING, not DO UPDATE: tags are a vocabulary shared across publishers.
+func (q *Queries) TagInsertIfMissing(ctx context.Context, arg TagInsertIfMissingParams) error {
+	_, err := q.db.Exec(ctx, tagInsertIfMissing, arg.Name)
+	return err
 }
