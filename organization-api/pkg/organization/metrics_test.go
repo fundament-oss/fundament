@@ -1,10 +1,14 @@
 package organization
 
 import (
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
@@ -181,4 +185,24 @@ func TestBuildNamespaceMetrics(t *testing.T) {
 	if r.GetPods() != 5 {
 		t.Errorf("pods = %v, want 5", r.GetPods())
 	}
+}
+
+// Gardener's per-shoot Prometheus also holds the shoot's control plane
+// (type="seed"); every selector we send must pick the shoot's own series.
+func TestMetricsQueriesSelectShootSeries(t *testing.T) {
+	src, err := os.ReadFile("metrics.go")
+	require.NoError(t, err)
+
+	selector := regexp.MustCompile(`\b(node_|kube_|kubelet_|container_)[a-zA-Z_]+(\{[^}]*\})?`)
+	var checked int
+	for line := range strings.SplitSeq(string(src), "\n") {
+		if !strings.Contains(line, "`") || strings.HasPrefix(strings.TrimSpace(line), "//") {
+			continue
+		}
+		for _, m := range selector.FindAllString(line, -1) {
+			checked++
+			assert.Contains(t, m, `type="shoot"`, "selector without type=\"shoot\" in: %s", strings.TrimSpace(line))
+		}
+	}
+	assert.Greater(t, checked, 20)
 }
