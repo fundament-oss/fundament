@@ -1,0 +1,3 @@
+# Image of the controller. The published chart pins it by digest (build.yml,
+# publish-chart); set it when installing the chart from this directory.
+image: ""
