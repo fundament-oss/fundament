@@ -171,12 +171,12 @@
             </span>
           </button>
         }
-        @if (hasUncategorized()) {
+        @if (hasOther()) {
           <button
             type="button"
-            (click)="selectCategory(UNCATEGORIZED)"
+            (click)="selectCategory(OTHER)"
             [class]="
-              selectedCategory() === UNCATEGORIZED
+              selectedCategory() === OTHER
                 ? 'bg-accent-75 text-accent-800 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
             "
@@ -184,10 +184,10 @@
           >
             <span class="flex items-center gap-2.5">
               <nldd-icon icon="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
-              Uncategorized
+              Other
             </span>
             <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
-              {{ categoryCount(UNCATEGORIZED) }}
+              {{ categoryCount(OTHER) }}
             </span>
           </button>
         }
