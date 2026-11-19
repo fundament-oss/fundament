@@ -98,7 +98,7 @@ export function storeFieldHtml(classes) {
     return field(
       `<nldd-text-field id="bucket-storage-class" name="storageClass" placeholder="${OBJECT_STORAGE_CLASS_PREFIX}my-store"
                         required maxlength="253" no-spellcheck></nldd-text-field>`,
-      `The object storage's StorageClass, named ${OBJECT_STORAGE_CLASS_PREFIX}<store name>. The object storages could not be listed; an organization admin sees the store names on the cluster's Object Storage page.`,
+      `The object storages could not be loaded. Enter the StorageClass: ${OBJECT_STORAGE_CLASS_PREFIX}<store name>.`,
     );
   }
   const placeholder = classes.length > 1
@@ -109,7 +109,6 @@ export function storeFieldHtml(classes) {
     .join('');
   return field(
     `<nldd-dropdown required><select id="bucket-storage-class" name="storageClass">${placeholder}${options}</select></nldd-dropdown>`,
-    'The object store the bucket lives on.',
   );
 }
 
@@ -241,7 +240,7 @@ export async function bucketDetailPage(ctx) {
     ]);
     const spec = claim.spec ?? {};
     const pairs = [
-      ['Phase', claim.status?.phase ?? 'Unknown'],
+      ['Status', claim.status?.phase ?? 'Unknown'],
       ['Namespace', ctx.namespaceDisplayNames?.[namespace] ?? namespace],
       [spec.bucketName ? 'Requested bucket name' : 'Bucket name prefix',
         spec.bucketName ?? spec.generateBucketName ?? '—'],
@@ -249,7 +248,7 @@ export async function bucketDetailPage(ctx) {
     if (spec.additionalConfig?.maxSize) pairs.push(['Max size', spec.additionalConfig.maxSize]);
     if (spec.additionalConfig?.maxObjects) pairs.push(['Max objects', spec.additionalConfig.maxObjects]);
 
-    let connection = hintHtml('Connection details appear once the claim is Bound.');
+    let connection = hintHtml('Shown once the bucket is Bound.');
     if (cm) {
       connection = renderKeyValueList([
         ['Endpoint', `http://${cm.data?.BUCKET_HOST ?? '?'}:${cm.data?.BUCKET_PORT ?? '?'}`],
@@ -259,13 +258,14 @@ export async function bucketDetailPage(ctx) {
 
     // Without the client-side uniqueness pre-check, a taken exact name
     // surfaces here: the provisioner leaves the claim Pending and retries
-    // with backoff, so say what Pending can mean.
+    // with backoff, so say what Pending can mean. The console has no delete,
+    // so the way out goes through kubectl.
     const phase = claim.status?.phase ?? 'Unknown';
     let pendingNote = '';
     if (phase !== 'Bound') {
       pendingNote = spec.bucketName
-        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml('The provisioner has not fulfilled this claim yet and retries with backoff. For an exact bucket name this can mean the name is already taken on this store, in or outside Kubernetes. If it stays Pending, delete the claim and pick another name.')}`
-        : `<nldd-spacer size="12"></nldd-spacer>${hintHtml('The provisioner has not fulfilled this claim yet; it retries with backoff.')}`;
+        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. If it stays Pending, the name may be taken: delete this bucket with kubectl and create one with another name.')}`
+        : `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. It is retried automatically.')}`;
     }
 
     // The Secret's name is shown; its values never reach this iframe.
@@ -282,8 +282,8 @@ export async function bucketDetailPage(ctx) {
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-rich-text>
         <p>
-          Credentials are in the Secret <code>${escapeHtml(name)}</code> (same namespace),
-          as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Give a pod both with:
+          The credentials are in Secret <code>${escapeHtml(name)}</code> as
+          AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY. Add both to a pod with:
         </p>
         <pre><code>${escapeHtml(mount)}</code></pre>
       </nldd-rich-text>
@@ -316,9 +316,9 @@ export async function bucketCreatePage(ctx) {
   const namespaces = ctx.namespaces ?? [];
   const displayNames = ctx.namespaceDisplayNames ?? {};
 
+  // From a store's Buckets section the store is given; only the project's
+  // Buckets page asks for it.
   let storeField = '';
-  let intro = `The bucket is provisioned on this storage (class
-        <code>${escapeHtml(fixedClass ?? '')}</code>).`;
   if (!fixedClass) {
     sheetBody.innerHTML = loadingHtml();
     let classes;
@@ -337,7 +337,6 @@ export async function bucketCreatePage(ctx) {
       return;
     }
     storeField = storeFieldHtml(classes);
-    intro = 'The bucket is provisioned on the object storage you pick.';
   }
 
   // A project carries its namespaces; without any (dev sandbox), the
@@ -350,14 +349,6 @@ export async function bucketCreatePage(ctx) {
                         no-spellcheck></nldd-text-field>`;
 
   sheetBody.innerHTML = `
-    <nldd-rich-text>
-      <p>
-        ${intro} The endpoint lands in a ConfigMap and the credentials in a
-        Secret, both named after the claim, in the claim's namespace.
-      </p>
-    </nldd-rich-text>
-    <nldd-spacer size="12"></nldd-spacer>
-
     <nldd-form>
       <form novalidate>
         ${errorBannerHtml('bucket-error')}
@@ -372,17 +363,17 @@ export async function bucketCreatePage(ctx) {
                             required maxlength="63" no-spellcheck></nldd-text-field>`,
           {
             errorId: 'claim-name-error',
-            hint: 'Names the claim and its ConfigMap/Secret. Lowercase letters, digits and dashes.',
+            hint: 'Lowercase letters, digits and dashes. Also names the ConfigMap and Secret.',
           },
         )}
 
         ${formFieldHtml(
           'Bucket name',
           `<nldd-dropdown><select id="naming-mode" name="namingMode">
-            <option value="generate" selected>Generate from the claim name (recommended)</option>
+            <option value="generate" selected>Generate from the name (recommended)</option>
             <option value="exact">Exact name</option>
           </select></nldd-dropdown>`,
-          { hint: 'Generated names get a random suffix, so they cannot collide.' },
+          { hint: 'Adds a random suffix, so the name is always free.' },
         )}
 
         <div data-role="exact-name">
@@ -392,7 +383,7 @@ export async function bucketCreatePage(ctx) {
                               no-spellcheck></nldd-text-field>`,
             {
               errorId: 'bucket-name-error',
-              hint: 'Bucket names are shared across the whole object store. A taken name is only caught by the provisioner: the claim then stays Pending.',
+              hint: 'Must be unique on this object storage. A taken name leaves the bucket Pending.',
             },
           )}
         </div>
@@ -401,13 +392,13 @@ export async function bucketCreatePage(ctx) {
           'Max size (optional)',
           `<nldd-text-field id="max-size" name="maxSize" placeholder="10Gi"
                             no-spellcheck></nldd-text-field>`,
-          { errorId: 'max-size-error', hint: 'Quota for the bucket, e.g. 10Gi. Empty means unlimited.' },
+          { errorId: 'max-size-error', hint: 'For example 10Gi. Empty means no limit.' },
         )}
 
         ${formFieldHtml(
           'Max objects (optional)',
           `<nldd-text-field id="max-objects" name="maxObjects" no-spellcheck></nldd-text-field>`,
-          { errorId: 'max-objects-error', hint: 'Empty means unlimited.' },
+          { errorId: 'max-objects-error', hint: 'Empty means no limit.' },
         )}
 
         ${formActionsHtml({ submitId: 'bucket-submit', submitText: 'Create bucket', cancelId: 'bucket-cancel' })}

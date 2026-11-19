@@ -2,6 +2,7 @@
 // the list and detail pages. sheet.js boots the SDK and the design system
 // bundle first (bootPage).
 import {
+  emptyStateHtml,
   errorBox,
   escapeHtml,
   navigateToDetail,
@@ -45,25 +46,17 @@ export async function diskPoolCreatePage() {
   }
 
   if (availableDisks.length === 0) {
-    body.innerHTML = `
-      <nldd-rich-text>
-        <p>
-          No disks to offer. A disk appears here when it is discovered, unclaimed, and empty
-          in the node's last probe. The probe can lag; <code>kubectl get disks</code> shows
-          what each disk reports.
-        </p>
-      </nldd-rich-text>
-    `;
+    body.innerHTML = emptyStateHtml({
+      icon: 'ssd-hard-drive',
+      text: 'No free disks',
+      supportingText: 'Only empty disks that are in no disk pool can be added.',
+    });
     return;
   }
 
   body.innerHTML = `
     <nldd-rich-text>
-      <p>
-        <strong>Recommendation:</strong> create a single DiskPool per cluster. All pools feed
-        one shared Ceph cluster and data is placed across every disk in it, so a second pool
-        only contributes more disks.
-      </p>
+      <p>One disk pool per cluster is enough.</p>
     </nldd-rich-text>
     <nldd-spacer size="12"></nldd-spacer>
 
@@ -81,11 +74,8 @@ export async function diskPoolCreatePage() {
         <nldd-form-section text="Disks">
           ${renderDiskPicker(availableDisks)}
           <nldd-text size="sm" color="secondary">
-            Each selected disk joins the shared Ceph cluster, which runs one storage daemon
-            (OSD) per disk. Disks spread over two or more nodes let volumes survive a node
-            failure. Fundament confirms only that a disk is unclaimed. A disk marked as
-            carrying a filesystem holds data, and one marked with nothing may still hold data
-            the last probe missed.
+            Pick disks on at least two nodes, so storage survives a node failure. Make sure
+            the disks hold no data you need.
           </nldd-text>
         </nldd-form-section>
 
@@ -167,10 +157,9 @@ export async function diskPoolEditPage(ctx) {
     preserved.length === 0
       ? ''
       : `<nldd-text size="sm" color="secondary">
-           Kept as they are, because this form cannot show them: a disk is listed here only
-           when it exists and is either free or already claimed by this pool:
-           ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving leaves them in the pool; use kubectl
-           to remove one.
+           Also in this pool but not shown here:
+           ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving keeps them. Remove
+           them with kubectl.
          </nldd-text>`;
 
   body.innerHTML = `
@@ -182,9 +171,8 @@ export async function diskPoolEditPage(ctx) {
           ${renderDiskPicker(disks, currentNames)}
           ${preservedNote}
           <nldd-text size="sm" color="secondary">
-            Unchecking a disk removes it from the shared Ceph cluster's device list, but its
-            storage daemon (OSD) keeps running until it is purged from Ceph manually, and
-            data may rebalance in the meantime.
+            Removing a disk here does not stop Ceph from using it. Taking it out completely
+            is a manual step in Ceph.
           </nldd-text>
         </nldd-form-section>
 
@@ -209,7 +197,7 @@ export async function diskPoolEditPage(ctx) {
     checks: [
       [
         body.querySelector('#disk-picker'),
-        () => (selected().length === 0 ? 'Select at least one disk.' : null),
+        () => (selected().length === 0 ? 'Please select at least one disk.' : null),
       ],
     ],
     action: async () => {
