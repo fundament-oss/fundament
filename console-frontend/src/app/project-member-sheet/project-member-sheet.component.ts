@@ -16,7 +16,7 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatTimeAgo } from '../utils/date-format';
-import { projectRoleLabel } from '../utils/role-label';
+import { projectRoleAccess, projectRoleLabel } from '../utils/role-label';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
@@ -53,6 +53,11 @@ interface ProjectMemberView {
  *  what the organization decided. */
 const isLocked = (view: ProjectMemberView): boolean =>
   view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN;
+
+/** What the member can do on the cluster. A locked member is an organization
+ *  admin, who gets cluster-admin rather than the project's namespace roles. */
+const roleAccess = (view: ProjectMemberView): string | null =>
+  projectRoleAccess(view.member.role, isLocked(view));
 
 const formatMemberDate = (member: ProjectMember): string =>
   member.created ? formatTimeAgo(timestampDate(member.created)) : 'unknown';
@@ -110,6 +115,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
   roleLabel = projectRoleLabel;
 
   isLocked = isLocked;
+
+  roleAccess = roleAccess;
 
   formatMemberDate = formatMemberDate;
 
