@@ -36,3 +36,24 @@ export function projectRoleLabel(role: ProjectMemberRole): string {
       return 'Unknown';
   }
 }
+
+/**
+ * What a project role grants on the cluster (FUN-7): the built-in `admin` or
+ * `view` ClusterRole, bound in every namespace of the project. An organization
+ * admin gets no RoleBindings: their ServiceAccount is bound to `cluster-admin`,
+ * whatever their project role says.
+ */
+export function projectRoleAccess(
+  role: ProjectMemberRole,
+  organizationAdmin: boolean,
+): string | null {
+  if (organizationAdmin) return 'cluster-admin, as organization admin';
+  switch (role) {
+    case ProjectMemberRole.ADMIN:
+      return 'admin in every namespace of this project';
+    case ProjectMemberRole.VIEWER:
+      return 'view in every namespace of this project';
+    default:
+      return null;
+  }
+}

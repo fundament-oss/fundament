@@ -16,7 +16,7 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatTimeAgo } from '../utils/date-format';
-import { projectRoleLabel } from '../utils/role-label';
+import { projectRoleAccess, projectRoleLabel } from '../utils/role-label';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
@@ -47,12 +47,19 @@ interface ProjectMemberView {
   member: ProjectMember;
   /** 'org' when the project role equals the organization role. */
   source: 'org' | 'project';
+  /** An organization admin, whatever their project role: on the cluster they
+   *  get cluster-admin instead of the project's namespace roles. */
+  organizationAdmin: boolean;
 }
 
 /** Locked: an organization admin is admin here too, and this page cannot change
  *  what the organization decided. */
 const isLocked = (view: ProjectMemberView): boolean =>
   view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN;
+
+/** What the member can do on the cluster. */
+const roleAccess = (view: ProjectMemberView): string | null =>
+  projectRoleAccess(view.member.role, view.organizationAdmin);
 
 const formatMemberDate = (member: ProjectMember): string =>
   member.created ? formatTimeAgo(timestampDate(member.created)) : 'unknown';
@@ -111,6 +118,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   isLocked = isLocked;
 
+  roleAccess = roleAccess;
+
   formatMemberDate = formatMemberDate;
 
   ngOnInit() {
@@ -133,6 +142,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
         orgMembers.filter((m) => m.externalRef).map((m) => [m.userId, m.permission]),
       );
       const found = projectResponse.members.find((m) => m.id === this.memberId());
+      const orgRole = found ? orgRoleByUserId.get(found.userId) : undefined;
       this.member.set(
         found
           ? {
@@ -141,10 +151,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
                 // The organization permission is a bare string ("admin" /
                 // "viewer"), so this compares values, not the labels the tags
                 // show — those name their scope and would never match.
-                (found.role === ProjectMemberRole.ADMIN ? 'admin' : 'viewer') ===
-                orgRoleByUserId.get(found.userId)
+                (found.role === ProjectMemberRole.ADMIN ? 'admin' : 'viewer') === orgRole
                   ? 'org'
                   : 'project',
+              organizationAdmin: orgRole === 'admin',
             }
           : null,
       );

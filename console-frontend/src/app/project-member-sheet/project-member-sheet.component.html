@@ -66,6 +66,7 @@
               width="fit-content"
               horizontal-alignment="right"
               [attr.text]="roleLabel(view.member.role)"
+              [attr.supporting-text]="roleAccess(view)"
             ></nldd-text-cell>
             <!-- An inherited role has no action here; the paragraph below
                  says why, so the row does not repeat it. -->

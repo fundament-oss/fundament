@@ -46,7 +46,8 @@ namespace in the project, and a project viewer can view all of them. On the
 cluster the same split applies: organization admins get `cluster-admin`;
 project admins are bound to the built-in `admin` role and project viewers to
 the built-in `view` role in every namespace of their project. See
-[Cluster access](./clusters.md#what-the-kubeconfig-grants).
+[Cluster access](./clusters.md#what-the-kubeconfig-grants). A member's sheet,
+under **Project → Members**, shows this beneath their project role.
 
 There is no way to give someone access to a single namespace. If workloads
 need to be separated by who can reach them, put them in separate projects.
