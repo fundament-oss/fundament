@@ -15,9 +15,9 @@ describe('projectRoleAccess', () => {
   });
 
   it('gives an organization admin cluster-admin, whatever the project role', () => {
-    expect(projectRoleAccess(ProjectMemberRole.ADMIN, true)).toBe(
-      'cluster-admin on the whole cluster',
-    );
+    const expected = 'cluster-admin, as organization admin';
+    expect(projectRoleAccess(ProjectMemberRole.ADMIN, true)).toBe(expected);
+    expect(projectRoleAccess(ProjectMemberRole.VIEWER, true)).toBe(expected);
   });
 
   it('says nothing for a role it does not know', () => {

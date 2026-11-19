@@ -47,7 +47,7 @@ export function projectRoleAccess(
   role: ProjectMemberRole,
   organizationAdmin: boolean,
 ): string | null {
-  if (organizationAdmin) return 'cluster-admin on the whole cluster';
+  if (organizationAdmin) return 'cluster-admin, as organization admin';
   switch (role) {
     case ProjectMemberRole.ADMIN:
       return 'admin in every namespace of this project';

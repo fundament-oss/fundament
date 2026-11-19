@@ -47,6 +47,9 @@ interface ProjectMemberView {
   member: ProjectMember;
   /** 'org' when the project role equals the organization role. */
   source: 'org' | 'project';
+  /** An organization admin, whatever their project role: on the cluster they
+   *  get cluster-admin instead of the project's namespace roles. */
+  organizationAdmin: boolean;
 }
 
 /** Locked: an organization admin is admin here too, and this page cannot change
@@ -54,10 +57,9 @@ interface ProjectMemberView {
 const isLocked = (view: ProjectMemberView): boolean =>
   view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN;
 
-/** What the member can do on the cluster. A locked member is an organization
- *  admin, who gets cluster-admin rather than the project's namespace roles. */
+/** What the member can do on the cluster. */
 const roleAccess = (view: ProjectMemberView): string | null =>
-  projectRoleAccess(view.member.role, isLocked(view));
+  projectRoleAccess(view.member.role, view.organizationAdmin);
 
 const formatMemberDate = (member: ProjectMember): string =>
   member.created ? formatTimeAgo(timestampDate(member.created)) : 'unknown';
@@ -140,6 +142,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
         orgMembers.filter((m) => m.externalRef).map((m) => [m.userId, m.permission]),
       );
       const found = projectResponse.members.find((m) => m.id === this.memberId());
+      const orgRole = found ? orgRoleByUserId.get(found.userId) : undefined;
       this.member.set(
         found
           ? {
@@ -148,10 +151,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
                 // The organization permission is a bare string ("admin" /
                 // "viewer"), so this compares values, not the labels the tags
                 // show — those name their scope and would never match.
-                (found.role === ProjectMemberRole.ADMIN ? 'admin' : 'viewer') ===
-                orgRoleByUserId.get(found.userId)
+                (found.role === ProjectMemberRole.ADMIN ? 'admin' : 'viewer') === orgRole
                   ? 'org'
                   : 'project',
+              organizationAdmin: orgRole === 'admin',
             }
           : null,
       );
