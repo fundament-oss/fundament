@@ -205,6 +205,37 @@ export function hintHtml(html) {
   return `<nldd-text size="sm" color="secondary">${html}</nldd-text>`;
 }
 
+// An "About …" button that opens a page's explanation on demand, in a
+// popover, so the page itself keeps only what helps act on it. Pages add it
+// after bootPage: before the bundle loads, the popover's text shows inline.
+export function infoButtonHtml(label, paragraphs) {
+  return `
+    <nldd-button type="button" appearance="secondary" start-icon="info" text="${escapeHtml(label)}">
+      <nldd-popover slot="popup" role="region" accessible-label="${escapeHtml(label)}">
+        <nldd-container padding="16">
+          <nldd-rich-text spacing="tight">
+            ${paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}
+          </nldd-rich-text>
+        </nldd-container>
+      </nldd-popover>
+    </nldd-button>`;
+}
+
+// Puts the info button at the end of a page's button group.
+export function addInfoButton(group, label, paragraphs) {
+  group.insertAdjacentHTML('beforeend', infoButtonHtml(label, paragraphs));
+}
+
+// What a disk pool is, for the disk pool list's and detail's info box.
+export const DISK_POOL_INFO = [
+  'A disk pool gives disks to the cluster\'s storage. All pools together form one shared storage cluster, and block, file and object storage are built on top of it.',
+  'One pool per cluster is usually enough: add disks to it instead of creating another.',
+];
+
+// What replicas and the failure domain mean, for every consumer kind's info box.
+export const REPLICAS_INFO = 'Replicas is the number of copies Ceph keeps of all data. '
+  + 'With two or more replicas and disks on two or more nodes, the copies go to different nodes, so the storage survives a node failure.';
+
 // Posts a navigate message to the parent, which resolves it relative to the
 // iframe's current route — so this sends only the resource identity, and works
 // from a create view too. parentOrigin falls back to '*' before init.
@@ -291,7 +322,7 @@ export function loadErrorBanner(message) {
 // for an absent spec.replicas.
 export function replicasFieldHtml(replicas) {
   const selected = replicas ? String(replicas) : 'auto';
-  const label = (v) => (v === 'auto' ? 'auto (recommended)' : {
+  const label = (v) => (v === 'auto' ? 'Auto (recommended)' : {
     1: '1 (no replication)',
     2: '2 replicas',
     3: '3 replicas',
@@ -302,7 +333,7 @@ export function replicasFieldHtml(replicas) {
   return formFieldHtml(
     'Replicas',
     `<nldd-dropdown><select id="replicas" name="replicas">${options}</select></nldd-dropdown>`,
-    { hint: 'auto derives the replica count from the number of nodes contributing disks to the cluster.' },
+    { hint: 'Auto keeps one copy per node with disks, up to 3.' },
   );
 }
 
@@ -319,7 +350,7 @@ export function defaultFieldHtml(checked = false) {
   return formFieldHtml(
     '',
     `<nldd-checkbox-field name="default" label="Default StorageClass"${checked ? ' checked' : ''}></nldd-checkbox-field>`,
-    { hint: 'PersistentVolumeClaims without an explicit storageClassName use this class. Only one BlockStorage may be the default; a second one degrades both until resolved.' },
+    { hint: 'Used for volume claims that name no StorageClass. Only one block storage can be the default.' },
   );
 }
 
@@ -484,4 +515,17 @@ export function humanizeQuantity(quantity) {
   if (bytes === null) return String(quantity);
   const formatted = formatSize(Math.abs(bytes));
   return bytes < 0 && formatted !== '0 GiB' ? `-${formatted}` : formatted;
+}
+
+// A status row with the cluster's free space as a storage can use it: every
+// byte is kept replicas times, so the raw numbers divide by the count.
+// Approximate, as Ceph keeps some headroom free. Raw for a disk pool, or while
+// the count is not known yet; null without capacity.
+export function freeSpace(cap, replicas) {
+  if (!cap) return null;
+  if (!replicas) {
+    return ['Free in cluster (raw)', `${humanizeQuantity(String(cap.bytesAvailable))} of ${humanizeQuantity(String(cap.bytesTotal))}`];
+  }
+  const usable = (bytes) => humanizeQuantity(String(Math.floor(Number(bytes) / replicas)));
+  return ['Free space (approx.)', `${usable(cap.bytesAvailable)} of ${usable(cap.bytesTotal)}`];
 }

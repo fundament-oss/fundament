@@ -1,4 +1,5 @@
 import {
+  addInfoButton,
   bootPage,
   emptyStateHtml,
   errorBox,
@@ -14,6 +15,11 @@ list.innerHTML = loadingHtml('Loading disks…');
 
 await bootPage();
 
+addInfoButton(document.getElementById('page-actions'), 'About disks', [
+  'Disks are found on the cluster\'s nodes automatically. To use a disk for storage, add it to a disk pool.',
+  'Only disks reported empty and disks in a disk pool are listed.',
+]);
+
 // Deliberately never says "Available". `available` is a stale-able snapshot of
 // "empty and unformatted" — a disk running an OSD has been observed reporting
 // available=true — so it cannot back a claim that a disk is free to take. Only
@@ -21,9 +27,9 @@ await bootPage();
 // the node actually saw. An absent filesystem is absence of evidence, so it
 // stays unstated.
 function claimText(status) {
-  if (status?.claimedBy) return `Claimed by ${status.claimedBy}`;
-  if (status?.filesystem) return `No claim recorded, contains ${status.filesystem}`;
-  return 'No claim recorded';
+  if (status?.claimedBy) return `In disk pool ${status.claimedBy}`;
+  if (status?.filesystem) return `No disk pool, contains ${status.filesystem}`;
+  return 'No disk pool';
 }
 
 // Soft-deleted disks are never removed (repo policy is soft deletes only), so a
