@@ -80,6 +80,8 @@ metadata:
   icon: puzzle-piece   # a built-in icon name, or a file: see Icons
   tags:
     - example
+  categories:
+    - Networking
 spec:
   permissions:
     capabilities:
@@ -152,6 +154,20 @@ are one contract with nothing to enforce it at build time. The generated
 actually embedded; the rest is on you, so change them together.
 
 `definition.yaml` has **no `spec.image`**: `functl plugin publish --image=<repo>@sha256:<digest>` injects the pushed digest, so a published definition pins immutable code and its hash binds that code. A manifest that names a mutable tag is rejected.
+
+## Categories
+
+`metadata.categories` files the plugin under marketplace categories. The marketplace has a fixed set of categories: Database, Identity, Networking, Observability, Security and Storage. Use their names; case does not matter. A plugin can list up to 10. A plugin with no categories is listed under **Other**.
+
+```yaml
+metadata:
+  categories:
+    - Database
+```
+
+`functl plugin publish --create` looks the names up when it creates the listing. A name that is not a category stops the publish, with the valid names in the error. Like `tags`, categories are only read when the listing is created: changing them later in `definition.yaml` does not move a listing that already exists.
+
+Publishing a manifest that sets `metadata.categories` requires a `functl`, marketplace registry, catalog and admin API, and plugin-controller built with category support. An older one rejects the manifest at parse time (strict decoding), so upgrade them before publishing versions that set categories.
 
 ## Icons
 

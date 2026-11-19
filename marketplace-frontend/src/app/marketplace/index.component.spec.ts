@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import MarketplaceIndexComponent, {
-  UNCATEGORIZED,
+  OTHER,
   browseCategories,
   isUncategorized,
 } from './index.component';
@@ -86,32 +86,32 @@ describe('marketplace browse counts', () => {
     expect(isUncategorized(plugin('y', ['cat-db']), listed)).toBe(false);
   });
 
-  it('adds up to "All plugins" once the uncategorized ones have an entry', async () => {
+  it('adds up to "All plugins" once Other has an entry', async () => {
     const component = await build();
 
     const entries = [
       ...component.shownCategories().map((c) => c.id),
-      ...(component.hasUncategorized() ? [UNCATEGORIZED] : []),
+      ...(component.hasOther() ? [OTHER] : []),
     ];
     const sum = entries.reduce((total, id) => total + component.categoryCount(id), 0);
 
-    expect(component.categoryCount(UNCATEGORIZED)).toBe(2);
+    expect(component.categoryCount(OTHER)).toBe(2);
     expect(sum).toBe(component.searchMatches().length);
   });
 
-  it('lists the plugins in no category under Uncategorized', async () => {
+  it('lists the plugins in no category under Other', async () => {
     const component = await build();
 
-    component.selectCategory(UNCATEGORIZED);
+    component.selectCategory(OTHER);
 
     expect(component.filteredPlugins().map((p) => p.id)).toEqual(['haven', 'ftv']);
-    expect(component.selectedCategoryName()).toBe('Uncategorized');
+    expect(component.selectedCategoryName()).toBe('Other');
   });
 
   it('shows as many plugins in each entry as its count says', async () => {
     const component = await build();
 
-    [...component.shownCategories().map((c) => c.id), UNCATEGORIZED].forEach((id) => {
+    [...component.shownCategories().map((c) => c.id), OTHER].forEach((id) => {
       component.selectCategory(id);
       expect(component.filteredPlugins().length).toBe(component.categoryCount(id));
     });

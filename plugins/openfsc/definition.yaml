@@ -17,6 +17,8 @@ metadata:
     - fsc
     - federation
     - common-ground
+  categories:
+    - Networking
 spec:
   permissions:
     capabilities:

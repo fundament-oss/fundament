@@ -18,6 +18,8 @@ metadata:
     - gateway
     - envoy
     - ingress
+  categories:
+    - Networking
 spec:
   permissions:
     capabilities:

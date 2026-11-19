@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 
 	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/scaffold"
+	marketplacev1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
@@ -453,7 +456,16 @@ var errListingNotFound = errors.New("listing not found")
 // createPlugin reserves the listing, seeded from the manifest's metadata. The
 // listing copy (display name, descriptions, tags) is authored properly through
 // the developer portal afterwards; this is just enough to publish against.
+// Like tags, categories are only read here: changing them in definition.yaml
+// later does not move an existing listing.
 func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def *pluginruntime.PluginDefinition) (string, error) {
+	// Resolved first, so a misspelt category fails the publish before the
+	// listing name is reserved.
+	categoryIDs, err := resolveCategoryIDs(ctx, pubClient, def.Metadata.Categories)
+	if err != nil {
+		return "", err
+	}
+
 	displayName := def.Metadata.DisplayName
 	if displayName == "" {
 		displayName = def.Metadata.Name
@@ -474,6 +486,7 @@ func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationSe
 		DisplayName:      displayName,
 		DescriptionShort: descriptionShort,
 		Description:      def.Metadata.Description,
+		CategoryIds:      categoryIDs,
 		Tags:             tags,
 		RepositoryUrl:    def.Metadata.URLs.Repository,
 		License:          def.Metadata.License,
@@ -483,6 +496,57 @@ func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationSe
 		return "", fmt.Errorf("create plugin: %w", err)
 	}
 	return resp.GetPlugin().GetId(), nil
+}
+
+// maxCategories mirrors category_ids' max_items on CreatePluginRequest.
+const maxCategories = 10
+
+// resolveCategoryIDs turns metadata.categories into the registry's category
+// ids. With none it asks the registry nothing, and the listing lands under
+// Other.
+func resolveCategoryIDs(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, names []string) ([]string, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+	resp, err := pubClient.ListCategories(ctx, registryv1.ListCategoriesRequest_builder{}.Build())
+	if err != nil {
+		return nil, fmt.Errorf("list categories: %w", err)
+	}
+	return matchCategories(names, resp.GetCategories())
+}
+
+// matchCategories matches names to categories ignoring case and surrounding
+// space. Any name that matches nothing fails the lot: a typo should stop the
+// publish, not quietly file the plugin under Other.
+func matchCategories(names []string, categories []*marketplacev1.Category) ([]string, error) {
+	byName := make(map[string]string, len(categories))
+	known := make([]string, 0, len(categories))
+	for _, category := range categories {
+		byName[strings.ToLower(category.GetName())] = category.GetId()
+		known = append(known, category.GetName())
+	}
+
+	ids := make([]string, 0, len(names))
+	var unknown []string
+	for _, name := range names {
+		id, ok := byName[strings.ToLower(strings.TrimSpace(name))]
+		if !ok {
+			unknown = append(unknown, strconv.Quote(name))
+			continue
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	if len(unknown) > 0 {
+		slices.Sort(known)
+		return nil, fmt.Errorf("unknown metadata.categories %s; expected any of: %s",
+			strings.Join(unknown, ", "), strings.Join(known, ", "))
+	}
+	if len(ids) > maxCategories {
+		return nil, fmt.Errorf("metadata.categories lists %d categories; at most %d are allowed", len(ids), maxCategories)
+	}
+	return ids, nil
 }
 
 // mapValue returns the value node for key in a YAML mapping, or nil.

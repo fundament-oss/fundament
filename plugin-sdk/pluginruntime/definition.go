@@ -154,6 +154,10 @@ type PluginMetadata struct {
 	IconDark    string     `yaml:"iconDark"`
 	URLs        PluginURLs `yaml:"urls"`
 	Tags        []string   `yaml:"tags"`
+	// Marketplace categories by name, from the registry's curated set (its
+	// ListCategories). functl resolves them when it creates the listing; a
+	// plugin with none is listed under Other.
+	Categories []string `yaml:"categories"`
 }
 
 // PluginURLs holds links related to the plugin.

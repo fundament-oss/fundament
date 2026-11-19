@@ -121,6 +121,24 @@ spec:
 	assert.Empty(t, def.Spec.Image)
 }
 
+// The decoder rejects unknown fields, so metadata.categories has to be a known
+// one for any manifest that sets it to parse at all.
+func TestParseSourceDefinition_Categories(t *testing.T) {
+	def, err := ParseSourceDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+  categories:
+    - Security
+spec:
+  permissions:
+    rbac: []
+`))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Security"}, def.Metadata.Categories)
+}
+
 func TestParseSourceDefinition_RejectsMutableTag(t *testing.T) {
 	// An image that IS present must still be digest-pinned, so a hand-written
 	// mutable tag fails here rather than at publish time.
