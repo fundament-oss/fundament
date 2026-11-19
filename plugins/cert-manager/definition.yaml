@@ -17,6 +17,8 @@ metadata:
     - certificates
     - tls
     - security
+  categories:
+    - Security
 spec:
   permissions:
     capabilities:

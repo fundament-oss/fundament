@@ -16,6 +16,8 @@ metadata:
   tags:
     - postgresql
     - database
+  categories:
+    - Database
 spec:
   permissions:
     capabilities:

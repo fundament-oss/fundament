@@ -14,6 +14,10 @@ metadata:
     documentation: https://example.com/docs
   tags:
     - example
+  # Marketplace categories, by name. Without any, the plugin is listed under
+  # Other. See "Categories" in the plugin docs for the valid names.
+  # categories:
+  #   - Networking
 # There is deliberately no spec.image here. Publishing builds the image, resolves
 # the pushed manifest digest and injects it, so the stored definition always pins
 # immutable code. Never add a mutable tag by hand: it will be rejected.

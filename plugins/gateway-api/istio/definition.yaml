@@ -18,6 +18,8 @@ metadata:
     - gateway
     - istio
     - ingress
+  categories:
+    - Networking
 spec:
   permissions:
     capabilities:
