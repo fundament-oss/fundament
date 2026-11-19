@@ -54,7 +54,10 @@ const (
 // node name is in kubernetes_io_hostname, copied from the node's labels, so
 // label_replace turns that into node. On backends whose cAdvisor series do
 // carry node (kube-prometheus-stack), kubernetes_io_hostname is absent and
-// label_replace leaves node as it is.
+// label_replace leaves node as it is. This relies on the hostname label
+// matching the Node name, which kubelet guarantees unless a cloud provider
+// renames the node; the capacity queries key on the Node name, so a mismatch
+// would split each node into a usage row and a capacity row.
 const (
 	queryNodeCPUUsed = `sum by (node) (label_replace(rate(container_cpu_usage_seconds_total{container!="",` +
 		notControlPlane + `}[5m]), "node", "$1", "kubernetes_io_hostname", "(.+)"))`
@@ -752,7 +755,9 @@ func emptyResourceTotals() *organizationv1.ResourceUsageInfo {
 // messages. Node names are unioned across all slices so that nodes appearing
 // in only some results are still included (with zeros for missing values).
 // Samples without a node name are dropped: kube_pod_info reports unscheduled
-// pods with node="", which is not a node to show.
+// pods with node="", which is not a node to show. The same goes for usage on a
+// backend whose cAdvisor series carry neither node nor kubernetes_io_hostname:
+// it still counts in the cluster totals, just not under any node.
 func buildNodeMetrics(
 	cpuUsed, cpuTotal, memUsed, memTotal, podsUsed, podsTotal []prom.Sample,
 ) []*organizationv1.NodeWorkloadMetrics {
