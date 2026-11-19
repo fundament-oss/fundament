@@ -74,8 +74,8 @@ export async function diskPoolCreatePage() {
         <nldd-form-section text="Disks">
           ${renderDiskPicker(availableDisks)}
           <nldd-text size="sm" color="secondary">
-            Pick disks on at least two nodes, so storage survives a node failure. Make sure
-            the disks hold no data you need.
+            Pick disks on at least two nodes, so storage can survive a node failure. Make
+            sure the disks hold no data you need.
           </nldd-text>
         </nldd-form-section>
 

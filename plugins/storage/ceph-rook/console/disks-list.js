@@ -17,7 +17,7 @@ await bootPage();
 
 addInfoButton(document.getElementById('page-actions'), 'About disks', [
   'Disks are found on the cluster\'s nodes automatically. To use a disk for storage, add it to a disk pool.',
-  'Only empty disks and disks in a disk pool are listed.',
+  'Only disks reported empty and disks in a disk pool are listed.',
 ]);
 
 // Deliberately never says "Available". `available` is a stale-able snapshot of

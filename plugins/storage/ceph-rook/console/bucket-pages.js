@@ -258,13 +258,16 @@ export async function bucketDetailPage(ctx) {
 
     // Without the client-side uniqueness pre-check, a taken exact name
     // surfaces here: the provisioner leaves the claim Pending and retries
-    // with backoff, so say what Pending can mean. The console has no delete,
-    // so the way out goes through kubectl.
-    const phase = claim.status?.phase ?? 'Unknown';
+    // with backoff, so say what Pending can mean. A claim fresh from the create
+    // form has no phase yet and is waiting too; Failed or Released is not
+    // retried, and the badge says so. The console has no delete, so the way
+    // out is the kubectl command.
+    const phase = claim.status?.phase;
     let pendingNote = '';
-    if (phase !== 'Bound') {
+    if (!phase || phase === 'Pending') {
+      const command = `kubectl delete objectbucketclaim ${name} -n ${namespace}`;
       pendingNote = spec.bucketName
-        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. If it stays Pending, the name may be taken: delete this bucket with kubectl and create one with another name.')}`
+        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml(`Not created yet. If it stays Pending, the name may be taken: delete it with <code>${escapeHtml(command)}</code> and create one with another name.`)}`
         : `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. It is retried automatically.')}`;
     }
 

@@ -234,7 +234,7 @@ export const DISK_POOL_INFO = [
 
 // What replicas and the failure domain mean, for every consumer kind's info box.
 export const REPLICAS_INFO = 'Replicas is the number of copies Ceph keeps of all data. '
-  + 'With disks on two or more nodes, the copies go to different nodes, so the storage survives a node failure.';
+  + 'With two or more replicas and disks on two or more nodes, the copies go to different nodes, so the storage survives a node failure.';
 
 // Posts a navigate message to the parent, which resolves it relative to the
 // iframe's current route — so this sends only the resource identity, and works
