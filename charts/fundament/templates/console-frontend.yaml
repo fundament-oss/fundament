@@ -42,10 +42,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "console-frontend" "component" "frontend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "console-frontend" "replicas" $.Values.consoleFrontend.replicas) }}
       containers:
         - name: console-frontend
           image: {{ $.Values.images.consoleFrontend }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
@@ -95,4 +97,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "console-frontend") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "console-frontend" "component" "frontend" "replicas" $.Values.consoleFrontend.replicas) }}
 {{- end }}

@@ -277,6 +277,8 @@ kubeApiProxy:
 # Cluster Worker
 clusterWorker:
   enabled: false
+  # Must be 1: the worker takes outbox rows with SKIP LOCKED, so two of them
+  # can apply one cluster's changes out of order and leave a stale Shoot spec.
   replicas: 1
   resources: {}
   logLevel: info
@@ -425,6 +427,8 @@ marketplaceAdminFrontend:
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:
   enabled: false
+  # Must be 1: the worker takes outbox rows with SKIP LOCKED, so two of them
+  # can apply one subject's changes out of order and leave a stale grant.
   replicas: 1
   resources: {}
   logLevel: info

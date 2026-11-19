@@ -20,6 +20,68 @@ helm.sh/chart: {{ .root.Chart.Name }}-{{ .root.Chart.Version | replace "+" "_" }
 {{- end }}
 
 {{/*
+Pod topology spread for a Deployment with more than one replica: the pods go
+to different nodes where the scheduler can place them. ScheduleAnyway keeps a
+cluster with fewer nodes than replicas, or a node being drained, from leaving
+pods Pending. pod-template-hash limits the count to the current ReplicaSet, so
+a rolling update spreads the new pods too.
+Renders at the pod spec's indentation, so call it without nindent.
+Usage: {{- include "fundament.topologySpread" (dict "root" $ "name" "authn-api" "replicas" $.Values.authnApi.replicas) }}
+*/}}
+{{- define "fundament.topologySpread" -}}
+{{- if gt (int .replicas) 1 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "fundament.selectorLabels" . | nindent 14 }}
+          matchLabelKeys:
+            - pod-template-hash
+{{- end }}
+{{- end }}
+
+{{/*
+Keeps a stopping pod serving until Envoy has dropped it from its endpoints:
+the endpoint removal and the stop signal start together, and a pod that exits
+first turns the requests routed to it meanwhile into 503s. Rollouts, drains
+and scale-downs all stop pods this way.
+Usage: {{- include "fundament.preStop" . | nindent 10 }}
+*/}}
+{{- define "fundament.preStop" -}}
+lifecycle:
+  preStop:
+    sleep:
+      seconds: 5
+{{- end }}
+
+{{/*
+PodDisruptionBudget for a Deployment with more than one replica: a node drain
+evicts one pod at a time. A single replica gets none: with maxUnavailable 1 a
+budget on one pod protects nothing. AlwaysAllow lets a drain evict a pod that
+is not Ready, so a crash-looping pod does not hold up node maintenance.
+Usage: include "fundament.podDisruptionBudget" (dict "root" $ "name" "authn-api" "component" "backend" "replicas" $.Values.authnApi.replicas)
+*/}}
+{{- define "fundament.podDisruptionBudget" -}}
+{{- if gt (int .replicas) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "fundament.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" . | nindent 6 }}
+{{- end }}
+{{- end }}
+
+{{/*
 Database name
 */}}
 {{- define "fundament.db.name" -}}

@@ -44,10 +44,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "console-demo-frontend" "replicas" $.Values.consoleDemoFrontend.replicas) }}
       containers:
         - name: console-demo-frontend
           image: {{ $.Values.images.consoleDemoFrontend }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 80
@@ -81,4 +83,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "console-demo-frontend") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "console-demo-frontend" "component" "frontend" "replicas" $.Values.consoleDemoFrontend.replicas) }}
 {{- end }}

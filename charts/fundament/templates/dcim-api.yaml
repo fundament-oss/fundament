@@ -18,10 +18,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "dcim-api" "component" "backend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "dcim-api" "replicas" $.Values.dcimApi.replicas) }}
       containers:
         - name: dcim-api
           image: {{ $.Values.images.dcimApi }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 8080
@@ -61,4 +63,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "dcim-api") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "dcim-api" "component" "backend" "replicas" $.Values.dcimApi.replicas) }}
 {{- end }}
