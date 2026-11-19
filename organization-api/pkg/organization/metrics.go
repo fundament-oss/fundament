@@ -50,24 +50,35 @@ const (
 	queryNetTx     = `sum(rate(container_network_transmit_bytes_total{` + notControlPlane + `}[5m]))`
 )
 
-// Per-node queries. Gardener's shoot cAdvisor series have no node label; the
-// node name is in kubernetes_io_hostname, copied from the node's labels, so
-// label_replace turns that into node. On backends whose cAdvisor series do
-// carry node (kube-prometheus-stack), kubernetes_io_hostname is absent and
-// label_replace leaves node as it is. This relies on the hostname label
-// matching the Node name, which kubelet guarantees unless a cloud provider
-// renames the node; the capacity queries key on the Node name, so a mismatch
-// would split each node into a usage row and a capacity row.
+// Per-node queries. The capacity queries key on the Node name in node.
+var (
+	queryNodeCPUUsed = sumByNode(func(nodeSel string) string {
+		return `rate(container_cpu_usage_seconds_total{container!="",` + notControlPlane + `,` + nodeSel + `}[5m])`
+	})
+	queryNodeMemUsed = sumByNode(func(nodeSel string) string {
+		return `container_memory_working_set_bytes{container!="",` + notControlPlane + `,` + nodeSel + `}`
+	})
+)
+
 const (
-	queryNodeCPUUsed = `sum by (node) (label_replace(rate(container_cpu_usage_seconds_total{container!="",` +
-		notControlPlane + `}[5m]), "node", "$1", "kubernetes_io_hostname", "(.+)"))`
-	queryNodeCPUTotal = `sum(kube_node_status_capacity{resource="cpu"}) by (node)`
-	queryNodeMemUsed  = `sum by (node) (label_replace(container_memory_working_set_bytes{container!="",` +
-		notControlPlane + `}, "node", "$1", "kubernetes_io_hostname", "(.+)"))`
+	queryNodeCPUTotal  = `sum(kube_node_status_capacity{resource="cpu"}) by (node)`
 	queryNodeMemTotal  = `sum(kube_node_status_capacity{resource="memory"}) by (node)`
 	queryNodePodsUsed  = `count(kube_pod_info{` + notControlPlane + `}) by (node)`
 	queryNodePodsTotal = `sum(kube_node_status_capacity{resource="pods"}) by (node)`
 )
+
+// sumByNode sums cAdvisor usage per node. expr builds the series selector
+// around a matcher on node. Series that carry node (kube-prometheus-stack)
+// keep it: that is the Node name the capacity queries use. Gardener's shoot
+// cAdvisor series have no node label; their node name is in
+// kubernetes_io_hostname, copied from the node's labels, so only those get
+// node from it. kubelet sets that label to the Node name unless a cloud
+// provider renames the node; a mismatch would split the node into a usage row
+// and a capacity row.
+func sumByNode(expr func(nodeSel string) string) string {
+	return `sum by (node) (` + expr(`node!=""`) + ` or label_replace(` + expr(`node=""`) +
+		`, "node", "$1", "kubernetes_io_hostname", "(.+)"))`
+}
 
 // promClientFor selects the Prometheus backend for one cluster:
 //   - "per-shoot" → the cluster's per-shoot Prometheus at the monitoring
