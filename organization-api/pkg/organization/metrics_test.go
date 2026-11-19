@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
@@ -152,6 +153,39 @@ func TestBuildNodeMetrics(t *testing.T) {
 	// 1 GiB / bytesPerGiB = 1.0
 	if n.GetMemory().GetUsed() != 1.0 {
 		t.Errorf("memory used = %v, want 1.0 GiB", n.GetMemory().GetUsed())
+	}
+}
+
+func TestBuildNodeMetrics_DropsUnnamedNode(t *testing.T) {
+	// kube_pod_info reports unscheduled pods with node="".
+	pods := []prom.Sample{
+		{Labels: map[string]string{"node": "n1"}, Value: 10},
+		{Labels: map[string]string{"node": ""}, Value: 2},
+	}
+	podsTot := []prom.Sample{{Labels: map[string]string{"node": "n1"}, Value: 110}}
+
+	nodes := buildNodeMetrics(nil, nil, nil, nil, pods, podsTot)
+	require.Len(t, nodes, 1)
+	assert.Equal(t, "n1", nodes[0].GetNode())
+}
+
+// ---- cluster-wide queries ----
+
+// Gardener federates the shoot's control-plane pods from the seed under
+// namespace="shoot-control-plane"; every query that reads pod or container
+// series must exclude them, or the seed's nodes reach organization admins.
+func TestClusterQueries_ExcludeControlPlane(t *testing.T) {
+	for name, q := range map[string]string{
+		"cpu used":       queryCPUUsed,
+		"mem used":       queryMemUsed,
+		"pods used":      queryPodsUsed,
+		"net rx":         queryNetRx,
+		"net tx":         queryNetTx,
+		"node cpu used":  queryNodeCPUUsed,
+		"node mem used":  queryNodeMemUsed,
+		"node pods used": queryNodePodsUsed,
+	} {
+		assert.Contains(t, q, `namespace!="shoot-control-plane"`, name)
 	}
 }
 
