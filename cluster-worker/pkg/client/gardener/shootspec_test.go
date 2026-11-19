@@ -169,3 +169,116 @@ func TestUpdateShootSpec_DisablesTenantDNS(t *testing.T) {
 	require.Equal(t, other, shoot.Spec.Extensions[0])
 	requireTenantDNSDisabled(t, &shoot.Spec.Extensions[1])
 }
+
+// A new Shoot has Gardener's maintenance auto-updates switched off.
+func TestBuildShootSpec_DisablesAutoUpdate(t *testing.T) {
+	local := NewProviderConfig()
+	shoot, err := testClient(&local).buildShootSpec(testCluster())
+	require.NoError(t, err)
+	requireAutoUpdateDisabled(t, shoot)
+}
+
+// A sync switches the auto-updates Gardener defaulted to on off, and keeps the
+// rest of the maintenance settings.
+func TestUpdateShootSpec_DisablesAutoUpdate(t *testing.T) {
+	local := NewProviderConfig()
+	window := &gardencorev1beta1.MaintenanceTimeWindow{Begin: "220000+0100", End: "230000+0100"}
+	shoot := &gardencorev1beta1.Shoot{
+		Spec: gardencorev1beta1.ShootSpec{
+			Maintenance: &gardencorev1beta1.Maintenance{
+				AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
+					KubernetesVersion:   true,
+					MachineImageVersion: new(true),
+				},
+				TimeWindow: window,
+			},
+		},
+	}
+
+	require.NoError(t, testClient(&local).updateShootSpec(shoot, testCluster()))
+
+	requireAutoUpdateDisabled(t, shoot)
+	require.Equal(t, window, shoot.Spec.Maintenance.TimeWindow)
+}
+
+// A sync never lowers the Kubernetes version or a worker's machine image, as
+// Gardener's maintenance may have moved them past the database's.
+func TestUpdateShootSpec_KeepsNewerVersions(t *testing.T) {
+	provider := NewProviderConfig()
+	r := testClient(&provider)
+	cluster := testCluster() // 1.35.6, image 1.0.0
+
+	workers, err := r.buildWorkers(cluster)
+	require.NoError(t, err)
+	workers[0].Machine.Image.Version = new("1.2.0")
+	shoot := &gardencorev1beta1.Shoot{
+		Spec: gardencorev1beta1.ShootSpec{
+			Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.35.10"},
+			Provider:   gardencorev1beta1.Provider{Workers: workers},
+		},
+	}
+
+	require.NoError(t, r.updateShootSpec(shoot, cluster))
+	require.Equal(t, "1.35.10", shoot.Spec.Kubernetes.Version)
+	require.Equal(t, "1.2.0", *shoot.Spec.Provider.Workers[0].Machine.Image.Version)
+
+	// An upgrade in the database still goes through.
+	cluster.KubernetesVersion = "1.36.6"
+	require.NoError(t, r.updateShootSpec(shoot, cluster))
+	require.Equal(t, "1.36.6", shoot.Spec.Kubernetes.Version)
+}
+
+func TestNewerVersion(t *testing.T) {
+	tests := []struct {
+		desired, current, want string
+	}{
+		{"1.35.6", "1.35.10", "1.35.10"},
+		{"1.35.10", "1.35.6", "1.35.10"},
+		{"1.36.6", "1.35.10", "1.36.6"},
+		{"1.35.6", "1.35.6", "1.35.6"},
+		{"1.35.6", "", "1.35.6"},
+		{"1.35", "1.35.4", "1.35.4"},
+		{"1.35.6", "not-a-version", "1.35.6"},
+		{"v1.35.6", "1.35.10", "1.35.10"},
+		{"1.35.6", "v1.35.10", "v1.35.10"},
+	}
+	for _, tt := range tests {
+		require.Equal(t, tt.want, newerVersion(tt.desired, tt.current), "desired %q, current %q", tt.desired, tt.current)
+	}
+}
+
+func requireAutoUpdateDisabled(t *testing.T, shoot *gardencorev1beta1.Shoot) {
+	t.Helper()
+	require.NotNil(t, shoot.Spec.Maintenance)
+	require.NotNil(t, shoot.Spec.Maintenance.AutoUpdate)
+	require.False(t, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion)
+	require.NotNil(t, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
+	require.False(t, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion)
+}
+
+// keepNewerImages keeps only a higher version of the same image in the worker
+// of the same name, and reports what it kept.
+func TestKeepNewerImages(t *testing.T) {
+	image := func(name, version string) gardencorev1beta1.Machine {
+		return gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{Name: name, Version: new(version)}}
+	}
+	workers := []gardencorev1beta1.Worker{
+		{Name: "older", Machine: image("local", "1.0.0")},
+		{Name: "newer", Machine: image("local", "2.0.0")},
+		{Name: "other-image", Machine: image("local", "1.0.0")},
+		{Name: "new-pool", Machine: image("local", "1.0.0")},
+	}
+	existing := []gardencorev1beta1.Worker{
+		{Name: "older", Machine: image("local", "1.2.0")},
+		{Name: "newer", Machine: image("local", "1.0.0")},
+		{Name: "other-image", Machine: image("gardenlinux", "9.0.0")},
+	}
+
+	kept := keepNewerImages(workers, existing)
+
+	require.Equal(t, []string{"older=1.2.0"}, kept)
+	require.Equal(t, "1.2.0", *workers[0].Machine.Image.Version)
+	require.Equal(t, "2.0.0", *workers[1].Machine.Image.Version)
+	require.Equal(t, "1.0.0", *workers[2].Machine.Image.Version)
+	require.Equal(t, "1.0.0", *workers[3].Machine.Image.Version)
+}
