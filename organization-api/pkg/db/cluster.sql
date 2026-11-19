@@ -137,7 +137,11 @@ RETURNING id;
 UPDATE tenant.clusters
 SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version),
     kubernetes_version_id = COALESCE(sqlc.narg('kubernetes_version_id'), kubernetes_version_id)
-WHERE id = $1 AND deleted IS NULL;
+WHERE id = $1 AND deleted IS NULL
+    -- The version the caller checked the request against; a concurrent update
+    -- in between leaves the row alone.
+    AND (sqlc.narg('expected_kubernetes_version')::text IS NULL
+        OR kubernetes_version = sqlc.narg('expected_kubernetes_version'));
 
 -- name: ClusterDelete :execrows
 UPDATE tenant.clusters
