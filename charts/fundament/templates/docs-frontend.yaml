@@ -37,10 +37,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "docs-frontend" "component" "frontend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "docs-frontend" "replicas" $.Values.docsFrontend.replicas) }}
       containers:
         - name: docs-frontend
           image: {{ $.Values.images.docsFrontend }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 80
@@ -75,4 +77,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "docs-frontend") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "docs-frontend" "component" "frontend" "replicas" $.Values.docsFrontend.replicas) }}
 {{- end }}

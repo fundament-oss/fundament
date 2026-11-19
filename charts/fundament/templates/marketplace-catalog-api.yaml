@@ -18,10 +18,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-catalog-api" "component" "backend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "marketplace-catalog-api" "replicas" $.Values.marketplaceCatalogApi.replicas) }}
       containers:
         - name: marketplace-catalog-api
           image: {{ $.Values.images.marketplaceCatalogApi }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 8080
@@ -75,4 +77,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-catalog-api") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "marketplace-catalog-api" "component" "backend" "replicas" $.Values.marketplaceCatalogApi.replicas) }}
 {{- end }}

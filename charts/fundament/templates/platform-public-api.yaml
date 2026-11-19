@@ -18,10 +18,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "platform-public-api" "component" "backend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "platform-public-api" "replicas" $.Values.platformPublicApi.replicas) }}
       containers:
         - name: platform-public-api
           image: {{ $.Values.images.platformPublicApi }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 8080
@@ -67,4 +69,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "platform-public-api") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "platform-public-api" "component" "backend" "replicas" $.Values.platformPublicApi.replicas) }}
 {{- end }}

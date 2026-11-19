@@ -23,6 +23,7 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "authn-api" "replicas" $.Values.authnApi.replicas) }}
       {{- if .Values.hostAliases }}
       hostAliases:
         {{- toYaml .Values.hostAliases | nindent 8 }}
@@ -31,6 +32,7 @@ spec:
         - name: authn-api
           image: {{ $.Values.images.authnApi }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           ports:
             - name: http
               containerPort: 8080
@@ -168,4 +170,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "authn-api") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "authn-api" "component" "backend" "replicas" $.Values.authnApi.replicas) }}
 {{- end }}

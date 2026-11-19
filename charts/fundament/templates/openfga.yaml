@@ -57,6 +57,7 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "openfga" "replicas" $.Values.openfga.replicas) }}
       initContainers:
         - name: wait-for-db
           image: {{ $.Values.db.image }}
@@ -86,6 +87,7 @@ spec:
         - name: openfga
           image: {{ $.Values.openfga.image }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           args:
             - run
           ports:
@@ -158,4 +160,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "openfga") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "openfga" "component" "backend" "replicas" $.Values.openfga.replicas) }}
 {{- end }}

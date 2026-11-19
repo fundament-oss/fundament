@@ -4,9 +4,15 @@ One image, two Deployments (WORKER_MODE). cluster-worker provisions: outbox,
 status and reconcile. cluster-worker-inventory collects the staff fleet view's
 snapshots (FUN-23), only where that view is deployed: collection mints an
 admin kubeconfig per ready shoot every interval, for data nobody else reads.
-It runs one replica, with no leader election, so every shoot is read once per
-interval; Recreate keeps a rollout from running two.
+Both run at most one replica with no leader election, and a rollout starts
+stopping the old pod before it creates the new one: inventory reads every
+shoot once per interval, and two provisioning workers apply one cluster's
+outbox rows out of order, which can leave a Shoot with a spec the database no
+longer holds.
 */}}
+{{- if gt (int $.Values.clusterWorker.replicas) 1 }}
+{{- fail "clusterWorker.replicas must be 0 or 1: two workers apply one cluster's outbox rows out of order and can leave a Shoot with a stale spec" }}
+{{- end }}
 {{- $modes := list "provisioning" }}
 {{- if $.Values.platformAdminApi.enabled }}
 {{- $modes = append $modes "inventory" }}
@@ -29,11 +35,17 @@ metadata:
     secret.reloader.stakater.com/reload: {{ $.Values.clusterWorker.sandboxKubeconfigSecret | quote }}
     {{- end }}
 spec:
-  {{- if $provisioning }}
   replicas: {{ $.Values.clusterWorker.replicas }}
-  {{- else }}
-  replicas: 1
   strategy:
+  {{- if $provisioning }}
+    # The old worker overlaps the new one only while it finishes its current
+    # row. Not Recreate: an existing Deployment keeps the rollingUpdate the API
+    # server defaulted, and server-side apply refuses Recreate next to it.
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- else }}
     type: Recreate
   {{- end }}
   selector:

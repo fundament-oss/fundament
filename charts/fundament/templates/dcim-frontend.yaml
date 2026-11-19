@@ -33,10 +33,12 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "dcim-frontend" "component" "frontend") | nindent 8 }}
     spec:
+      {{- include "fundament.topologySpread" (dict "root" $ "name" "dcim-frontend" "replicas" $.Values.dcimFrontend.replicas) }}
       containers:
         - name: dcim-frontend
           image: {{ $.Values.images.dcimFrontend }}
           imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- include "fundament.preStop" . | nindent 10 }}
           env:
             - name: CONNECT_SRC
               value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }} {{ $.Values.externalUrls.platformAdminApi }}"
@@ -75,4 +77,5 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "dcim-frontend") | nindent 4 }}
 
+{{- include "fundament.podDisruptionBudget" (dict "root" $ "name" "dcim-frontend" "component" "frontend" "replicas" $.Values.dcimFrontend.replicas) }}
 {{- end }}
