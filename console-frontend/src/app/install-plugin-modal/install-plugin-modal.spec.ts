@@ -292,3 +292,84 @@ describe('InstallPluginModalComponent statusMessage', () => {
     expect(component.statusMessage(cluster('Deploying', ''))).toBe('');
   });
 });
+
+describe('InstallPluginModalComponent uninstall confirmation', () => {
+  const installed = {
+    id: 'c1',
+    name: 'prod',
+    phase: 'Running',
+    version: 'v1.0.0',
+    running: true,
+    configInvalid: false,
+    message: '',
+  };
+
+  function buildWithCluster(phase: string | null) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: INSTALL, useValue: {} }],
+    });
+    const fixture = TestBed.createComponent(InstallPluginModalComponent);
+    fixture.componentRef.setInput('clusters', [{ ...installed, phase }]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const emitted: string[] = [];
+    component.uninstall.subscribe((id) => emitted.push(id));
+    return { fixture, component, emitted };
+  }
+
+  it('asks for confirmation instead of uninstalling right away', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+
+    expect(emitted).toEqual([]);
+    expect(component.pendingUninstall()).toEqual({ id: 'c1', name: 'prod' });
+  });
+
+  it('uninstalls once confirmed', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual(['c1']);
+    expect(component.pendingUninstall()).toBeNull();
+  });
+
+  // A poll can change the row while the dialog is open: the confirmation must
+  // look at the row as it is now, not as it was when the dialog opened.
+  it.each([
+    ['moved to uninstalling', [{ ...installed, phase: 'Terminating' }]],
+    ['lost the plugin', [{ ...installed, phase: null }]],
+    ['was dropped from the list', []],
+  ])('does not uninstall when the cluster %s meanwhile', (_, clusters) => {
+    const { fixture, component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    fixture.componentRef.setInput('clusters', clusters);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual([]);
+    expect(component.pendingUninstall()).toBeNull();
+  });
+
+  it('still uninstalls when the installation failed meanwhile', () => {
+    const { fixture, component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    fixture.componentRef.setInput('clusters', [{ ...installed, phase: 'Failed' }]);
+    component.confirmUninstall();
+
+    expect(emitted).toEqual(['c1']);
+  });
+
+  it('closing the sheet drops a pending confirmation', () => {
+    const { component, emitted } = buildWithCluster('Running');
+
+    component.onUninstall(installed);
+    component.onClose();
+    component.confirmUninstall();
+
+    expect(emitted).toEqual([]);
+  });
+});
