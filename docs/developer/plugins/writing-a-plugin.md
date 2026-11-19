@@ -167,6 +167,8 @@ metadata:
 
 `functl plugin publish --create` looks the names up when it creates the listing. A name that is not a category stops the publish, with the valid names in the error. Like `tags`, categories are only read when the listing is created: changing them later in `definition.yaml` does not move a listing that already exists.
 
+Publishing a manifest that sets `metadata.categories` requires a `functl`, marketplace registry, catalog and admin API, and plugin-controller built with category support. An older one rejects the manifest at parse time (strict decoding), so upgrade them before publishing versions that set categories.
+
 ## Icons
 
 `metadata.icon` is a built-in icon name or a path to a logo file. `metadata.iconDark` is an optional dark-mode logo and needs `metadata.icon` to be a file. Each `menu` entry's `icon` is a built-in icon name or a path to a menu icon file.
