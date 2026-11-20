@@ -52,6 +52,9 @@ func missingRequired(config map[string]string, schema []pluginruntime.ConfigSche
 		if entry.Description != "" {
 			fmt.Fprintf(&b, ": %s", entry.Description)
 		}
+		if entry.Placeholder != "" {
+			fmt.Fprintf(&b, " (e.g. %s)", entry.Placeholder)
+		}
 	}
 	if b.Len() == 0 {
 		return nil

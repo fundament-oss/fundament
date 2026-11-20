@@ -68,6 +68,7 @@ func configSchemaFromManifest(manifest []byte) ([]*catalogv1.ConfigSchemaEntry, 
 			Required:     entry.Required,
 			Values:       entry.Values,
 			Advanced:     entry.Advanced,
+			Placeholder:  entry.Placeholder,
 		}.Build())
 	}
 	return entries, nil

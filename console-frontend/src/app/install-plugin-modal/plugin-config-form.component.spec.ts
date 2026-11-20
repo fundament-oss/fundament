@@ -118,6 +118,41 @@ describe('PluginConfigFormComponent', () => {
     expect(field?.getAttribute('label')).toBe('Monitor count');
   });
 
+  it('shows the placeholder in the empty text field without submitting it', () => {
+    const fixture = buildFixture([
+      {
+        name: 'DOMAIN',
+        type: ConfigType.STRING,
+        required: true,
+        placeholder: 'cluster.example.org',
+      },
+      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
+    ]);
+
+    const [domain, monCount] = fixture.nativeElement.querySelectorAll('nldd-text-field');
+    expect(domain?.getAttribute('placeholder')).toBe('cluster.example.org');
+    expect(monCount?.hasAttribute('placeholder')).toBe(false);
+
+    const component = fixture.componentInstance;
+    expect(component.form.get('DOMAIN')?.value).toBe('');
+    const confirmed = vi.fn();
+    component.confirmed.subscribe(confirmed);
+    component.onSubmit();
+    expect(confirmed).not.toHaveBeenCalled();
+  });
+
+  it('omits an optional key that shows only its placeholder', () => {
+    const component = build([{ name: 'REGION', type: ConfigType.STRING, placeholder: 'nl-1' }]);
+
+    let emitted: Record<string, string> | undefined;
+    component.confirmed.subscribe((value) => {
+      emitted = value;
+    });
+    component.onSubmit();
+
+    expect(emitted).toEqual({});
+  });
+
   it('blocks submit when an int value has 20 digits (does not fit int64)', () => {
     const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
 
