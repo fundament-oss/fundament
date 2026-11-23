@@ -165,6 +165,44 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_waiting"))
 }
 
+// A later sync of a cluster that never reached Gardener changes nothing: it
+// queues the cluster's own sync and completes, so the pool's failed row stays
+// the only thing that says why its change never landed.
+func TestCheckStatusKeepsAFailedPoolSyncBeforeTheShoot(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-failed-before-shoot")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	laterPool := insertNodePoolReturningID(t, db, clusterID, "later", "n1-standard-4", 1, 1)
+
+	// Nothing of the cluster is queued anymore: its create gave up.
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now()
+		 WHERE tenant.cluster_outbox.cluster_id = $1 AND tenant.cluster_outbox.status <> 'completed'`, clusterID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', status_info = 'quota exceeded', failed = now()
+		 WHERE tenant.cluster_outbox.node_pool_id = $1`, poolID)
+	require.NoError(t, err)
+	// The later pool's sync completed while only queueing the cluster's own sync.
+	_, err = db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'completed', processed = now()
+		 WHERE tenant.cluster_outbox.node_pool_id = $1`, laterPool)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "error", status)
+	assert.Equal(t, "The last sync to Gardener failed: quota exceeded", message)
+}
+
 // A pool's failed sync row stops describing the pool once a later sync
 // completes: that sync applied the whole cluster, so Gardener has the pool's
 // change, and the current report decides again like for any other pool.
@@ -261,6 +299,12 @@ func TestClusterGetPushState(t *testing.T) {
 			setPoolRow(pool, "failed")
 		}},
 		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true, wantQueued: true},
+		// A row in retry backoff applies the cluster when it runs, whatever a
+		// newer row did in between.
+		{name: "an older cluster row still queued", setup: func(c, _ uuid.UUID) {
+			addClusterRow(c, "updated", "retrying")
+			addClusterRow(c, "updated", "completed")
+		}, wantQueued: true},
 		{name: "the cluster's own update failed", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "failed") }, wantBlocked: true, wantMessageSet: true},
 		{name: "the cluster's own update failed and a later pool sync failed", setup: func(c, _ uuid.UUID) {
 			addClusterRow(c, "updated", "failed")
@@ -283,6 +327,12 @@ func TestClusterGetPushState(t *testing.T) {
 		{name: "a failed cluster row not superseded by a pool sync before the Shoot", neverSynced: true, setup: func(c, pool uuid.UUID) {
 			setPoolRow(pool, "completed")
 			addClusterRow(c, "updated", "failed")
+			// The cluster's own create row failed for good too: nothing of the
+			// cluster is queued anymore.
+			_, err := db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now()
+				 WHERE tenant.cluster_outbox.cluster_id = $1 AND tenant.cluster_outbox.status = 'pending'`, c)
+			require.NoError(t, err)
 			laterPool := insertNodePoolReturningID(t, db, c, "later", "n1-standard-4", 1, 2)
 			setPoolRow(laterPool, "completed")
 		}, wantBlocked: true, wantMessageSet: true},

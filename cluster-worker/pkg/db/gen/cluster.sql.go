@@ -347,7 +347,13 @@ SELECT
         )
     )::boolean AS sync_in_flight,
     (
-        COALESCE((SELECT latest_cluster.status IN ('pending', 'retrying') FROM latest_cluster), false)
+        EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+              AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+        )
         OR EXISTS (
             SELECT 1
             FROM tenant.cluster_outbox
@@ -966,6 +972,15 @@ SELECT
                   WHERE tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
                     AND tenant.node_pools.cluster_id = $1::uuid
               )
+          )
+          -- A pool's sync only applies the cluster once it reached Gardener:
+          -- before that it queues the cluster's own sync and completes having
+          -- changed nothing, so it does not supersede a failed pool row.
+          AND EXISTS (
+              SELECT 1
+              FROM tenant.cluster_outbox
+              WHERE tenant.cluster_outbox.cluster_id = $1::uuid
+                AND tenant.cluster_outbox.status = 'completed'
           )
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1

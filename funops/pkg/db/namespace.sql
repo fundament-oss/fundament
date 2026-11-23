@@ -5,10 +5,11 @@
 -- has a row waiting is left out; a second run changes nothing. A deleted
 -- namespace is included: its row still has to remove what the namespace left
 -- on the shoot.
--- The --all branch leaves out namespaces of a cluster that is deleted or lost
--- its Shoot: no sync of them can converge, so queueing them only adds failures
--- to triage. A Shoot that is created again syncs them through its api_available
--- fan-out. A namespace named by id is queued whatever its cluster's state.
+-- The --all branch leaves out namespaces of a cluster that cannot converge now:
+-- a deleted cluster, one that lost its Shoot, or one whose API server has not
+-- answered yet. Queueing those only adds deferrals and failures to triage; the
+-- api_available fan-out syncs them once the cluster is back. A namespace named
+-- by id is queued whatever its cluster's state.
 -- The NOT EXISTS guard is not backed by ON CONFLICT here: the partial unique
 -- index cluster_outbox_uq_ns_reconcile covers source 'reconcile' only, and
 -- widening it takes a migration. Two operators queueing one namespace at once
@@ -37,6 +38,11 @@ WHERE (
             WHERE tenant.projects.id = tenant.namespaces.project_id
               AND tenant.clusters.deleted IS NULL
               AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+              -- Reachable, as in ClusterListAccessible: a namespace on a
+              -- cluster whose API server has not answered yet would only defer
+              -- until the deferral cap and fail. Its fan-out syncs them once
+              -- the API server is there.
+              AND (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
         )
     )
 )

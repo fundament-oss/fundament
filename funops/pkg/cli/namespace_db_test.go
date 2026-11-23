@@ -38,9 +38,11 @@ func namespaceTestFixtures(t *testing.T, ctx *Context, names ...string) (namespa
 
 	const globex = "019b4000-0000-7000-8000-000000000002"
 	var clusterID uuid.UUID
+	// Ready, so its API server counts as reachable: --all only considers
+	// namespaces on clusters that can converge now.
 	err := ctx.DB.Pool.QueryRow(t.Context(), `
-		INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-		VALUES ($1, 'namespace-sync', 'local', '1.31')
+		INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, shoot_status)
+		VALUES ($1, 'namespace-sync', 'local', '1.31', 'ready')
 		RETURNING id`, globex).Scan(&clusterID)
 	require.NoError(t, err)
 
@@ -155,6 +157,20 @@ func TestNamespaceSync_All_SkipsDeletedCluster(t *testing.T) {
 
 	require.NoError(t, (&NamespaceSyncCmd{Namespace: namespaces[0].String()}).Run(ctx))
 	assert.Equal(t, []uuid.UUID{namespaces[0]}, pendingManualNamespaceSyncs(t, ctx))
+}
+
+// A cluster whose API server has not answered yet is not a candidate either:
+// its namespace rows would only defer until the cap and then fail.
+func TestNamespaceSync_All_SkipsUnreachableCluster(t *testing.T) {
+	ctx := newTestContext(t)
+	namespaces := namespaceTestFixtures(t, ctx, "early")
+	_, err := ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET shoot_status = NULL, shoot_api_available = NULL WHERE name = 'namespace-sync'`)
+	require.NoError(t, err)
+	failNamespaceSync(t, ctx, namespaces[0])
+
+	require.NoError(t, (&NamespaceSyncCmd{All: true}).Run(ctx))
+	assert.Empty(t, pendingManualNamespaceSyncs(t, ctx))
 }
 
 // A cluster whose Shoot disappeared is the same: nothing converges until a

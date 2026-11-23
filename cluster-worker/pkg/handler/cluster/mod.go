@@ -64,6 +64,21 @@ type Config struct {
 	ReconcileInterval time.Duration
 }
 
+// Validate rejects limits that would invert the safety they add: a limit of
+// zero or less makes the check report the stalled state on its first look.
+func (c Config) Validate() error {
+	if c.StatusPendingTimeout <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_PENDING_TIMEOUT must be positive, got %s", c.StatusPendingTimeout)
+	}
+	if c.StatusUpdatingWarning <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_UPDATING_WARNING must be positive, got %s", c.StatusUpdatingWarning)
+	}
+	if c.StatusDeletingAlert <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_DELETING_ALERT must be positive, got %s", c.StatusDeletingAlert)
+	}
+	return nil
+}
+
 // Handler manages cluster lifecycle in Gardener (sync, status, finishing
 // deletions of deleted clusters).
 //
