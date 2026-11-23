@@ -20,13 +20,13 @@ const shootUnchecked gardener.ShootStatusType = ""
 // progressing, a migrate that sends a ready shoot back to progressing, a Shoot
 // recreated after a change that starts pending again — and a deleted cluster is
 // checked on its own path, which writes deleting or deleted whatever status the
-// row holds. So every state leads to every status. The set's value is that it
-// names them: a status the code writes without an edge here, or a state added
-// to Gardener's list without one, fails the edge-set test. deleted is final;
-// the sweep skips a cluster once its deletion is confirmed.
+// row holds. So every state leads to every status, except that deleted only
+// follows itself: a confirmed deletion is final, the sweep skips a cluster once
+// its deletion is confirmed, and a report never reopens one. The set's value is
+// that it names them: a status the code writes without an edge here, or a state
+// added to Gardener's list without one, fails the edge-set test.
 var shootLifecycle = machine.Must(
-	machine.New("shoot lifecycle", shootUnchecked, shootLifecycleEdges()...).
-		Terminal(gardener.StatusDeleted),
+	machine.New("shoot lifecycle", shootUnchecked, shootLifecycleEdges()...),
 )
 
 // shootStatuses are the values the clusters_ck_shoot_status constraint allows,
@@ -43,16 +43,16 @@ var shootStatuses = []gardener.ShootStatusType{
 }
 
 func shootLifecycleEdges() []machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType] {
-	from := make([]gardener.ShootStatusType, 0, len(shootStatuses))
+	from := make([]gardener.ShootStatusType, 0, len(shootStatuses)+1)
 	from = append(from, shootUnchecked)
-	for _, status := range shootStatuses {
-		if status != gardener.StatusDeleted {
-			from = append(from, status)
-		}
-	}
+	from = append(from, shootStatuses...)
 	edges := make([]machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType], 0, len(from)*len(shootStatuses))
 	for _, f := range from {
 		for _, t := range shootStatuses {
+			// A confirmed deletion is final: only itself follows it.
+			if f == gardener.StatusDeleted && t != gardener.StatusDeleted {
+				continue
+			}
 			edges = append(edges, machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType]{From: f, Event: t, To: t})
 		}
 	}

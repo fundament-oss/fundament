@@ -146,12 +146,13 @@ stateDiagram-v2
 <!-- END GENERATED: cluster outbox row -->
 
 `tenant.clusters.shoot_status`, as the console shows it. Every status can follow every
-other: Gardener can report any state at any check — an error while progressing, a migrate
-that sends a ready Shoot back to `progressing`, a Shoot recreated after a change that
-starts `pending` again — and a deleted cluster's check writes `deleting` or `deleted`
-whatever status the row held. `deleted` is final: the sweep skips a cluster once its
-deletion is confirmed. `TestShootLifecycleCoversEveryEmittedUpdate` pins the status rules
-to that set.
+other, except that `deleted` only follows itself: Gardener can report any state at any
+check — an error while progressing, a migrate that sends a ready Shoot back to
+`progressing`, a Shoot recreated after a change that starts `pending` again — and a
+deleted cluster's check writes `deleting` or `deleted` whatever status the row held.
+`deleted` is final: the sweep skips a cluster once its deletion is confirmed, and a
+report never reopens one. `TestShootLifecycleCoversEveryEmittedUpdate` pins the status
+rules to that set.
 
 | Status | Meaning |
 |---|---|
@@ -184,9 +185,10 @@ progress events.
 
 ### Stalled statuses
 
-A status that does not move is not evidence of progress. Three limits watch it, measured
-from `shoot_status_since` (the moment the stored status last changed) or, for an update,
-from the moment the change's sync row finished:
+A status that does not move is not evidence of progress. Three limits watch the states
+that wait for Gardener with nothing to show them, measured from `shoot_status_since` (the
+moment the stored status last changed) or, for an update, from the moment the change's
+sync row finished:
 
 - A cluster whose Shoot never appeared in Gardener turns `error` with "The Shoot did not
   appear in Gardener; the cluster's next change tries again." and a `status_error` event
@@ -201,6 +203,10 @@ from the moment the change's sync row finished:
 - A Shoot that has been `deleting` for `CLUSTER_STATUS_DELETING_ALERT` (2h) records the
   same warning and logs an `ALERT` with how long it has been deleting. The status stays
   `deleting`: declaring it deleted would release quota while the Shoot still exists.
+
+A create Gardener keeps failing and retrying is not one of these: the cluster stays
+`progressing` with the current retrying error recorded as a warning, because Gardener is
+still working and may recover. No limit escalates it.
 
 A warning is compared with every `status_warning` recorded since the cluster's last
 milestone (ready, healthy, error or lost) and recorded once, so a stuck state is

@@ -388,6 +388,21 @@ func TestNextShootStatus(t *testing.T) {
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 			want:     shootStatusUpdate{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 		},
+		{
+			// The sweep skips a confirmed deletion, so an active row holding it
+			// is one repaired by hand: a report about the Shoot does not reopen
+			// it, and nothing is recorded for it.
+			name:     "a confirmed deletion is not reopened",
+			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+		},
+		{
+			name:     "a confirmed deletion ignores a Shoot that reported ready",
+			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Healthy: true, APIServerAvailable: true},
+			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+		},
 	}
 
 	for _, tt := range tests {

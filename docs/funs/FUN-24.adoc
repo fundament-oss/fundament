@@ -17,7 +17,7 @@ This FUN makes the states explicit in three places, each enforcing the same rule
 * expected-state guards in the SQL that writes those rows;
 * a database `CHECK` on the Shoot status values, so a row cannot hold a value the code cannot name.
 
-It also adds time limits where a state waiting for Gardener had none, so a stuck cluster ends in something visible instead of staying quiet.
+It also adds time limits to the states that wait for Gardener with nothing to show for it, so a stuck cluster ends in something visible instead of staying quiet.
 
 == The outbox row
 
@@ -78,6 +78,8 @@ A state that waits for Gardener had no limit, so a create that never happened an
 
 A warning is compared with every `status_warning` event recorded since the cluster's last milestone and recorded once per incident, not on every check.
 
+A create that Gardener keeps failing and retrying has no timeout: the cluster stays `progressing` with the current retrying error recorded as a warning. Gardener is still working on it and may recover, so the limit that would escalate it does not exist yet.
+
 == Namespace healing
 
 The namespace handler had one rule for a failed sync: skip it forever. `SkipIfFailed` kept the reconcile loop from spending a row every five minutes on a namespace that could not succeed, but a namespace that failed on a transient condition stayed broken until someone noticed, and noticing meant reading `cluster_outbox` by hand.
@@ -88,7 +90,7 @@ Two ways out remain for an operator: `funops namespace sync <id>` queues a recon
 
 == Sync state
 
-`ClusterGetPushState` returns three answers instead of one flag. `sync_in_flight` says whether a change is still on its way: the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`. A deleted pool's row is left out: removing a pool does not shape the pools that remain. `sync_blocked` says the cluster's own latest row is `failed` and no later node pool sync is still going or completed; a later row that failed itself changed nothing. A deleted pool's row counts for `sync_blocked`: its sync also pushed the cluster to Gardener, so it lifts the block. `sync_queued` is the widest: some sync of the cluster is still to come, a deleted pool's row included, so the status timeout waits for it instead of recording a Shoot that never appeared just before the sync that creates it. A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster; it stops counting once any later sync completes, since that sync applied the whole cluster.
+`ClusterGetPushState` returns three answers instead of one flag. `sync_in_flight` says whether a change is still on its way: the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`. A deleted pool's row is left out: removing a pool does not shape the pools that remain. `sync_blocked` says the cluster's own latest row is `failed` and no node pool sync that came after it — inserted later, or run after the failure was recorded — is still going or completed; a later row that failed itself changed nothing. A deleted pool's row counts for `sync_blocked`: its sync also pushed the cluster to Gardener, so it lifts the block. `sync_queued` is the widest: some sync of the cluster is still to come, a deleted pool's row included, so the status timeout waits for it instead of recording a Shoot that never appeared just before the sync that creates it. A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster; it stops counting once any later sync completes, since that sync applied the whole cluster.
 
 The status checker uses the split to decide whether Gardener's report can be trusted yet: while a sync is in flight, a pool that is not `ready` reads `progressing` (a complaint naming it still counts, being about machines missing now); once it settles, the same report classifies the pools. A cluster whose create gave up has no Shoot at all, so the sweep checks it too: its pools report the sync's failure, and its status records that no Shoot ever appeared.
 

@@ -27,6 +27,7 @@ func TestShootLifecycleCoversEveryEmittedUpdate(t *testing.T) {
 		{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: dbconst.ClusterShootHealth_Unhealthy},
 		{Status: gardener.StatusError, Message: "Reconcile: failed"},
 		{Status: gardener.StatusDeleting, Message: "Delete: in progress"},
+		{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
 		{Status: gardener.StatusLost, Message: gardener.MsgShootLost},
 	}
 	observed := []*gardener.ShootStatus{
