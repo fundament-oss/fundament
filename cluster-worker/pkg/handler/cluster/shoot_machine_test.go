@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -47,6 +48,32 @@ func TestShootLifecycleCoversEveryEmittedUpdate(t *testing.T) {
 			assert.True(t, shootTransitionDeclared(stored[i].Status, update.Status),
 				"stored %q, reported %q: %q is not a declared edge", stored[i].Status, report.Status, update.Status)
 		}
+	}
+}
+
+// The clusters_ck_shoot_status constraint and the machine must name the same
+// statuses: a status one allows and the other does not is a write the database
+// rejects or a state the rules can never leave.
+func TestShootLifecycleMatchesTheDatabaseConstraint(t *testing.T) {
+	t.Parallel()
+
+	dbStatuses := []dbconst.ClusterShootStatus{
+		dbconst.ClusterShootStatus_Pending,
+		dbconst.ClusterShootStatus_Progressing,
+		dbconst.ClusterShootStatus_Ready,
+		dbconst.ClusterShootStatus_Error,
+		dbconst.ClusterShootStatus_Deleting,
+		dbconst.ClusterShootStatus_Deleted,
+		dbconst.ClusterShootStatus_Lost,
+	}
+	require.Len(t, dbStatuses, len(shootStatuses))
+
+	declared := make(map[gardener.ShootStatusType]bool, len(shootStatuses))
+	for _, status := range shootStatuses {
+		declared[status] = true
+	}
+	for _, status := range dbStatuses {
+		assert.True(t, declared[gardener.ShootStatusType(status)], "the database allows %q, the machine does not", status)
 	}
 }
 

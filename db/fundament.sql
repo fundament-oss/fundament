@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1290,10 +1290,10 @@ CREATE TABLE tenant.clusters (
 	kubernetes_version text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	synced timestamptz,
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
+	shoot_status_since timestamptz,
 	shoot_health text,
 	shoot_updating boolean NOT NULL DEFAULT false,
 	shoot_api_available timestamptz,
@@ -1306,6 +1306,7 @@ CREATE TABLE tenant.clusters (
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
 	CONSTRAINT clusters_ck_shoot_health CHECK (shoot_health IN ('healthy','unhealthy')),
+	CONSTRAINT clusters_ck_shoot_status CHECK (shoot_status IN ('pending','progressing','ready','error','deleting','deleted','lost')),
 	CONSTRAINT clusters_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
 	CONSTRAINT clusters_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
 	CONSTRAINT clusters_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
@@ -1313,6 +1314,8 @@ CREATE TABLE tenant.clusters (
 	CONSTRAINT clusters_ck_default_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
 	CONSTRAINT clusters_ck_default_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
 );
+-- ddl-end --
+COMMENT ON COLUMN tenant.clusters.shoot_status_since IS E'When the current shoot_status began: set when the status changes, not when only its message or health does.';
 -- ddl-end --
 ALTER TABLE tenant.clusters OWNER TO fun_owner;
 -- ddl-end --
@@ -1354,16 +1357,6 @@ CREATE POLICY clusters_authn_api_policy ON tenant.clusters
 	FOR SELECT
 	TO fun_authn_api
 	USING (true);
--- ddl-end --
-
--- object: clusters_idx_needs_sync | type: INDEX --
--- DROP INDEX IF EXISTS tenant.clusters_idx_needs_sync CASCADE;
-CREATE INDEX clusters_idx_needs_sync ON tenant.clusters
-USING btree
-(
-	created
-)
-WHERE (synced IS NULL);
 -- ddl-end --
 
 -- object: tenant.node_pools | type: TABLE --

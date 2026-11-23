@@ -29,28 +29,30 @@ var shootLifecycle = machine.Must(
 		Terminal(gardener.StatusDeleted),
 )
 
+// shootStatuses are the values the clusters_ck_shoot_status constraint allows,
+// which the machine and the database must agree on. A status added to one
+// without the other fails the edge-set test.
+var shootStatuses = []gardener.ShootStatusType{
+	gardener.StatusPending,
+	gardener.StatusProgressing,
+	gardener.StatusReady,
+	gardener.StatusError,
+	gardener.StatusDeleting,
+	gardener.StatusDeleted,
+	gardener.StatusLost,
+}
+
 func shootLifecycleEdges() []machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType] {
-	from := []gardener.ShootStatusType{
-		shootUnchecked,
-		gardener.StatusPending,
-		gardener.StatusProgressing,
-		gardener.StatusReady,
-		gardener.StatusError,
-		gardener.StatusDeleting,
-		gardener.StatusLost,
+	from := make([]gardener.ShootStatusType, 0, len(shootStatuses))
+	from = append(from, shootUnchecked)
+	for _, status := range shootStatuses {
+		if status != gardener.StatusDeleted {
+			from = append(from, status)
+		}
 	}
-	to := []gardener.ShootStatusType{
-		gardener.StatusPending,
-		gardener.StatusProgressing,
-		gardener.StatusReady,
-		gardener.StatusError,
-		gardener.StatusDeleting,
-		gardener.StatusDeleted,
-		gardener.StatusLost,
-	}
-	edges := make([]machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType], 0, len(from)*len(to))
+	edges := make([]machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType], 0, len(from)*len(shootStatuses))
 	for _, f := range from {
-		for _, t := range to {
+		for _, t := range shootStatuses {
 			edges = append(edges, machine.Transition[gardener.ShootStatusType, gardener.ShootStatusType]{From: f, Event: t, To: t})
 		}
 	}

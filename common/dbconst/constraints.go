@@ -69,6 +69,8 @@ const (
 	ConstraintClustersCkDefaultMemoryRequestMi = "clusters_ck_default_memory_request_mi"
 	// ConstraintClustersCkShootHealth is defined on tenant.clusters.
 	ConstraintClustersCkShootHealth = "clusters_ck_shoot_health"
+	// ConstraintClustersCkShootStatus is defined on tenant.clusters.
+	ConstraintClustersCkShootStatus = "clusters_ck_shoot_status"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersFkRegionVersion is defined on tenant.clusters.

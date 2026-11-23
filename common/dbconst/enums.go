@@ -101,6 +101,19 @@ const (
 	ClusterShootHealth_Unhealthy ClusterShootHealth = "unhealthy"
 )
 
+// ClusterShootStatus represents valid values for tenant.clusters.shoot_status.
+type ClusterShootStatus string
+
+const (
+	ClusterShootStatus_Pending     ClusterShootStatus = "pending"
+	ClusterShootStatus_Progressing ClusterShootStatus = "progressing"
+	ClusterShootStatus_Ready       ClusterShootStatus = "ready"
+	ClusterShootStatus_Error       ClusterShootStatus = "error"
+	ClusterShootStatus_Deleting    ClusterShootStatus = "deleting"
+	ClusterShootStatus_Deleted     ClusterShootStatus = "deleted"
+	ClusterShootStatus_Lost        ClusterShootStatus = "lost"
+)
+
 // DeviceCatalogCategory represents valid values for dcim.device_catalogs.category.
 type DeviceCatalogCategory string
 
