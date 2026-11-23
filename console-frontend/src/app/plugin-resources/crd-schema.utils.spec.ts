@@ -2,6 +2,7 @@ import {
   crdRefToLabel,
   formatColumnValue,
   printerColumnValue,
+  printedConditionBadge,
   resolveJsonPath,
   fieldNameToLabel,
   kindToLabel,
@@ -228,5 +229,32 @@ describe('printerColumnValue', () => {
     expect(printerColumnValue(resource, { name: 'Kind', jsonPath: '.kind', type: 'string' })).toBe(
       'Gateway',
     );
+  });
+});
+
+describe('printedConditionBadge', () => {
+  const ready = {
+    name: 'Ready',
+    jsonPath: '.status.conditions[?(@.type=="Ready")].status',
+    type: 'string',
+  };
+  const phase = { name: 'Phase', jsonPath: '.status.phase', type: 'string' };
+
+  it('names the condition after the column', () => {
+    expect(printedConditionBadge(ready, 'True')).toEqual({ text: 'Ready', color: 'success' });
+    expect(printedConditionBadge(ready, 'False')).toEqual({ text: 'Not ready', color: 'warning' });
+  });
+
+  it('reads Unknown as a condition only from a column on the conditions', () => {
+    expect(printedConditionBadge(ready, 'Unknown')).toEqual({
+      text: 'Ready unknown',
+      color: 'neutral',
+    });
+    expect(printedConditionBadge(phase, 'Unknown')).toBeNull();
+  });
+
+  it('leaves any other value as text', () => {
+    expect(printedConditionBadge(phase, 'Ready')).toBeNull();
+    expect(printedConditionBadge(ready, '\u2014')).toBeNull();
   });
 });

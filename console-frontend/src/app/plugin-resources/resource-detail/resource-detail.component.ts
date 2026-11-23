@@ -34,7 +34,7 @@ import {
   fieldNameToLabel,
   resourceListLabel,
   printerColumnValue,
-  isConditionValue,
+  printedConditionBadge,
 } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
@@ -551,12 +551,10 @@ export default class ResourceDetailComponent implements OnInit {
     const resource = this.resource();
     const printed = resource
       ? (this.crdDef()?.additionalPrinterColumns ?? [])
-          .map((col) => ({ name: col.name, value: printerColumnValue(resource, col) }))
-          // Unknown too: a Gateway's Programmed while it reconciles is still the
-          // column the card carries, not a reason to fall through to Accepted.
-          .find(({ value }) => isConditionValue(value) || value === 'Unknown')
+          .map((col) => printedConditionBadge(col, printerColumnValue(resource, col)))
+          .find((badge) => badge !== null)
       : undefined;
-    if (printed) return this.conditionBadge(printed.name, printed.value);
+    if (printed) return printed;
     const all = this.conditions();
     const ready = all.find((entry) => entry['type'] === 'Ready') ?? all[0];
     return ready ? this.conditionBadge(String(ready['type'] ?? ''), ready['status']) : null;

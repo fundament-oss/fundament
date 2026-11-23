@@ -32,6 +32,7 @@ import { isDroppedWhenNarrow, narrowTableTracks, tableTracks } from '../table-tr
 import {
   getListColumns,
   printerColumnValue,
+  printedConditionBadge,
   labelMidSentence,
   resourceListLabel,
   resourceSingularLabelMidSentence,
@@ -361,26 +362,14 @@ export default class ResourceListComponent implements OnInit {
   conditionColumn = computed(() =>
     this.columns().find((col) =>
       this.resources().some((resource) =>
-        this.conditionBadge(col.name, printerColumnValue(resource, col)),
+        printedConditionBadge(col, printerColumnValue(resource, col)),
       ),
     ),
   );
 
   detailColumns = computed(() => this.columns().filter((col) => col !== this.conditionColumn()));
 
-  /** A printer column that says True or False is a condition the platform keeps,
-   *  not a word: it gets a badge, the same as a cluster's status. The column
-   *  names it, so "Ready" reads as Ready and Not ready rather than as True and
-   *  False, and a column called something else follows along. Anything that is
-   *  not exactly True or False stays text, whatever the plugin puts there. */
-  // eslint-disable-next-line class-methods-use-this
-  conditionBadge(column: string, value: string): { text: string; color: string } | null {
-    if (value === 'True') return { text: column, color: 'success' };
-    if (value === 'False') {
-      return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
-    }
-    return null;
-  }
+  conditionBadge = printedConditionBadge;
 
   /**
    * The poll's refresh, so a status column follows the cluster. Re-lists the

@@ -171,9 +171,36 @@ export function printerColumnValue(resource: KubeResource, col: AdditionalPrinte
   return formatColumnValue(resolveJsonPath(fullObj, col.jsonPath), col.type);
 }
 
-/** A printer column that says True or False is a condition: the resource's
- *  status, which the list's card and the detail page's title both carry. */
-export const isConditionValue = (value: string): boolean => value === 'True' || value === 'False';
+/** Whether a printer column reads one of the resource's conditions, such as
+ *  `.status.conditions[?(@.type=="Ready")].status`. */
+const readsCondition = (col: AdditionalPrinterColumn): boolean =>
+  /\.conditions\[/.test(col.jsonPath);
+
+/**
+ * The badge a printer column's cell gets, the same as a cluster's status, or
+ * null when the cell stays text. The list's card and the detail page's title
+ * both carry it. True or False is a condition the platform keeps, not a word,
+ * so the column names it: "Ready" reads as Ready and Not ready rather than as
+ * True and False, and a column called something else follows along. Unknown is
+ * a condition too, but only from a column that reads one: a phase of Unknown
+ * is a word, and stays text.
+ */
+export function printedConditionBadge(
+  col: AdditionalPrinterColumn,
+  value: string,
+): { text: string; color: string } | null {
+  if (value === 'True') return { text: col.name, color: 'success' };
+  if (value === 'False') {
+    return {
+      text: `Not ${col.name.charAt(0).toLowerCase()}${col.name.slice(1)}`,
+      color: 'warning',
+    };
+  }
+  if (value === 'Unknown' && readsCondition(col)) {
+    return { text: `${col.name} unknown`, color: 'neutral' };
+  }
+  return null;
+}
 
 /**
  * Get columns for the list view.
