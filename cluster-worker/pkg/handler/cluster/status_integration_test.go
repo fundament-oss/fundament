@@ -73,6 +73,30 @@ func TestCheckStatusDeletedConfirmedGone(t *testing.T) {
 	assertEventExists(t, db, clusterID, "status_deleted")
 }
 
+// A client that reports the deletion itself instead of not-found gives the
+// same answer: the cluster is confirmed deleted, not stuck deleting forever.
+func TestCheckStatusDeletedReportedDeleted(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "status-reported-deleted")
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "deleting")
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusDeleted, Message: "Delete: succeeded",
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "deleted", *status)
+	assertEventExists(t, db, clusterID, "status_deleted")
+}
+
 func TestCheckStatusErrorTransition(t *testing.T) {
 	t.Parallel()
 

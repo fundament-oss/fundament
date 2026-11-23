@@ -57,7 +57,7 @@ The ready outbox row and the API-available outbox row are inserted in the same t
 
 === Timeouts
 
-A state that waits for Gardener had no limit, so a create that never happened and a deletion Gardener never finished both looked the same as a recent one. `tenant.clusters.shoot_status_since` records when the stored status last changed (a status write moves it only when the status differs), and three limits read it:
+A state that waits for Gardener had no limit, so a create that never happened and a deletion Gardener never finished both looked the same as a recent one. `tenant.clusters.shoot_status_since` records when the stored status last changed (a status write moves it only when the status differs); the pending and deleting limits read it, while the updating limit measures from when the cluster's latest sync row completed:
 
 [cols="2,1,4"]
 |===

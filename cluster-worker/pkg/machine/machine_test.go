@@ -80,8 +80,16 @@ func TestValidate(t *testing.T) {
 			name: "state with no exit",
 			table: New("dead-end", statePending,
 				Transition[state, event]{From: statePending, Event: eventStart, To: stateRunning},
+				Transition[state, event]{From: statePending, Event: eventDone, To: stateCompleted},
 			).Terminal(stateCompleted),
 			wantErr: `state "running" has no exit`,
+		},
+		{
+			name: "terminal state nothing leads to",
+			table: New("orphan-terminal", statePending,
+				Transition[state, event]{From: statePending, Event: eventStart, To: stateRunning},
+			).Terminal(stateRunning, stateCompleted),
+			wantErr: `state "completed" is unreachable from "pending"`,
 		},
 		{
 			name: "terminal state with an exit",

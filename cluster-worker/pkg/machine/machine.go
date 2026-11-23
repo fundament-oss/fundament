@@ -63,7 +63,8 @@ func (t Table[State, Event]) Apply(from State, event Event) (State, bool) {
 // Validate rejects a table that cannot describe a working machine:
 // an edge declared twice for the same state and event, a state the machine can
 // never reach, a terminal state with an exit, or a non-terminal state without
-// one.
+// one. A declared terminal is a state like any other: no edge leading to it is
+// as broken as one leading nowhere.
 func (t Table[State, Event]) Validate() error {
 	if len(t.transitions) == 0 {
 		return fmt.Errorf("no transitions")
@@ -86,6 +87,7 @@ func (t Table[State, Event]) Validate() error {
 	terminal := make(map[State]struct{}, len(t.terminals))
 	for _, s := range t.terminals {
 		terminal[s] = struct{}{}
+		states[s] = struct{}{}
 		if exits[s] > 0 {
 			return fmt.Errorf("terminal state %q has an exit", s)
 		}

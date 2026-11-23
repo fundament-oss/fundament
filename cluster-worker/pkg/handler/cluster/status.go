@@ -243,7 +243,11 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 	// server was available, so nothing queued for it treats it as reachable.
 	apiGone := cluster.ShootApiAvailable.Valid
 
-	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
+	// Not found is how a gone Shoot reads; a report of the deletion itself is
+	// the same answer, should the client ever see one.
+	confirmedGone := shootStatus.Status == gardener.StatusDeleted ||
+		(shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound)
+	if !confirmedGone {
 		now := time.Now()
 		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message, APIGone: apiGone}
 		stored := storedShootState{

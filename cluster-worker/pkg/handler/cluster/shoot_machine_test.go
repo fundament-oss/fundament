@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,6 +50,26 @@ func TestShootLifecycleCoversEveryEmittedUpdate(t *testing.T) {
 				"stored %q, reported %q: %q is not a declared edge", stored[i].Status, report.Status, update.Status)
 		}
 	}
+}
+
+// The pending timeout writes its error without going through nextShootStatus,
+// so its edge is not covered by the matrix above; it must be declared too, or
+// narrowing the table leaves the worker writing a transition the machine no
+// longer describes.
+func TestShootLifecycleDeclaresTheTimeoutPath(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	stored := storedShootState{
+		Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
+		Since: now.Add(-time.Hour),
+	}
+	observed := &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound}
+
+	timedOut, ok := timedOutPending(&stored, observed, now, 20*time.Minute)
+	require.True(t, ok)
+	assert.True(t, shootTransitionDeclared(stored.Status, timedOut.Status),
+		"the timeout writes %q from %q, which is not a declared edge", timedOut.Status, stored.Status)
 }
 
 // The clusters_ck_shoot_status constraint and the machine must name the same
