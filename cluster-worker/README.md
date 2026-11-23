@@ -98,6 +98,12 @@ sequenceDiagram
   cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
   of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
   a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
+  A namespace whose sync failed for good is left alone until its failure is an hour old,
+  and then gets one more attempt: a hopeless namespace does not cost a sync every round,
+  and one that failed on a transient condition heals without an operator.
+  `funops namespace sync <id>` (or `--all`, for every namespace whose last sync failed)
+  queues that attempt now, and `tenant.namespace_sync_state` shows each namespace's latest
+  sync row.
 - **No tenant DNS.** Every sync writes the `shoot-dns-service` extension as disabled on the
   shoot (never on the local provider, whose Gardener does not register it), so cluster admins
   cannot publish DNS names under the shoot domain. `funops cluster sync --all` queues a sync

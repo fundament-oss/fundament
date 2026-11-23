@@ -144,10 +144,11 @@ WHERE NOT EXISTS (
 -- Conditionally insert a reconcile outbox row for a namespace.
 -- Skips insert if the namespace already has an active (pending/retrying) row.
 -- With skip_if_failed it also skips a namespace whose latest row failed for
--- good: the periodic reconcile loop sets it, so
--- a namespace that cannot succeed is not retried every round. The fan-out when
--- the cluster's API server becomes available does not: whatever the namespace
--- waited on may be there now. Safe to call repeatedly (idempotent).
+-- good within failed_retry_after: the periodic reconcile loop sets it, so a
+-- namespace that cannot succeed is not retried every round, but a failure
+-- older than that gets one more attempt. The fan-out when the cluster's API
+-- server becomes available does not skip at all: whatever the namespace waited
+-- on may be there now. Safe to call repeatedly (idempotent).
 -- The NOT EXISTS guard is evaluated against the caller's snapshot, so two
 -- concurrent callers (ready fan-out + reconcile loop) could both pass it; the
 -- ON CONFLICT clause lets the partial unique index cluster_outbox_uq_ns_reconcile
@@ -162,12 +163,14 @@ WHERE NOT EXISTS (
 AND NOT (
     @skip_if_failed::boolean
     AND COALESCE((
-        SELECT tenant.cluster_outbox.status
+        SELECT
+            tenant.cluster_outbox.status = 'failed'
+            AND tenant.cluster_outbox.failed > now() - @failed_retry_after::interval
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.namespace_id = @namespace_id
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) = 'failed', false)
+    ), false)
 )
 ON CONFLICT (namespace_id) WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'))
 DO NOTHING;

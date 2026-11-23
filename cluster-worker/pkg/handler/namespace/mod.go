@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -44,6 +45,12 @@ const (
 	// ManagedByValue is the value of LabelManagedBy on managed namespaces.
 	ManagedByValue = "cluster-worker"
 )
+
+// failedRetryAfter is how long a namespace's failed sync is left alone before
+// the reconcile loop queues one more attempt. A namespace that cannot succeed
+// should not be retried every round, but one that failed on a transient
+// condition should not need an operator to notice.
+const failedRetryAfter = time.Hour
 
 // Handler reconciles tenant.namespaces rows to v1/Namespace resources on the
 // owning shoot cluster.
@@ -274,7 +281,8 @@ func (h *Handler) enqueueClusterNamespaces(ctx context.Context, clusterID uuid.U
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
 			// A cluster whose API server became available retries a failed namespace too.
-			SkipIfFailed: false,
+			SkipIfFailed:     false,
+			FailedRetryAfter: pgtype.Interval{Microseconds: failedRetryAfter.Microseconds(), Valid: true},
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", nsID, err))
 		}
@@ -324,8 +332,11 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	for _, id := range plan.CreateIDs {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
-			// A namespace whose sync failed for good would fail again every round.
-			SkipIfFailed: true,
+			// A namespace whose sync failed for good would fail again every
+			// round, so a recent failure is left alone; an old one gets one
+			// more attempt.
+			SkipIfFailed:     true,
+			FailedRetryAfter: pgtype.Interval{Microseconds: failedRetryAfter.Microseconds(), Valid: true},
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", id, err))
 		}
