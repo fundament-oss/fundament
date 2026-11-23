@@ -154,15 +154,22 @@ SELECT
     tenant.clusters.shoot_api_available,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
-    tenant.clusters.shoot_status_since,
+    -- A row from before the column existed takes its last status write as the
+    -- start of the status: otherwise a cluster already stuck at deploy time
+    -- would never reach a timeout, since an unchanged status writes nothing.
+    COALESCE(tenant.clusters.shoot_status_since, tenant.clusters.shoot_status_updated) AS shoot_status_since,
     tenant.organizations.name AS organization_name,
     catalog.regions.cloud_profile,
     catalog.regions.cloud_profile_region,
     (
         SELECT COALESCE(tenant.cluster_outbox.processed, tenant.cluster_outbox.failed)
         FROM tenant.cluster_outbox
-        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
-          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        LEFT JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
+        WHERE (
+            tenant.cluster_outbox.cluster_id = tenant.clusters.id
+            AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        )
+        OR tenant.node_pools.cluster_id = tenant.clusters.id
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
     ) AS update_settled,
@@ -213,10 +220,12 @@ type ClusterGetForStatusCheckRow struct {
 // whether the cluster has reached Gardener at all (a status was recorded or
 // an outbox row completed); before that there is no Shoot to check.
 // shoot_status_since is when the stored status began, so a check knows how
-// long one has lasted; update_settled is when the cluster's latest sync row
+// long one has lasted; update_settled is when the cluster's latest sync
 // finished, so a check knows how long Gardener has had to roll out a change.
-// It is NULL while that row is still queued: the previous row's finish is no
-// measure of an update Gardener has not received yet.
+// A node pool's sync applies the whole cluster too, and it carries no
+// cluster_id, so its rows count here as well. It is NULL while that row is
+// still queued: the previous row's finish is no measure of an update Gardener
+// has not received yet.
 func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
 	var i ClusterGetForStatusCheckRow
@@ -274,44 +283,6 @@ func (q *Queries) ClusterGetLastProgressEvent(ctx context.Context, arg ClusterGe
 	var i ClusterGetLastProgressEventRow
 	err := row.Scan(&i.Created, &i.Message)
 	return i, err
-}
-
-const clusterGetLastWarningMessage = `-- name: ClusterGetLastWarningMessage :one
-SELECT
-    tenant.cluster_events.message
-FROM
-    tenant.cluster_events
-WHERE
-    tenant.cluster_events.cluster_id = $1
-    AND tenant.cluster_events.event_type = 'status_warning'
-    AND tenant.cluster_events.created > COALESCE((
-        SELECT
-            max(tenant.cluster_events.created)
-        FROM
-            tenant.cluster_events
-        WHERE
-            tenant.cluster_events.cluster_id = $1
-            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
-    ), '-infinity'::timestamptz)
-ORDER BY
-    tenant.cluster_events.created DESC
-LIMIT
-    1
-`
-
-type ClusterGetLastWarningMessageParams struct {
-	ClusterID uuid.UUID
-}
-
-// The message of the cluster's most recent status_warning event since its last
-// milestone (ready, healthy, error or lost), so an error Gardener retries again
-// and again is recorded once, and the same error in a later incident is
-// recorded again.
-func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterGetLastWarningMessageParams) (pgtype.Text, error) {
-	row := q.db.QueryRow(ctx, clusterGetLastWarningMessage, arg.ClusterID)
-	var message pgtype.Text
-	err := row.Scan(&message)
-	return message, err
 }
 
 const clusterGetPushState = `-- name: ClusterGetPushState :one
@@ -606,6 +577,55 @@ func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, e
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clusterListWarningMessages = `-- name: ClusterListWarningMessages :many
+SELECT DISTINCT
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = $1
+    AND tenant.cluster_events.event_type = 'status_warning'
+    AND tenant.cluster_events.message IS NOT NULL
+    AND tenant.cluster_events.created > COALESCE((
+        SELECT
+            max(tenant.cluster_events.created)
+        FROM
+            tenant.cluster_events
+        WHERE
+            tenant.cluster_events.cluster_id = $1
+            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
+    ), '-infinity'::timestamptz)
+`
+
+type ClusterListWarningMessagesParams struct {
+	ClusterID uuid.UUID
+}
+
+// The messages of the cluster's status_warning events since its last milestone
+// (ready, healthy, error or lost), so an error Gardener retries again and again
+// is recorded once, and the same error in a later incident is recorded again.
+// All of them, not the latest: two warning sources can be active at once, and
+// compared with one message each would re-add the other's warning every check.
+func (q *Queries) ClusterListWarningMessages(ctx context.Context, arg ClusterListWarningMessagesParams) ([]pgtype.Text, error) {
+	rows, err := q.db.Query(ctx, clusterListWarningMessages, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.Text
+	for rows.Next() {
+		var message pgtype.Text
+		if err := rows.Scan(&message); err != nil {
+			return nil, err
+		}
+		items = append(items, message)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

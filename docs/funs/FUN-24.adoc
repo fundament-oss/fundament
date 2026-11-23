@@ -88,7 +88,7 @@ Two ways out remain for an operator: `funops namespace sync <id>` queues a recon
 
 == Sync state
 
-`ClusterGetPushState` returns two answers instead of one flag: `sync_in_flight` (the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`) and `sync_blocked` (the cluster's own latest row is `failed` and no active pool's row is newer). A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster.
+`ClusterGetPushState` returns two answers instead of one flag: `sync_in_flight` (the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`) and `sync_blocked` (the cluster's own latest row is `failed` and no node pool's row is newer, a deleted pool's row included: its sync also pushed the cluster to Gardener). A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster.
 
 The status checker uses the split to decide whether Gardener's report can be trusted yet: while a sync is in flight, a pool that is new or `progressing` stays `progressing`; once it settles, the same report classifies the pools.
 

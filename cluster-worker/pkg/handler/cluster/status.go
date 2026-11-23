@@ -113,18 +113,19 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		Since:         cluster.ShootStatusSince.Time,
 		UpdateSettled: cluster.UpdateSettled.Time,
 	}
-	// A warning records once, compared against the latest one, so it is loaded
-	// when a rule may record one: an error Gardener retries, an update that may
-	// have stalled, or a Shoot that may be stuck deleting.
+	// A warning records once per incident, compared against the ones already
+	// recorded, so they are loaded when a rule may record one: an error Gardener
+	// retries, an update that may have stalled, or a Shoot that may be stuck
+	// deleting.
 	if (shootStatus.Status == gardener.StatusError && shootStatus.Retrying) ||
 		cluster.ShootUpdating ||
 		cluster.ShootStatus.String == string(gardener.StatusDeleting) ||
 		shootStatus.Status == gardener.StatusDeleting {
-		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("load last warning: %w", err)
+		warnings, err := h.loadWarnings(ctx, cluster.ID)
+		if err != nil {
+			return 0, err
 		}
-		stored.LastWarning = lastWarning.String
+		stored.Warnings = warnings
 	}
 	update := nextShootStatus(&stored, shootStatus)
 	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
@@ -191,6 +192,21 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	return retryAfter, nil
 }
 
+// loadWarnings reads the warning messages the cluster recorded since its last
+// milestone, as a set, so a check does not repeat one and two warning sources
+// do not displace each other.
+func (h *Handler) loadWarnings(ctx context.Context, clusterID uuid.UUID) (map[string]bool, error) {
+	rows, err := h.queries.ClusterListWarningMessages(ctx, db.ClusterListWarningMessagesParams{ClusterID: clusterID})
+	if err != nil {
+		return nil, fmt.Errorf("load warning messages: %w", err)
+	}
+	warnings := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		warnings[row.String] = true
+	}
+	return warnings, nil
+}
+
 // lastProgress loads the cluster's latest status_progressing event.
 func (h *Handler) lastProgress(ctx context.Context, clusterID uuid.UUID) (progressRecord, error) {
 	row, err := h.queries.ClusterGetLastProgressEvent(ctx, db.ClusterGetLastProgressEventParams{ClusterID: clusterID})
@@ -227,11 +243,11 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		// deleting: forcing deleted would release the quota while the Shoot
 		// still exists.
 		if deletingTooLong(&stored, now, h.cfg.StatusDeletingAlert) {
-			lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-				return 0, fmt.Errorf("load last warning: %w", err)
+			warnings, err := h.loadWarnings(ctx, cluster.ID)
+			if err != nil {
+				return 0, err
 			}
-			stored.LastWarning = lastWarning.String
+			stored.Warnings = warnings
 			if addDeletingWarning(&deleting, &stored, now, h.cfg.StatusDeletingAlert) {
 				h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
 					"deleting_for", now.Sub(stored.Since).Round(time.Minute))

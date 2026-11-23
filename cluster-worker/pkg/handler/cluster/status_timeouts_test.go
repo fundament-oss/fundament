@@ -113,7 +113,7 @@ func TestAddUpdateWarning(t *testing.T) {
 		},
 		{
 			name:   "the same warning is recorded once",
-			stored: storedShootState{Status: gardener.StatusReady, UpdateSettled: now.Add(-time.Hour), LastWarning: msgUpdateStalled},
+			stored: storedShootState{Status: gardener.StatusReady, UpdateSettled: now.Add(-time.Hour), Warnings: map[string]bool{msgUpdateStalled: true}},
 			update: shootStatusUpdate{Status: gardener.StatusReady, Updating: true},
 			want:   shootStatusUpdate{Status: gardener.StatusReady, Updating: true},
 		},
@@ -170,7 +170,7 @@ func TestAddDeletingWarning(t *testing.T) {
 		},
 		{
 			name:   "the same warning is recorded once",
-			stored: storedShootState{Status: gardener.StatusDeleting, Since: now.Add(-3 * time.Hour), LastWarning: msgDeleteStuck},
+			stored: storedShootState{Status: gardener.StatusDeleting, Since: now.Add(-3 * time.Hour), Warnings: map[string]bool{msgDeleteStuck: true}},
 			update: shootStatusUpdate{Status: gardener.StatusDeleting, Message: "Delete: in progress"},
 			want:   shootStatusUpdate{Status: gardener.StatusDeleting, Message: "Delete: in progress"},
 		},

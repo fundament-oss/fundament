@@ -488,7 +488,8 @@ func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, 
 		return fmt.Errorf("update status: %w", err)
 	}
 	if updated == 0 {
-		// The pool was soft-deleted after it was read: no row, no events.
+		// The pool was soft-deleted after it was read, or its cluster was
+		// recorded as lost and had its pools cleared: no row, no events.
 		return nil
 	}
 	if counts != nil {

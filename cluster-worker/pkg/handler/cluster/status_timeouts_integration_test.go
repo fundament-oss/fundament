@@ -112,6 +112,35 @@ func TestCheckStatusTimesOutANeverCreatedShoot(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_lost"))
 }
 
+// A cluster whose status row predates shoot_status_since has no start time;
+// the check falls back to when the status was last written, so a cluster that
+// was already stuck at deploy time still reaches the timeout instead of
+// waiting forever.
+func TestCheckStatusTimesOutAShootStuckBeforeTheColumnExisted(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-never-old-row")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "pending", gardener.MsgShootNotFound, "", 21*time.Minute)
+	require.True(t, getShootStatusSince(t, db, clusterID).IsZero(),
+		"the row must have no shoot_status_since for this test")
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "error", *status)
+	message, _ := getShootState(t, db, clusterID)
+	assert.Equal(t, "The Shoot did not appear in Gardener; the cluster's next change tries again.", message)
+}
+
 // An update that settled in the outbox long ago and is still rolling out has
 // stalled: the check records a warning once and leaves the updating flag set,
 // so a genuinely stuck update stays visible.
@@ -196,6 +225,94 @@ func TestCheckStatusDoesNotWarnWhileTheUpdateIsStillQueued(t *testing.T) {
 
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_warning"),
 		"an update whose sync row is still queued has not stalled")
+}
+
+// A node pool's sync applies the whole cluster to Gardener, so it can be the
+// row that carried an update. A cluster whose latest sync is such a row, long
+// finished, has stalled exactly like one whose own row settled.
+func TestCheckStatusWarnsWhenOnlyThePoolsSyncSettled(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-stalled-pool")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 2*time.Hour)
+	setShootStatusSince(t, db, clusterID, 2*time.Hour)
+	setShootUpdating(t, db, clusterID, true)
+
+	// The pool's change is the cluster's latest sync; it reached Gardener 45
+	// minutes ago.
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (node_pool_id, event, source, status, processed)
+		 VALUES ($1, 'updated', 'trigger', 'completed', now() - interval '45 minutes')`, poolID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		Message: "Reconcile: Waiting until worker resource status is updated", APIServerAvailable: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	var warning string
+	err = db.adminPool.QueryRow(t.Context(),
+		`SELECT message FROM tenant.cluster_events WHERE cluster_id = $1 AND event_type = 'status_warning'`,
+		clusterID,
+	).Scan(&warning)
+	require.NoError(t, err)
+	assert.Equal(t, "The update has not finished long after the change reached Gardener.", warning)
+}
+
+// Two warnings can apply to one cluster at once: Gardener erroring on a retry
+// while the update it is retrying has stalled. Each is recorded once, and
+// neither displaces the other, so a repeated check records nothing.
+func TestCheckStatusRecordsEachWarningOnceWhenTwoSourcesApply(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-two-warnings")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 2*time.Hour)
+	setShootStatusSince(t, db, clusterID, 2*time.Hour)
+	setShootUpdating(t, db, clusterID, true)
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed)
+		 VALUES ($1, 'updated', 'trigger', 'completed', now() - interval '45 minutes')`, clusterID)
+	require.NoError(t, err)
+
+	retrying := "etcd not ready. Operation will be retried."
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusError, Operation: gardener.OperationReconcile, Retrying: true,
+		Message: retrying, APIServerAvailable: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	rows, err := db.adminPool.Query(t.Context(),
+		`SELECT message FROM tenant.cluster_events WHERE cluster_id = $1 AND event_type = 'status_warning'`,
+		clusterID)
+	require.NoError(t, err)
+	defer rows.Close()
+	var messages []string
+	for rows.Next() {
+		var message string
+		require.NoError(t, rows.Scan(&message))
+		messages = append(messages, message)
+	}
+	require.NoError(t, rows.Err())
+	assert.ElementsMatch(t, []string{
+		retrying,
+		"The update has not finished long after the change reached Gardener.",
+	}, messages)
+
+	require.NoError(t, checkStatus(t, h))
+	assert.Equal(t, 2, countEvents(t, db, clusterID, "status_warning"),
+		"a repeated check must not record either warning again")
 }
 
 // A Shoot still deleting past the alert limit records one warning; the status

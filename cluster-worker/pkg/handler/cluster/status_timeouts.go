@@ -69,11 +69,11 @@ func deletingTooLong(stored *storedShootState, now time.Time, limit time.Duratio
 	return stored.Status == gardener.StatusDeleting && !stored.Since.IsZero() && now.Sub(stored.Since) > limit
 }
 
-// addWarningOnce appends a status_warning event unless the cluster's latest
-// warning already says the same, so a stuck state is recorded once per
-// incident rather than on every check.
+// addWarningOnce appends a status_warning event unless the cluster already
+// recorded that message since its last milestone, so a stuck state is recorded
+// once per incident rather than on every check.
 func addWarningOnce(update *shootStatusUpdate, stored *storedShootState, message string) bool {
-	if stored.LastWarning == message {
+	if stored.Warnings[message] {
 		return false
 	}
 	update.Events = append(update.Events, statusEvent{Type: dbconst.ClusterEventEventType_StatusWarning, Message: message})

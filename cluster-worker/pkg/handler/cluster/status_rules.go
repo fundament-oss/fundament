@@ -16,9 +16,11 @@ type storedShootState struct {
 	// Updating is set while an update fundament pushed rolls out on a ready
 	// cluster (the sync handler sets it).
 	Updating bool
-	// LastWarning is the message of the latest status_warning event. It is
-	// loaded when a warning may be recorded, so the same one is not repeated.
-	LastWarning string
+	// Warnings holds the messages already recorded as status_warning since the
+	// last milestone (ready, healthy, error or lost). It is loaded when a
+	// warning may be recorded, so the same one is not repeated; a set, because
+	// two warning sources can be active at once.
+	Warnings map[string]bool
 	// APIAvailable is set once the shoot's API server was seen available
 	// (shoot_api_available).
 	APIAvailable bool
@@ -198,7 +200,7 @@ func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatu
 			warning.Health = stored.Health
 			warning.Updating = stored.Updating
 		}
-		if observed.Message != stored.LastWarning {
+		if !stored.Warnings[observed.Message] {
 			warning.Events = []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: observed.Message}}
 		}
 		return warning
