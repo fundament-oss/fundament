@@ -132,3 +132,42 @@ func TestNamespaceSync_All_IncludesDeletedNamespace(t *testing.T) {
 	require.NoError(t, (&NamespaceSyncCmd{All: true}).Run(ctx))
 	assert.Equal(t, []uuid.UUID{namespaces[0]}, pendingManualNamespaceSyncs(t, ctx))
 }
+
+// A namespace of a deleted cluster cannot converge, so --all leaves it out; an
+// operator naming it still queues it. The delete cascade is honoured: a
+// cluster is deleted after its projects, and those after their namespaces.
+func TestNamespaceSync_All_SkipsDeletedCluster(t *testing.T) {
+	ctx := newTestContext(t)
+	namespaces := namespaceTestFixtures(t, ctx, "orphaned")
+	_, err := ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.namespaces SET deleted = now() WHERE id = $1`, namespaces[0])
+	require.NoError(t, err)
+	_, err = ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.projects SET deleted = now() WHERE name = 'namespace-sync'`)
+	require.NoError(t, err)
+	_, err = ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET deleted = now() WHERE name = 'namespace-sync'`)
+	require.NoError(t, err)
+	failNamespaceSync(t, ctx, namespaces[0])
+
+	require.NoError(t, (&NamespaceSyncCmd{All: true}).Run(ctx))
+	assert.Empty(t, pendingManualNamespaceSyncs(t, ctx))
+
+	require.NoError(t, (&NamespaceSyncCmd{Namespace: namespaces[0].String()}).Run(ctx))
+	assert.Equal(t, []uuid.UUID{namespaces[0]}, pendingManualNamespaceSyncs(t, ctx))
+}
+
+// A cluster whose Shoot disappeared is the same: nothing converges until a
+// change creates the Shoot again, and its api_available fan-out syncs the
+// namespaces then.
+func TestNamespaceSync_All_SkipsLostCluster(t *testing.T) {
+	ctx := newTestContext(t)
+	namespaces := namespaceTestFixtures(t, ctx, "lost")
+	_, err := ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET shoot_status = 'lost' WHERE name = 'namespace-sync'`)
+	require.NoError(t, err)
+	failNamespaceSync(t, ctx, namespaces[0])
+
+	require.NoError(t, (&NamespaceSyncCmd{All: true}).Run(ctx))
+	assert.Empty(t, pendingManualNamespaceSyncs(t, ctx))
+}

@@ -230,9 +230,9 @@ latest_pool_row AS (
       -- early return.
       AND EXISTS (
           SELECT 1
-          FROM tenant.cluster_outbox AS cluster_sync
-          WHERE cluster_sync.cluster_id = @cluster_id
-            AND cluster_sync.status = 'completed'
+          FROM tenant.cluster_outbox
+          WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+            AND tenant.cluster_outbox.status = 'completed'
       )
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
@@ -278,12 +278,13 @@ WHERE
 -- name: NodePoolUpdateStatus :execrows
 -- Record what Gardener reports about one pool's machines. Keyed by id: the
 -- row was just read by the same check, and with soft deletes (cluster_id,
--- name) could meanwhile mean a recreated pool. A cluster that was recorded as
--- lost while this check ran has had its pools cleared; the pool status the
--- check decided from the old report must not land after that clear. Writing
--- only while status_updated still holds the value read with the row keeps a
--- check that classified from an older report from landing after a newer one;
--- zero rows says so.
+-- name) could meanwhile mean a recreated pool. Writing only while
+-- status_updated still holds the value read with the row keeps a check that
+-- classified from an older report from landing after a newer one; zero rows
+-- says so. A cluster another check recorded as lost since this one read it
+-- had its pools cleared, and that clear must stand. @cluster_status is the
+-- status this check read, so a check that read the lost itself still writes:
+-- its pools are classified from the live report that brought the Shoot back.
 UPDATE tenant.node_pools
 SET
     status = @status,
@@ -293,11 +294,14 @@ WHERE
     tenant.node_pools.id = @node_pool_id
     AND tenant.node_pools.deleted IS NULL
     AND tenant.node_pools.status_updated IS NOT DISTINCT FROM @checked_at
-    AND EXISTS (
-        SELECT 1
-        FROM tenant.clusters
-        WHERE tenant.clusters.id = tenant.node_pools.cluster_id
-          AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+    AND (
+        @cluster_status::text = 'lost'
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.clusters
+            WHERE tenant.clusters.id = tenant.node_pools.cluster_id
+              AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+        )
     );
 
 -- name: NodePoolClearStatusByClusterID :exec

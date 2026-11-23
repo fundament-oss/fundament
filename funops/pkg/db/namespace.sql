@@ -5,6 +5,10 @@
 -- has a row waiting is left out; a second run changes nothing. A deleted
 -- namespace is included: its row still has to remove what the namespace left
 -- on the shoot.
+-- The --all branch leaves out namespaces of a cluster that is deleted or lost
+-- its Shoot: no sync of them can converge, so queueing them only adds failures
+-- to triage. A Shoot that is created again syncs them through its api_available
+-- fan-out. A namespace named by id is queued whatever its cluster's state.
 -- The NOT EXISTS guard is not backed by ON CONFLICT here: the partial unique
 -- index cluster_outbox_uq_ns_reconcile covers source 'reconcile' only, and
 -- widening it takes a migration. Two operators queueing one namespace at once
@@ -26,6 +30,14 @@ WHERE (
             ORDER BY tenant.cluster_outbox.id DESC
             LIMIT 1
         ), false)
+        AND EXISTS (
+            SELECT 1
+            FROM tenant.projects
+            JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+            WHERE tenant.projects.id = tenant.namespaces.project_id
+              AND tenant.clusters.deleted IS NULL
+              AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+        )
     )
 )
 AND NOT EXISTS (

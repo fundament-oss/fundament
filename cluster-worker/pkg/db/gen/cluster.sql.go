@@ -321,9 +321,9 @@ latest_pool_row AS (
       -- early return.
       AND EXISTS (
           SELECT 1
-          FROM tenant.cluster_outbox AS cluster_sync
-          WHERE cluster_sync.cluster_id = $1
-            AND cluster_sync.status = 'completed'
+          FROM tenant.cluster_outbox
+          WHERE tenant.cluster_outbox.cluster_id = $1
+            AND tenant.cluster_outbox.status = 'completed'
       )
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
@@ -1040,35 +1040,41 @@ WHERE
     tenant.node_pools.id = $3
     AND tenant.node_pools.deleted IS NULL
     AND tenant.node_pools.status_updated IS NOT DISTINCT FROM $4
-    AND EXISTS (
-        SELECT 1
-        FROM tenant.clusters
-        WHERE tenant.clusters.id = tenant.node_pools.cluster_id
-          AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+    AND (
+        $5::text = 'lost'
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.clusters
+            WHERE tenant.clusters.id = tenant.node_pools.cluster_id
+              AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+        )
     )
 `
 
 type NodePoolUpdateStatusParams struct {
-	Status     pgtype.Text
-	Message    pgtype.Text
-	NodePoolID uuid.UUID
-	CheckedAt  pgtype.Timestamptz
+	Status        pgtype.Text
+	Message       pgtype.Text
+	NodePoolID    uuid.UUID
+	CheckedAt     pgtype.Timestamptz
+	ClusterStatus string
 }
 
 // Record what Gardener reports about one pool's machines. Keyed by id: the
 // row was just read by the same check, and with soft deletes (cluster_id,
-// name) could meanwhile mean a recreated pool. A cluster that was recorded as
-// lost while this check ran has had its pools cleared; the pool status the
-// check decided from the old report must not land after that clear. Writing
-// only while status_updated still holds the value read with the row keeps a
-// check that classified from an older report from landing after a newer one;
-// zero rows says so.
+// name) could meanwhile mean a recreated pool. Writing only while
+// status_updated still holds the value read with the row keeps a check that
+// classified from an older report from landing after a newer one; zero rows
+// says so. A cluster another check recorded as lost since this one read it
+// had its pools cleared, and that clear must stand. @cluster_status is the
+// status this check read, so a check that read the lost itself still writes:
+// its pools are classified from the live report that brought the Shoot back.
 func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) (int64, error) {
 	result, err := q.db.Exec(ctx, nodePoolUpdateStatus,
 		arg.Status,
 		arg.Message,
 		arg.NodePoolID,
 		arg.CheckedAt,
+		arg.ClusterStatus,
 	)
 	if err != nil {
 		return 0, err

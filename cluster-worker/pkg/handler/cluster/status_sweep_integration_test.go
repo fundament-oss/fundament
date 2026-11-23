@@ -75,3 +75,29 @@ func TestNodePoolStatusWriteIsRefusedAfterLost(t *testing.T) {
 	status, _ := getNodePoolStatus(t, db, clusterID, "workers")
 	assert.Empty(t, status, "the pool keeps the cleared status")
 }
+
+// The check that reads the cluster as lost and finds its Shoot again writes
+// its pools in that same check: the guard only refuses a lost the check did
+// not read itself.
+func TestNodePoolStatusWritesAfterRecoveryFromLost(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	queries := dbgen.New(db.workerPool)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "recovered-pools")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 2)
+	setShootState(t, db, clusterID, "lost", "Shoot disappeared", "", time.Minute)
+
+	rows, err := queries.NodePoolUpdateStatus(t.Context(), dbgen.NodePoolUpdateStatusParams{
+		NodePoolID:    poolID,
+		Status:        pgtype.Text{String: string(dbconst.NodePoolStatus_Ready), Valid: true},
+		Message:       pgtype.Text{String: "machines are ready", Valid: true},
+		ClusterStatus: "lost",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), rows)
+
+	status, _ := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, string(dbconst.NodePoolStatus_Ready), status)
+}

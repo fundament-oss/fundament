@@ -476,7 +476,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		if c, ok := counts[update.Name]; ok {
 			poolCounts = &c.all
 		}
-		applied, err := h.writeNodePoolStatus(ctx, cluster.ID, update, poolCounts)
+		applied, err := h.writeNodePoolStatus(ctx, cluster.ID, cluster.ShootStatus.String, update, poolCounts)
 		if err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
@@ -514,8 +514,10 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 // writeNodePoolStatus commits one pool's status row, its events and, when
 // counts is set, the node counts the status was decided on, together. It
 // reports whether the status was written: a check that lost the row to a newer
-// one, or a pool that is gone, writes nothing.
-func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update *nodePoolUpdate, counts *shoot.PoolInventory) (bool, error) {
+// one, a pool that is gone, or a cluster another check recorded as lost since
+// this one read it, writes nothing. clusterStatus is the status this check
+// read from the cluster row.
+func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, clusterStatus string, update *nodePoolUpdate, counts *shoot.PoolInventory) (bool, error) {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin: %w", err)
@@ -524,10 +526,11 @@ func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, 
 
 	qtx := h.queries.WithTx(tx)
 	updated, err := qtx.NodePoolUpdateStatus(ctx, db.NodePoolUpdateStatusParams{
-		NodePoolID: update.ID,
-		Status:     pgtype.Text{String: string(update.Status), Valid: true},
-		Message:    pgtype.Text{String: update.Message, Valid: update.Message != ""},
-		CheckedAt:  update.StatusUpdated,
+		NodePoolID:    update.ID,
+		Status:        pgtype.Text{String: string(update.Status), Valid: true},
+		Message:       pgtype.Text{String: update.Message, Valid: update.Message != ""},
+		CheckedAt:     update.StatusUpdated,
+		ClusterStatus: clusterStatus,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update status: %w", err)
