@@ -4,6 +4,7 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PluginRegistryService from './plugin-registry.service';
 import { ConfigService } from '../config.service';
+import OrganizationContextService from '../organization-context.service';
 import { INSTALL } from '../../connect/tokens';
 import type { PluginInstallationItem } from './types';
 
@@ -99,11 +100,35 @@ describe('PluginRegistryService', () => {
         { provide: INSTALL, useValue: { getPluginDefinition } },
       ],
     });
+    // Definitions are fetched once the organization's id is known; the test at
+    // the end covers the wait itself.
+    TestBed.inject(OrganizationContextService).setOrganizationId('org-1');
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('waits for the organization id before it fetches a definition', async () => {
+    const context = TestBed.inject(OrganizationContextService);
+    context.clearOrganizationId();
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    // A page opened by its address: the cluster is known before the
+    // organization's id, and a definition call without the id would carry no
+    // Fun-Organization header.
+    const load = registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getPluginDefinition).not.toHaveBeenCalled();
+
+    context.setOrganizationId('org-1');
+    await load;
+
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+    expect(registry.allPlugins().map((p) => p.installationName)).toEqual(['acme--cert-manager']);
   });
 
   it('keeps a plugin in the menu while it is still deploying, and follows its phase', async () => {

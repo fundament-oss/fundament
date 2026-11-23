@@ -40,6 +40,23 @@ export default class OrganizationContextService {
    */
   readonly hasOrganization = computed(() => this.organizationId() !== null);
 
+  /** Callers of organizationIdSet() waiting for an id. */
+  private idWaiters: ((id: string) => void)[] = [];
+
+  /**
+   * Resolves with the organization's id: at once when one is set, otherwise
+   * when the next one is. A page opened by its address knows the organization's
+   * name straight away but its id only once the organization has been fetched,
+   * and a call sent before that goes without the Fun-Organization header.
+   */
+  organizationIdSet(): Promise<string> {
+    const id = this.organizationId();
+    if (id) return Promise.resolve(id);
+    return new Promise((resolve) => {
+      this.idWaiters.push(resolve);
+    });
+  }
+
   /**
    * Set the current organization ID and persist to localStorage.
    */
@@ -47,6 +64,9 @@ export default class OrganizationContextService {
     this.organizationId.set(id);
     if (id) {
       localStorage.setItem(STORAGE_KEY, id);
+      const waiters = this.idWaiters;
+      this.idWaiters = [];
+      waiters.forEach((resolve) => resolve(id));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
