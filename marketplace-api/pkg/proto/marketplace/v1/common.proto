@@ -101,6 +101,22 @@ message DocumentationLink {
   string url = 40;
 }
 
+// Listing edits that wait for review (appstore.plugins.listing_draft), as the
+// listing will read once they are approved. A feature block or link without an
+// id is new.
+message ListingDraft {
+  string description = 10;
+  repeated string category_ids = 20;
+  string image = 30;
+  string author_name = 40;
+  string author_url = 50;
+  // Data URIs; empty shows the version's logo.
+  string logo = 60;
+  string logo_dark = 70;
+  repeated FeatureBlock features = 80;
+  repeated DocumentationLink documentation_links = 90;
+}
+
 // A plugin manifest (definition.yaml) as the console reads it: the parsed
 // form of a stored version's manifest.
 message PluginDefinition {

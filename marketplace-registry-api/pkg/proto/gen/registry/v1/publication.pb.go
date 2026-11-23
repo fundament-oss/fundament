@@ -415,7 +415,8 @@ type CreatePluginRequest_builder struct {
 	CategoryIds []string
 	// Tag names, not ids — the server upserts them.
 	Tags []string
-	// Listing artwork, not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image         string
 	RepositoryUrl string
 	License       string
@@ -511,6 +512,10 @@ func (b0 CreatePluginResponse_builder) Build() *CreatePluginResponse {
 // No name — it is immutable once reserved. display_name, description_short,
 // tags, repository_url and license are owned by definition.yaml and synced
 // from the newest approved version, so they are not editable here.
+//
+// visibility and allowed_organization_ids take effect at once. The other
+// fields are stored as Plugin.pending_listing and go live when a version
+// submitted after them is approved.
 type UpdatePluginRequest struct {
 	state                             protoimpl.MessageState   `protogen:"opaque.v1"`
 	xxx_hidden_PluginId               string                   `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId"`
@@ -523,6 +528,8 @@ type UpdatePluginRequest struct {
 	xxx_hidden_AllowedOrganizationIds []string                 `protobuf:"bytes,130,rep,name=allowed_organization_ids,json=allowedOrganizationIds"`
 	xxx_hidden_AuthorName             string                   `protobuf:"bytes,140,opt,name=author_name,json=authorName"`
 	xxx_hidden_AuthorUrl              string                   `protobuf:"bytes,150,opt,name=author_url,json=authorUrl"`
+	xxx_hidden_Logo                   []byte                   `protobuf:"bytes,160,opt,name=logo"`
+	xxx_hidden_LogoDark               []byte                   `protobuf:"bytes,170,opt,name=logo_dark,json=logoDark"`
 	unknownFields                     protoimpl.UnknownFields
 	sizeCache                         protoimpl.SizeCache
 }
@@ -626,6 +633,20 @@ func (x *UpdatePluginRequest) GetAuthorUrl() string {
 	return ""
 }
 
+func (x *UpdatePluginRequest) GetLogo() []byte {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return nil
+}
+
+func (x *UpdatePluginRequest) GetLogoDark() []byte {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return nil
+}
+
 func (x *UpdatePluginRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
@@ -666,16 +687,32 @@ func (x *UpdatePluginRequest) SetAuthorUrl(v string) {
 	x.xxx_hidden_AuthorUrl = v
 }
 
+func (x *UpdatePluginRequest) SetLogo(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Logo = v
+}
+
+func (x *UpdatePluginRequest) SetLogoDark(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_LogoDark = v
+}
+
 type UpdatePluginRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	PluginId    string
 	Description string
 	CategoryIds []string
-	// Listing artwork, not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image string
 	// A link with no id is created; one carrying an id updates that link in
-	// place, keeping its id. Links the request omits are soft-deleted.
+	// place, keeping its id. Links the request omits are soft-deleted. An id
+	// must be one of the listing's live links.
 	DocumentationLinks []*v1.DocumentationLink
 	// Same rule as documentation_links: no id creates, an id updates that block
 	// in place, and an omitted block is soft-deleted.
@@ -685,6 +722,11 @@ type UpdatePluginRequest_builder struct {
 	// Original author, which may differ from the publishing organization.
 	AuthorName string
 	AuthorUrl  string
+	// SVG or PNG files shown instead of the version's logos. Empty clears the
+	// upload, so the version's logo shows again. The server applies the rules a
+	// pushed logo meets.
+	Logo     []byte
+	LogoDark []byte
 }
 
 func (b0 UpdatePluginRequest_builder) Build() *UpdatePluginRequest {
@@ -701,6 +743,8 @@ func (b0 UpdatePluginRequest_builder) Build() *UpdatePluginRequest {
 	x.xxx_hidden_AllowedOrganizationIds = b.AllowedOrganizationIds
 	x.xxx_hidden_AuthorName = b.AuthorName
 	x.xxx_hidden_AuthorUrl = b.AuthorUrl
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
 	return m0
 }
 
@@ -1686,7 +1730,7 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\"@\n" +
 	"\x11GetPluginResponse\x12+\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xbf\x04\n" +
+	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xbc\x04\n" +
 	"\x13CreatePluginRequest\x12\x7f\n" +
 	"\x04name\x18\n" +
 	" \x01(\tBk\xbaHh\xba\x01a\n" +
@@ -1697,8 +1741,8 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"\vdescription\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\vdescription\x122\n" +
 	"\fcategory_ids\x182 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
 	"\"\x05r\x03\xb0\x01\x01R\vcategoryIds\x12\x1c\n" +
-	"\x04tags\x18< \x03(\tB\b\xbaH\x05\x92\x01\x02\x10\x14R\x04tags\x12!\n" +
-	"\x05image\x18F \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\x05image\x122\n" +
+	"\x04tags\x18< \x03(\tB\b\xbaH\x05\x92\x01\x02\x10\x14R\x04tags\x12\x1e\n" +
+	"\x05image\x18F \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x05image\x122\n" +
 	"\x0erepository_url\x18P \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\rrepositoryUrl\x12!\n" +
 	"\alicense\x18Z \x01(\tB\a\xbaH\x04r\x02\x18@R\alicense\x12I\n" +
 	"\n" +
@@ -1707,14 +1751,14 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"visibility\"C\n" +
 	"\x14CreatePluginResponse\x12+\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xb0\x05\n" +
+	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"\xf6\x05\n" +
 	"\x13UpdatePluginRequest\x12%\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\x12*\n" +
 	"\vdescription\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\vdescription\x122\n" +
 	"\fcategory_ids\x182 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
-	"\"\x05r\x03\xb0\x01\x01R\vcategoryIds\x12!\n" +
-	"\x05image\x18F \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\x05image\x12\\\n" +
+	"\"\x05r\x03\xb0\x01\x01R\vcategoryIds\x12\x1e\n" +
+	"\x05image\x18F \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x05image\x12\\\n" +
 	"\x13documentation_links\x18d \x03(\v2!.marketplace.v1.DocumentationLinkB\b\xbaH\x05\x92\x01\x02\x10\x14R\x12documentationLinks\x12B\n" +
 	"\bfeatures\x18n \x03(\v2\x1c.marketplace.v1.FeatureBlockB\b\xbaH\x05\x92\x01\x02\x10\x14R\bfeatures\x12I\n" +
 	"\n" +
@@ -1726,7 +1770,9 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	"\vauthor_name\x18\x8c\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\n" +
 	"authorName\x12+\n" +
 	"\n" +
-	"author_url\x18\x96\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\tauthorUrlJ\x04\b\x14\x10\x15J\x04\b\x1e\x10\x1fJ\x04\b<\x10=J\x04\bP\x10QJ\x04\bZ\x10[R\fdisplay_nameR\x11description_shortR\x04tagsR\x0erepository_urlR\alicense\"C\n" +
+	"author_url\x18\x96\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x88\x01\x01R\tauthorUrl\x12\x1e\n" +
+	"\x04logo\x18\xa0\x01 \x01(\fB\t\xbaH\x06z\x04\x18\x80\x80\x01R\x04logo\x12'\n" +
+	"\tlogo_dark\x18\xaa\x01 \x01(\fB\t\xbaH\x06z\x04\x18\x80\x80\x01R\blogoDarkJ\x04\b\x14\x10\x15J\x04\b\x1e\x10\x1fJ\x04\b<\x10=J\x04\bP\x10QJ\x04\bZ\x10[R\fdisplay_nameR\x11description_shortR\x04tagsR\x0erepository_urlR\alicense\"C\n" +
 	"\x14UpdatePluginResponse\x12+\n" +
 	"\x06plugin\x18\n" +
 	" \x01(\v2\x13.registry.v1.PluginR\x06plugin\"<\n" +

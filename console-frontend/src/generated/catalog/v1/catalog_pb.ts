@@ -59,7 +59,8 @@ export type PluginSummary = Message<"catalog.v1.PluginSummary"> & {
   organizationId: string;
 
   /**
-   * Listing artwork (appstore.plugins.image), not a container image.
+   * Upstream container image the plugin is built around, shown for reference;
+   * the image a version runs is its manifest's.
    *
    * @generated from field: string image = 60;
    */
@@ -163,7 +164,8 @@ export type PluginDetails = Message<"catalog.v1.PluginDetails"> & {
   organizationId: string;
 
   /**
-   * Listing artwork (appstore.plugins.image), not a container image.
+   * Upstream container image the plugin is built around, shown for reference;
+   * the image a version runs is its manifest's.
    *
    * @generated from field: string image = 60;
    */

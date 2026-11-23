@@ -113,8 +113,17 @@ WHERE plugin_id = sqlc.arg('plugin_id')::uuid
   AND deleted IS NULL;
 
 -- name: SubmissionCreate :one
-INSERT INTO appstore.submissions (plugin_definition_id, submitter_user_id)
-VALUES (sqlc.arg('plugin_definition_id')::uuid, sqlc.arg('submitter_user_id')::uuid)
+-- The round carries the listing's pending edits as they stand now: what the
+-- reviewer sees and what approval applies (FUN-20).
+INSERT INTO appstore.submissions (plugin_definition_id, submitter_user_id, listing_draft)
+VALUES (
+	sqlc.arg('plugin_definition_id')::uuid,
+	sqlc.arg('submitter_user_id')::uuid,
+	(SELECT plugins.listing_draft
+	   FROM appstore.plugins
+	   JOIN appstore.plugin_definitions ON plugin_definitions.plugin_id = plugins.id
+	  WHERE plugin_definitions.id = sqlc.arg('plugin_definition_id')::uuid)
+)
 RETURNING id;
 
 -- name: SubmissionOpenByDefinitionID :one

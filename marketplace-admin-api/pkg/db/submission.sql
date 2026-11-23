@@ -52,7 +52,8 @@ SELECT
 	submissions.rejection_reason,
 	submissions.feedback,
 	plugin_definitions.logo,
-	plugin_definitions.logo_dark
+	plugin_definitions.logo_dark,
+	submissions.listing_draft
 FROM appstore.submissions
 JOIN appstore.plugin_definitions ON plugin_definitions.id = submissions.plugin_definition_id
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
@@ -107,61 +108,3 @@ UPDATE appstore.plugin_definitions SET status = sqlc.arg('status')::text
 WHERE id = sqlc.arg('id')::uuid
   AND status = 'pending'
   AND deleted IS NULL;
-
--- Listing sync on approval: the fields definition.yaml owns are copied from
--- the approved manifest onto the listing when that version is the newest
--- published one (common/pluginlisting).
-
--- name: PluginVersionGetManifest :one
-SELECT plugin_id, plugin_version, manifest
-FROM appstore.plugin_definitions
-WHERE id = sqlc.arg('id')::uuid
-  AND deleted IS NULL;
-
--- name: PluginLockForSync :one
--- Serializes concurrent approvals of one plugin, so each sees the other's
--- published version before deciding which is newest.
-SELECT id
-FROM appstore.plugins
-WHERE id = sqlc.arg('id')::uuid
-  AND deleted IS NULL
-FOR UPDATE;
-
--- name: PluginVersionsPublishedExcept :many
-SELECT plugin_version
-FROM appstore.plugin_definitions
-WHERE plugin_id = sqlc.arg('plugin_id')::uuid
-  AND id <> sqlc.arg('id')::uuid
-  AND published IS NOT NULL
-  AND deleted IS NULL;
-
--- name: PluginListingSync :exec
-UPDATE appstore.plugins SET
-	display_name = sqlc.arg('display_name')::text,
-	description_short = sqlc.arg('description_short')::text,
-	repository_url = sqlc.narg('repository_url')::text,
-	license = sqlc.arg('license')::text,
-	updated = now()
-WHERE id = sqlc.arg('id')::uuid
-  AND deleted IS NULL;
-
--- name: PluginTagsDeleteByPluginID :exec
--- An edge, not an entity: replacement removes it outright.
-DELETE FROM appstore.plugins_tags
-WHERE plugin_id = sqlc.arg('plugin_id')::uuid;
-
--- name: TagInsertIfMissing :exec
--- DO NOTHING, not DO UPDATE: tags are a vocabulary shared across publishers.
-INSERT INTO appstore.tags (name) VALUES (sqlc.arg('name')::text)
-ON CONFLICT (name, deleted) DO NOTHING;
-
--- name: TagGetByName :one
-SELECT id
-FROM appstore.tags
-WHERE name = sqlc.arg('name')::text
-  AND deleted IS NULL;
-
--- name: PluginTagInsert :exec
-INSERT INTO appstore.plugins_tags (plugin_id, tag_id)
-VALUES (sqlc.arg('plugin_id')::uuid, sqlc.arg('tag_id')::uuid)
-ON CONFLICT DO NOTHING;

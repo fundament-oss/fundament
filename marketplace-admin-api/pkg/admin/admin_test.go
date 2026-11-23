@@ -614,15 +614,15 @@ spec:
 `
 }
 
-func seedVersionWithManifest(t *testing.T, env *testEnv, pluginID uuid.UUID, version, status, manifest string) uuid.UUID {
+// seedVersionWithManifest inserts a pending version carrying manifest.
+func seedVersionWithManifest(t *testing.T, env *testEnv, pluginID uuid.UUID, version, manifest string) uuid.UUID {
 	t.Helper()
 
 	versionID := uuid.New()
 	_, err := env.superPool.Exec(context.Background(), `
 		INSERT INTO appstore.plugin_definitions (id, plugin_id, plugin_version, manifest, hash, image, status, published)
-		VALUES ($1, $2, $3, $4, 'sha256:test', 'ghcr.io/example/img@sha256:abc', $5,
-		        CASE WHEN $5 = 'approved' THEN now() END)`,
-		versionID, pluginID, version, []byte(manifest), status)
+		VALUES ($1, $2, $3, $4, 'sha256:test', 'ghcr.io/example/img@sha256:abc', 'pending', NULL)`,
+		versionID, pluginID, version, []byte(manifest))
 	require.NoError(t, err)
 
 	return versionID
@@ -668,7 +668,7 @@ func TestApproveSyncsDefinitionOwnedListingFields(t *testing.T) {
 		`UPDATE appstore.plugins SET description = 'Long write-up.' WHERE id = $1`, pluginID)
 	require.NoError(t, err)
 
-	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", "pending", listingManifest("1.0.0", "Cert Manager"))
+	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", listingManifest("1.0.0", "Cert Manager"))
 	approve(t, env, seedSubmission(t, env, versionID, submitterID))
 
 	listing := readListing(t, env, pluginID)
@@ -687,10 +687,10 @@ func TestApprovingAnOlderVersionLineLeavesTheListing(t *testing.T) {
 	submitterID := seedUser(t, env, "dev")
 	pluginID := seedPlugin(t, env, orgID, "cert-manager")
 
-	newer := seedVersionWithManifest(t, env, pluginID, "2.0.0", "pending", listingManifest("2.0.0", "Cert Manager Two"))
+	newer := seedVersionWithManifest(t, env, pluginID, "2.0.0", listingManifest("2.0.0", "Cert Manager Two"))
 	approve(t, env, seedSubmission(t, env, newer, submitterID))
 
-	older := seedVersionWithManifest(t, env, pluginID, "1.0.1", "pending", listingManifest("1.0.1", "Cert Manager One"))
+	older := seedVersionWithManifest(t, env, pluginID, "1.0.1", listingManifest("1.0.1", "Cert Manager One"))
 	approve(t, env, seedSubmission(t, env, older, submitterID))
 
 	assert.Equal(t, "Cert Manager Two", readListing(t, env, pluginID).displayName)
@@ -702,7 +702,7 @@ func TestNonApprovalDecisionsLeaveTheListing(t *testing.T) {
 	submitterID := seedUser(t, env, "dev")
 	pluginID := seedPlugin(t, env, orgID, "cert-manager")
 
-	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", "pending", listingManifest("1.0.0", "Cert Manager"))
+	versionID := seedVersionWithManifest(t, env, pluginID, "1.0.0", listingManifest("1.0.0", "Cert Manager"))
 	submissionID := seedSubmission(t, env, versionID, submitterID)
 
 	_, err := newReviewer(t, env).RequestChanges(context.Background(),

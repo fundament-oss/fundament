@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -196,4 +197,73 @@ func TestCreatePluginVersion_RejectsOversizedRequest(t *testing.T) {
 	}.Build())
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeResourceExhausted, connectCode(err))
+}
+
+func updateLogos(ctx context.Context, client registryClient, pluginID string, logo, logoDark []byte) (*registryv1.Plugin, error) {
+	resp, err := client.UpdatePlugin(ctx, registryv1.UpdatePluginRequest_builder{
+		PluginId:   pluginID,
+		Visibility: registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+		Logo:       logo,
+		LogoDark:   logoDark,
+	}.Build())
+	if err != nil {
+		return nil, err //nolint:wrapcheck // tests assert on the connect error
+	}
+	return resp.GetPlugin(), nil
+}
+
+// approveIconVersion pushes and approves a version whose logo is icon, so
+// the listing's pending logos go live with it.
+func approveIconVersion(t *testing.T, env *testEnv, client registryClient, pluginID, version string, icon []byte) {
+	t.Helper()
+
+	manifest := strings.Replace(iconManifest(pluginruntime.IconDigest(icon), "", ""), "version: 1.2.3", "version: "+version, 1)
+	resp, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId:  pluginID,
+		Version:   version,
+		Manifest:  []byte(manifest),
+		IconFiles: filesOf(icon),
+	}.Build())
+	require.NoError(t, err)
+	approveVersion(t, env, client, resp.GetVersion().GetId())
+}
+
+func TestUpdatePlugin_ListingLogoWinsOverTheVersions(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+	plugin := createPlugin(t, client, "postgres-operator")
+	pushed := svgIcon("circle")
+
+	uploaded := pngIcon(t)
+	got, err := updateLogos(context.Background(), client, plugin.GetId(), uploaded, nil)
+	require.NoError(t, err)
+	assert.Contains(t, got.GetPendingListing().GetLogo(), "data:image/png;base64,")
+	assert.Empty(t, got.GetListingLogo(), "an upload waits for review")
+
+	approveIconVersion(t, env, client, plugin.GetId(), "1.2.3", pushed)
+	got = getPlugin(t, client, plugin.GetId())
+	assert.Contains(t, got.GetLogo(), "data:image/png;base64,")
+	assert.Equal(t, got.GetLogo(), got.GetListingLogo())
+	// No dark upload: the version's dark logo (none here) still applies.
+	assert.Empty(t, got.GetListingLogoDark())
+
+	// Clearing the upload brings the version's logo back.
+	_, err = updateLogos(context.Background(), client, plugin.GetId(), nil, nil)
+	require.NoError(t, err)
+	approveIconVersion(t, env, client, plugin.GetId(), "1.2.4", pushed)
+	got = getPlugin(t, client, plugin.GetId())
+	assert.Contains(t, got.GetLogo(), "data:image/svg+xml;base64,")
+	assert.Empty(t, got.GetListingLogo())
+}
+
+func TestUpdatePlugin_RejectsALogoAPushWouldReject(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	unsafe := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+	_, err := updateLogos(context.Background(), client, plugin.GetId(), nil, unsafe)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connectCode(err))
+	assert.Contains(t, err.Error(), "logo_dark")
 }

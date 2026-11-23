@@ -390,8 +390,15 @@ func (q *Queries) SubmissionCloseOpenByPluginID(ctx context.Context, arg Submiss
 }
 
 const submissionCreate = `-- name: SubmissionCreate :one
-INSERT INTO appstore.submissions (plugin_definition_id, submitter_user_id)
-VALUES ($1::uuid, $2::uuid)
+INSERT INTO appstore.submissions (plugin_definition_id, submitter_user_id, listing_draft)
+VALUES (
+	$1::uuid,
+	$2::uuid,
+	(SELECT plugins.listing_draft
+	   FROM appstore.plugins
+	   JOIN appstore.plugin_definitions ON plugin_definitions.plugin_id = plugins.id
+	  WHERE plugin_definitions.id = $1::uuid)
+)
 RETURNING id
 `
 
@@ -400,6 +407,8 @@ type SubmissionCreateParams struct {
 	SubmitterUserID    uuid.UUID
 }
 
+// The round carries the listing's pending edits as they stand now: what the
+// reviewer sees and what approval applies (FUN-20).
 func (q *Queries) SubmissionCreate(ctx context.Context, arg SubmissionCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, submissionCreate, arg.PluginDefinitionID, arg.SubmitterUserID)
 	var id uuid.UUID

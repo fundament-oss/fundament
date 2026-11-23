@@ -33,7 +33,8 @@ message Plugin {
   // no qualifier. The developer frontend is authenticated and a member, so
   // organization-api's GetOrganization resolves it.
   string organization_id = 70;
-  // Listing artwork, not a container image.
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
   string image = 80;
   // Curated vocabulary, resolved through ListCategories. Matches what
   // UpdatePlugin already accepts.
@@ -60,9 +61,17 @@ message Plugin {
   // Trust and support badges. Fundament assigns them, so CreatePlugin and
   // UpdatePlugin do not accept them; the developer only reads them back.
   repeated marketplace.v1.PluginLabel labels = 220;
-  // Logo of the newest pushed version, as a data URI. Empty when it has none.
+  // Logo shown for the plugin, as a data URI: the uploaded listing logo, else
+  // the newest pushed version's. Empty when neither exists.
   string logo = 230;
   string logo_dark = 240;
+  // The listing's own logos, as data URIs; empty when it has none and logo
+  // falls back to the version's.
+  string listing_logo = 250;
+  string listing_logo_dark = 260;
+  // Edits from UpdatePlugin that wait for review: submitting a version sends
+  // them along, and approving it makes them live. Absent when there are none.
+  marketplace.v1.ListingDraft pending_listing = 270;
 }
 
 // A pushed build (appstore.plugin_definitions plus review state).

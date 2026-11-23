@@ -1,0 +1,418 @@
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading listing...</div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+  <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Back to my plugins
+  </a>
+} @else if (listing(); as listing) {
+  <a
+    [routerLink]="['/manage', listing.id]"
+    class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon icon="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    {{ listing.synced.displayName }}
+  </a>
+
+  <h1 class="mb-6 text-3xl font-semibold">Edit listing</h1>
+
+  <div class="mb-6 max-w-3xl rounded-md bg-gray-100 p-4 dark:bg-gray-900" data-testid="review-note">
+    @if (listing.pendingReview) {
+      <p class="font-medium">These edits are saved and waiting for review.</p>
+    }
+    <p [class.mt-1]="listing.pendingReview" class="text-gray-700 dark:text-gray-300">
+      Listing changes go live when a version you submit after saving is approved, so the reviewer
+      sees them together with it. Visibility is the exception: it applies as soon as you save.
+    </p>
+  </div>
+
+  <nldd-form class="block max-w-3xl" (submit)="$event.preventDefault(); save()">
+    <!-- definition.yaml -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="text-lg font-semibold">From definition.yaml</h2>
+        <p class="mt-2 text-gray-600 dark:text-gray-300">
+          These fields come from the plugin's <span class="font-mono">definition.yaml</span>. To
+          change them, edit the file, push a new version and submit it: they update when that
+          version is approved.
+        </p>
+        <dl class="mt-6 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Display name
+            </dt>
+            <dd class="mt-2">{{ listing.synced.displayName || '—' }}</dd>
+          </div>
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              License
+            </dt>
+            <dd class="mt-2">{{ listing.synced.license || '—' }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Short description
+            </dt>
+            <dd class="mt-2">{{ listing.synced.descriptionShort || '—' }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Repository
+            </dt>
+            <dd class="mt-2 break-all">{{ listing.synced.repositoryUrl || '—' }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Tags
+            </dt>
+            <dd class="mt-2 flex flex-wrap gap-2">
+              @for (tag of listing.synced.tags; track tag) {
+                <nldd-tag color="neutral" [text]="tag"></nldd-tag>
+              } @empty {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </nldd-card>
+
+    <!-- Description and author -->
+    <nldd-card class="mb-6 block">
+      <div class="space-y-6 p-6">
+        <h2 class="text-lg font-semibold">Listing</h2>
+
+        <nldd-form-field label="Description">
+          <nldd-multi-line-text-field
+            [value]="listing.description"
+            (input)="onDescriptionInput($event)"
+            rows="12"
+            [invalid]="!!error('description')"
+            unmet="listing-description-error"
+          ></nldd-multi-line-text-field>
+          <nldd-form-field-help-text>
+            Markdown. Shown on the plugin's catalog page. {{ listing.description.length }} /
+            {{ maxDescription }} characters.
+          </nldd-form-field-help-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="listing-description-error">{{
+              error('description')
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+
+        <nldd-form-field label="Author name">
+          <nldd-text-field
+            [value]="listing.authorName"
+            (input)="onAuthorNameInput($event)"
+            [invalid]="!!error('authorName')"
+            unmet="listing-author-name-error"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="listing-author-name-error">{{
+              error('authorName')
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+
+        <nldd-form-field label="Author URL (optional)">
+          <nldd-text-field
+            type="url"
+            [value]="listing.authorUrl"
+            (input)="onAuthorUrlInput($event)"
+            [invalid]="!!error('authorUrl')"
+            unmet="listing-author-url-error"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="listing-author-url-error">{{
+              error('authorUrl')
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+
+        <nldd-form-field label="Upstream image (optional)">
+          <nldd-text-field
+            [value]="listing.image"
+            (input)="onImageInput($event)"
+            [invalid]="!!error('image')"
+            unmet="listing-image-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text
+            >The container image the plugin is built around, such as
+            quay.io/jetstack/cert-manager-controller:v1.21.3.</nldd-form-field-help-text
+          >
+          <nldd-validation-list>
+            <nldd-validation-item id="listing-image-error">{{
+              error('image')
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+      </div>
+    </nldd-card>
+
+    <!-- Logos -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="text-lg font-semibold">Logo</h2>
+        <p class="mt-2 text-gray-600 dark:text-gray-300">
+          By default the listing shows the logo of the newest version, from
+          <span class="font-mono">icon</span> and <span class="font-mono">iconDark</span> in
+          <span class="font-mono">definition.yaml</span>. An uploaded logo replaces it once it is
+          approved. SVG or PNG, at most 16 KB.
+        </p>
+        <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          @for (variant of logoVariants(); track variant.key) {
+            <div>
+              <h3 class="font-medium">{{ variant.label }}</h3>
+              <div
+                class="mt-3 flex h-24 w-24 items-center justify-center rounded-xl border border-gray-200 p-2 dark:border-gray-800"
+                [class.bg-white]="variant.key === 'logo'"
+                [class.bg-gray-900]="variant.key === 'logoDark'"
+              >
+                @if (variant.uploaded || variant.version; as shown) {
+                  <img [src]="shown" alt="" class="max-h-full max-w-full" />
+                }
+              </div>
+              <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                @if (variant.uploaded) {
+                  Uploaded logo
+                } @else if (variant.version) {
+                  From the newest version
+                } @else {
+                  No upload: the newest version's logo is shown, if it has one
+                }
+              </p>
+              <nldd-form-field
+                class="mt-3 block"
+                [attr.label]="'Upload ' + variant.label.toLowerCase() + ' logo'"
+              >
+                <nldd-file-field
+                  accept=".svg,.png,image/svg+xml,image/png"
+                  (change)="onLogoChange(variant.key, $event)"
+                  [invalid]="!!logoErrors()[variant.key]"
+                  [attr.unmet]="'listing-' + variant.key + '-error'"
+                ></nldd-file-field>
+                <nldd-validation-list>
+                  <nldd-validation-item [attr.id]="'listing-' + variant.key + '-error'">{{
+                    logoErrors()[variant.key]
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              @if (variant.uploaded) {
+                <nldd-button
+                  class="mt-3"
+                  type="button"
+                  text="Remove upload"
+                  start-icon="trash"
+                  appearance="destructive"
+                  size="sm"
+                  (click)="removeLogo(variant.key)"
+                ></nldd-button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </nldd-card>
+
+    <!-- Categories -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="text-lg font-semibold">Categories</h2>
+        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          @for (category of categories(); track category.id) {
+            <nldd-checkbox-field
+              [attr.label]="category.name"
+              [attr.value]="category.id"
+              [attr.checked]="isCategorySelected(category.id) ? '' : null"
+              (change)="onCategoryChange(category.id, $event)"
+            ></nldd-checkbox-field>
+          }
+        </div>
+        @if (error('categories'); as message) {
+          <p class="text-danger-700 dark:text-danger-300 mt-3 text-sm">{{ message }}</p>
+        }
+      </div>
+    </nldd-card>
+
+    <!-- Features -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="text-lg font-semibold">Features</h2>
+        <p class="mt-2 text-gray-600 dark:text-gray-300">
+          Highlights shown as blocks on the catalog page.
+        </p>
+        <div class="mt-4 space-y-4">
+          @for (feature of listing.features; track $index; let i = $index) {
+            <div class="space-y-4 rounded-md border border-gray-200 p-4 dark:border-gray-800">
+              <nldd-form-field label="Title">
+                <nldd-text-field
+                  [value]="feature.title"
+                  (input)="onFeatureInput(i, 'title', $event)"
+                ></nldd-text-field>
+              </nldd-form-field>
+              <nldd-form-field label="Body">
+                <nldd-multi-line-text-field
+                  [value]="feature.body"
+                  (input)="onFeatureInput(i, 'body', $event)"
+                  rows="3"
+                ></nldd-multi-line-text-field>
+              </nldd-form-field>
+              <nldd-button
+                type="button"
+                text="Remove feature"
+                start-icon="trash"
+                appearance="destructive"
+                size="sm"
+                (click)="removeFeature(i)"
+              ></nldd-button>
+            </div>
+          }
+        </div>
+        @if (listing.features.length < maxFeatures) {
+          <nldd-button
+            class="mt-4"
+            type="button"
+            text="Add feature"
+            start-icon="plus"
+            appearance="secondary"
+            (click)="addFeature()"
+          ></nldd-button>
+        }
+      </div>
+    </nldd-card>
+
+    <!-- Documentation links -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="text-lg font-semibold">Documentation links</h2>
+        <div class="mt-4 space-y-4">
+          @for (link of listing.documentationLinks; track $index; let i = $index) {
+            <div class="space-y-4 rounded-md border border-gray-200 p-4 dark:border-gray-800">
+              <nldd-form-field label="Group">
+                <nldd-text-field
+                  [value]="link.title"
+                  (input)="onLinkInput(i, 'title', $event)"
+                ></nldd-text-field>
+                <nldd-form-field-help-text>
+                  The heading the link is listed under.
+                </nldd-form-field-help-text>
+              </nldd-form-field>
+              <nldd-form-field label="Link text">
+                <nldd-text-field
+                  [value]="link.urlName"
+                  (input)="onLinkInput(i, 'urlName', $event)"
+                ></nldd-text-field>
+              </nldd-form-field>
+              <nldd-form-field label="URL">
+                <nldd-text-field
+                  type="url"
+                  [value]="link.url"
+                  (input)="onLinkInput(i, 'url', $event)"
+                  [invalid]="!!error('link-' + i)"
+                  [attr.unmet]="'listing-link-error-' + i"
+                ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item [attr.id]="'listing-link-error-' + i">{{
+                    error('link-' + i)
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-button
+                type="button"
+                text="Remove link"
+                start-icon="trash"
+                appearance="destructive"
+                size="sm"
+                (click)="removeLink(i)"
+              ></nldd-button>
+            </div>
+          }
+        </div>
+        @if (listing.documentationLinks.length < maxLinks) {
+          <nldd-button
+            class="mt-4"
+            type="button"
+            text="Add link"
+            start-icon="plus"
+            appearance="secondary"
+            (click)="addLink()"
+          ></nldd-button>
+        }
+      </div>
+    </nldd-card>
+
+    <!-- Visibility -->
+    <nldd-card class="mb-6 block">
+      <div class="space-y-6 p-6">
+        <div>
+          <h2 class="text-lg font-semibold">Visibility</h2>
+          <p class="mt-2 text-gray-600 dark:text-gray-300">Applies as soon as you save.</p>
+        </div>
+        <nldd-radio-button-group
+          name="visibility"
+          accessible-label="Visibility"
+          (change)="onVisibilityChange($event)"
+        >
+          <nldd-radio-button-field
+            value="public"
+            label="Public: every organization can find and install it"
+            [attr.checked]="listing.visibility === 'public' ? '' : null"
+          ></nldd-radio-button-field>
+          <nldd-radio-button-field
+            value="restricted"
+            label="Restricted: only the organizations listed below"
+            [attr.checked]="listing.visibility === 'restricted' ? '' : null"
+          ></nldd-radio-button-field>
+        </nldd-radio-button-group>
+
+        @if (listing.visibility === 'restricted') {
+          <nldd-form-field label="Allowed organizations">
+            <nldd-multi-line-text-field
+              [value]="allowedOrganizationsText()"
+              (input)="onAllowedOrganizationsInput($event)"
+              rows="4"
+              no-spellcheck
+              [invalid]="!!error('allowedOrganizations')"
+              unmet="listing-allowed-organizations-error"
+            ></nldd-multi-line-text-field>
+            <nldd-form-field-help-text>One organization ID per line.</nldd-form-field-help-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="listing-allowed-organizations-error">{{
+                error('allowedOrganizations')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
+          </nldd-form-field>
+        }
+      </div>
+    </nldd-card>
+
+    <nldd-form-actions>
+      <nldd-button
+        type="submit"
+        text="Save listing"
+        appearance="primary"
+        [attr.loading]="isSaving() ? '' : null"
+      ></nldd-button>
+      <nldd-button
+        type="button"
+        text="Cancel"
+        appearance="secondary"
+        [routerLink]="['/manage', listing.id]"
+      ></nldd-button>
+    </nldd-form-actions>
+  </nldd-form>
+}

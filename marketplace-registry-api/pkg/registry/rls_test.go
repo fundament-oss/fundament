@@ -150,3 +150,24 @@ func TestRLSShowsNothingWithoutAnOrganizationContext(t *testing.T) {
 
 	assert.Zero(t, count, "an unset organization must reveal nothing")
 }
+
+// Feature blocks and documentation links reach the live listing only through
+// an approved draft, so the registry may read its own but not write them.
+func TestRegistryRoleCannotWriteFeaturesOrLinks(t *testing.T) {
+	env := newTestEnv(t)
+	orgID := seedOrganization(t, env, "acme")
+	pluginID := seedPluginAs(t, env, orgID, "cert-manager")
+
+	conn := registryConn(t, env, orgID)
+
+	for _, stmt := range []string{
+		`INSERT INTO appstore.plugin_features (plugin_id, title, body, position) VALUES ($1, 'Unreviewed', '', 0)`,
+		`INSERT INTO appstore.plugin_documentation_links (plugin_id, title, url_name, url, position) VALUES ($1, 'Docs', 'Docs', 'https://example.com', 0)`,
+		`UPDATE appstore.plugin_features SET title = 'Unreviewed' WHERE plugin_id = $1`,
+		`UPDATE appstore.plugin_documentation_links SET url = 'https://example.com' WHERE plugin_id = $1`,
+	} {
+		_, err := conn.Exec(context.Background(), stmt, pluginID)
+		require.Error(t, err, stmt)
+		assert.True(t, isRLSDenied(err), "expected insufficient_privilege, got: %v", err)
+	}
+}

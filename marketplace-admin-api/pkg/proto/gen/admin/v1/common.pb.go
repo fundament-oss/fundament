@@ -102,6 +102,7 @@ type Submission struct {
 	xxx_hidden_Feedback        string                 `protobuf:"bytes,110,opt,name=feedback"`
 	xxx_hidden_Logo            string                 `protobuf:"bytes,120,opt,name=logo"`
 	xxx_hidden_LogoDark        string                 `protobuf:"bytes,130,opt,name=logo_dark,json=logoDark"`
+	xxx_hidden_ListingChanges  *v1.ListingDraft       `protobuf:"bytes,140,opt,name=listing_changes,json=listingChanges"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -222,6 +223,13 @@ func (x *Submission) GetLogoDark() string {
 	return ""
 }
 
+func (x *Submission) GetListingChanges() *v1.ListingDraft {
+	if x != nil {
+		return x.xxx_hidden_ListingChanges
+	}
+	return nil
+}
+
 func (x *Submission) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -274,6 +282,10 @@ func (x *Submission) SetLogoDark(v string) {
 	x.xxx_hidden_LogoDark = v
 }
 
+func (x *Submission) SetListingChanges(v *v1.ListingDraft) {
+	x.xxx_hidden_ListingChanges = v
+}
+
 func (x *Submission) HasSubmitted() bool {
 	if x == nil {
 		return false
@@ -288,12 +300,23 @@ func (x *Submission) HasReviewed() bool {
 	return x.xxx_hidden_Reviewed != nil
 }
 
+func (x *Submission) HasListingChanges() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_ListingChanges != nil
+}
+
 func (x *Submission) ClearSubmitted() {
 	x.xxx_hidden_Submitted = nil
 }
 
 func (x *Submission) ClearReviewed() {
 	x.xxx_hidden_Reviewed = nil
+}
+
+func (x *Submission) ClearListingChanges() {
+	x.xxx_hidden_ListingChanges = nil
 }
 
 type Submission_builder struct {
@@ -322,6 +345,9 @@ type Submission_builder struct {
 	// Logo of the submitted version, a data: URI; empty when it declares none.
 	Logo     string
 	LogoDark string
+	// The listing edits submitted with this round, which approving applies.
+	// Absent when the round carries none.
+	ListingChanges *v1.ListingDraft
 }
 
 func (b0 Submission_builder) Build() *Submission {
@@ -341,6 +367,7 @@ func (b0 Submission_builder) Build() *Submission {
 	x.xxx_hidden_Feedback = b.Feedback
 	x.xxx_hidden_Logo = b.Logo
 	x.xxx_hidden_LogoDark = b.LogoDark
+	x.xxx_hidden_ListingChanges = b.ListingChanges
 	return m0
 }
 
@@ -555,7 +582,8 @@ type Plugin_builder struct {
 	Description      string
 	// Publishing organization, resolved through ListPublishers.
 	OrganizationId string
-	// Listing artwork, not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image       string
 	CategoryIds []string
 	Tags        []string
@@ -873,7 +901,7 @@ var File_admin_v1_common_proto protoreflect.FileDescriptor
 
 const file_admin_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15admin/v1/common.proto\x12\badmin.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xa4\x04\n" +
+	"\x15admin/v1/common.proto\x12\badmin.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xec\x04\n" +
 	"\n" +
 	"Submission\x12\x0e\n" +
 	"\x02id\x18\n" +
@@ -889,7 +917,8 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\x10rejection_reason\x18d \x01(\x0e2\x19.admin.v1.RejectionReasonR\x0frejectionReason\x12\x1a\n" +
 	"\bfeedback\x18n \x01(\tR\bfeedback\x12\x12\n" +
 	"\x04logo\x18x \x01(\tR\x04logo\x12\x1c\n" +
-	"\tlogo_dark\x18\x82\x01 \x01(\tR\blogoDark\"\xb5\x03\n" +
+	"\tlogo_dark\x18\x82\x01 \x01(\tR\blogoDark\x12F\n" +
+	"\x0flisting_changes\x18\x8c\x01 \x01(\v2\x1c.marketplace.v1.ListingDraftR\x0elistingChanges\"\xb5\x03\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -939,27 +968,29 @@ var file_admin_v1_common_proto_goTypes = []any{
 	(*PluginVersion)(nil),         // 3: admin.v1.PluginVersion
 	(v1.SubmissionStatus)(0),      // 4: marketplace.v1.SubmissionStatus
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(v1.PluginLabel)(0),           // 6: marketplace.v1.PluginLabel
-	(*v1.PluginPermission)(nil),   // 7: marketplace.v1.PluginPermission
+	(*v1.ListingDraft)(nil),       // 6: marketplace.v1.ListingDraft
+	(v1.PluginLabel)(0),           // 7: marketplace.v1.PluginLabel
+	(*v1.PluginPermission)(nil),   // 8: marketplace.v1.PluginPermission
 }
 var file_admin_v1_common_proto_depIdxs = []int32{
 	4,  // 0: admin.v1.Submission.status:type_name -> marketplace.v1.SubmissionStatus
 	5,  // 1: admin.v1.Submission.submitted:type_name -> google.protobuf.Timestamp
 	5,  // 2: admin.v1.Submission.reviewed:type_name -> google.protobuf.Timestamp
 	0,  // 3: admin.v1.Submission.rejection_reason:type_name -> admin.v1.RejectionReason
-	5,  // 4: admin.v1.Plugin.created:type_name -> google.protobuf.Timestamp
-	5,  // 5: admin.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
-	6,  // 6: admin.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
-	4,  // 7: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
-	7,  // 8: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
-	5,  // 9: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
-	5,  // 10: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
-	5,  // 11: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	6,  // 4: admin.v1.Submission.listing_changes:type_name -> marketplace.v1.ListingDraft
+	5,  // 5: admin.v1.Plugin.created:type_name -> google.protobuf.Timestamp
+	5,  // 6: admin.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
+	7,  // 7: admin.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
+	4,  // 8: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
+	8,  // 9: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
+	5,  // 10: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
+	5,  // 11: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
+	5,  // 12: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_admin_v1_common_proto_init() }

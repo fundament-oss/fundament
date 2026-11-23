@@ -55,7 +55,7 @@ export interface MarketplacePluginSummary {
   vendor: string;
   logo: string; // data: URI; empty when the plugin has none
   logoDark: string;
-  image: string; // listing artwork; not rendered yet
+  image: string; // upstream container image; not rendered yet
   categoryIds: string[];
   categoryName: string; // first category, resolved for display
   tags: string[];

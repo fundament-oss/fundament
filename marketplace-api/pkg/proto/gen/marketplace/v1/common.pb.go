@@ -668,6 +668,183 @@ func (b0 DocumentationLink_builder) Build() *DocumentationLink {
 	return m0
 }
 
+// Listing edits that wait for review (appstore.plugins.listing_draft), as the
+// listing will read once they are approved. A feature block or link without an
+// id is new.
+type ListingDraft struct {
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Description        string                 `protobuf:"bytes,10,opt,name=description"`
+	xxx_hidden_CategoryIds        []string               `protobuf:"bytes,20,rep,name=category_ids,json=categoryIds"`
+	xxx_hidden_Image              string                 `protobuf:"bytes,30,opt,name=image"`
+	xxx_hidden_AuthorName         string                 `protobuf:"bytes,40,opt,name=author_name,json=authorName"`
+	xxx_hidden_AuthorUrl          string                 `protobuf:"bytes,50,opt,name=author_url,json=authorUrl"`
+	xxx_hidden_Logo               string                 `protobuf:"bytes,60,opt,name=logo"`
+	xxx_hidden_LogoDark           string                 `protobuf:"bytes,70,opt,name=logo_dark,json=logoDark"`
+	xxx_hidden_Features           *[]*FeatureBlock       `protobuf:"bytes,80,rep,name=features"`
+	xxx_hidden_DocumentationLinks *[]*DocumentationLink  `protobuf:"bytes,90,rep,name=documentation_links,json=documentationLinks"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
+}
+
+func (x *ListingDraft) Reset() {
+	*x = ListingDraft{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListingDraft) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListingDraft) ProtoMessage() {}
+
+func (x *ListingDraft) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListingDraft) GetDescription() string {
+	if x != nil {
+		return x.xxx_hidden_Description
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetCategoryIds() []string {
+	if x != nil {
+		return x.xxx_hidden_CategoryIds
+	}
+	return nil
+}
+
+func (x *ListingDraft) GetImage() string {
+	if x != nil {
+		return x.xxx_hidden_Image
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetAuthorName() string {
+	if x != nil {
+		return x.xxx_hidden_AuthorName
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetAuthorUrl() string {
+	if x != nil {
+		return x.xxx_hidden_AuthorUrl
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetLogo() string {
+	if x != nil {
+		return x.xxx_hidden_Logo
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_LogoDark
+	}
+	return ""
+}
+
+func (x *ListingDraft) GetFeatures() []*FeatureBlock {
+	if x != nil {
+		if x.xxx_hidden_Features != nil {
+			return *x.xxx_hidden_Features
+		}
+	}
+	return nil
+}
+
+func (x *ListingDraft) GetDocumentationLinks() []*DocumentationLink {
+	if x != nil {
+		if x.xxx_hidden_DocumentationLinks != nil {
+			return *x.xxx_hidden_DocumentationLinks
+		}
+	}
+	return nil
+}
+
+func (x *ListingDraft) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *ListingDraft) SetCategoryIds(v []string) {
+	x.xxx_hidden_CategoryIds = v
+}
+
+func (x *ListingDraft) SetImage(v string) {
+	x.xxx_hidden_Image = v
+}
+
+func (x *ListingDraft) SetAuthorName(v string) {
+	x.xxx_hidden_AuthorName = v
+}
+
+func (x *ListingDraft) SetAuthorUrl(v string) {
+	x.xxx_hidden_AuthorUrl = v
+}
+
+func (x *ListingDraft) SetLogo(v string) {
+	x.xxx_hidden_Logo = v
+}
+
+func (x *ListingDraft) SetLogoDark(v string) {
+	x.xxx_hidden_LogoDark = v
+}
+
+func (x *ListingDraft) SetFeatures(v []*FeatureBlock) {
+	x.xxx_hidden_Features = &v
+}
+
+func (x *ListingDraft) SetDocumentationLinks(v []*DocumentationLink) {
+	x.xxx_hidden_DocumentationLinks = &v
+}
+
+type ListingDraft_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Description string
+	CategoryIds []string
+	Image       string
+	AuthorName  string
+	AuthorUrl   string
+	// Data URIs; empty shows the version's logo.
+	Logo               string
+	LogoDark           string
+	Features           []*FeatureBlock
+	DocumentationLinks []*DocumentationLink
+}
+
+func (b0 ListingDraft_builder) Build() *ListingDraft {
+	m0 := &ListingDraft{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_CategoryIds = b.CategoryIds
+	x.xxx_hidden_Image = b.Image
+	x.xxx_hidden_AuthorName = b.AuthorName
+	x.xxx_hidden_AuthorUrl = b.AuthorUrl
+	x.xxx_hidden_Logo = b.Logo
+	x.xxx_hidden_LogoDark = b.LogoDark
+	x.xxx_hidden_Features = &b.Features
+	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
+	return m0
+}
+
 // A plugin manifest (definition.yaml) as the console reads it: the parsed
 // form of a stored version's manifest.
 type PluginDefinition struct {
@@ -687,7 +864,7 @@ type PluginDefinition struct {
 
 func (x *PluginDefinition) Reset() {
 	*x = PluginDefinition{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	mi := &file_marketplace_v1_common_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -699,7 +876,7 @@ func (x *PluginDefinition) String() string {
 func (*PluginDefinition) ProtoMessage() {}
 
 func (x *PluginDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[6]
+	mi := &file_marketplace_v1_common_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -891,7 +1068,7 @@ type PluginDefinitionMetadata struct {
 
 func (x *PluginDefinitionMetadata) Reset() {
 	*x = PluginDefinitionMetadata{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[7]
+	mi := &file_marketplace_v1_common_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +1080,7 @@ func (x *PluginDefinitionMetadata) String() string {
 func (*PluginDefinitionMetadata) ProtoMessage() {}
 
 func (x *PluginDefinitionMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[7]
+	mi := &file_marketplace_v1_common_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1065,7 +1242,7 @@ type PluginURLs struct {
 
 func (x *PluginURLs) Reset() {
 	*x = PluginURLs{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[8]
+	mi := &file_marketplace_v1_common_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1077,7 +1254,7 @@ func (x *PluginURLs) String() string {
 func (*PluginURLs) ProtoMessage() {}
 
 func (x *PluginURLs) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[8]
+	mi := &file_marketplace_v1_common_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1149,7 +1326,7 @@ type PluginPermissions struct {
 
 func (x *PluginPermissions) Reset() {
 	*x = PluginPermissions{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[9]
+	mi := &file_marketplace_v1_common_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1161,7 +1338,7 @@ func (x *PluginPermissions) String() string {
 func (*PluginPermissions) ProtoMessage() {}
 
 func (x *PluginPermissions) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[9]
+	mi := &file_marketplace_v1_common_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1223,7 +1400,7 @@ type PluginPolicyRule struct {
 
 func (x *PluginPolicyRule) Reset() {
 	*x = PluginPolicyRule{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[10]
+	mi := &file_marketplace_v1_common_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1412,7 @@ func (x *PluginPolicyRule) String() string {
 func (*PluginPolicyRule) ProtoMessage() {}
 
 func (x *PluginPolicyRule) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[10]
+	mi := &file_marketplace_v1_common_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1307,7 +1484,7 @@ type PluginMenu struct {
 
 func (x *PluginMenu) Reset() {
 	*x = PluginMenu{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[11]
+	mi := &file_marketplace_v1_common_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1319,7 +1496,7 @@ func (x *PluginMenu) String() string {
 func (*PluginMenu) ProtoMessage() {}
 
 func (x *PluginMenu) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[11]
+	mi := &file_marketplace_v1_common_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1386,7 +1563,7 @@ type PluginMenuEntry struct {
 
 func (x *PluginMenuEntry) Reset() {
 	*x = PluginMenuEntry{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[12]
+	mi := &file_marketplace_v1_common_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1398,7 +1575,7 @@ func (x *PluginMenuEntry) String() string {
 func (*PluginMenuEntry) ProtoMessage() {}
 
 func (x *PluginMenuEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[12]
+	mi := &file_marketplace_v1_common_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1511,7 +1688,7 @@ type PluginComponentMapping struct {
 
 func (x *PluginComponentMapping) Reset() {
 	*x = PluginComponentMapping{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[13]
+	mi := &file_marketplace_v1_common_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1523,7 +1700,7 @@ func (x *PluginComponentMapping) String() string {
 func (*PluginComponentMapping) ProtoMessage() {}
 
 func (x *PluginComponentMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[13]
+	mi := &file_marketplace_v1_common_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1611,7 +1788,7 @@ type PluginAllowedResource struct {
 
 func (x *PluginAllowedResource) Reset() {
 	*x = PluginAllowedResource{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[14]
+	mi := &file_marketplace_v1_common_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1623,7 +1800,7 @@ func (x *PluginAllowedResource) String() string {
 func (*PluginAllowedResource) ProtoMessage() {}
 
 func (x *PluginAllowedResource) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[14]
+	mi := &file_marketplace_v1_common_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1708,7 +1885,7 @@ type PluginUIHint struct {
 
 func (x *PluginUIHint) Reset() {
 	*x = PluginUIHint{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[15]
+	mi := &file_marketplace_v1_common_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1720,7 +1897,7 @@ func (x *PluginUIHint) String() string {
 func (*PluginUIHint) ProtoMessage() {}
 
 func (x *PluginUIHint) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[15]
+	mi := &file_marketplace_v1_common_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1792,7 +1969,7 @@ type PluginFormGroup struct {
 
 func (x *PluginFormGroup) Reset() {
 	*x = PluginFormGroup{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[16]
+	mi := &file_marketplace_v1_common_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1804,7 +1981,7 @@ func (x *PluginFormGroup) String() string {
 func (*PluginFormGroup) ProtoMessage() {}
 
 func (x *PluginFormGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[16]
+	mi := &file_marketplace_v1_common_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1863,7 +2040,7 @@ type PluginStatusMapping struct {
 
 func (x *PluginStatusMapping) Reset() {
 	*x = PluginStatusMapping{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[17]
+	mi := &file_marketplace_v1_common_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1875,7 +2052,7 @@ func (x *PluginStatusMapping) String() string {
 func (*PluginStatusMapping) ProtoMessage() {}
 
 func (x *PluginStatusMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[17]
+	mi := &file_marketplace_v1_common_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1934,7 +2111,7 @@ type PluginStatusValue struct {
 
 func (x *PluginStatusValue) Reset() {
 	*x = PluginStatusValue{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[18]
+	mi := &file_marketplace_v1_common_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +2123,7 @@ func (x *PluginStatusValue) String() string {
 func (*PluginStatusValue) ProtoMessage() {}
 
 func (x *PluginStatusValue) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[18]
+	mi := &file_marketplace_v1_common_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2030,7 +2207,20 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	" \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x02id\x12\x14\n" +
 	"\x05title\x18\x14 \x01(\tR\x05title\x12\x19\n" +
 	"\burl_name\x18\x1e \x01(\tR\aurlName\x12\x10\n" +
-	"\x03url\x18( \x01(\tR\x03url\"\xed\x05\n" +
+	"\x03url\x18( \x01(\tR\x03url\"\xe8\x02\n" +
+	"\fListingDraft\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescription\x12!\n" +
+	"\fcategory_ids\x18\x14 \x03(\tR\vcategoryIds\x12\x14\n" +
+	"\x05image\x18\x1e \x01(\tR\x05image\x12\x1f\n" +
+	"\vauthor_name\x18( \x01(\tR\n" +
+	"authorName\x12\x1d\n" +
+	"\n" +
+	"author_url\x182 \x01(\tR\tauthorUrl\x12\x12\n" +
+	"\x04logo\x18< \x01(\tR\x04logo\x12\x1b\n" +
+	"\tlogo_dark\x18F \x01(\tR\blogoDark\x128\n" +
+	"\bfeatures\x18P \x03(\v2\x1c.marketplace.v1.FeatureBlockR\bfeatures\x12R\n" +
+	"\x13documentation_links\x18Z \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\"\xed\x05\n" +
 	"\x10PluginDefinition\x12D\n" +
 	"\bmetadata\x18\n" +
 	" \x01(\v2(.marketplace.v1.PluginDefinitionMetadataR\bmetadata\x12\x14\n" +
@@ -2137,7 +2327,7 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03BiZ]github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_marketplace_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_marketplace_v1_common_proto_goTypes = []any{
 	(SubmissionStatus)(0),            // 0: marketplace.v1.SubmissionStatus
 	(PluginLabel)(0),                 // 1: marketplace.v1.PluginLabel
@@ -2147,45 +2337,48 @@ var file_marketplace_v1_common_proto_goTypes = []any{
 	(*PluginPermission)(nil),         // 5: marketplace.v1.PluginPermission
 	(*FeatureBlock)(nil),             // 6: marketplace.v1.FeatureBlock
 	(*DocumentationLink)(nil),        // 7: marketplace.v1.DocumentationLink
-	(*PluginDefinition)(nil),         // 8: marketplace.v1.PluginDefinition
-	(*PluginDefinitionMetadata)(nil), // 9: marketplace.v1.PluginDefinitionMetadata
-	(*PluginURLs)(nil),               // 10: marketplace.v1.PluginURLs
-	(*PluginPermissions)(nil),        // 11: marketplace.v1.PluginPermissions
-	(*PluginPolicyRule)(nil),         // 12: marketplace.v1.PluginPolicyRule
-	(*PluginMenu)(nil),               // 13: marketplace.v1.PluginMenu
-	(*PluginMenuEntry)(nil),          // 14: marketplace.v1.PluginMenuEntry
-	(*PluginComponentMapping)(nil),   // 15: marketplace.v1.PluginComponentMapping
-	(*PluginAllowedResource)(nil),    // 16: marketplace.v1.PluginAllowedResource
-	(*PluginUIHint)(nil),             // 17: marketplace.v1.PluginUIHint
-	(*PluginFormGroup)(nil),          // 18: marketplace.v1.PluginFormGroup
-	(*PluginStatusMapping)(nil),      // 19: marketplace.v1.PluginStatusMapping
-	(*PluginStatusValue)(nil),        // 20: marketplace.v1.PluginStatusValue
-	nil,                              // 21: marketplace.v1.PluginDefinition.CustomComponentsEntry
-	nil,                              // 22: marketplace.v1.PluginDefinition.UiHintsEntry
-	nil,                              // 23: marketplace.v1.PluginStatusMapping.ValuesEntry
+	(*ListingDraft)(nil),             // 8: marketplace.v1.ListingDraft
+	(*PluginDefinition)(nil),         // 9: marketplace.v1.PluginDefinition
+	(*PluginDefinitionMetadata)(nil), // 10: marketplace.v1.PluginDefinitionMetadata
+	(*PluginURLs)(nil),               // 11: marketplace.v1.PluginURLs
+	(*PluginPermissions)(nil),        // 12: marketplace.v1.PluginPermissions
+	(*PluginPolicyRule)(nil),         // 13: marketplace.v1.PluginPolicyRule
+	(*PluginMenu)(nil),               // 14: marketplace.v1.PluginMenu
+	(*PluginMenuEntry)(nil),          // 15: marketplace.v1.PluginMenuEntry
+	(*PluginComponentMapping)(nil),   // 16: marketplace.v1.PluginComponentMapping
+	(*PluginAllowedResource)(nil),    // 17: marketplace.v1.PluginAllowedResource
+	(*PluginUIHint)(nil),             // 18: marketplace.v1.PluginUIHint
+	(*PluginFormGroup)(nil),          // 19: marketplace.v1.PluginFormGroup
+	(*PluginStatusMapping)(nil),      // 20: marketplace.v1.PluginStatusMapping
+	(*PluginStatusValue)(nil),        // 21: marketplace.v1.PluginStatusValue
+	nil,                              // 22: marketplace.v1.PluginDefinition.CustomComponentsEntry
+	nil,                              // 23: marketplace.v1.PluginDefinition.UiHintsEntry
+	nil,                              // 24: marketplace.v1.PluginStatusMapping.ValuesEntry
 }
 var file_marketplace_v1_common_proto_depIdxs = []int32{
-	9,  // 0: marketplace.v1.PluginDefinition.metadata:type_name -> marketplace.v1.PluginDefinitionMetadata
-	11, // 1: marketplace.v1.PluginDefinition.permissions:type_name -> marketplace.v1.PluginPermissions
-	13, // 2: marketplace.v1.PluginDefinition.menu:type_name -> marketplace.v1.PluginMenu
-	21, // 3: marketplace.v1.PluginDefinition.custom_components:type_name -> marketplace.v1.PluginDefinition.CustomComponentsEntry
-	16, // 4: marketplace.v1.PluginDefinition.allowed_resources:type_name -> marketplace.v1.PluginAllowedResource
-	22, // 5: marketplace.v1.PluginDefinition.ui_hints:type_name -> marketplace.v1.PluginDefinition.UiHintsEntry
-	10, // 6: marketplace.v1.PluginDefinitionMetadata.urls:type_name -> marketplace.v1.PluginURLs
-	12, // 7: marketplace.v1.PluginPermissions.rbac:type_name -> marketplace.v1.PluginPolicyRule
-	14, // 8: marketplace.v1.PluginMenu.organization:type_name -> marketplace.v1.PluginMenuEntry
-	14, // 9: marketplace.v1.PluginMenu.project:type_name -> marketplace.v1.PluginMenuEntry
-	18, // 10: marketplace.v1.PluginUIHint.form_groups:type_name -> marketplace.v1.PluginFormGroup
-	19, // 11: marketplace.v1.PluginUIHint.status_mapping:type_name -> marketplace.v1.PluginStatusMapping
-	23, // 12: marketplace.v1.PluginStatusMapping.values:type_name -> marketplace.v1.PluginStatusMapping.ValuesEntry
-	15, // 13: marketplace.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> marketplace.v1.PluginComponentMapping
-	17, // 14: marketplace.v1.PluginDefinition.UiHintsEntry.value:type_name -> marketplace.v1.PluginUIHint
-	20, // 15: marketplace.v1.PluginStatusMapping.ValuesEntry.value:type_name -> marketplace.v1.PluginStatusValue
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	6,  // 0: marketplace.v1.ListingDraft.features:type_name -> marketplace.v1.FeatureBlock
+	7,  // 1: marketplace.v1.ListingDraft.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	10, // 2: marketplace.v1.PluginDefinition.metadata:type_name -> marketplace.v1.PluginDefinitionMetadata
+	12, // 3: marketplace.v1.PluginDefinition.permissions:type_name -> marketplace.v1.PluginPermissions
+	14, // 4: marketplace.v1.PluginDefinition.menu:type_name -> marketplace.v1.PluginMenu
+	22, // 5: marketplace.v1.PluginDefinition.custom_components:type_name -> marketplace.v1.PluginDefinition.CustomComponentsEntry
+	17, // 6: marketplace.v1.PluginDefinition.allowed_resources:type_name -> marketplace.v1.PluginAllowedResource
+	23, // 7: marketplace.v1.PluginDefinition.ui_hints:type_name -> marketplace.v1.PluginDefinition.UiHintsEntry
+	11, // 8: marketplace.v1.PluginDefinitionMetadata.urls:type_name -> marketplace.v1.PluginURLs
+	13, // 9: marketplace.v1.PluginPermissions.rbac:type_name -> marketplace.v1.PluginPolicyRule
+	15, // 10: marketplace.v1.PluginMenu.organization:type_name -> marketplace.v1.PluginMenuEntry
+	15, // 11: marketplace.v1.PluginMenu.project:type_name -> marketplace.v1.PluginMenuEntry
+	19, // 12: marketplace.v1.PluginUIHint.form_groups:type_name -> marketplace.v1.PluginFormGroup
+	20, // 13: marketplace.v1.PluginUIHint.status_mapping:type_name -> marketplace.v1.PluginStatusMapping
+	24, // 14: marketplace.v1.PluginStatusMapping.values:type_name -> marketplace.v1.PluginStatusMapping.ValuesEntry
+	16, // 15: marketplace.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> marketplace.v1.PluginComponentMapping
+	18, // 16: marketplace.v1.PluginDefinition.UiHintsEntry.value:type_name -> marketplace.v1.PluginUIHint
+	21, // 17: marketplace.v1.PluginStatusMapping.ValuesEntry.value:type_name -> marketplace.v1.PluginStatusValue
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_marketplace_v1_common_proto_init() }
@@ -2199,7 +2392,7 @@ func file_marketplace_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_marketplace_v1_common_proto_rawDesc), len(file_marketplace_v1_common_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

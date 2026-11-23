@@ -158,6 +158,28 @@ func TestListPlugins_LogoFromLatestPublished(t *testing.T) {
 	assert.Equal(t, "dark-b", got.GetPlugin().GetLogoDark())
 }
 
+// A logo uploaded on the listing wins over the published version's; an
+// upload of only one variant leaves the other with the version.
+func TestListPlugins_ListingLogoWinsOverTheVersions(t *testing.T) {
+	env := newTestEnv(t)
+	pluginID := seedLogoVersions(t, env, "logo-listing")
+	_, err := env.adminPool.Exec(context.Background(),
+		`UPDATE appstore.plugins SET logo = 'logo-uploaded' WHERE id = $1`, pluginID)
+	require.NoError(t, err)
+	srv := newServer(t, env)
+
+	list, err := srv.ListPlugins(context.Background(), catalogv1.ListPluginsRequest_builder{Query: "logo-listing"}.Build())
+	require.NoError(t, err)
+	require.Len(t, list.GetPlugins(), 1)
+	assert.Equal(t, "logo-uploaded", list.GetPlugins()[0].GetLogo())
+	assert.Equal(t, "dark-b", list.GetPlugins()[0].GetLogoDark())
+
+	got, err := srv.GetPlugin(context.Background(), catalogv1.GetPluginRequest_builder{PluginId: pluginID.String()}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, "logo-uploaded", got.GetPlugin().GetLogo())
+	assert.Equal(t, "dark-b", got.GetPlugin().GetLogoDark())
+}
+
 func TestListPlugins_NoCustomLogo(t *testing.T) {
 	env := newTestEnv(t)
 	seedPlugin(t, env, seedOptions{Name: "logo-none", Visibility: "public", Published: true})

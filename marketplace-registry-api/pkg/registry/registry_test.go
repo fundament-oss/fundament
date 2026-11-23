@@ -211,6 +211,9 @@ func TestListPluginsKeepsChildRowsWithTheirOwnListing(t *testing.T) {
 	}.Build())
 	require.NoError(t, err)
 
+	approveListing(t, env, client, first)
+	approveListing(t, env, client, second)
+
 	resp, err := client.ListPlugins(context.Background(), registryv1.ListPluginsRequest_builder{}.Build())
 	require.NoError(t, err)
 
@@ -314,13 +317,12 @@ func TestUpdatePluginReplacesRepeatedFieldsWholesale(t *testing.T) {
 		for _, title := range titles {
 			features = append(features, marketplacev1.FeatureBlock_builder{Title: title, Body: "Body."}.Build())
 		}
-		resp, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
+		updatePlugin(t, client, registryv1.UpdatePluginRequest_builder{
 			PluginId:   plugin.GetId(),
 			Features:   features,
 			Visibility: registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
 		}.Build())
-		require.NoError(t, err)
-		return resp.GetPlugin()
+		return approveListing(t, env, client, plugin)
 	}
 
 	require.Len(t, update("Backups", "Failover").GetFeatures(), 2)
@@ -356,7 +358,7 @@ func TestUpdatePluginKeepsDefinitionOwnedFields(t *testing.T) {
 	require.NoError(t, err)
 
 	updated := resp.GetPlugin()
-	assert.Equal(t, "A long write-up.", updated.GetDescription())
+	assert.Equal(t, "A long write-up.", updated.GetPendingListing().GetDescription())
 	assert.Equal(t, "Postgres Operator", updated.GetDisplayName())
 	assert.Equal(t, "Runs Postgres.", updated.GetDescriptionShort())
 	assert.Equal(t, []string{"database"}, updated.GetTags())
@@ -382,8 +384,6 @@ func TestUpdatePluginStoresTheAllowListForRestrictedListings(t *testing.T) {
 	assert.Equal(t, []string{allowedOrgID.String()}, resp.GetPlugin().GetAllowedOrganizationIds())
 }
 
-// updateLinks applies a documentation-link set to a listing, holding the rest of
-// the request steady so only the links vary.
 // updateChildrenRequest holds the scalar fields steady so only the child rows
 // under test vary between calls.
 func updateChildrenRequest(pluginID string, links []*marketplacev1.DocumentationLink, features []*marketplacev1.FeatureBlock) *registryv1.UpdatePluginRequest {
@@ -403,22 +403,20 @@ func updateFeaturesRequest(pluginID string, features ...*marketplacev1.FeatureBl
 	return updateChildrenRequest(pluginID, nil, features)
 }
 
-func updateLinks(t *testing.T, client registryClient, pluginID string, links ...*marketplacev1.DocumentationLink) *registryv1.Plugin {
+// updateLinks and updateFeatures edit the listing and approve the edit, and
+// return the live listing.
+func updateLinks(t *testing.T, env *testEnv, client registryClient, plugin *registryv1.Plugin, links ...*marketplacev1.DocumentationLink) *registryv1.Plugin {
 	t.Helper()
 
-	resp, err := client.UpdatePlugin(context.Background(), updateLinksRequest(pluginID, links...))
-	require.NoError(t, err)
-
-	return resp.GetPlugin()
+	updatePlugin(t, client, updateLinksRequest(plugin.GetId(), links...))
+	return approveListing(t, env, client, plugin)
 }
 
-func updateFeatures(t *testing.T, client registryClient, pluginID string, features ...*marketplacev1.FeatureBlock) *registryv1.Plugin {
+func updateFeatures(t *testing.T, env *testEnv, client registryClient, plugin *registryv1.Plugin, features ...*marketplacev1.FeatureBlock) *registryv1.Plugin {
 	t.Helper()
 
-	resp, err := client.UpdatePlugin(context.Background(), updateFeaturesRequest(pluginID, features...))
-	require.NoError(t, err)
-
-	return resp.GetPlugin()
+	updatePlugin(t, client, updateFeaturesRequest(plugin.GetId(), features...))
+	return approveListing(t, env, client, plugin)
 }
 
 // A documentation link is the one child row whose id the API hands out, so an
@@ -430,7 +428,7 @@ func TestUpdatePluginKeepsTheIDOfADocumentationLinkHandedBack(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateLinks(t, client, plugin.GetId(), marketplacev1.DocumentationLink_builder{
+	created := updateLinks(t, env, client, plugin, marketplacev1.DocumentationLink_builder{
 		Title: "Guides", UrlName: "Getting started", Url: "https://example.com/start",
 	}.Build())
 	require.Len(t, created.GetDocumentationLinks(), 1)
@@ -438,7 +436,7 @@ func TestUpdatePluginKeepsTheIDOfADocumentationLinkHandedBack(t *testing.T) {
 	linkID := created.GetDocumentationLinks()[0].GetId()
 	require.NotEmpty(t, linkID)
 
-	edited := updateLinks(t, client, plugin.GetId(), marketplacev1.DocumentationLink_builder{
+	edited := updateLinks(t, env, client, plugin, marketplacev1.DocumentationLink_builder{
 		Id: linkID, Title: "Guides", UrlName: "Quickstart", Url: "https://example.com/start",
 	}.Build())
 	require.Len(t, edited.GetDocumentationLinks(), 1)
@@ -455,7 +453,7 @@ func TestUpdatePluginDropsADocumentationLinkTheRequestOmits(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateLinks(t, client, plugin.GetId(),
+	created := updateLinks(t, env, client, plugin,
 		marketplacev1.DocumentationLink_builder{Title: "Guides", UrlName: "Start", Url: "https://example.com/start"}.Build(),
 		marketplacev1.DocumentationLink_builder{Title: "Guides", UrlName: "API", Url: "https://example.com/api"}.Build(),
 	)
@@ -463,7 +461,7 @@ func TestUpdatePluginDropsADocumentationLinkTheRequestOmits(t *testing.T) {
 
 	keptID := created.GetDocumentationLinks()[0].GetId()
 
-	after := updateLinks(t, client, plugin.GetId(), marketplacev1.DocumentationLink_builder{
+	after := updateLinks(t, env, client, plugin, marketplacev1.DocumentationLink_builder{
 		Id: keptID, Title: "Guides", UrlName: "Start", Url: "https://example.com/start",
 	}.Build())
 
@@ -471,15 +469,15 @@ func TestUpdatePluginDropsADocumentationLinkTheRequestOmits(t *testing.T) {
 	assert.Equal(t, keptID, after.GetDocumentationLinks()[0].GetId())
 }
 
-// The update is scoped by plugin_id as well as id, so an id from somewhere else
-// is an error rather than a silent no-op. The whole request rolls back with it.
+// An id must name one of the listing's live links, so one from somewhere else
+// is refused and nothing is stored.
 func TestUpdatePluginRejectsAnUnknownDocumentationLinkID(t *testing.T) {
 	env := newTestEnv(t)
 	_, client := newOrgClient(t, env)
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateLinks(t, client, plugin.GetId(), marketplacev1.DocumentationLink_builder{
+	created := updateLinks(t, env, client, plugin, marketplacev1.DocumentationLink_builder{
 		Title: "Guides", UrlName: "Start", Url: "https://example.com/start",
 	}.Build())
 	require.Len(t, created.GetDocumentationLinks(), 1)
@@ -506,7 +504,7 @@ func TestUpdatePluginKeepsTheIDOfAFeatureBlockHandedBack(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateFeatures(t, client, plugin.GetId(),
+	created := updateFeatures(t, env, client, plugin,
 		marketplacev1.FeatureBlock_builder{Title: "Backups", Body: "Nightly."}.Build(),
 		marketplacev1.FeatureBlock_builder{Title: "Failover", Body: "Automatic."}.Build(),
 	)
@@ -516,7 +514,7 @@ func TestUpdatePluginKeepsTheIDOfAFeatureBlockHandedBack(t *testing.T) {
 	require.NotEmpty(t, keptID)
 
 	// Carries the first back edited and omits the second.
-	after := updateFeatures(t, client, plugin.GetId(), marketplacev1.FeatureBlock_builder{
+	after := updateFeatures(t, env, client, plugin, marketplacev1.FeatureBlock_builder{
 		Id: keptID, Title: "Backups", Body: "Hourly.",
 	}.Build())
 
@@ -531,7 +529,7 @@ func TestUpdatePluginRejectsAnUnknownFeatureBlockID(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateFeatures(t, client, plugin.GetId(),
+	created := updateFeatures(t, env, client, plugin,
 		marketplacev1.FeatureBlock_builder{Title: "Backups", Body: "Nightly."}.Build())
 	require.Len(t, created.GetFeatures(), 1)
 
@@ -555,7 +553,7 @@ func TestUpdatePluginRejectsTheSameDocumentationLinkIDTwice(t *testing.T) {
 
 	plugin := createPlugin(t, client, "postgres-operator")
 
-	created := updateLinks(t, client, plugin.GetId(), marketplacev1.DocumentationLink_builder{
+	created := updateLinks(t, env, client, plugin, marketplacev1.DocumentationLink_builder{
 		Title: "Guides", UrlName: "Start", Url: "https://example.com/start",
 	}.Build())
 	require.Len(t, created.GetDocumentationLinks(), 1)

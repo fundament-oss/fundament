@@ -97,6 +97,9 @@ type Plugin struct {
 	xxx_hidden_Labels                   []v1.PluginLabel         `protobuf:"varint,220,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
 	xxx_hidden_Logo                     string                   `protobuf:"bytes,230,opt,name=logo"`
 	xxx_hidden_LogoDark                 string                   `protobuf:"bytes,240,opt,name=logo_dark,json=logoDark"`
+	xxx_hidden_ListingLogo              string                   `protobuf:"bytes,250,opt,name=listing_logo,json=listingLogo"`
+	xxx_hidden_ListingLogoDark          string                   `protobuf:"bytes,260,opt,name=listing_logo_dark,json=listingLogoDark"`
+	xxx_hidden_PendingListing           *v1.ListingDraft         `protobuf:"bytes,270,opt,name=pending_listing,json=pendingListing"`
 	unknownFields                       protoimpl.UnknownFields
 	sizeCache                           protoimpl.SizeCache
 }
@@ -291,6 +294,27 @@ func (x *Plugin) GetLogoDark() string {
 	return ""
 }
 
+func (x *Plugin) GetListingLogo() string {
+	if x != nil {
+		return x.xxx_hidden_ListingLogo
+	}
+	return ""
+}
+
+func (x *Plugin) GetListingLogoDark() string {
+	if x != nil {
+		return x.xxx_hidden_ListingLogoDark
+	}
+	return ""
+}
+
+func (x *Plugin) GetPendingListing() *v1.ListingDraft {
+	if x != nil {
+		return x.xxx_hidden_PendingListing
+	}
+	return nil
+}
+
 func (x *Plugin) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -383,6 +407,18 @@ func (x *Plugin) SetLogoDark(v string) {
 	x.xxx_hidden_LogoDark = v
 }
 
+func (x *Plugin) SetListingLogo(v string) {
+	x.xxx_hidden_ListingLogo = v
+}
+
+func (x *Plugin) SetListingLogoDark(v string) {
+	x.xxx_hidden_ListingLogoDark = v
+}
+
+func (x *Plugin) SetPendingListing(v *v1.ListingDraft) {
+	x.xxx_hidden_PendingListing = v
+}
+
 func (x *Plugin) HasCreated() bool {
 	if x == nil {
 		return false
@@ -397,12 +433,23 @@ func (x *Plugin) HasUpdated() bool {
 	return x.xxx_hidden_Updated != nil
 }
 
+func (x *Plugin) HasPendingListing() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_PendingListing != nil
+}
+
 func (x *Plugin) ClearCreated() {
 	x.xxx_hidden_Created = nil
 }
 
 func (x *Plugin) ClearUpdated() {
 	x.xxx_hidden_Updated = nil
+}
+
+func (x *Plugin) ClearPendingListing() {
+	x.xxx_hidden_PendingListing = nil
 }
 
 type Plugin_builder struct {
@@ -419,7 +466,8 @@ type Plugin_builder struct {
 	// no qualifier. The developer frontend is authenticated and a member, so
 	// organization-api's GetOrganization resolves it.
 	OrganizationId string
-	// Listing artwork, not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image string
 	// Curated vocabulary, resolved through ListCategories. Matches what
 	// UpdatePlugin already accepts.
@@ -446,9 +494,17 @@ type Plugin_builder struct {
 	// Trust and support badges. Fundament assigns them, so CreatePlugin and
 	// UpdatePlugin do not accept them; the developer only reads them back.
 	Labels []v1.PluginLabel
-	// Logo of the newest pushed version, as a data URI. Empty when it has none.
+	// Logo shown for the plugin, as a data URI: the uploaded listing logo, else
+	// the newest pushed version's. Empty when neither exists.
 	Logo     string
 	LogoDark string
+	// The listing's own logos, as data URIs; empty when it has none and logo
+	// falls back to the version's.
+	ListingLogo     string
+	ListingLogoDark string
+	// Edits from UpdatePlugin that wait for review: submitting a version sends
+	// them along, and approving it makes them live. Absent when there are none.
+	PendingListing *v1.ListingDraft
 }
 
 func (b0 Plugin_builder) Build() *Plugin {
@@ -478,6 +534,9 @@ func (b0 Plugin_builder) Build() *Plugin {
 	x.xxx_hidden_Labels = b.Labels
 	x.xxx_hidden_Logo = b.Logo
 	x.xxx_hidden_LogoDark = b.LogoDark
+	x.xxx_hidden_ListingLogo = b.ListingLogo
+	x.xxx_hidden_ListingLogoDark = b.ListingLogoDark
+	x.xxx_hidden_PendingListing = b.PendingListing
 	return m0
 }
 
@@ -722,7 +781,7 @@ var File_registry_v1_common_proto protoreflect.FileDescriptor
 
 const file_registry_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xb9\a\n" +
+	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xd2\b\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -751,7 +810,10 @@ const file_registry_v1_common_proto_rawDesc = "" +
 	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x124\n" +
 	"\x06labels\x18\xdc\x01 \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\x12\x13\n" +
 	"\x04logo\x18\xe6\x01 \x01(\tR\x04logo\x12\x1c\n" +
-	"\tlogo_dark\x18\xf0\x01 \x01(\tR\blogoDark\"\xc7\x03\n" +
+	"\tlogo_dark\x18\xf0\x01 \x01(\tR\blogoDark\x12\"\n" +
+	"\flisting_logo\x18\xfa\x01 \x01(\tR\vlistingLogo\x12+\n" +
+	"\x11listing_logo_dark\x18\x84\x02 \x01(\tR\x0flistingLogoDark\x12F\n" +
+	"\x0fpending_listing\x18\x8e\x02 \x01(\v2\x1c.marketplace.v1.ListingDraftR\x0ependingListing\"\xc7\x03\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -780,7 +842,8 @@ var file_registry_v1_common_proto_goTypes = []any{
 	(*v1.FeatureBlock)(nil),       // 4: marketplace.v1.FeatureBlock
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 	(v1.PluginLabel)(0),           // 6: marketplace.v1.PluginLabel
-	(v1.SubmissionStatus)(0),      // 7: marketplace.v1.SubmissionStatus
+	(*v1.ListingDraft)(nil),       // 7: marketplace.v1.ListingDraft
+	(v1.SubmissionStatus)(0),      // 8: marketplace.v1.SubmissionStatus
 }
 var file_registry_v1_common_proto_depIdxs = []int32{
 	3,  // 0: registry.v1.Plugin.documentation_links:type_name -> marketplace.v1.DocumentationLink
@@ -789,15 +852,16 @@ var file_registry_v1_common_proto_depIdxs = []int32{
 	5,  // 3: registry.v1.Plugin.created:type_name -> google.protobuf.Timestamp
 	5,  // 4: registry.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
 	6,  // 5: registry.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
-	7,  // 6: registry.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
-	5,  // 7: registry.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
-	5,  // 8: registry.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
-	5,  // 9: registry.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	7,  // 6: registry.v1.Plugin.pending_listing:type_name -> marketplace.v1.ListingDraft
+	8,  // 7: registry.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
+	5,  // 8: registry.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
+	5,  // 9: registry.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
+	5,  // 10: registry.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_registry_v1_common_proto_init() }

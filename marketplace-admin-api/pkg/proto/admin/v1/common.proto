@@ -53,6 +53,9 @@ message Submission {
   // Logo of the submitted version, a data: URI; empty when it declares none.
   string logo = 120;
   string logo_dark = 130;
+  // The listing edits submitted with this round, which approving applies.
+  // Absent when the round carries none.
+  marketplace.v1.ListingDraft listing_changes = 140;
 }
 
 // The listing a submission points at, as it stands now. Deliberately narrower
@@ -67,7 +70,8 @@ message Plugin {
   string description = 50;
   // Publishing organization, resolved through ListPublishers.
   string organization_id = 60;
-  // Listing artwork, not a container image.
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
   string image = 70;
   repeated string category_ids = 80;
   repeated string tags = 90;

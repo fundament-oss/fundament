@@ -194,8 +194,8 @@ func decidePluginVersion(ctx *Context, d *pluginDecision) error {
 	}
 
 	if d.status == dbconst.PluginDefinitionStatus_Approved {
-		if err := syncListing(bgCtx, qtx, ver.ID); err != nil {
-			return err
+		if err := pluginlisting.Sync(bgCtx, tx, ver.ID); err != nil {
+			return fmt.Errorf("failed to sync listing: %w", err)
 		}
 	}
 
@@ -222,63 +222,6 @@ func decidePluginVersion(ctx *Context, d *pluginDecision) error {
 
 	ctx.Logger.Info("decided plugin version", "organization", plug.organization, "plugin", plug.name,
 		"version", d.version, "status", string(d.status), "reviewer", reviewerID.String())
-
-	return nil
-}
-
-// syncListing mirrors marketplace-admin-api's: the definition.yaml-owned
-// fields of a just-approved version are copied onto its listing, unless a
-// newer version is already published.
-func syncListing(ctx context.Context, qtx *db.Queries, versionID uuid.UUID) error {
-	version, err := qtx.PluginVersionGetManifest(ctx, db.PluginVersionGetManifestParams{ID: versionID})
-	if err != nil {
-		return fmt.Errorf("failed to load approved manifest: %w", err)
-	}
-
-	if _, err := qtx.PluginLockForSync(ctx, db.PluginLockForSyncParams{ID: version.PluginID}); err != nil {
-		return fmt.Errorf("failed to lock plugin listing: %w", err)
-	}
-
-	others, err := qtx.PluginVersionsPublishedExcept(ctx, db.PluginVersionsPublishedExceptParams{
-		PluginID: version.PluginID, ID: versionID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list published versions: %w", err)
-	}
-	if !pluginlisting.IsNewest(version.PluginVersion, others) {
-		return nil
-	}
-
-	fields, err := pluginlisting.FromManifest(version.Manifest)
-	if err != nil {
-		return err //nolint:wrapcheck // already names the cause
-	}
-
-	if err := qtx.PluginListingSync(ctx, db.PluginListingSyncParams{
-		ID:               version.PluginID,
-		DisplayName:      fields.DisplayName,
-		DescriptionShort: fields.DescriptionShort,
-		RepositoryUrl:    pgtype.Text{String: fields.RepositoryURL, Valid: fields.RepositoryURL != ""},
-		License:          fields.License,
-	}); err != nil {
-		return fmt.Errorf("failed to sync listing: %w", err)
-	}
-
-	if err := qtx.PluginTagsDeleteByPluginID(ctx, db.PluginTagsDeleteByPluginIDParams{PluginID: version.PluginID}); err != nil {
-		return fmt.Errorf("failed to clear tags: %w", err)
-	}
-	for _, name := range fields.Tags {
-		if err := qtx.TagInsertIfMissing(ctx, db.TagInsertIfMissingParams{Name: name}); err != nil {
-			return fmt.Errorf("failed to create tag: %w", err)
-		}
-		tagID, err := qtx.TagGetByName(ctx, db.TagGetByNameParams{Name: name})
-		if err != nil {
-			return fmt.Errorf("failed to resolve tag: %w", err)
-		}
-		if err := qtx.PluginTagInsert(ctx, db.PluginTagInsertParams{PluginID: version.PluginID, TagID: tagID}); err != nil {
-			return fmt.Errorf("failed to attach tag: %w", err)
-		}
-	}
 
 	return nil
 }

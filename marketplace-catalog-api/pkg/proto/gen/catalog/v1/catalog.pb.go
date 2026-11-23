@@ -309,7 +309,8 @@ type PluginSummary_builder struct {
 	DescriptionShort string
 	// Publishing organization, resolved through ListPublishers.
 	OrganizationId string
-	// Listing artwork (appstore.plugins.image), not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image       string
 	CategoryIds []string
 	// Free-form labels with no independent identity, unlike categories.
@@ -697,7 +698,8 @@ type PluginDetails_builder struct {
 	DescriptionShort string
 	// See PluginSummary.organization_id.
 	OrganizationId string
-	// Listing artwork (appstore.plugins.image), not a container image.
+	// Upstream container image the plugin is built around, shown for reference;
+	// the image a version runs is its manifest's.
 	Image       string
 	CategoryIds []string
 	Tags        []string

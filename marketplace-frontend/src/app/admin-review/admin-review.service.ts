@@ -54,6 +54,22 @@ export interface PluginSubmission {
   // Present only when status === 'rejected'.
   rejectionReason?: RejectionReasonValue;
   feedback?: string;
+  // The listing edits submitted with this round, which approving applies.
+  // description and categories above already show them.
+  listingChanges?: ListingChanges;
+}
+
+export interface ListingChanges {
+  descriptionChanged: boolean;
+  categoriesChanged: boolean;
+  authorName: string;
+  authorUrl: string;
+  image: string;
+  // data: URIs; empty shows the version's logo.
+  logo: string;
+  logoDark: string;
+  features: { title: string; body: string }[];
+  documentationLinks: { title: string; urlName: string; url: string }[];
 }
 
 // One review round of a plugin, as the submission page's history lists it. A
@@ -225,16 +241,35 @@ export default class AdminReviewService {
     categories: Map<string, string>,
   ): PluginSubmission {
     const status = fromProtoStatus(submission.status);
+    const changes = submission.listingChanges;
+    const liveCategoryIds = plugin?.categoryIds ?? [];
+    const categoryIds = changes?.categoryIds ?? liveCategoryIds;
     return {
       id: submission.id,
       pluginId: submission.pluginId,
       pluginVersionId: submission.pluginVersionId,
       title: plugin?.displayName ?? '',
       descriptionShort: plugin?.descriptionShort ?? '',
-      description: plugin?.description ?? '',
-      categories: (plugin?.categoryIds ?? [])
+      description: changes?.description ?? plugin?.description ?? '',
+      categories: categoryIds
         .map((categoryId) => categories.get(categoryId))
         .filter((name): name is string => name !== undefined),
+      listingChanges: changes && {
+        descriptionChanged: changes.description !== (plugin?.description ?? ''),
+        categoriesChanged:
+          [...changes.categoryIds].sort().join() !== [...liveCategoryIds].sort().join(),
+        authorName: changes.authorName,
+        authorUrl: changes.authorUrl,
+        image: changes.image,
+        logo: changes.logo,
+        logoDark: changes.logoDark,
+        features: changes.features.map(({ title, body }) => ({ title, body })),
+        documentationLinks: changes.documentationLinks.map(({ title, urlName, url }) => ({
+          title,
+          urlName,
+          url,
+        })),
+      },
       logo: submission.logo,
       logoDark: submission.logoDark,
       menuIcons: [],

@@ -31,10 +31,11 @@ const (
 )
 
 // testManifest is a parseable definition: approval syncs its listing fields.
-func testManifest(name, version, displayName string) string {
+func testManifest(name, version string) string {
 	return "apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n" +
-		"  name: " + name + "\n  displayName: " + displayName + "\n  version: " + version + "\n" +
-		"  description: Ships logs.\n  tags: [logging]\n" +
+		"  name: " + name + "\n  displayName: Logging Operator\n  version: " + version + "\n" +
+		"  description: Ships logs.\n  license: Apache-2.0\n" +
+		"  urls:\n    repository: https://example.com/" + name + "\n  tags: [logging]\n" +
 		"spec:\n  image: ghcr.io/example/" + name + "@sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\n"
 }
 
@@ -51,7 +52,7 @@ func seedPluginVersion(t *testing.T, ctx *Context, orgID, name, version string, 
 	err = ctx.DB.Pool.QueryRow(t.Context(), `
 		INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash, status)
 		VALUES ($1, $2, $3, 'testhash', $4)
-		RETURNING id`, pluginID, version, []byte(testManifest(name, version, name)), string(status)).Scan(&definitionID)
+		RETURNING id`, pluginID, version, []byte(testManifest(name, version)), string(status)).Scan(&definitionID)
 	require.NoError(t, err)
 
 	return pluginID, definitionID
@@ -126,17 +127,49 @@ func TestPluginApprove_SyncsListingFields(t *testing.T) {
 		Plugin: pluginID.String(), Version: "1.0.0", Reviewer: testReviewerAliceID,
 	}).Run(ctx))
 
-	var descriptionShort string
+	var displayName, descriptionShort, repositoryURL, license string
 	var tags []string
 	err := ctx.DB.Pool.QueryRow(t.Context(), `
-		SELECT plugins.description_short,
+		SELECT plugins.display_name, plugins.description_short, plugins.repository_url, plugins.license,
 		       ARRAY(SELECT tags.name FROM appstore.plugins_tags
 		               JOIN appstore.tags ON tags.id = plugins_tags.tag_id
 		              WHERE plugins_tags.plugin_id = plugins.id)
-		FROM appstore.plugins WHERE id = $1`, pluginID).Scan(&descriptionShort, &tags)
+		FROM appstore.plugins WHERE id = $1`, pluginID).Scan(&displayName, &descriptionShort, &repositoryURL, &license, &tags)
 	require.NoError(t, err)
+	assert.Equal(t, "Logging Operator", displayName)
 	assert.Equal(t, "Ships logs.", descriptionShort)
+	assert.Equal(t, "https://example.com/logging-operator", repositoryURL)
+	assert.Equal(t, "Apache-2.0", license)
 	assert.Equal(t, []string{"logging"}, tags)
+}
+
+// The listing edits frozen on the round go live with the approval.
+func TestPluginApprove_AppliesTheSubmittedListingDraft(t *testing.T) {
+	ctx := newTestContext(t)
+	pluginID, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
+	seedOpenRound(t, ctx, defID)
+
+	draft := `{"description": "Reviewed write-up.", "authorName": "Globex"}`
+	_, err := ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE appstore.plugins SET listing_draft = $2 WHERE id = $1`, pluginID, draft)
+	require.NoError(t, err)
+	_, err = ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE appstore.submissions SET listing_draft = $2 WHERE plugin_definition_id = $1 AND closed IS NULL`, defID, draft)
+	require.NoError(t, err)
+
+	require.NoError(t, (&PluginApproveCmd{
+		Plugin: pluginID.String(), Version: "1.0.0", Reviewer: testReviewerAliceID,
+	}).Run(ctx))
+
+	var description, authorName string
+	var pending []byte
+	err = ctx.DB.Pool.QueryRow(t.Context(),
+		`SELECT description, author_name, listing_draft FROM appstore.plugins WHERE id = $1`, pluginID).
+		Scan(&description, &authorName, &pending)
+	require.NoError(t, err)
+	assert.Equal(t, "Reviewed write-up.", description)
+	assert.Equal(t, "Globex", authorName)
+	assert.Nil(t, pending)
 }
 
 func TestPluginApprove_ByPluginID(t *testing.T) {

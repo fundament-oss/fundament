@@ -7,7 +7,7 @@ import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2"
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { DocumentationLink, FeatureBlock, PluginLabel, SubmissionStatus } from "../../marketplace/v1/common_pb";
+import type { DocumentationLink, FeatureBlock, ListingDraft, PluginLabel, SubmissionStatus } from "../../marketplace/v1/common_pb";
 import { file_marketplace_v1_common } from "../../marketplace/v1/common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file registry/v1/common.proto.
  */
 export const file_registry_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChhyZWdpc3RyeS92MS9jb21tb24ucHJvdG8SC3JlZ2lzdHJ5LnYxIqQFCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSEwoLZGVzY3JpcHRpb24YMiABKAkSFwoPb3JnYW5pemF0aW9uX2lkGEYgASgJEg0KBWltYWdlGFAgASgJEhQKDGNhdGVnb3J5X2lkcxhaIAMoCRIMCgR0YWdzGGQgAygJEhMKC2F1dGhvcl9uYW1lGG4gASgJEhIKCmF1dGhvcl91cmwYeCABKAkSFwoOcmVwb3NpdG9yeV91cmwYggEgASgJEhAKB2xpY2Vuc2UYjAEgASgJEj8KE2RvY3VtZW50YXRpb25fbGlua3MYlgEgAygLMiEubWFya2V0cGxhY2UudjEuRG9jdW1lbnRhdGlvbkxpbmsSLwoIZmVhdHVyZXMYoAEgAygLMhwubWFya2V0cGxhY2UudjEuRmVhdHVyZUJsb2NrEjIKCnZpc2liaWxpdHkYqgEgASgOMh0ucmVnaXN0cnkudjEuUGx1Z2luVmlzaWJpbGl0eRIhChhhbGxvd2VkX29yZ2FuaXphdGlvbl9pZHMYtAEgAygJEiQKG2xhdGVzdF9wdWJsaXNoZWRfdmVyc2lvbl9pZBi+ASABKAkSLAoHY3JlYXRlZBjIASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiwKB3VwZGF0ZWQY0gEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIsCgZsYWJlbHMY3AEgAygOMhsubWFya2V0cGxhY2UudjEuUGx1Z2luTGFiZWwSDQoEbG9nbxjmASABKAkSEgoJbG9nb19kYXJrGPABIAEoCSLUAgoNUGx1Z2luVmVyc2lvbhIKCgJpZBgKIAEoCRIRCglwbHVnaW5faWQYFCABKAkSDwoHdmVyc2lvbhgeIAEoCRINCgVpbWFnZRgoIAEoCRIXCg9kZWZpbml0aW9uX2hhc2gYMiABKAkSFQoNcmVsZWFzZV9ub3Rlcxg8IAEoCRIwCgZzdGF0dXMYRiABKA4yIC5tYXJrZXRwbGFjZS52MS5TdWJtaXNzaW9uU3RhdHVzEisKB2NyZWF0ZWQYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCXN1Ym1pdHRlZBhaIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJcHVibGlzaGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9yZXZpZXdfZmVlZGJhY2sYbiABKAkqdQoQUGx1Z2luVmlzaWJpbGl0eRIhCh1QTFVHSU5fVklTSUJJTElUWV9VTlNQRUNJRklFRBAAEhwKGFBMVUdJTl9WSVNJQklMSVRZX1BVQkxJQxABEiAKHFBMVUdJTl9WSVNJQklMSVRZX1JFU1RSSUNURUQQAkJsWmBnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLXJlZ2lzdHJ5LWFwaS9wa2cvcHJvdG8vZ2VuL3JlZ2lzdHJ5L3YxO3JlZ2lzdHJ5djGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
+  fileDesc("ChhyZWdpc3RyeS92MS9jb21tb24ucHJvdG8SC3JlZ2lzdHJ5LnYxIo8GCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSEwoLZGVzY3JpcHRpb24YMiABKAkSFwoPb3JnYW5pemF0aW9uX2lkGEYgASgJEg0KBWltYWdlGFAgASgJEhQKDGNhdGVnb3J5X2lkcxhaIAMoCRIMCgR0YWdzGGQgAygJEhMKC2F1dGhvcl9uYW1lGG4gASgJEhIKCmF1dGhvcl91cmwYeCABKAkSFwoOcmVwb3NpdG9yeV91cmwYggEgASgJEhAKB2xpY2Vuc2UYjAEgASgJEj8KE2RvY3VtZW50YXRpb25fbGlua3MYlgEgAygLMiEubWFya2V0cGxhY2UudjEuRG9jdW1lbnRhdGlvbkxpbmsSLwoIZmVhdHVyZXMYoAEgAygLMhwubWFya2V0cGxhY2UudjEuRmVhdHVyZUJsb2NrEjIKCnZpc2liaWxpdHkYqgEgASgOMh0ucmVnaXN0cnkudjEuUGx1Z2luVmlzaWJpbGl0eRIhChhhbGxvd2VkX29yZ2FuaXphdGlvbl9pZHMYtAEgAygJEiQKG2xhdGVzdF9wdWJsaXNoZWRfdmVyc2lvbl9pZBi+ASABKAkSLAoHY3JlYXRlZBjIASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiwKB3VwZGF0ZWQY0gEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIsCgZsYWJlbHMY3AEgAygOMhsubWFya2V0cGxhY2UudjEuUGx1Z2luTGFiZWwSDQoEbG9nbxjmASABKAkSEgoJbG9nb19kYXJrGPABIAEoCRIVCgxsaXN0aW5nX2xvZ28Y+gEgASgJEhoKEWxpc3RpbmdfbG9nb19kYXJrGIQCIAEoCRI2Cg9wZW5kaW5nX2xpc3RpbmcYjgIgASgLMhwubWFya2V0cGxhY2UudjEuTGlzdGluZ0RyYWZ0ItQCCg1QbHVnaW5WZXJzaW9uEgoKAmlkGAogASgJEhEKCXBsdWdpbl9pZBgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEg0KBWltYWdlGCggASgJEhcKD2RlZmluaXRpb25faGFzaBgyIAEoCRIVCg1yZWxlYXNlX25vdGVzGDwgASgJEjAKBnN0YXR1cxhGIAEoDjIgLm1hcmtldHBsYWNlLnYxLlN1Ym1pc3Npb25TdGF0dXMSKwoHY3JlYXRlZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJc3VibWl0dGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglwdWJsaXNoZWQYZCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jldmlld19mZWVkYmFjaxhuIAEoCSp1ChBQbHVnaW5WaXNpYmlsaXR5EiEKHVBMVUdJTl9WSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASHAoYUExVR0lOX1ZJU0lCSUxJVFlfUFVCTElDEAESIAocUExVR0lOX1ZJU0lCSUxJVFlfUkVTVFJJQ1RFRBACQmxaYGdpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvbWFya2V0cGxhY2UtcmVnaXN0cnktYXBpL3BrZy9wcm90by9nZW4vcmVnaXN0cnkvdjE7cmVnaXN0cnl2MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
 
 /**
  * A plugin the caller's organization owns (appstore.plugins). Name is unique
@@ -63,7 +63,8 @@ export type Plugin = Message<"registry.v1.Plugin"> & {
   organizationId: string;
 
   /**
-   * Listing artwork, not a container image.
+   * Upstream container image the plugin is built around, shown for reference;
+   * the image a version runs is its manifest's.
    *
    * @generated from field: string image = 80;
    */
@@ -157,7 +158,8 @@ export type Plugin = Message<"registry.v1.Plugin"> & {
   labels: PluginLabel[];
 
   /**
-   * Logo of the newest pushed version, as a data URI. Empty when it has none.
+   * Logo shown for the plugin, as a data URI: the uploaded listing logo, else
+   * the newest pushed version's. Empty when neither exists.
    *
    * @generated from field: string logo = 230;
    */
@@ -167,6 +169,27 @@ export type Plugin = Message<"registry.v1.Plugin"> & {
    * @generated from field: string logo_dark = 240;
    */
   logoDark: string;
+
+  /**
+   * The listing's own logos, as data URIs; empty when it has none and logo
+   * falls back to the version's.
+   *
+   * @generated from field: string listing_logo = 250;
+   */
+  listingLogo: string;
+
+  /**
+   * @generated from field: string listing_logo_dark = 260;
+   */
+  listingLogoDark: string;
+
+  /**
+   * Edits from UpdatePlugin that wait for review: submitting a version sends
+   * them along, and approving it makes them live. Absent when there are none.
+   *
+   * @generated from field: marketplace.v1.ListingDraft pending_listing = 270;
+   */
+  pendingListing?: ListingDraft | undefined;
 };
 
 /**

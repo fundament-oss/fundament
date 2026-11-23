@@ -82,11 +82,9 @@ message CreatePluginRequest {
   }];
   // Tag names, not ids — the server upserts them.
   repeated string tags = 60 [(buf.validate.field).repeated = {max_items: 20}];
-  // Listing artwork, not a container image.
-  string image = 70 [
-    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
-    (buf.validate.field).string = {uri: true}
-  ];
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
+  string image = 70 [(buf.validate.field).string = {max_len: 512}];
   string repository_url = 80 [
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string = {uri: true}
@@ -106,6 +104,10 @@ message CreatePluginResponse {
 // No name — it is immutable once reserved. display_name, description_short,
 // tags, repository_url and license are owned by definition.yaml and synced
 // from the newest approved version, so they are not editable here.
+//
+// visibility and allowed_organization_ids take effect at once. The other
+// fields are stored as Plugin.pending_listing and go live when a version
+// submitted after them is approved.
 message UpdatePluginRequest {
   reserved 20, 30, 60, 80, 90;
   reserved display_name, description_short, tags, repository_url, license;
@@ -118,13 +120,12 @@ message UpdatePluginRequest {
       string: {uuid: true}
     }
   }];
-  // Listing artwork, not a container image.
-  string image = 70 [
-    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
-    (buf.validate.field).string = {uri: true}
-  ];
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
+  string image = 70 [(buf.validate.field).string = {max_len: 512}];
   // A link with no id is created; one carrying an id updates that link in
-  // place, keeping its id. Links the request omits are soft-deleted.
+  // place, keeping its id. Links the request omits are soft-deleted. An id
+  // must be one of the listing's live links.
   repeated marketplace.v1.DocumentationLink documentation_links = 100 [(buf.validate.field).repeated = {max_items: 20}];
   // Same rule as documentation_links: no id creates, an id updates that block
   // in place, and an omitted block is soft-deleted.
@@ -145,6 +146,11 @@ message UpdatePluginRequest {
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string = {uri: true}
   ];
+  // SVG or PNG files shown instead of the version's logos. Empty clears the
+  // upload, so the version's logo shows again. The server applies the rules a
+  // pushed logo meets.
+  bytes logo = 160 [(buf.validate.field).bytes = {max_len: 16384}];
+  bytes logo_dark = 170 [(buf.validate.field).bytes = {max_len: 16384}];
 }
 
 message UpdatePluginResponse {

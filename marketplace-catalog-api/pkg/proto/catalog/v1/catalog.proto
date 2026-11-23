@@ -50,7 +50,8 @@ message PluginSummary {
   string description_short = 40;
   // Publishing organization, resolved through ListPublishers.
   string organization_id = 50;
-  // Listing artwork (appstore.plugins.image), not a container image.
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
   string image = 60;
   repeated string category_ids = 70;
   // Free-form labels with no independent identity, unlike categories.
@@ -80,7 +81,8 @@ message PluginDetails {
   string description_short = 40;
   // See PluginSummary.organization_id.
   string organization_id = 50;
-  // Listing artwork (appstore.plugins.image), not a container image.
+  // Upstream container image the plugin is built around, shown for reference;
+  // the image a version runs is its manifest's.
   string image = 60;
   repeated string category_ids = 70;
   repeated string tags = 80;

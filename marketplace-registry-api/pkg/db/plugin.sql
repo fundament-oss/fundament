@@ -27,18 +27,22 @@ SELECT
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
 	  LIMIT 1) AS latest_published_version_id,
-	COALESCE((SELECT plugin_definitions.logo
+	-- An uploaded listing logo wins over the newest version's.
+	COALESCE(NULLIF(logo, ''), (SELECT plugin_definitions.logo
 	   FROM appstore.plugin_definitions
 	  WHERE plugin_definitions.plugin_id = plugins.id
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.created DESC
-	  LIMIT 1), '')::text AS logo,
-	COALESCE((SELECT plugin_definitions.logo_dark
+	  LIMIT 1), '')::text AS effective_logo,
+	COALESCE(NULLIF(logo_dark, ''), (SELECT plugin_definitions.logo_dark
 	   FROM appstore.plugin_definitions
 	  WHERE plugin_definitions.plugin_id = plugins.id
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.created DESC
-	  LIMIT 1), '')::text AS logo_dark
+	  LIMIT 1), '')::text AS effective_logo_dark,
+	logo,
+	logo_dark,
+	listing_draft
 FROM appstore.plugins
 WHERE deleted IS NULL
 ORDER BY name ASC;
@@ -66,18 +70,22 @@ SELECT
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.published DESC
 	  LIMIT 1) AS latest_published_version_id,
-	COALESCE((SELECT plugin_definitions.logo
+	-- An uploaded listing logo wins over the newest version's.
+	COALESCE(NULLIF(logo, ''), (SELECT plugin_definitions.logo
 	   FROM appstore.plugin_definitions
 	  WHERE plugin_definitions.plugin_id = plugins.id
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.created DESC
-	  LIMIT 1), '')::text AS logo,
-	COALESCE((SELECT plugin_definitions.logo_dark
+	  LIMIT 1), '')::text AS effective_logo,
+	COALESCE(NULLIF(logo_dark, ''), (SELECT plugin_definitions.logo_dark
 	   FROM appstore.plugin_definitions
 	  WHERE plugin_definitions.plugin_id = plugins.id
 	    AND plugin_definitions.deleted IS NULL
 	  ORDER BY plugin_definitions.created DESC
-	  LIMIT 1), '')::text AS logo_dark
+	  LIMIT 1), '')::text AS effective_logo_dark,
+	logo,
+	logo_dark,
+	listing_draft
 FROM appstore.plugins
 WHERE id = sqlc.arg('id')::uuid
   AND deleted IS NULL;
@@ -102,15 +110,12 @@ INSERT INTO appstore.plugins (
 RETURNING id;
 
 -- name: PluginUpdate :execrows
--- name is absent: it is immutable once reserved (FUN-5). So are the fields
--- definition.yaml owns, which are synced on approval. Zero rows means the
--- listing was soft-deleted after the handler looked it up.
+-- Only what takes effect without review; the other listing fields wait in
+-- listing_draft (FUN-20). Zero rows means the listing was soft-deleted after
+-- the handler looked it up.
 UPDATE appstore.plugins SET
-	description = sqlc.arg('description')::text,
-	image = sqlc.arg('image')::text,
-	author_name = sqlc.narg('author_name')::text,
-	author_url = sqlc.narg('author_url')::text,
 	visibility = sqlc.arg('visibility')::text,
+	listing_draft = sqlc.narg('listing_draft')::jsonb,
 	updated = now()
 WHERE id = sqlc.arg('id')::uuid
   AND deleted IS NULL;
@@ -202,65 +207,9 @@ WHERE plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND deleted IS NULL
 ORDER BY plugin_id ASC, position ASC, id ASC;
 
--- name: PluginDocLinkInsert :exec
-INSERT INTO appstore.plugin_documentation_links (plugin_id, title, url_name, url, position)
-VALUES (
-	sqlc.arg('plugin_id')::uuid,
-	sqlc.arg('title')::text,
-	sqlc.arg('url_name')::text,
-	sqlc.arg('url')::text,
-	sqlc.arg('position')::integer
-);
-
--- name: PluginDocLinkUpdate :execrows
--- Scoped by plugin_id as well as id so a link belonging to another listing
--- cannot be pulled into this one; zero rows means the id was not real.
-UPDATE appstore.plugin_documentation_links SET
-	title = sqlc.arg('title')::text,
-	url_name = sqlc.arg('url_name')::text,
-	url = sqlc.arg('url')::text,
-	position = sqlc.arg('position')::integer
-WHERE id = sqlc.arg('id')::uuid
-  AND plugin_id = sqlc.arg('plugin_id')::uuid
-  AND deleted IS NULL;
-
--- name: PluginDocLinksSoftDeleteNotIn :exec
--- A documentation link has an id the API hands out, so replacement soft-deletes
--- rather than removing and spares the ids the request carried back.
-UPDATE appstore.plugin_documentation_links SET deleted = now()
-WHERE plugin_id = sqlc.arg('plugin_id')::uuid
-  AND deleted IS NULL
-  AND id <> ALL(sqlc.arg('kept_ids')::uuid[]);
-
 -- name: PluginFeaturesListByPluginIDs :many
 SELECT plugin_id, id, title, body
 FROM appstore.plugin_features
 WHERE plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND deleted IS NULL
 ORDER BY plugin_id ASC, position ASC, id ASC;
-
--- name: PluginFeatureInsert :exec
-INSERT INTO appstore.plugin_features (plugin_id, title, body, position)
-VALUES (
-	sqlc.arg('plugin_id')::uuid,
-	sqlc.arg('title')::text,
-	sqlc.arg('body')::text,
-	sqlc.arg('position')::integer
-);
-
--- name: PluginFeatureUpdate :execrows
--- Mirrors PluginDocLinkUpdate.
-UPDATE appstore.plugin_features SET
-	title = sqlc.arg('title')::text,
-	body = sqlc.arg('body')::text,
-	position = sqlc.arg('position')::integer
-WHERE id = sqlc.arg('id')::uuid
-  AND plugin_id = sqlc.arg('plugin_id')::uuid
-  AND deleted IS NULL;
-
--- name: PluginFeaturesSoftDeleteNotIn :exec
--- Mirrors PluginDocLinksSoftDeleteNotIn.
-UPDATE appstore.plugin_features SET deleted = now()
-WHERE plugin_id = sqlc.arg('plugin_id')::uuid
-  AND deleted IS NULL
-  AND id <> ALL(sqlc.arg('kept_ids')::uuid[]);

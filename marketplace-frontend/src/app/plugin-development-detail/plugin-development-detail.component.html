@@ -121,7 +121,23 @@
   <!-- Metadata -->
   <nldd-card class="mb-6 block">
     <div class="p-6">
-      <h2 class="mb-4 text-lg font-semibold">Details</h2>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 class="text-lg font-semibold">Details</h2>
+        <nldd-button
+          [routerLink]="['/manage', plugin.id, 'edit']"
+          text="Edit listing"
+          start-icon="pencil"
+          appearance="secondary"
+          size="sm"
+        ></nldd-button>
+      </div>
+      @if (plugin.listingPendingReview) {
+        <p
+          class="mb-6 max-w-3xl rounded-md bg-gray-100 p-4 text-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        >
+          Listing edits are waiting for review. They go live when a version you submit is approved.
+        </p>
+      }
       <p class="mb-8 max-w-3xl leading-relaxed text-gray-600 dark:text-gray-300">
         {{ plugin.description }}
       </p>

@@ -452,7 +452,7 @@ func resolvePluginID(ctx context.Context, pubClient registryv1connect.Publicatio
 var errListingNotFound = errors.New("listing not found")
 
 // createPlugin reserves the listing, seeded with the fields definition.yaml
-// owns; each approved version re-syncs them. The long description and the
+// owns; the newest approved version re-syncs them. The long description and the
 // rest of the listing are authored through the developer portal.
 func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, def *pluginruntime.PluginDefinition) (string, error) {
 	listing := pluginlisting.FromDefinition(def)

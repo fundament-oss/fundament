@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file marketplace/v1/common.proto.
  */
 export const file_marketplace_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAki7QQKEFBsdWdpbkRlZmluaXRpb24SOgoIbWV0YWRhdGEYCiABKAsyKC5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNgoLcGVybWlzc2lvbnMYKCABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9ucxIoCgRtZW51GDIgASgLMhoubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudRIMCgRjcmRzGDwgAygJElEKEWN1c3RvbV9jb21wb25lbnRzGEYgAygLMjYubWFya2V0cGxhY2UudjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQAoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJS5tYXJrZXRwbGFjZS52MS5QbHVnaW5BbGxvd2VkUmVzb3VyY2USPwoIdWlfaGludHMYWiADKAsyLS5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uLlVpSGludHNFbnRyeRpfChVDdXN0b21Db21wb25lbnRzRW50cnkSCwoDa2V5GAEgASgJEjUKBXZhbHVlGAIgASgLMiYubWFya2V0cGxhY2UudjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTAoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIrCgV2YWx1ZRgCIAEoCzIcLm1hcmtldHBsYWNlLnYxLlBsdWdpblVJSGludDoCOAEiywEKGFBsdWdpbkRlZmluaXRpb25NZXRhZGF0YRIMCgRuYW1lGAogASgJEhQKDGRpc3BsYXlfbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEg4KBmF1dGhvchgyIAEoCRIPCgdsaWNlbnNlGDwgASgJEgwKBGljb24YRiABKAkSKAoEdXJscxhQIAEoCzIaLm1hcmtldHBsYWNlLnYxLlBsdWdpblVSTHMSDAoEdGFncxhaIAMoCSJJCgpQbHVnaW5VUkxzEhAKCGhvbWVwYWdlGAogASgJEhIKCnJlcG9zaXRvcnkYFCABKAkSFQoNZG9jdW1lbnRhdGlvbhgeIAEoCSJZChFQbHVnaW5QZXJtaXNzaW9ucxIUCgxjYXBhYmlsaXRpZXMYCiADKAkSLgoEcmJhYxgUIAMoCzIgLm1hcmtldHBsYWNlLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ1CgpQbHVnaW5NZW51EjUKDG9yZ2FuaXphdGlvbhgKIAMoCzIfLm1hcmtldHBsYWNlLnYxLlBsdWdpbk1lbnVFbnRyeRIwCgdwcm9qZWN0GBQgAygLMh8ubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudUVudHJ5InEKD1BsdWdpbk1lbnVFbnRyeRILCgNjcmQYCiABKAkSDAoEbGlzdBgUIAEoCBIOCgZkZXRhaWwYHiABKAgSDAoEaWNvbhgoIAEoCRINCgVsYWJlbBgyIAEoCRIWCg5zaW5ndWxhcl9sYWJlbBg8IAEoCSJUChZQbHVnaW5Db21wb25lbnRNYXBwaW5nEgwKBGxpc3QYCiABKAkSDgoGZGV0YWlsGBQgASgJEg4KBmNyZWF0ZRgeIAEoCRIMCgRlZGl0GCggASgJIlgKFVBsdWdpbkFsbG93ZWRSZXNvdXJjZRINCgVncm91cBgKIAEoCRIPCgd2ZXJzaW9uGBQgASgJEhAKCHJlc291cmNlGB4gASgJEg0KBXZlcmJzGCggAygJIoEBCgxQbHVnaW5VSUhpbnQSNAoLZm9ybV9ncm91cHMYCiADKAsyHy5tYXJrZXRwbGFjZS52MS5QbHVnaW5Gb3JtR3JvdXASOwoOc3RhdHVzX21hcHBpbmcYFCABKAsyIy5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNNYXBwaW5nIi8KD1BsdWdpbkZvcm1Hcm91cBIMCgRuYW1lGAogASgJEg4KBmZpZWxkcxgUIAMoCSK7AQoTUGx1Z2luU3RhdHVzTWFwcGluZxIRCglqc29uX3BhdGgYCiABKAkSPwoGdmFsdWVzGBQgAygLMi8ubWFya2V0cGxhY2UudjEuUGx1Z2luU3RhdHVzTWFwcGluZy5WYWx1ZXNFbnRyeRpQCgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSMAoFdmFsdWUYAiABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBiqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQA0JpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
+  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAkiggIKDExpc3RpbmdEcmFmdBITCgtkZXNjcmlwdGlvbhgKIAEoCRIUCgxjYXRlZ29yeV9pZHMYFCADKAkSDQoFaW1hZ2UYHiABKAkSEwoLYXV0aG9yX25hbWUYKCABKAkSEgoKYXV0aG9yX3VybBgyIAEoCRIMCgRsb2dvGDwgASgJEhEKCWxvZ29fZGFyaxhGIAEoCRIuCghmZWF0dXJlcxhQIAMoCzIcLm1hcmtldHBsYWNlLnYxLkZlYXR1cmVCbG9jaxI+ChNkb2N1bWVudGF0aW9uX2xpbmtzGFogAygLMiEubWFya2V0cGxhY2UudjEuRG9jdW1lbnRhdGlvbkxpbmsi7QQKEFBsdWdpbkRlZmluaXRpb24SOgoIbWV0YWRhdGEYCiABKAsyKC5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNgoLcGVybWlzc2lvbnMYKCABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9ucxIoCgRtZW51GDIgASgLMhoubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudRIMCgRjcmRzGDwgAygJElEKEWN1c3RvbV9jb21wb25lbnRzGEYgAygLMjYubWFya2V0cGxhY2UudjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQAoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJS5tYXJrZXRwbGFjZS52MS5QbHVnaW5BbGxvd2VkUmVzb3VyY2USPwoIdWlfaGludHMYWiADKAsyLS5tYXJrZXRwbGFjZS52MS5QbHVnaW5EZWZpbml0aW9uLlVpSGludHNFbnRyeRpfChVDdXN0b21Db21wb25lbnRzRW50cnkSCwoDa2V5GAEgASgJEjUKBXZhbHVlGAIgASgLMiYubWFya2V0cGxhY2UudjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTAoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIrCgV2YWx1ZRgCIAEoCzIcLm1hcmtldHBsYWNlLnYxLlBsdWdpblVJSGludDoCOAEiywEKGFBsdWdpbkRlZmluaXRpb25NZXRhZGF0YRIMCgRuYW1lGAogASgJEhQKDGRpc3BsYXlfbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEg4KBmF1dGhvchgyIAEoCRIPCgdsaWNlbnNlGDwgASgJEgwKBGljb24YRiABKAkSKAoEdXJscxhQIAEoCzIaLm1hcmtldHBsYWNlLnYxLlBsdWdpblVSTHMSDAoEdGFncxhaIAMoCSJJCgpQbHVnaW5VUkxzEhAKCGhvbWVwYWdlGAogASgJEhIKCnJlcG9zaXRvcnkYFCABKAkSFQoNZG9jdW1lbnRhdGlvbhgeIAEoCSJZChFQbHVnaW5QZXJtaXNzaW9ucxIUCgxjYXBhYmlsaXRpZXMYCiADKAkSLgoEcmJhYxgUIAMoCzIgLm1hcmtldHBsYWNlLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ1CgpQbHVnaW5NZW51EjUKDG9yZ2FuaXphdGlvbhgKIAMoCzIfLm1hcmtldHBsYWNlLnYxLlBsdWdpbk1lbnVFbnRyeRIwCgdwcm9qZWN0GBQgAygLMh8ubWFya2V0cGxhY2UudjEuUGx1Z2luTWVudUVudHJ5InEKD1BsdWdpbk1lbnVFbnRyeRILCgNjcmQYCiABKAkSDAoEbGlzdBgUIAEoCBIOCgZkZXRhaWwYHiABKAgSDAoEaWNvbhgoIAEoCRINCgVsYWJlbBgyIAEoCRIWCg5zaW5ndWxhcl9sYWJlbBg8IAEoCSJUChZQbHVnaW5Db21wb25lbnRNYXBwaW5nEgwKBGxpc3QYCiABKAkSDgoGZGV0YWlsGBQgASgJEg4KBmNyZWF0ZRgeIAEoCRIMCgRlZGl0GCggASgJIlgKFVBsdWdpbkFsbG93ZWRSZXNvdXJjZRINCgVncm91cBgKIAEoCRIPCgd2ZXJzaW9uGBQgASgJEhAKCHJlc291cmNlGB4gASgJEg0KBXZlcmJzGCggAygJIoEBCgxQbHVnaW5VSUhpbnQSNAoLZm9ybV9ncm91cHMYCiADKAsyHy5tYXJrZXRwbGFjZS52MS5QbHVnaW5Gb3JtR3JvdXASOwoOc3RhdHVzX21hcHBpbmcYFCABKAsyIy5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNNYXBwaW5nIi8KD1BsdWdpbkZvcm1Hcm91cBIMCgRuYW1lGAogASgJEg4KBmZpZWxkcxgUIAMoCSK7AQoTUGx1Z2luU3RhdHVzTWFwcGluZxIRCglqc29uX3BhdGgYCiABKAkSPwoGdmFsdWVzGBQgAygLMi8ubWFya2V0cGxhY2UudjEuUGx1Z2luU3RhdHVzTWFwcGluZy5WYWx1ZXNFbnRyeRpQCgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSMAoFdmFsdWUYAiABKAsyIS5tYXJrZXRwbGFjZS52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBiqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQA0JpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * appstore.categories. A curated vocabulary: a developer picks from it rather
@@ -211,6 +211,69 @@ export const DocumentationLinkSchema: GenMessage<DocumentationLink> = /*@__PURE_
   messageDesc(file_marketplace_v1_common, 5);
 
 /**
+ * Listing edits that wait for review (appstore.plugins.listing_draft), as the
+ * listing will read once they are approved. A feature block or link without an
+ * id is new.
+ *
+ * @generated from message marketplace.v1.ListingDraft
+ */
+export type ListingDraft = Message<"marketplace.v1.ListingDraft"> & {
+  /**
+   * @generated from field: string description = 10;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated string category_ids = 20;
+   */
+  categoryIds: string[];
+
+  /**
+   * @generated from field: string image = 30;
+   */
+  image: string;
+
+  /**
+   * @generated from field: string author_name = 40;
+   */
+  authorName: string;
+
+  /**
+   * @generated from field: string author_url = 50;
+   */
+  authorUrl: string;
+
+  /**
+   * Data URIs; empty shows the version's logo.
+   *
+   * @generated from field: string logo = 60;
+   */
+  logo: string;
+
+  /**
+   * @generated from field: string logo_dark = 70;
+   */
+  logoDark: string;
+
+  /**
+   * @generated from field: repeated marketplace.v1.FeatureBlock features = 80;
+   */
+  features: FeatureBlock[];
+
+  /**
+   * @generated from field: repeated marketplace.v1.DocumentationLink documentation_links = 90;
+   */
+  documentationLinks: DocumentationLink[];
+};
+
+/**
+ * Describes the message marketplace.v1.ListingDraft.
+ * Use `create(ListingDraftSchema)` to create a new message.
+ */
+export const ListingDraftSchema: GenMessage<ListingDraft> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 6);
+
+/**
  * A plugin manifest (definition.yaml) as the console reads it: the parsed
  * form of a stored version's manifest.
  *
@@ -268,7 +331,7 @@ export type PluginDefinition = Message<"marketplace.v1.PluginDefinition"> & {
  * Use `create(PluginDefinitionSchema)` to create a new message.
  */
 export const PluginDefinitionSchema: GenMessage<PluginDefinition> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 6);
+  messageDesc(file_marketplace_v1_common, 7);
 
 /**
  * @generated from message marketplace.v1.PluginDefinitionMetadata
@@ -325,7 +388,7 @@ export type PluginDefinitionMetadata = Message<"marketplace.v1.PluginDefinitionM
  * Use `create(PluginDefinitionMetadataSchema)` to create a new message.
  */
 export const PluginDefinitionMetadataSchema: GenMessage<PluginDefinitionMetadata> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 7);
+  messageDesc(file_marketplace_v1_common, 8);
 
 /**
  * @generated from message marketplace.v1.PluginURLs
@@ -352,7 +415,7 @@ export type PluginURLs = Message<"marketplace.v1.PluginURLs"> & {
  * Use `create(PluginURLsSchema)` to create a new message.
  */
 export const PluginURLsSchema: GenMessage<PluginURLs> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 8);
+  messageDesc(file_marketplace_v1_common, 9);
 
 /**
  * @generated from message marketplace.v1.PluginPermissions
@@ -374,7 +437,7 @@ export type PluginPermissions = Message<"marketplace.v1.PluginPermissions"> & {
  * Use `create(PluginPermissionsSchema)` to create a new message.
  */
 export const PluginPermissionsSchema: GenMessage<PluginPermissions> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 9);
+  messageDesc(file_marketplace_v1_common, 10);
 
 /**
  * @generated from message marketplace.v1.PluginPolicyRule
@@ -401,7 +464,7 @@ export type PluginPolicyRule = Message<"marketplace.v1.PluginPolicyRule"> & {
  * Use `create(PluginPolicyRuleSchema)` to create a new message.
  */
 export const PluginPolicyRuleSchema: GenMessage<PluginPolicyRule> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 10);
+  messageDesc(file_marketplace_v1_common, 11);
 
 /**
  * @generated from message marketplace.v1.PluginMenu
@@ -423,7 +486,7 @@ export type PluginMenu = Message<"marketplace.v1.PluginMenu"> & {
  * Use `create(PluginMenuSchema)` to create a new message.
  */
 export const PluginMenuSchema: GenMessage<PluginMenu> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 11);
+  messageDesc(file_marketplace_v1_common, 12);
 
 /**
  * @generated from message marketplace.v1.PluginMenuEntry
@@ -465,7 +528,7 @@ export type PluginMenuEntry = Message<"marketplace.v1.PluginMenuEntry"> & {
  * Use `create(PluginMenuEntrySchema)` to create a new message.
  */
 export const PluginMenuEntrySchema: GenMessage<PluginMenuEntry> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 12);
+  messageDesc(file_marketplace_v1_common, 13);
 
 /**
  * @generated from message marketplace.v1.PluginComponentMapping
@@ -499,7 +562,7 @@ export type PluginComponentMapping = Message<"marketplace.v1.PluginComponentMapp
  * Use `create(PluginComponentMappingSchema)` to create a new message.
  */
 export const PluginComponentMappingSchema: GenMessage<PluginComponentMapping> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 13);
+  messageDesc(file_marketplace_v1_common, 14);
 
 /**
  * @generated from message marketplace.v1.PluginAllowedResource
@@ -531,7 +594,7 @@ export type PluginAllowedResource = Message<"marketplace.v1.PluginAllowedResourc
  * Use `create(PluginAllowedResourceSchema)` to create a new message.
  */
 export const PluginAllowedResourceSchema: GenMessage<PluginAllowedResource> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 14);
+  messageDesc(file_marketplace_v1_common, 15);
 
 /**
  * @generated from message marketplace.v1.PluginUIHint
@@ -553,7 +616,7 @@ export type PluginUIHint = Message<"marketplace.v1.PluginUIHint"> & {
  * Use `create(PluginUIHintSchema)` to create a new message.
  */
 export const PluginUIHintSchema: GenMessage<PluginUIHint> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 15);
+  messageDesc(file_marketplace_v1_common, 16);
 
 /**
  * @generated from message marketplace.v1.PluginFormGroup
@@ -575,7 +638,7 @@ export type PluginFormGroup = Message<"marketplace.v1.PluginFormGroup"> & {
  * Use `create(PluginFormGroupSchema)` to create a new message.
  */
 export const PluginFormGroupSchema: GenMessage<PluginFormGroup> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 16);
+  messageDesc(file_marketplace_v1_common, 17);
 
 /**
  * @generated from message marketplace.v1.PluginStatusMapping
@@ -597,7 +660,7 @@ export type PluginStatusMapping = Message<"marketplace.v1.PluginStatusMapping"> 
  * Use `create(PluginStatusMappingSchema)` to create a new message.
  */
 export const PluginStatusMappingSchema: GenMessage<PluginStatusMapping> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 17);
+  messageDesc(file_marketplace_v1_common, 18);
 
 /**
  * @generated from message marketplace.v1.PluginStatusValue
@@ -619,7 +682,7 @@ export type PluginStatusValue = Message<"marketplace.v1.PluginStatusValue"> & {
  * Use `create(PluginStatusValueSchema)` to create a new message.
  */
 export const PluginStatusValueSchema: GenMessage<PluginStatusValue> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 18);
+  messageDesc(file_marketplace_v1_common, 19);
 
 /**
  * Where a version sits in the push -> submit -> review -> publish pipeline.

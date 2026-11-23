@@ -46,3 +46,55 @@ describe('AdminReviewService.listPluginHistory', () => {
     ]);
   });
 });
+
+describe('AdminReviewService.getSubmission', () => {
+  it('shows the listing as approving the submitted edits leaves it', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: REVIEW_CLIENT,
+          useValue: {
+            getSubmission: () =>
+              of({
+                submission: {
+                  ...round('s1', 'v1', '2026-11-04'),
+                  organizationId: 'o1',
+                  listingChanges: {
+                    description: '## Rewritten',
+                    categoryIds: ['c1'],
+                    authorName: 'Jetstack',
+                    authorUrl: '',
+                    image: '',
+                    logo: '',
+                    logoDark: '',
+                    features: [{ id: '', title: 'Issuers', body: 'Many.' }],
+                    documentationLinks: [],
+                  },
+                },
+              }),
+            getPlugin: () =>
+              of({
+                plugin: { displayName: 'Cert Manager', description: '## Old', categoryIds: ['c1'] },
+              }),
+            getPluginVersion: () => of({ version: { version: '1.0.0', menuIcons: [] } }),
+            listPublishers: () => of({ publishers: [] }),
+            listCategories: () => of({ categories: [{ id: 'c1', name: 'Security' }] }),
+          },
+        },
+      ],
+    });
+
+    const submission = await TestBed.inject(AdminReviewService).getSubmission('s1');
+
+    expect(submission?.description).toBe('## Rewritten');
+    expect(submission?.categories).toEqual(['Security']);
+    expect(submission?.listingChanges).toEqual(
+      expect.objectContaining({
+        descriptionChanged: true,
+        categoriesChanged: false,
+        authorName: 'Jetstack',
+        features: [{ title: 'Issuers', body: 'Many.' }],
+      }),
+    );
+  });
+});

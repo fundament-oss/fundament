@@ -155,6 +155,12 @@ func allIconValues(def *PluginDefinition) []string {
 	return values
 }
 
+// LogoDataURI validates an uploaded logo against the rules a pushed one meets
+// and returns it as a data: URI.
+func LogoDataURI(content []byte) (string, error) {
+	return validateIconFile(IconDigest(content), content, false)
+}
+
 // validateIconFile checks one file against the limits of its role. A file used
 // as a menu icon anywhere is held to the menu rules (smaller, SVG only).
 func validateIconFile(digest string, content []byte, asMenu bool) (string, error) {

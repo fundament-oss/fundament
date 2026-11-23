@@ -3,6 +3,8 @@
 -- small and unpaginated, and FTS would cost a tsvector column plus a trigger.
 -- 'query' is a LIKE pattern fragment, not raw user input: callers must run it
 -- through escapeLikePattern first so % and _ stay literal.
+-- Every logo here prefers the one uploaded on the listing (plugins.logo) over
+-- the version's.
 SELECT
   appstore.plugins.id,
   appstore.plugins.name,
@@ -23,7 +25,7 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo, ''), (
     SELECT appstore.plugin_definitions.logo
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -32,7 +34,7 @@ SELECT
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS logo,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo_dark, ''), (
     SELECT appstore.plugin_definitions.logo_dark
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -119,7 +121,7 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo, ''), (
     SELECT appstore.plugin_definitions.logo
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -128,7 +130,7 @@ SELECT
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS logo,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo_dark, ''), (
     SELECT appstore.plugin_definitions.logo_dark
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -246,7 +248,9 @@ LIMIT 1;
 -- PluginLatestPublishedDefinition: plugin_definitions' policy cannot reach the
 -- plugin's visibility or deleted without recursing, so the join is what keeps a
 -- RESTRICTED or taken-down listing from handing out its manifest.
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash,
+  COALESCE(NULLIF(appstore.plugins.logo, ''), appstore.plugin_definitions.logo)::text AS logo,
+  appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
@@ -261,7 +265,9 @@ WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
 -- this same query as the install role, whose definitions policy admits the
 -- caller's own unpublished versions; the storefront role's does not, and
 -- published is not repeated here so the two can share the query.
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash,
+  COALESCE(NULLIF(appstore.plugins.logo, ''), appstore.plugin_definitions.logo)::text AS logo,
+  appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id

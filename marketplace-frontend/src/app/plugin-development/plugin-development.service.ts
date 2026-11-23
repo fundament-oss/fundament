@@ -6,6 +6,7 @@ import { type SubmissionStatus, fromProtoStatus } from '../status/submission-sta
 import {
   type Plugin as RegistryPlugin,
   type PluginVersion as RegistryPluginVersion,
+  PluginVisibility,
 } from '../../generated/registry/v1/common_pb';
 
 // The plugin developer's surface, backed by registry.v1.PublicationService.
@@ -49,6 +50,67 @@ export interface AuthoredPlugin {
   status: SubmissionStatus;
   // Newest first.
   versions: PluginVersion[];
+  // Listing edits are saved but wait for a submitted version's approval.
+  listingPendingReview: boolean;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export interface ListingFeature {
+  id: string; // empty for a feature not saved yet
+  title: string;
+  body: string;
+}
+
+export interface ListingLink {
+  id: string; // empty for a link not saved yet
+  title: string; // the group the link is listed under
+  urlName: string; // the link text
+  url: string;
+}
+
+export type ListingVisibility = 'public' | 'restricted';
+
+// The listing as UpdatePlugin takes it. The fields definition.yaml owns sit in
+// `synced`: they change when a version is approved, not here. The editable
+// fields are the pending edits when there are any, else the live listing.
+export interface PluginListing {
+  id: string;
+  // Edits are saved but wait for a submitted version to be approved.
+  pendingReview: boolean;
+  synced: {
+    displayName: string;
+    descriptionShort: string;
+    tags: string[];
+    repositoryUrl: string;
+    license: string;
+  };
+  description: string;
+  categoryIds: string[];
+  image: string;
+  features: ListingFeature[];
+  documentationLinks: ListingLink[];
+  visibility: ListingVisibility;
+  allowedOrganizationIds: string[];
+  authorName: string;
+  authorUrl: string;
+  // The listing's own logos as data URIs, shown instead of the version's;
+  // empty when it has none.
+  logo: string;
+  logoDark: string;
+  // The newest version's logos, known only while no upload hides them.
+  versionLogo: string;
+  versionLogoDark: string;
+}
+
+// The bytes of a base64 data: URI, which is how logos are read and uploaded.
+export function dataUriBytes(uri: string): Uint8Array {
+  if (uri === '') return new Uint8Array();
+  const binary = atob(uri.slice(uri.indexOf(',') + 1));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 @Injectable({ providedIn: 'root' })
@@ -85,6 +147,44 @@ export default class PluginDevelopmentService {
     const plugin = response.plugin;
     if (!plugin) return null;
     return PluginDevelopmentService.toPlugin(plugin, versions.versions, categories);
+  }
+
+  async getListing(id: string): Promise<PluginListing | null> {
+    const response = await firstValueFrom(this.client.getPlugin({ pluginId: id }));
+    return response.plugin ? PluginDevelopmentService.toListing(response.plugin) : null;
+  }
+
+  // UpdatePlugin replaces the whole listing, so every editable field is sent,
+  // including the ones the author left alone.
+  async updateListing(listing: PluginListing): Promise<PluginListing | null> {
+    const response = await firstValueFrom(
+      this.client.updatePlugin({
+        pluginId: listing.id,
+        description: listing.description,
+        categoryIds: listing.categoryIds,
+        image: listing.image,
+        features: listing.features,
+        documentationLinks: listing.documentationLinks,
+        visibility:
+          listing.visibility === 'restricted'
+            ? PluginVisibility.RESTRICTED
+            : PluginVisibility.PUBLIC,
+        allowedOrganizationIds:
+          listing.visibility === 'restricted' ? listing.allowedOrganizationIds : [],
+        authorName: listing.authorName,
+        authorUrl: listing.authorUrl,
+        logo: dataUriBytes(listing.logo),
+        logoDark: dataUriBytes(listing.logoDark),
+      }),
+    );
+    return response.plugin ? PluginDevelopmentService.toListing(response.plugin) : null;
+  }
+
+  async listCategories(): Promise<Category[]> {
+    const categories = await this.loadCategories();
+    return [...categories]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   // Moves a draft, changes_requested or withdrawn version to pending and opens
@@ -159,6 +259,44 @@ export default class PluginDevelopmentService {
       // draft is.
       status: latest?.status ?? 'draft',
       versions: sorted,
+      listingPendingReview: plugin.pendingListing !== undefined,
+    };
+  }
+
+  private static toListing(plugin: RegistryPlugin): PluginListing {
+    const edits = plugin.pendingListing ?? {
+      ...plugin,
+      logo: plugin.listingLogo,
+      logoDark: plugin.listingLogoDark,
+    };
+    return {
+      id: plugin.id,
+      pendingReview: plugin.pendingListing !== undefined,
+      synced: {
+        displayName: plugin.displayName,
+        descriptionShort: plugin.descriptionShort,
+        tags: plugin.tags,
+        repositoryUrl: plugin.repositoryUrl,
+        license: plugin.license,
+      },
+      description: edits.description,
+      categoryIds: edits.categoryIds,
+      image: edits.image,
+      features: edits.features.map(({ id, title, body }) => ({ id, title, body })),
+      documentationLinks: edits.documentationLinks.map(({ id, title, urlName, url }) => ({
+        id,
+        title,
+        urlName,
+        url,
+      })),
+      visibility: plugin.visibility === PluginVisibility.RESTRICTED ? 'restricted' : 'public',
+      allowedOrganizationIds: plugin.allowedOrganizationIds,
+      authorName: edits.authorName,
+      authorUrl: edits.authorUrl,
+      logo: edits.logo,
+      logoDark: edits.logoDark,
+      versionLogo: plugin.listingLogo ? '' : plugin.logo,
+      versionLogoDark: plugin.listingLogoDark ? '' : plugin.logoDark,
     };
   }
 

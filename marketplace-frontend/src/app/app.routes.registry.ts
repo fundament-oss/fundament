@@ -29,6 +29,11 @@ const routes: Routes = [
           import('./plugin-create/plugin-create.component').then((m) => m.default),
       },
       {
+        path: ':id/edit',
+        loadComponent: () =>
+          import('./plugin-listing-edit/plugin-listing-edit.component').then((m) => m.default),
+      },
+      {
         path: ':id',
         loadComponent: () =>
           import('./plugin-development-detail/plugin-development-detail.component').then(

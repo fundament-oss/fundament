@@ -4,6 +4,7 @@
 package pluginlisting
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -40,24 +41,12 @@ func FromDefinition(def *pluginruntime.PluginDefinition) Fields {
 		displayName = def.Metadata.Name
 	}
 
-	// Cut on rune boundaries: the limit counts characters, and a byte cut
-	// inside a multi-byte rune would leave invalid UTF-8.
-	descriptionShort := def.Metadata.Description
-	if runes := []rune(descriptionShort); len(runes) > MaxDescriptionShort {
-		descriptionShort = string(runes[:MaxDescriptionShort])
-	}
-
-	tags := def.Metadata.Tags
-	if len(tags) > MaxTags {
-		tags = tags[:MaxTags]
-	}
-
 	return Fields{
 		DisplayName:      displayName,
-		DescriptionShort: descriptionShort,
+		DescriptionShort: def.Metadata.Description,
 		RepositoryURL:    def.Metadata.URLs.Repository,
 		License:          def.Metadata.License,
-		Tags:             tags,
+		Tags:             def.Metadata.Tags,
 	}
 }
 
@@ -76,12 +65,23 @@ func (f *Fields) Validate() error {
 	if n := utf8.RuneCountInString(f.DisplayName); n > MaxDisplayName {
 		return fmt.Errorf("metadata.displayName is %d characters, the maximum is %d", n, MaxDisplayName)
 	}
+	if n := utf8.RuneCountInString(f.DescriptionShort); n > MaxDescriptionShort {
+		return fmt.Errorf("metadata.description is %d characters, the maximum is %d", n, MaxDescriptionShort)
+	}
 	if n := utf8.RuneCountInString(f.License); n > MaxLicense {
 		return fmt.Errorf("metadata.license is %d characters, the maximum is %d", n, MaxLicense)
 	}
 	if f.RepositoryURL != "" {
 		if u, err := url.Parse(f.RepositoryURL); err != nil || !u.IsAbs() {
 			return fmt.Errorf("metadata.urls.repository %q is not an absolute URL", f.RepositoryURL)
+		}
+	}
+	if len(f.Tags) > MaxTags {
+		return fmt.Errorf("metadata.tags has %d entries, the maximum is %d", len(f.Tags), MaxTags)
+	}
+	for _, tag := range f.Tags {
+		if strings.TrimSpace(tag) == "" {
+			return errors.New("metadata.tags contains a blank tag")
 		}
 	}
 	return nil

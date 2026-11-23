@@ -10,7 +10,9 @@
 -- upsert keyed on the stable UUIDs below, so the Job can run this unconditionally
 -- on every deploy: a fresh database gets the catalog, and an existing one has
 -- those rows reconciled to whatever this file says (added plugins inserted,
--- edited descriptions/links refreshed).
+-- edited descriptions/links refreshed). display_name, description_short and
+-- repository_url are seeded once: after that, approving a version syncs them
+-- from its definition.yaml (FUN-20), so a deploy must not overwrite them.
 --
 -- The association rows (categories_plugins, plugins_tags, preset_plugins) are
 -- insert-only: new links are added, but removing a link, re-categorizing a
@@ -38,7 +40,11 @@ INSERT INTO appstore.tags (id, name) VALUES
     ('019b4000-5000-7000-8000-000000000007', 'Elasticsearch'),
     ('019b4000-5000-7000-8000-000000000008', 'Authentication'),
     ('019b4000-5000-7000-8000-000000000009', 'Secrets'),
-    ('019b4000-5000-7000-8000-00000000000a', 'Grafana stack')
+    ('019b4000-5000-7000-8000-00000000000a', 'Grafana stack'),
+    -- cert-manager's, spelled as its definition.yaml spells them
+    ('019b4000-5000-7000-8000-00000000000b', 'certificates'),
+    ('019b4000-5000-7000-8000-00000000000c', 'tls'),
+    ('019b4000-5000-7000-8000-00000000000d', 'security')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Plugins
@@ -59,7 +65,7 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 - Unified telemetry collection for metrics, logs, and traces
 - Prometheus metrics collection and forwarding
 - OpenTelemetry instrumentation aggregation', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/alloy', 'docker.io/grafana/alloy:v1.8.3'),
-    ('019b4000-3000-7000-8000-000000000002', '019b4000-0000-7000-8000-000000000000', 'cert-manager', 'cert-manager', 'Automatic TLS certificate management', '## Overview
+    ('019b4000-3000-7000-8000-000000000002', '019b4000-0000-7000-8000-000000000000', 'cert-manager', 'Cert Manager', 'Automated TLS certificate management for Kubernetes using cert-manager.', '## Overview
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
 
@@ -345,13 +351,16 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,
-    display_name = EXCLUDED.display_name,
-    description_short = EXCLUDED.description_short,
     description = EXCLUDED.description,
     author_name = EXCLUDED.author_name,
     author_url = EXCLUDED.author_url,
-    repository_url = EXCLUDED.repository_url,
     image = EXCLUDED.image;
+
+-- Logos the listing owns rather than its definition.yaml (FUN-20)
+UPDATE appstore.plugins SET
+    logo = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0wIDBoMjR2MjRIMHoiLz48cGF0aCBmaWxsPSIjNUIyRjdCIiBkPSJNMTIuMDEgMi4wMTFhMy4yIDMuMiAwIDAgMSAyLjExMy43OTdsLjE1NC4xNDVsLjY5OC42OThhMS4yIDEuMiAwIDAgMCAuNzEuMzQxTDE1LjgyIDRoMWEzLjIgMy4yIDAgMCAxIDMuMTk1IDMuMDE4bC4wMDUuMTgydjFjMCAuMjcuMDkyLjUzMy4yNTguNzQzbC4wOS4xbC42OTcuNjk4YTMuMiAzLjIgMCAwIDEgLjE0NyA0LjM4MmwtLjE0NS4xNTRsLS42OTguNjk4YTEuMiAxLjIgMCAwIDAtLjM0MS43MWwtLjAwOC4xMzV2MWEzLjIgMy4yIDAgMCAxLTMuMDE4IDMuMTk1bC0uMTgyLjAwNWgtMWExLjIgMS4yIDAgMCAwLS43NDMuMjU4bC0uMS4wOWwtLjY5OC42OTdhMy4yIDMuMiAwIDAgMS00LjM4Mi4xNDdsLS4xNTQtLjE0NWwtLjY5OC0uNjk4YTEuMiAxLjIgMCAwIDAtLjcxLS4zNDFMOC4yIDIwLjAyaC0xYTMuMiAzLjIgMCAwIDEtMy4xOTUtMy4wMThMNCAxNi44MnYtMWExLjIgMS4yIDAgMCAwLS4yNTgtLjc0M2wtLjA5LS4xbC0uNjk3LS42OThhMy4yIDMuMiAwIDAgMS0uMTQ3LTQuMzgybC4xNDUtLjE1NGwuNjk4LS42OThhMS4yIDEuMiAwIDAgMCAuMzQxLS43MUw0IDguMnYtMWwuMDA1LS4xODJhMy4yIDMuMiAwIDAgMSAzLjAxMy0zLjAxM0w3LjIgNGgxYTEuMiAxLjIgMCAwIDAgLjc0My0uMjU4bC4xLS4wOWwuNjk4LS42OTdhMy4yIDMuMiAwIDAgMSAyLjI2OS0uOTQ0bTMuNjk3IDcuMjgyYTEgMSAwIDAgMC0xLjQxNCAwTDExIDEyLjU4NWwtMS4yOTMtMS4yOTJsLS4wOTQtLjA4M2ExIDEgMCAwIDAtMS4zMiAxLjQ5N2wyIDJsLjA5NC4wODNhMSAxIDAgMCAwIDEuMzItLjA4M2w0LTRsLjA4My0uMDk0YTEgMSAwIDAgMC0uMDgzLTEuMzIiLz48L2c+PC9zdmc+Cg==',
+    logo_dark = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0wIDBoMjR2MjRIMHoiLz48cGF0aCBmaWxsPSIjQzRBM0UwIiBkPSJNMTIuMDEgMi4wMTFhMy4yIDMuMiAwIDAgMSAyLjExMy43OTdsLjE1NC4xNDVsLjY5OC42OThhMS4yIDEuMiAwIDAgMCAuNzEuMzQxTDE1LjgyIDRoMWEzLjIgMy4yIDAgMCAxIDMuMTk1IDMuMDE4bC4wMDUuMTgydjFjMCAuMjcuMDkyLjUzMy4yNTguNzQzbC4wOS4xbC42OTcuNjk4YTMuMiAzLjIgMCAwIDEgLjE0NyA0LjM4MmwtLjE0NS4xNTRsLS42OTguNjk4YTEuMiAxLjIgMCAwIDAtLjM0MS43MWwtLjAwOC4xMzV2MWEzLjIgMy4yIDAgMCAxLTMuMDE4IDMuMTk1bC0uMTgyLjAwNWgtMWExLjIgMS4yIDAgMCAwLS43NDMuMjU4bC0uMS4wOWwtLjY5OC42OTdhMy4yIDMuMiAwIDAgMS00LjM4Mi4xNDdsLS4xNTQtLjE0NWwtLjY5OC0uNjk4YTEuMiAxLjIgMCAwIDAtLjcxLS4zNDFMOC4yIDIwLjAyaC0xYTMuMiAzLjIgMCAwIDEtMy4xOTUtMy4wMThMNCAxNi44MnYtMWExLjIgMS4yIDAgMCAwLS4yNTgtLjc0M2wtLjA5LS4xbC0uNjk3LS42OThhMy4yIDMuMiAwIDAgMS0uMTQ3LTQuMzgybC4xNDUtLjE1NGwuNjk4LS42OThhMS4yIDEuMiAwIDAgMCAuMzQxLS43MUw0IDguMnYtMWwuMDA1LS4xODJhMy4yIDMuMiAwIDAgMSAzLjAxMy0zLjAxM0w3LjIgNGgxYTEuMiAxLjIgMCAwIDAgLjc0My0uMjU4bC4xLS4wOWwuNjk4LS42OTdhMy4yIDMuMiAwIDAgMSAyLjI2OS0uOTQ0bTMuNjk3IDcuMjgyYTEgMSAwIDAgMC0xLjQxNCAwTDExIDEyLjU4NWwtMS4yOTMtMS4yOTJsLS4wOTQtLjA4M2ExIDEgMCAwIDAtMS4zMiAxLjQ5N2wyIDJsLjA5NC4wODNhMSAxIDAgMCAwIDEuMzItLjA4M2w0LTRsLjA4My0uMDk0YTEgMSAwIDAgMC0uMDgzLTEuMzIiLz48L2c+PC9zdmc+Cg=='
+WHERE id = '019b4000-3000-7000-8000-000000000002';
 
 -- Plugin-Category associations
 INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
@@ -396,8 +405,10 @@ INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
     ('019b4000-3000-7000-8000-000000000001', '019b4000-5000-7000-8000-000000000002'),
     ('019b4000-3000-7000-8000-000000000001', '019b4000-5000-7000-8000-000000000003'),
     ('019b4000-3000-7000-8000-000000000001', '019b4000-5000-7000-8000-00000000000a'),
-    -- cert-manager: Certificates
-    ('019b4000-3000-7000-8000-000000000002', '019b4000-5000-7000-8000-000000000004'),
+    -- cert-manager: certificates, tls, security
+    ('019b4000-3000-7000-8000-000000000002', '019b4000-5000-7000-8000-00000000000b'),
+    ('019b4000-3000-7000-8000-000000000002', '019b4000-5000-7000-8000-00000000000c'),
+    ('019b4000-3000-7000-8000-000000000002', '019b4000-5000-7000-8000-00000000000d'),
     -- CloudNativePG: PostgreSQL
     ('019b4000-3000-7000-8000-000000000003', '019b4000-5000-7000-8000-000000000006'),
     -- ECK operator: Elasticsearch

@@ -84,7 +84,9 @@ func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg Plugin
 }
 
 const pluginDefinitionGetByName = `-- name: PluginDefinitionGetByName :one
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash,
+  COALESCE(NULLIF(appstore.plugins.logo, ''), appstore.plugin_definitions.logo)::text AS logo,
+  appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
@@ -127,7 +129,9 @@ func (q *Queries) PluginDefinitionGetByName(ctx context.Context, arg PluginDefin
 }
 
 const pluginDefinitionGetPublished = `-- name: PluginDefinitionGetPublished :one
-SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.logo, appstore.plugin_definitions.menu_icons
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash,
+  COALESCE(NULLIF(appstore.plugins.logo, ''), appstore.plugin_definitions.logo)::text AS logo,
+  appstore.plugin_definitions.menu_icons
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = $1::uuid
@@ -276,7 +280,7 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo, ''), (
     SELECT appstore.plugin_definitions.logo
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -285,7 +289,7 @@ SELECT
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS logo,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo_dark, ''), (
     SELECT appstore.plugin_definitions.logo_dark
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -467,7 +471,7 @@ SELECT
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo, ''), (
     SELECT appstore.plugin_definitions.logo
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -476,7 +480,7 @@ SELECT
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ), '')::text AS logo,
-  COALESCE((
+  COALESCE(NULLIF(appstore.plugins.logo_dark, ''), (
     SELECT appstore.plugin_definitions.logo_dark
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -562,6 +566,8 @@ type PluginListRow struct {
 // small and unpaginated, and FTS would cost a tsvector column plus a trigger.
 // 'query' is a LIKE pattern fragment, not raw user input: callers must run it
 // through escapeLikePattern first so % and _ stay literal.
+// Every logo here prefers the one uploaded on the listing (plugins.logo) over
+// the version's.
 func (q *Queries) PluginList(ctx context.Context, arg PluginListParams) ([]PluginListRow, error) {
 	rows, err := q.db.Query(ctx, pluginList, arg.Query, arg.CategoryID, arg.Sort)
 	if err != nil {

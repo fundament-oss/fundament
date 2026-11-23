@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -19,6 +18,7 @@ import (
 	marketplacev1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 func (s *Server) ListPlugins(
@@ -42,7 +42,11 @@ func (s *Server) ListPlugins(
 
 	plugins := make([]*registryv1.Plugin, 0, len(rows))
 	for i := range rows {
-		plugins = append(plugins, pluginFromRow(pluginRowFromList(&rows[i]), children))
+		plugin, err := pluginFromRow(pluginRowFromList(&rows[i]), children)
+		if err != nil {
+			return nil, err
+		}
+		plugins = append(plugins, plugin)
 	}
 
 	return registryv1.ListPluginsResponse_builder{Plugins: plugins}.Build(), nil
@@ -64,9 +68,12 @@ func (s *Server) GetPlugin(
 		return nil, err
 	}
 
-	return registryv1.GetPluginResponse_builder{
-		Plugin: pluginFromRow(pluginRowFromGet(&row), children),
-	}.Build(), nil
+	plugin, err := pluginFromRow(pluginRowFromGet(&row), children)
+	if err != nil {
+		return nil, err
+	}
+
+	return registryv1.GetPluginResponse_builder{Plugin: plugin}.Build(), nil
 }
 
 func (s *Server) CreatePlugin(
@@ -142,11 +149,17 @@ func (s *Server) UpdatePlugin(
 	// accident; looking it up first makes that explicit. The lookup also keeps
 	// NOT_FOUND the default denial (FUN-12): the OpenFGA check below only runs
 	// for a listing the caller's organization can see.
-	if _, err := s.queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: pluginID}); err != nil {
-		return nil, pluginLookupError(err)
+	live, err := s.loadPlugin(ctx, pluginID)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+		return nil, err
+	}
+
+	draft, err := s.storedDraft(ctx, req, live)
+	if err != nil {
 		return nil, err
 	}
 
@@ -158,33 +171,20 @@ func (s *Server) UpdatePlugin(
 	qtx := s.queries.WithTx(tx)
 
 	updated, err := qtx.PluginUpdate(ctx, db.PluginUpdateParams{
-		ID:          pluginID,
-		Description: req.GetDescription(),
-		Image:       req.GetImage(),
-		AuthorName:  textOrNull(req.GetAuthorName()),
-		AuthorUrl:   textOrNull(req.GetAuthorUrl()),
-		Visibility:  visibilityToDB(req.GetVisibility()),
+		ID:           pluginID,
+		Visibility:   visibilityToDB(req.GetVisibility()),
+		ListingDraft: draft,
 	})
 	if err != nil {
 		return nil, s.writeError(ctx, err, "updating plugin")
 	}
-	// Otherwise the replacements below would commit against a listing deleted
+	// Otherwise the replacement below would commit against a listing deleted
 	// since the lookup.
 	if updated == 0 {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("plugin not found"))
 	}
 
-	// A full replacement: everything the request omits is cleared.
-	if err := s.replaceCategories(ctx, qtx, pluginID, req.GetCategoryIds()); err != nil {
-		return nil, err
-	}
 	if err := s.replaceAllowedOrganizations(ctx, qtx, pluginID, req.GetAllowedOrganizationIds()); err != nil {
-		return nil, err
-	}
-	if err := s.replaceDocumentationLinks(ctx, qtx, pluginID, req.GetDocumentationLinks()); err != nil {
-		return nil, err
-	}
-	if err := s.replaceFeatures(ctx, qtx, pluginID, req.GetFeatures()); err != nil {
 		return nil, err
 	}
 
@@ -286,6 +286,9 @@ type registryPluginRow struct {
 	LatestPublishedVersionID uuid.UUID
 	Logo                     string
 	LogoDark                 string
+	ListingLogo              string
+	ListingLogoDark          string
+	ListingDraft             []byte
 }
 
 func pluginRowFromList(row *db.PluginListRow) *registryPluginRow {
@@ -305,8 +308,11 @@ func pluginRowFromList(row *db.PluginListRow) *registryPluginRow {
 		Created:                  timestamptzOrNil(row.Created),
 		Updated:                  timestamptzOrNil(row.Updated),
 		LatestPublishedVersionID: row.LatestPublishedVersionID,
-		Logo:                     row.Logo,
-		LogoDark:                 row.LogoDark,
+		Logo:                     row.EffectiveLogo,
+		LogoDark:                 row.EffectiveLogoDark,
+		ListingLogo:              row.Logo,
+		ListingLogoDark:          row.LogoDark,
+		ListingDraft:             row.ListingDraft,
 	}
 }
 
@@ -327,8 +333,11 @@ func pluginRowFromGet(row *db.PluginGetByIDRow) *registryPluginRow {
 		Created:                  timestamptzOrNil(row.Created),
 		Updated:                  timestamptzOrNil(row.Updated),
 		LatestPublishedVersionID: row.LatestPublishedVersionID,
-		Logo:                     row.Logo,
-		LogoDark:                 row.LogoDark,
+		Logo:                     row.EffectiveLogo,
+		LogoDark:                 row.EffectiveLogoDark,
+		ListingLogo:              row.Logo,
+		ListingLogoDark:          row.LogoDark,
+		ListingDraft:             row.ListingDraft,
 	}
 }
 
@@ -345,7 +354,7 @@ func (s *Server) loadPlugin(ctx context.Context, pluginID uuid.UUID) (*registryv
 		return nil, err
 	}
 
-	return pluginFromRow(pluginRowFromGet(&row), children), nil
+	return pluginFromRow(pluginRowFromGet(&row), children)
 }
 
 // pluginChildren is the child rows of a set of listings, keyed by plugin id.
@@ -445,7 +454,11 @@ func (s *Server) loadPluginChildren(ctx context.Context, pluginIDs []uuid.UUID) 
 	return children, nil
 }
 
-func pluginFromRow(row *registryPluginRow, children *pluginChildren) *registryv1.Plugin {
+func pluginFromRow(row *registryPluginRow, children *pluginChildren) (*registryv1.Plugin, error) {
+	pending, err := pendingListing(row.ListingDraft)
+	if err != nil {
+		return nil, err
+	}
 	return registryv1.Plugin_builder{
 		Id:                       row.ID.String(),
 		Name:                     row.Name,
@@ -470,7 +483,23 @@ func pluginFromRow(row *registryPluginRow, children *pluginChildren) *registryv1
 		Labels:                   children.labels[row.ID],
 		Logo:                     row.Logo,
 		LogoDark:                 row.LogoDark,
-	}.Build()
+		ListingLogo:              row.ListingLogo,
+		ListingLogoDark:          row.ListingLogoDark,
+		PendingListing:           pending,
+	}.Build(), nil
+}
+
+// uploadedLogo validates an uploaded logo as a pushed one would be and returns
+// it as the data URI stored on the listing; empty clears the upload.
+func uploadedLogo(field string, content []byte) (string, error) {
+	if len(content) == 0 {
+		return "", nil
+	}
+	uri, err := pluginruntime.LogoDataURI(content)
+	if err != nil {
+		return "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s: %w", field, err))
+	}
+	return uri, nil
 }
 
 func (s *Server) replaceCategories(ctx context.Context, qtx *db.Queries, pluginID uuid.UUID, categoryIDs []string) error {
@@ -546,137 +575,6 @@ func (s *Server) replaceAllowedOrganizations(ctx context.Context, qtx *db.Querie
 	}
 
 	return nil
-}
-
-// replaceDocumentationLinks applies the request's links to the listing. Unlike
-// the other replacements this one is not wholesale: a link is the only child
-// row whose id the API hands out, so a link carrying one is updated in place
-// and keeps it. The clear runs first and spares those ids, which is also what
-// keeps it from soft-deleting the rows this call is about to insert.
-func (s *Server) replaceDocumentationLinks(ctx context.Context, qtx *db.Queries, pluginID uuid.UUID, links []*marketplacev1.DocumentationLink) error {
-	ids := make([]string, 0, len(links))
-	for _, link := range links {
-		ids = append(ids, link.GetId())
-	}
-	kept, err := keptIDs(ids, "documentation link")
-	if err != nil {
-		return err
-	}
-
-	if err := qtx.PluginDocLinksSoftDeleteNotIn(ctx, db.PluginDocLinksSoftDeleteNotInParams{
-		PluginID: pluginID,
-		KeptIds:  kept,
-	}); err != nil {
-		return s.writeError(ctx, err, "clearing documentation links")
-	}
-
-	for position, link := range links {
-		if link.GetId() == "" {
-			if err := qtx.PluginDocLinkInsert(ctx, db.PluginDocLinkInsertParams{
-				PluginID: pluginID,
-				Title:    link.GetTitle(),
-				UrlName:  link.GetUrlName(),
-				Url:      link.GetUrl(),
-				Position: int32(position),
-			}); err != nil {
-				return s.writeError(ctx, err, "adding documentation link")
-			}
-			continue
-		}
-
-		updated, err := qtx.PluginDocLinkUpdate(ctx, db.PluginDocLinkUpdateParams{
-			ID:       uuid.MustParse(link.GetId()),
-			PluginID: pluginID,
-			Title:    link.GetTitle(),
-			UrlName:  link.GetUrlName(),
-			Url:      link.GetUrl(),
-			Position: int32(position),
-		})
-		if err != nil {
-			return s.writeError(ctx, err, "updating documentation link")
-		}
-		// Scoped by plugin_id, so this also catches a link id belonging to
-		// another listing rather than letting it read as a silent no-op.
-		if updated == 0 {
-			return connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("unknown documentation link %s", link.GetId()))
-		}
-	}
-
-	return nil
-}
-
-// replaceFeatures is replaceDocumentationLinks for feature blocks: same id rule,
-// same ordering, because both are authored child rows whose ids the API hands
-// out rather than edges keyed by their content.
-func (s *Server) replaceFeatures(ctx context.Context, qtx *db.Queries, pluginID uuid.UUID, features []*marketplacev1.FeatureBlock) error {
-	ids := make([]string, 0, len(features))
-	for _, feature := range features {
-		ids = append(ids, feature.GetId())
-	}
-	kept, err := keptIDs(ids, "feature block")
-	if err != nil {
-		return err
-	}
-
-	if err := qtx.PluginFeaturesSoftDeleteNotIn(ctx, db.PluginFeaturesSoftDeleteNotInParams{
-		PluginID: pluginID,
-		KeptIds:  kept,
-	}); err != nil {
-		return s.writeError(ctx, err, "clearing feature blocks")
-	}
-
-	for position, feature := range features {
-		if feature.GetId() == "" {
-			if err := qtx.PluginFeatureInsert(ctx, db.PluginFeatureInsertParams{
-				PluginID: pluginID,
-				Title:    feature.GetTitle(),
-				Body:     feature.GetBody(),
-				Position: int32(position),
-			}); err != nil {
-				return s.writeError(ctx, err, "adding feature block")
-			}
-			continue
-		}
-
-		updated, err := qtx.PluginFeatureUpdate(ctx, db.PluginFeatureUpdateParams{
-			ID:       uuid.MustParse(feature.GetId()),
-			PluginID: pluginID,
-			Title:    feature.GetTitle(),
-			Body:     feature.GetBody(),
-			Position: int32(position),
-		})
-		if err != nil {
-			return s.writeError(ctx, err, "updating feature block")
-		}
-		if updated == 0 {
-			return connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("unknown feature block %s", feature.GetId()))
-		}
-	}
-
-	return nil
-}
-
-// keptIDs is the ids a replacement request carries back, in order. A repeat is
-// refused: two entries claiming one row would collapse into it, and the caller
-// would read back fewer than it sent.
-func keptIDs(ids []string, kind string) ([]uuid.UUID, error) {
-	kept := make([]uuid.UUID, 0, len(ids))
-
-	for _, id := range ids {
-		if id == "" {
-			continue
-		}
-		parsed := uuid.MustParse(id)
-		if slices.Contains(kept, parsed) {
-			return nil, connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("%s %s appears twice", kind, id))
-		}
-		kept = append(kept, parsed)
-	}
-
-	return kept, nil
 }
 
 // checkPluginName rejects the two name shapes protovalidate's DNS-1123 rule

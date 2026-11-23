@@ -28,19 +28,11 @@ func TestFromDefinition(t *testing.T) {
 	}, FromDefinition(def))
 }
 
-func TestFromDefinitionFallbacksAndLimits(t *testing.T) {
+func TestFromDefinitionFallsBackToName(t *testing.T) {
 	def := &pluginruntime.PluginDefinition{}
 	def.Metadata.Name = "cert-manager"
-	def.Metadata.Description = strings.Repeat("é", MaxDescriptionShort+10)
-	for range MaxTags + 5 {
-		def.Metadata.Tags = append(def.Metadata.Tags, "t")
-	}
 
-	got := FromDefinition(def)
-
-	assert.Equal(t, "cert-manager", got.DisplayName)
-	assert.Equal(t, strings.Repeat("é", MaxDescriptionShort), got.DescriptionShort)
-	assert.Len(t, got.Tags, MaxTags)
+	assert.Equal(t, "cert-manager", FromDefinition(def).DisplayName)
 }
 
 func TestValidate(t *testing.T) {
@@ -55,6 +47,22 @@ func TestValidate(t *testing.T) {
 
 	relative := Fields{RepositoryURL: "example.com/repo"}
 	require.ErrorContains(t, relative.Validate(), "urls.repository")
+
+	// Characters, not bytes: a multi-byte description at the limit fits.
+	ok = Fields{DescriptionShort: strings.Repeat("é", MaxDescriptionShort)}
+	require.NoError(t, ok.Validate())
+
+	long = Fields{DescriptionShort: strings.Repeat("é", MaxDescriptionShort+1)}
+	require.ErrorContains(t, long.Validate(), "description")
+
+	long = Fields{Tags: make([]string, MaxTags+1)}
+	for i := range long.Tags {
+		long.Tags[i] = "t"
+	}
+	require.ErrorContains(t, long.Validate(), "maximum")
+
+	blank := Fields{Tags: []string{"tls", "  "}}
+	require.ErrorContains(t, blank.Validate(), "blank tag")
 }
 
 func TestIsNewest(t *testing.T) {

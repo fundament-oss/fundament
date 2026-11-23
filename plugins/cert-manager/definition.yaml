@@ -5,14 +5,9 @@ metadata:
   displayName: Cert Manager
   version: v1.21.3
   description: Automated TLS certificate management for Kubernetes using cert-manager.
-  author: Fundament
   license: Apache-2.0
-  icon: logo.svg
-  iconDark: logo-dark.svg
   urls:
-    homepage: https://cert-manager.io
     repository: https://github.com/cert-manager/cert-manager
-    documentation: https://cert-manager.io/docs
   tags:
     - certificates
     - tls

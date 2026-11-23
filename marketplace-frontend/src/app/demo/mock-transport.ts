@@ -20,9 +20,10 @@ import {
   GetPluginVersionResponseSchema,
   SubmitPluginVersionResponseSchema,
   WithdrawPluginVersionResponseSchema,
+  UpdatePluginResponseSchema,
   ListCategoriesResponseSchema as ListRegistryCategoriesResponseSchema,
 } from '../../generated/registry/v1/publication_pb';
-import { SubmissionStatus } from '../../generated/marketplace/v1/common_pb';
+import { ListingDraftSchema, SubmissionStatus } from '../../generated/marketplace/v1/common_pb';
 import * as fx from './fixtures';
 
 // Artificial latency so the app's loading and skeleton states are visible while
@@ -66,6 +67,14 @@ export function createDemoCatalogTransport(): Transport {
   });
 }
 
+// A data URI for an uploaded logo; the registry sniffs PNG the same way.
+function logoDataUri(content: Uint8Array): string {
+  if (content.length === 0) return '';
+  const isPng = content[0] === 0x89 && content[1] === 0x50;
+  const binary = Array.from(content, (byte) => String.fromCharCode(byte)).join('');
+  return `data:${isPng ? 'image/png' : 'image/svg+xml'};base64,${btoa(binary)}`;
+}
+
 /** The developer's publishing API: registry.v1.PublicationService. */
 export function createDemoRegistryTransport(): Transport {
   return createRouterTransport((router) => {
@@ -105,6 +114,32 @@ export function createDemoRegistryTransport(): Transport {
         const version = fx.findVersion(req.pluginVersionId);
         if (version) version.status = SubmissionStatus.WITHDRAWN;
         return create(WithdrawPluginVersionResponseSchema, { version });
+      },
+      // Mutates the fixture in place, like submit and withdraw, so the saved
+      // listing survives navigating back to it. As on the registry, visibility
+      // applies at once and the rest waits for review, which the demo has no
+      // reviewer for.
+      updatePlugin: async (req) => {
+        await delay(400);
+        const plugin = fx.authoredPlugins.find((candidate) => candidate.id === req.pluginId);
+        if (plugin) {
+          Object.assign(plugin, {
+            visibility: req.visibility,
+            allowedOrganizationIds: req.allowedOrganizationIds,
+            pendingListing: create(ListingDraftSchema, {
+              description: req.description,
+              categoryIds: req.categoryIds,
+              image: req.image,
+              features: req.features,
+              documentationLinks: req.documentationLinks,
+              authorName: req.authorName,
+              authorUrl: req.authorUrl,
+              logo: logoDataUri(req.logo),
+              logoDark: logoDataUri(req.logoDark),
+            }),
+          });
+        }
+        return create(UpdatePluginResponseSchema, { plugin });
       },
       listCategories: async () => {
         await delay(80);

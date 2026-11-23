@@ -1728,7 +1728,7 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="13" z-value="0">
+<table name="plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1900"/>
@@ -1764,6 +1764,18 @@ END;]]> </definition>
 	</column>
 	<column name="image" not-null="true" default-value="''">
 		<type name="text" length="0"/>
+	</column>
+	<column name="logo" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Logo as a data: URI, uploaded through UpdatePlugin. Empty means the newest version's logo is shown.]]> </comment>
+	</column>
+	<column name="logo_dark" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Dark-mode logo as a data: URI, uploaded through UpdatePlugin. Empty means the newest version's dark logo is shown.]]> </comment>
+	</column>
+	<column name="listing_draft">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[Listing edits from UpdatePlugin awaiting review, as a pluginlisting.Draft. Copied onto a submission when a version is submitted and applied when that version is approved; NULL when the listing has no pending edits.]]> </comment>
 	</column>
 	<column name="license" not-null="true" default-value="''">
 		<type name="text" length="0"/>
@@ -1973,7 +1985,7 @@ END;]]> </definition>
 	<predicate> <![CDATA[published IS NOT NULL AND deleted IS NULL]]> </predicate>
 </index>
 
-<table name="submissions" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="10" z-value="0">
+<table name="submissions" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="11" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<comment> <![CDATA[One review round for one plugin version. The version's own status column stays authoritative; this table records who submitted, who decided, when and why.]]> </comment>
@@ -2007,6 +2019,10 @@ END;]]> </definition>
 	<column name="closed">
 		<type name="timestamptz" length="0"/>
 		<comment> <![CDATA[Set by any terminal outcome. A withdrawal closes a round without a reviewer, which is why this is separate from reviewed.]]> </comment>
+	</column>
+	<column name="listing_draft">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[The listing's pending edits as they stood when this round was submitted: what the reviewer sees and what approval applies. Later edits wait for the next round.]]> </comment>
 	</column>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
@@ -2264,14 +2280,12 @@ END;]]> </definition>
 	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
-<policy name="plugin_features_all_registry" table="appstore.plugin_features" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+<policy name="plugin_features_select_registry" table="appstore.plugin_features" command="SELECT" permissive="true">	<roles names="fun_marketplace_registry_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
-	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
-<policy name="plugin_documentation_links_all_registry" table="appstore.plugin_documentation_links" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+<policy name="plugin_documentation_links_select_registry" table="appstore.plugin_documentation_links" command="SELECT" permissive="true">	<roles names="fun_marketplace_registry_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
-	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
 <policy name="plugins_tags_all_registry" table="appstore.plugins_tags" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
@@ -2334,6 +2348,24 @@ END;]]> </definition>
 
 <policy name="categories_plugins_select_admin" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="categories_plugins_insert_admin" table="appstore.categories_plugins" command="INSERT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="categories_plugins_delete_admin" table="appstore.categories_plugins" command="DELETE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_features_all_admin" table="appstore.plugin_features" command="ALL" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_documentation_links_all_admin" table="appstore.plugin_documentation_links" command="ALL" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
 </policy>
 
 <policy name="plugin_labels_select_admin" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
@@ -6344,6 +6376,11 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<privileges insert="true"/>
 </permission>
 <permission>
+	<object name="listing_draft" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
 	<object name="closed" parent="appstore.submissions" type="column"/>
 	<roles names="fun_marketplace_registry_api"/>
 	<privileges update="true"/>
@@ -6356,12 +6393,12 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="appstore.plugin_features" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
-	<privileges select="true" insert="true" update="true"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_documentation_links" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
-	<privileges select="true" insert="true" update="true"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugins_tags" type="table"/>
@@ -6434,6 +6471,41 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<privileges update="true"/>
 </permission>
 <permission>
+	<object name="description" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="image" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="author_name" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="author_url" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="logo" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="logo_dark" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="listing_draft" parent="appstore.plugins" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
 	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
@@ -6496,7 +6568,17 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="appstore.categories_plugins" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
-	<privileges select="true"/>
+	<privileges select="true" insert="true" delete="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_features" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_documentation_links" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_labels" type="table"/>

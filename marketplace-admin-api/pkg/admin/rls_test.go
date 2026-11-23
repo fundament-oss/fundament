@@ -67,15 +67,17 @@ func TestAdminRoleCannotRewriteSubmissionIdentity(t *testing.T) {
 	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
 }
 
-// The reviewer writes only the columns approval syncs from definition.yaml;
-// the rest of the listing belongs to its publisher.
+// The reviewer writes only the columns approval updates: the definition.yaml
+// fields and the reviewed listing draft. Who owns the listing, its name and
+// its visibility stay the publisher's.
 func TestAdminRoleCannotWriteListings(t *testing.T) {
 	env := newTestEnv(t)
 	seeded := seedPendingSubmission(t, env, "cert-manager")
 
 	for _, stmt := range []string{
-		`UPDATE appstore.plugins SET description = 'rewritten' WHERE id = $1`,
 		`UPDATE appstore.plugins SET organization_id = gen_random_uuid() WHERE id = $1`,
+		`UPDATE appstore.plugins SET name = 'renamed' WHERE id = $1`,
+		`UPDATE appstore.plugins SET visibility = 'restricted' WHERE id = $1`,
 	} {
 		_, err := env.servicePool.Exec(context.Background(), stmt, seeded.pluginID)
 		require.Error(t, err, stmt)
