@@ -511,7 +511,8 @@ FROM
     tenant.clusters
 WHERE
     (
-        tenant.clusters.shoot_status IS NOT NULL
+        tenant.clusters.deleted IS NOT NULL
+        OR tenant.clusters.shoot_status IS NOT NULL
         -- reached Gardener: the test ClusterHasEverBeenSynced spells out
         OR EXISTS (
             SELECT 1
@@ -528,9 +529,11 @@ ORDER BY
     tenant.clusters.id
 `
 
-// IDs of every cluster the status sweep checks: it has reached Gardener (a
-// status was recorded or an outbox row completed) and, if soft-deleted, its
-// Shoot is not confirmed gone yet.
+// IDs of every cluster the status sweep checks. A deleted cluster is always
+// checked: one that never reached Gardener still has to be recorded as
+// deleted, or it keeps its name and its quota. An active cluster is checked
+// once it has reached Gardener (a status was recorded or an outbox row
+// completed).
 func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, clusterListForStatusSweep)
 	if err != nil {
@@ -862,8 +865,14 @@ SET
     status_message = $2,
     status_updated = now()
 WHERE
-    id = $3
-    AND deleted IS NULL
+    tenant.node_pools.id = $3
+    AND tenant.node_pools.deleted IS NULL
+    AND EXISTS (
+        SELECT 1
+        FROM tenant.clusters
+        WHERE tenant.clusters.id = tenant.node_pools.cluster_id
+          AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+    )
 `
 
 type NodePoolUpdateStatusParams struct {
@@ -874,7 +883,9 @@ type NodePoolUpdateStatusParams struct {
 
 // Record what Gardener reports about one pool's machines. Keyed by id: the
 // row was just read by the same check, and with soft deletes (cluster_id,
-// name) could meanwhile mean a recreated pool.
+// name) could meanwhile mean a recreated pool. A cluster that was recorded as
+// lost while this check ran has had its pools cleared; the pool status the
+// check decided from the old report must not land after that clear.
 func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) (int64, error) {
 	result, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
 	if err != nil {

@@ -63,7 +63,10 @@ func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter ti
 		}
 		return 0, fmt.Errorf("load cluster %s: %w", id, err)
 	}
-	if !cluster.Synced {
+	// A deleted cluster is checked even when it never reached Gardener: there is
+	// no Shoot to wait for, and the check records that nothing is left to
+	// delete. Until it does, the cluster keeps its name and its quota.
+	if !cluster.Synced && !cluster.Deleted.Valid {
 		return 0, ErrClusterNotSynced
 	}
 
@@ -77,7 +80,7 @@ func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter ti
 		}
 		deleted := cluster.Deleted.Time
 		clusterToSync.Deleted = &deleted
-		return 0, h.checkDeletedCluster(ctx, &cluster, clusterToSync)
+		return h.checkDeletedCluster(ctx, &cluster, clusterToSync)
 	}
 	return h.checkActiveCluster(ctx, &cluster, clusterToSync)
 }
@@ -178,10 +181,10 @@ func (h *Handler) lastProgress(ctx context.Context, clusterID uuid.UUID) (progre
 }
 
 // checkDeletedCluster confirms that a soft-deleted cluster's Shoot is gone.
-func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) error {
+func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) (time.Duration, error) {
 	shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 	if err != nil {
-		return fmt.Errorf("get deleted shoot status: %w", err)
+		return 0, fmt.Errorf("get deleted shoot status: %w", err)
 	}
 
 	// The Shoot of a deleted cluster is going or gone: forget that its API
@@ -195,13 +198,20 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 			APIAvailable: cluster.ShootApiAvailable.Valid,
 		}
 		if deleting.unchanged(&stored) {
-			return nil
+			return 0, nil
 		}
-		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {
-			return err
+		written, err := h.writeShootStatus(ctx, cluster, &deleting)
+		if err != nil {
+			return 0, err
+		}
+		if !written {
+			// The row changed after it was read. Check again shortly instead of
+			// dropping the transition: no event is guaranteed to bring us back.
+			h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
+			return statusRetryBaseDelay, nil
 		}
 		h.logger.Debug("shoot still being deleted", "cluster_id", cluster.ID, "status", shootStatus.Status)
-		return nil
+		return 0, nil
 	}
 
 	written, err := h.writeShootStatus(ctx, cluster, &shootStatusUpdate{
@@ -211,12 +221,14 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		APIGone: apiGone,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if written {
-		h.logger.Info("confirmed shoot deletion", "cluster_id", cluster.ID, "name", cluster.Name)
+	if !written {
+		h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
+		return statusRetryBaseDelay, nil
 	}
-	return nil
+	h.logger.Info("confirmed shoot deletion", "cluster_id", cluster.ID, "name", cluster.Name)
+	return 0, nil
 }
 
 // writeShootStatus records a status update with its events and, on a

@@ -185,15 +185,23 @@ WHERE
 -- name: NodePoolUpdateStatus :execrows
 -- Record what Gardener reports about one pool's machines. Keyed by id: the
 -- row was just read by the same check, and with soft deletes (cluster_id,
--- name) could meanwhile mean a recreated pool.
+-- name) could meanwhile mean a recreated pool. A cluster that was recorded as
+-- lost while this check ran has had its pools cleared; the pool status the
+-- check decided from the old report must not land after that clear.
 UPDATE tenant.node_pools
 SET
     status = @status,
     status_message = @message,
     status_updated = now()
 WHERE
-    id = @node_pool_id
-    AND deleted IS NULL;
+    tenant.node_pools.id = @node_pool_id
+    AND tenant.node_pools.deleted IS NULL
+    AND EXISTS (
+        SELECT 1
+        FROM tenant.clusters
+        WHERE tenant.clusters.id = tenant.node_pools.cluster_id
+          AND tenant.clusters.shoot_status IS DISTINCT FROM 'lost'
+    );
 
 -- name: NodePoolClearStatusByClusterID :exec
 -- Forget what was recorded about a lost cluster's pools: their machines went
@@ -233,16 +241,19 @@ SELECT EXISTS (
 )::boolean AS has_been_synced;
 
 -- name: ClusterListForStatusSweep :many
--- IDs of every cluster the status sweep checks: it has reached Gardener (a
--- status was recorded or an outbox row completed) and, if soft-deleted, its
--- Shoot is not confirmed gone yet.
+-- IDs of every cluster the status sweep checks. A deleted cluster is always
+-- checked: one that never reached Gardener still has to be recorded as
+-- deleted, or it keeps its name and its quota. An active cluster is checked
+-- once it has reached Gardener (a status was recorded or an outbox row
+-- completed).
 SELECT
     tenant.clusters.id
 FROM
     tenant.clusters
 WHERE
     (
-        tenant.clusters.shoot_status IS NOT NULL
+        tenant.clusters.deleted IS NOT NULL
+        OR tenant.clusters.shoot_status IS NOT NULL
         -- reached Gardener: the test ClusterHasEverBeenSynced spells out
         OR EXISTS (
             SELECT 1
