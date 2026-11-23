@@ -193,8 +193,8 @@ from the moment the change's sync row finished:
   ran was lost after its row completed; nothing else would report it. A Shoot that once
   existed is not this case: its absence is `lost`, below.
 - An update `CLUSTER_STATUS_UPDATING_WARNING` (30m) after its sync row finished records a
-  `status_warning` that the update has not finished. The cluster stays `progressing` — a
-  warning, not a verdict.
+  `status_warning` that the update has not finished. The cluster stays `ready` and marked
+  as updating (`shoot_updating`) — a warning, not a verdict.
 - A Shoot that has been `deleting` for `CLUSTER_STATUS_DELETING_ALERT` (2h) records the
   same warning and logs an `ALERT` with how long it has been deleting. The status stays
   `deleting`: declaring it deleted would release quota while the Shoot still exists.

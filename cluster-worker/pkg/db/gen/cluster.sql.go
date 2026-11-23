@@ -163,7 +163,6 @@ SELECT
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
           AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
-          AND tenant.cluster_outbox.status IN ('completed', 'failed')
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
     ) AS update_settled,
@@ -216,6 +215,8 @@ type ClusterGetForStatusCheckRow struct {
 // shoot_status_since is when the stored status began, so a check knows how
 // long one has lasted; update_settled is when the cluster's latest sync row
 // finished, so a check knows how long Gardener has had to roll out a change.
+// It is NULL while that row is still queued: the previous row's finish is no
+// measure of an update Gardener has not received yet.
 func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
 	var i ClusterGetForStatusCheckRow
@@ -331,7 +332,6 @@ latest_pool_row AS (
     FROM tenant.cluster_outbox
     JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
     WHERE tenant.node_pools.cluster_id = $1
-      AND tenant.node_pools.deleted IS NULL
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
 )
@@ -391,11 +391,14 @@ type ClusterGetPushStateRow struct {
 // at the start of a check is stale for pools inserted since.
 //
 // sync_in_flight: a change was saved but its sync has not applied it to
-// Gardener — the cluster's own latest sync row is queued or retrying, or a
-// node pool's latest row (its create, update or delete) is.
-// sync_blocked: the cluster's own latest sync row failed for good, and no pool
-// sync came after it; nothing will retry it, so the pools must say so instead
-// of waiting behind it.
+// Gardener — the cluster's own latest sync row is queued or retrying, or an
+// active node pool's latest row (its create or update) is. A deleted pool's
+// row is not counted: removing a pool does not shape the pools that remain.
+// sync_blocked: the cluster's own latest sync row failed for good, and no
+// pool sync came after it; nothing will retry it, so the pools must say so
+// instead of waiting behind it. Any pool row counts here, a deleted pool's
+// included: that sync applied the whole cluster to Gardener, failed change
+// and all.
 func (q *Queries) ClusterGetPushState(ctx context.Context, arg ClusterGetPushStateParams) (ClusterGetPushStateRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetPushState, arg.ClusterID)
 	var i ClusterGetPushStateRow

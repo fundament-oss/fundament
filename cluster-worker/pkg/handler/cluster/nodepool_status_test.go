@@ -399,6 +399,15 @@ func TestReasonText(t *testing.T) {
 	assert.Equal(t, "…", string([]rune(cleaned)[maxReasonLen-1]))
 }
 
+// A failed sync's message carries Gardener or HTTP error text, so it is cleaned
+// like every other stored pool reason.
+func TestSyncFailureMessageSanitizes(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "The last sync to Gardener failed.", syncFailureMessage(""))
+	assert.Equal(t, "The last sync to Gardener failed: two  lines", syncFailureMessage("two \nlines\x1b"))
+}
+
 // The waiting reason a pool stores went through reasonText.
 func TestPoolComplaintSanitizes(t *testing.T) {
 	t.Parallel()

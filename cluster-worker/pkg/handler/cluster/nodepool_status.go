@@ -202,7 +202,7 @@ func syncFailureMessage(reason string) string {
 	if reason == "" {
 		return "The last sync to Gardener failed."
 	}
-	return "The last sync to Gardener failed: " + reason
+	return "The last sync to Gardener failed: " + reasonText(reason)
 }
 
 func shootOperationRuns(observed *gardener.ShootStatus) bool {

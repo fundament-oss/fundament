@@ -135,3 +135,50 @@ func (q *Queries) NamespaceListActiveForCluster(ctx context.Context, arg Namespa
 	}
 	return items, nil
 }
+
+const namespaceListFailedForCluster = `-- name: NamespaceListFailedForCluster :many
+SELECT tenant.namespaces.id
+FROM tenant.namespaces
+JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+WHERE tenant.projects.cluster_id = $1
+  AND tenant.namespaces.deleted IS NULL
+  AND COALESCE((
+      SELECT
+          tenant.cluster_outbox.status = 'failed'
+          AND tenant.cluster_outbox.failed <= now() - $2::interval
+      FROM tenant.cluster_outbox
+      WHERE tenant.cluster_outbox.namespace_id = tenant.namespaces.id
+      ORDER BY tenant.cluster_outbox.id DESC
+      LIMIT 1
+  ), false)
+`
+
+type NamespaceListFailedForClusterParams struct {
+	ClusterID        uuid.UUID
+	FailedRetryAfter pgtype.Interval
+}
+
+// List the ids of a cluster's active namespaces whose latest sync row failed
+// for good and whose failure is older than the retry interval. The reconcile
+// loop queues these again, whatever the Shoot already shows: a sync can fail
+// after creating the namespace, converging its LimitRange or role bindings,
+// and the namespace then looks present while staying unusable.
+func (q *Queries) NamespaceListFailedForCluster(ctx context.Context, arg NamespaceListFailedForClusterParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, namespaceListFailedForCluster, arg.ClusterID, arg.FailedRetryAfter)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

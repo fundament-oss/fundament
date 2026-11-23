@@ -211,6 +211,16 @@ func TestClusterGetPushState(t *testing.T) {
 		}},
 		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true},
 		{name: "the cluster's own update failed", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "failed") }, wantBlocked: true, wantMessageSet: true},
+		// A deleted pool's sync applies the whole cluster, failed change and
+		// all, so it clears the block like any other pool's sync.
+		{name: "a failed cluster row superseded by a deleted pool's sync", setup: func(c, pool uuid.UUID) {
+			addClusterRow(c, "updated", "failed")
+			deletePool(pool)
+			_, err := db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox SET status = 'completed', processed = now()
+				 WHERE tenant.cluster_outbox.node_pool_id = $1`, pool)
+			require.NoError(t, err)
+		}},
 		{name: "a ready fan-out row queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "ready", "pending") }},
 		{name: "a failed cluster row superseded by a later pool sync", setup: func(c, _ uuid.UUID) {
 			addClusterRow(c, "updated", "failed")

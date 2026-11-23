@@ -328,8 +328,23 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 
 	plan := BuildPlan(activeIDs, clusterNamespaces)
 
+	// A namespace whose sync failed long ago is queued again even when the
+	// Shoot already shows it: its sync may have failed after creating the
+	// namespace, on its LimitRange or role bindings.
+	failedIDs, err := h.queries.NamespaceListFailedForCluster(ctx, db.NamespaceListFailedForClusterParams{
+		ClusterID:        clusterID,
+		FailedRetryAfter: pgtype.Interval{Microseconds: failedRetryAfter.Microseconds(), Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("list namespaces whose sync failed: %w", err)
+	}
+
+	queue := make([]uuid.UUID, 0, len(plan.CreateIDs)+len(failedIDs))
+	queue = append(queue, plan.CreateIDs...)
+	queue = append(queue, failedIDs...)
+
 	var errs []error
-	for _, id := range plan.CreateIDs {
+	for _, id := range queue {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
 			// A namespace whose sync failed for good would fail again every

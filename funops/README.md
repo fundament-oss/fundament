@@ -9,6 +9,8 @@ See [FUN-8](../docs/funs/FUN-8.adoc) for design details.
 ```
 funops cluster sync <cluster-id>
 funops cluster sync --all
+funops namespace sync <namespace-id>
+funops namespace sync --all
 funops organization create <name> [--node-quota <region>/<machine-type>=<max> ...]
 funops organization list
 funops organization delete <name>
@@ -35,6 +37,14 @@ deploying a release that changes what the worker writes to every Shoot. It
 prints the IDs of the clusters it queued; deleted clusters and clusters that
 already have a sync waiting are left out. With a cluster ID, queuing nothing is
 an error.
+
+`funops namespace sync` queues a reconcile of a namespace: the cluster-worker
+converges it on its shoot again, as it does after a change to the namespace.
+The periodic reconcile loop leaves a namespace alone until its failed sync is an
+hour old; this queues that attempt now, for an operator who has fixed what it
+failed on. Run it with `--all` to re-drive every namespace whose last sync
+failed. It prints the IDs it queued; namespaces that already have a sync waiting
+are left out, and with a namespace ID, queuing nothing is an error.
 
 A sync writes the Kubernetes version and the worker pools from the database,
 with the machine image version from the cluster-worker's

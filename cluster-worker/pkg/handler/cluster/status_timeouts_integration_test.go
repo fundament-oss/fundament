@@ -161,6 +161,43 @@ func TestCheckStatusWarnsOnAStalledUpdate(t *testing.T) {
 	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_warning"), "the warning is recorded once")
 }
 
+// While the update's own sync row is still queued, the check does not measure
+// it against the previous row's finish: the change may not have reached
+// Gardener yet, and a cluster idle for longer than the limit would warn at once.
+func TestCheckStatusDoesNotWarnWhileTheUpdateIsStillQueued(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-queued-update")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 2*time.Hour)
+	setShootStatusSince(t, db, clusterID, 2*time.Hour)
+	setShootUpdating(t, db, clusterID, true)
+
+	// The last settled sync is 45 minutes old, the update's own row is still
+	// waiting to run.
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed)
+		 VALUES ($1, 'updated', 'trigger', 'completed', now() - interval '45 minutes')`, clusterID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status)
+		 VALUES ($1, 'updated', 'trigger', 'pending')`, clusterID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		Message: "Reconcile: Waiting until worker resource status is updated", APIServerAvailable: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_warning"),
+		"an update whose sync row is still queued has not stalled")
+}
+
 // A Shoot still deleting past the alert limit records one warning; the status
 // stays deleting, because forcing deleted would release the cluster's quota
 // while Gardener still has the Shoot.

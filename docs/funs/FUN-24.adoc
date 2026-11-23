@@ -69,7 +69,7 @@ A state that waits for Gardener had no limit, so a create that never happened an
 
 |`CLUSTER_STATUS_UPDATING_WARNING`
 |30m
-|An update whose sync row finished this long ago but that Gardener still reports running records a `status_warning`. The status stays `progressing`.
+|An update whose sync row finished this long ago but that Gardener still reports running records a `status_warning`. The cluster stays `ready`, marked as updating.
 
 |`CLUSTER_STATUS_DELETING_ALERT`
 |2h
