@@ -41,20 +41,51 @@ export default class OrganizationContextService {
   readonly hasOrganization = computed(() => this.organizationId() !== null);
 
   /** Callers of organizationIdSet() waiting for an id. */
-  private idWaiters: ((id: string) => void)[] = [];
+  private readonly idWaiters = new Set<{
+    resolve: (id: string) => void;
+    reject: (reason: unknown) => void;
+  }>();
 
   /**
    * Resolves with the organization's id: at once when one is set, otherwise
    * when the next one is. A page opened by its address knows the organization's
    * name straight away but its id only once the organization has been fetched,
    * and a call sent before that goes without the Fun-Organization header.
+   *
+   * Rejects when `abort` aborts, and when the id is cleared while it waits:
+   * a wait started in one session must not be answered with the id of the
+   * next one.
    */
-  organizationIdSet(): Promise<string> {
+  organizationIdSet(abort?: AbortSignal): Promise<string> {
     const id = this.organizationId();
     if (id) return Promise.resolve(id);
-    return new Promise((resolve) => {
-      this.idWaiters.push(resolve);
+    if (abort?.aborted) return Promise.reject(abort.reason);
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        resolve: (value: string) => {
+          waiter.done();
+          resolve(value);
+        },
+        reject: (reason: unknown) => {
+          waiter.done();
+          reject(reason);
+        },
+        onAbort: () => waiter.reject(abort?.reason),
+        done: () => {
+          this.idWaiters.delete(waiter);
+          abort?.removeEventListener('abort', waiter.onAbort);
+        },
+      };
+      this.idWaiters.add(waiter);
+      abort?.addEventListener('abort', waiter.onAbort, { once: true });
     });
+  }
+
+  /** Rejects every pending organizationIdSet() call: the id they wait for is
+   *  gone. */
+  private rejectIdWaiters() {
+    const reason = new Error('organization cleared');
+    [...this.idWaiters].forEach((waiter) => waiter.reject(reason));
   }
 
   /**
@@ -64,11 +95,10 @@ export default class OrganizationContextService {
     this.organizationId.set(id);
     if (id) {
       localStorage.setItem(STORAGE_KEY, id);
-      const waiters = this.idWaiters;
-      this.idWaiters = [];
-      waiters.forEach((resolve) => resolve(id));
+      [...this.idWaiters].forEach((waiter) => waiter.resolve(id));
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      this.rejectIdWaiters();
     }
   }
 
@@ -103,5 +133,6 @@ export default class OrganizationContextService {
     this.organizationName.set(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(NAME_STORAGE_KEY);
+    this.rejectIdWaiters();
   }
 }
