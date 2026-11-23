@@ -40,7 +40,6 @@ if (!ctx.resource?.name) {
       ['Node', s.nodeName ?? '—'],
       ['Size', humanizeQuantity(s.size)],
       ['Type', s.type ?? '—'],
-      ['Spinning disk (HDD)', s.rotational ? 'Yes' : 'No'],
       ['Model', s.model || '—'],
       ['Serial', s.serial || '—'],
       ['WWN', s.wwn || '—'],

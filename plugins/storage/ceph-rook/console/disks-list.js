@@ -53,8 +53,8 @@ try {
   if (live.length === 0) {
     list.innerHTML = emptyStateHtml({
       icon: 'ssd-hard-drive',
-      text: 'No disks discovered yet',
-      supportingText: 'Disks appear here once a node reports them.',
+      text: 'No disks',
+      supportingText: 'Only disks reported empty and disks in a disk pool are listed.',
     });
   } else {
     // The device path first: it is what an operator recognizes from the node,

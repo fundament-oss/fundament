@@ -229,12 +229,12 @@ export function addInfoButton(group, label, paragraphs) {
 // What a disk pool is, for the disk pool list's and detail's info box.
 export const DISK_POOL_INFO = [
   'A disk pool gives disks to the cluster\'s storage. All pools together form one shared storage cluster, and block, file and object storage are built on top of it.',
-  'One pool per cluster is usually enough: add disks to it instead of creating another.',
+  'A second pool only adds more disks to the same storage: it does not keep storage apart.',
 ];
 
 // What replicas and the failure domain mean, for every consumer kind's info box.
 export const REPLICAS_INFO = 'Replicas is the number of copies Ceph keeps of all data. '
-  + 'With two or more replicas and disks on two or more nodes, the copies go to different nodes, so the storage survives a node failure.';
+  + 'With two or more replicas and disks on two or more nodes, the copies go to different nodes, so no data is lost when one node fails.';
 
 // Posts a navigate message to the parent, which resolves it relative to the
 // iframe's current route — so this sends only the resource identity, and works
@@ -322,7 +322,7 @@ export function loadErrorBanner(message) {
 // for an absent spec.replicas.
 export function replicasFieldHtml(replicas) {
   const selected = replicas ? String(replicas) : 'auto';
-  const label = (v) => (v === 'auto' ? 'Auto (recommended)' : {
+  const label = (v) => (v === 'auto' ? 'Auto' : {
     1: '1 (no replication)',
     2: '2 replicas',
     3: '3 replicas',

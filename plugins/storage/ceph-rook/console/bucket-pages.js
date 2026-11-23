@@ -242,8 +242,10 @@ export async function bucketDetailPage(ctx) {
     const pairs = [
       ['Status', claim.status?.phase ?? 'Unknown'],
       ['Namespace', ctx.namespaceDisplayNames?.[namespace] ?? namespace],
-      [spec.bucketName ? 'Requested bucket name' : 'Bucket name prefix',
-        spec.bucketName ?? spec.generateBucketName ?? '—'],
+      // The provisioner writes a generated name into spec.bucketName too, so
+      // generateBucketName is what tells the two modes apart.
+      [spec.generateBucketName ? 'Bucket name prefix' : 'Requested bucket name',
+        spec.generateBucketName ?? spec.bucketName ?? '—'],
     ];
     if (spec.additionalConfig?.maxSize) pairs.push(['Max size', spec.additionalConfig.maxSize]);
     if (spec.additionalConfig?.maxObjects) pairs.push(['Max objects', spec.additionalConfig.maxObjects]);
@@ -266,9 +268,9 @@ export async function bucketDetailPage(ctx) {
     let pendingNote = '';
     if (!phase || phase === 'Pending') {
       const command = `kubectl delete objectbucketclaim ${name} -n ${namespace}`;
-      pendingNote = spec.bucketName
-        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml(`Not created yet. If it stays Pending, the name may be taken: delete it with <code>${escapeHtml(command)}</code> and create one with another name.`)}`
-        : `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. It is retried automatically.')}`;
+      pendingNote = spec.generateBucketName
+        ? `<nldd-spacer size="12"></nldd-spacer>${hintHtml('Not created yet. It is retried automatically.')}`
+        : `<nldd-spacer size="12"></nldd-spacer>${hintHtml(`Not created yet. If it stays Pending, the name may be taken: delete it with <code>${escapeHtml(command)}</code> and create one with another name.`)}`;
     }
 
     // The Secret's name is shown; its values never reach this iframe.

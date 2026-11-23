@@ -44,7 +44,7 @@ const METADATA_SERVERS = {
   name: 'metadataServers',
   id: 'mds-count',
   label: 'Metadata servers',
-  hint: '1 is enough for most workloads.',
+  hint: 'Each gets a standby that takes over if it fails.',
   min: 1,
   max: 5,
   default: 1,
@@ -54,7 +54,7 @@ const GATEWAY_INSTANCES = {
   name: 'gatewayInstances',
   id: 'rgw-count',
   label: 'Gateway instances',
-  hint: 'Pods that serve the S3 API. 1 is enough for most workloads.',
+  hint: 'Pods that serve the S3 API. With 1, the S3 API is down while that pod restarts.',
   min: 1,
   max: 5,
   default: 1,
@@ -155,7 +155,7 @@ function specFrom(cfg, form) {
 
 // The operator sets the failure domain to host only when the copies land on
 // two or more nodes (ComputeReplication); osd keeps them on one node's disks.
-export function survivesNodeFailure(failureDomain) {
+export function copiesOnSeparateNodes(failureDomain) {
   if (failureDomain === 'host') return 'Yes';
   if (failureDomain === 'osd') return 'No';
   return failureDomain ?? '—';
@@ -179,7 +179,7 @@ export async function consumerListPage(cfg) {
 
 // "StorageClass ceph-default · 2 replicas · default", and why a resource is
 // not Ready when its status says so. The failure domain stays on the detail
-// page, as whether the storage survives a node failure.
+// page, as whether the copies are on separate nodes.
 function summary(item) {
   const status = item.status ?? {};
   const parts = [`StorageClass ${status.storageClassName ?? '—'}`];
@@ -241,7 +241,7 @@ export async function consumerDetailPage(cfg) {
       pairs.push([field.label, String(item.spec?.[field.name] ?? field.default)]);
     }
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
-    pairs.push(['Survives a node failure', survivesNodeFailure(status.failureDomain)]);
+    pairs.push(['Copies on separate nodes', copiesOnSeparateNodes(status.failureDomain)]);
     const free = freeSpace(cap, status.replicas);
     if (free) pairs.push(free);
     if (status.message) pairs.push(['Message', status.message]);

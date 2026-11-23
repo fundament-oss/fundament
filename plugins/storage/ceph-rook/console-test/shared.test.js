@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { freeSpace, infoButtonHtml, latestRead, selectedDiskCount } from '../console/_shared.js';
-import { survivesNodeFailure } from '../console/consumer-pages.js';
+import { copiesOnSeparateNodes } from '../console/consumer-pages.js';
 
 describe('selectedDiskCount', () => {
   test.each([
@@ -50,14 +50,14 @@ describe('freeSpace', () => {
   });
 });
 
-describe('survivesNodeFailure', () => {
+describe('copiesOnSeparateNodes', () => {
   test.each([
     ['host', 'Yes'],
     ['osd', 'No'],
     [undefined, '—'],
     ['rack', 'rack'],
   ])('%p -> %p', (domain, want) => {
-    expect(survivesNodeFailure(domain)).toBe(want);
+    expect(copiesOnSeparateNodes(domain)).toBe(want);
   });
 });
 

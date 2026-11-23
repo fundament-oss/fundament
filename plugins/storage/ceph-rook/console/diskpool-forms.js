@@ -56,7 +56,7 @@ export async function diskPoolCreatePage() {
 
   body.innerHTML = `
     <nldd-rich-text>
-      <p>One disk pool per cluster is enough.</p>
+      <p>All disk pools form one shared storage cluster, so a second pool only adds more disks.</p>
     </nldd-rich-text>
     <nldd-spacer size="12"></nldd-spacer>
 
@@ -74,8 +74,8 @@ export async function diskPoolCreatePage() {
         <nldd-form-section text="Disks">
           ${renderDiskPicker(availableDisks)}
           <nldd-text size="sm" color="secondary">
-            Pick disks on at least two nodes, so storage can survive a node failure. Make
-            sure the disks hold no data you need.
+            Pick disks on at least two nodes, so copies of the data can go to different
+            nodes. Make sure the disks hold no data you need.
           </nldd-text>
         </nldd-form-section>
 
@@ -159,7 +159,7 @@ export async function diskPoolEditPage(ctx) {
       : `<nldd-text size="sm" color="secondary">
            Also in this pool but not shown here:
            ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving keeps them. Remove
-           them with kubectl.
+           them with <code>kubectl edit diskpool ${escapeHtml(name)}</code>.
          </nldd-text>`;
 
   body.innerHTML = `
