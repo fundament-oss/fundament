@@ -3,7 +3,6 @@ import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
-  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -102,10 +101,8 @@ export default class ClusterProjectsComponent {
   );
 
   constructor() {
-    effect(() => {
-      const name = this.cluster()?.name;
-      this.titleService.setTitle(name ? `Projects · ${name}` : 'Projects');
-    });
+    // The cluster's name and "Clusters" follow from the address (TitleService).
+    this.titleService.setTitle('Projects');
   }
 
   /** The new-project sheet, over this page. It reads the cluster from the

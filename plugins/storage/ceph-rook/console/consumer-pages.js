@@ -28,6 +28,7 @@ import {
   integerFieldError,
   resourceNameError,
   wireSubmit,
+  selectedDiskCount,
   formFieldHtml,
   formActionsHtml,
   errorBannerHtml,
@@ -189,6 +190,24 @@ function summary(item) {
   return parts.join(' · ');
 }
 
+// The disk pools, or undefined when they cannot be read: the empty state then
+// says nothing about them rather than guessing.
+async function listDiskPools() {
+  try {
+    const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: 'diskpools' });
+    return items ?? [];
+  } catch {
+    return undefined;
+  }
+}
+
+// What an empty list asks for: a disk pool with disks while there is none,
+// else the resource itself.
+export function emptySupportingText(cfg, pools) {
+  const noDisks = pools?.every((pool) => !(selectedDiskCount(pool.status) > 0));
+  return noDisks ? 'Create a disk pool with disks first.' : `Use New ${cfg.labelMidSentence}… to create one.`;
+}
+
 // Fills the list; again whenever a sheet over the list saved. Renders only
 // while isCurrent says no later read has started (see latestRead).
 async function renderList(list, cfg, isCurrent) {
@@ -197,10 +216,12 @@ async function renderList(list, cfg, isCurrent) {
     if (!isCurrent()) return;
 
     if (!items || items.length === 0) {
+      const pools = await listDiskPools();
+      if (!isCurrent()) return;
       list.innerHTML = emptyStateHtml({
         icon: 'cylinder-split-slash',
         text: cfg.emptyMessage,
-        supportingText: 'Create a disk pool with disks first.',
+        supportingText: emptySupportingText(cfg, pools),
       });
       return;
     }

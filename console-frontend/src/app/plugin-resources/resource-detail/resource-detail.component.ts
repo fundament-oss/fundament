@@ -33,6 +33,8 @@ import {
   toSimpleValue,
   fieldNameToLabel,
   resourceListLabel,
+  printerColumnValue,
+  isConditionValue,
 } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
@@ -542,8 +544,17 @@ export default class ResourceDetailComponent implements OnInit {
   );
 
   /** The one that says whether the thing works, beside the title where a cluster
-   *  carries its status too. Ready if there is one, otherwise the first. */
+   *  carries its status too. The printer column the list's card carries its badge
+   *  from, so both pages say the same (a Gateway's Programmed, not its Accepted);
+   *  without one Ready if there is one, otherwise the first. */
   primaryCondition = computed<{ text: string; color: string } | null>(() => {
+    const resource = this.resource();
+    const printed = resource
+      ? (this.crdDef()?.additionalPrinterColumns ?? [])
+          .map((col) => ({ name: col.name, value: printerColumnValue(resource, col) }))
+          .find(({ value }) => isConditionValue(value))
+      : undefined;
+    if (printed) return this.conditionBadge(printed.name, printed.value);
     const all = this.conditions();
     const ready = all.find((entry) => entry['type'] === 'Ready') ?? all[0];
     return ready ? this.conditionBadge(String(ready['type'] ?? ''), ready['status']) : null;

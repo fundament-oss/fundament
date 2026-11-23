@@ -112,12 +112,12 @@ spec:
         label: gRPC routes
         list: true
         detail: true
-        icon: zap
+        icon: lightning
       - crd: tcproutes.gateway.networking.k8s.io
         label: TCP routes
         list: true
         detail: true
-        icon: cable
+        icon: power-plug
       - crd: tlsroutes.gateway.networking.k8s.io
         label: TLS routes
         list: true
@@ -132,12 +132,12 @@ spec:
         label: Backend traffic policies
         list: true
         detail: true
-        icon: gauge
+        icon: score-meter
       - crd: clienttrafficpolicies.gateway.envoyproxy.io
         label: Client traffic policies
         list: true
         detail: true
-        icon: gauge
+        icon: score-meter
 
   customComponents:
     Gateway:

@@ -173,19 +173,23 @@ spec:
   menu:
     organization:
       - crd: clusterissuers.cert-manager.io
+        label: Cluster Issuers
         list: true
         detail: true
         icon: rectangle-stack
     project:
       - crd: certificates.cert-manager.io
+        label: Certificates
         list: true
         detail: true
         icon: file-text
       - crd: issuers.cert-manager.io
+        label: Issuers
         list: true
         detail: true
         icon: rectangle-stack
       - crd: certificaterequests.cert-manager.io
+        label: Certificate Requests
         list: true
         detail: true
         icon: magnifier

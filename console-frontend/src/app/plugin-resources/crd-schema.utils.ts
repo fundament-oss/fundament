@@ -1,4 +1,9 @@
-import type { CrdObjectSchema, CrdPropertySchema, AdditionalPrinterColumn } from './types';
+import type {
+  CrdObjectSchema,
+  CrdPropertySchema,
+  AdditionalPrinterColumn,
+  KubeResource,
+} from './types';
 
 function parsePropertySchema(raw: Record<string, unknown>): CrdPropertySchema {
   const schema: CrdPropertySchema = {
@@ -44,45 +49,60 @@ export function parseObjectSchema(
   return { properties, required: requiredFields };
 }
 
-function resolveSimplePath(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, part) => {
-    if (current === null || current === undefined || typeof current !== 'object') return undefined;
-    return (current as Record<string, unknown>)[part];
-  }, obj);
-}
+// One step of a printer column's JSONPath: a field (".status"), an index
+// ("[0]", "[-1]"), every element ("[*]") or a filter ("[?(@.type=="Ready")]").
+const JSON_PATH_STEP =
+  /\.?([^.[\]]+)|\[(?:(\*)|(-?\d+)|\?\(@\.(\w+)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?))\))\]/y;
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object';
+
+/** What [*] reaches: an array's elements, or an object's values. */
+const children = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) return value;
+  return isObject(value) ? Object.values(value) : [];
+};
 
 /**
- * Resolve a Kubernetes jsonPath expression against a resource object.
+ * Resolve a Kubernetes jsonPath expression against a resource object, as far as
+ * printer columns use it. A path with [*] gives every value it reaches, the way
+ * kubectl prints a Gateway's `.status.addresses[*].value`; any other path gives
+ * its first one, so a filter on a condition's type gives that condition's
+ * field. Anything this does not read gives undefined.
  */
 export function resolveJsonPath(obj: Record<string, unknown>, jsonPath: string): unknown {
   const path = jsonPath.startsWith('.') ? jsonPath.substring(1) : jsonPath;
-
-  // Matches: path[?(@.key == "value")], path[?(@.key == 'value')], path[?(@.key == 42)]
-  const filterMatch = path.match(
-    /^(.+?)\[\?\(@\.(\w+)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?))\)\](?:\.(.+))?$/,
-  );
-
-  if (filterMatch) {
-    const arrayPath = filterMatch[1];
-    const filterKey = filterMatch[2];
-    const filterValue = filterMatch[3] ?? filterMatch[4] ?? filterMatch[5];
-    const remainingPath = filterMatch[6];
-
-    const array = resolveSimplePath(obj, arrayPath);
-    if (!Array.isArray(array)) return undefined;
-
-    const match = array.find(
-      (item: Record<string, unknown>) => String(item[filterKey]) === filterValue,
-    );
-    if (!match) return undefined;
-
-    if (remainingPath) {
-      return resolveSimplePath(match as Record<string, unknown>, remainingPath);
+  let values: unknown[] = [obj];
+  let wildcard = false;
+  JSON_PATH_STEP.lastIndex = 0;
+  while (JSON_PATH_STEP.lastIndex < path.length) {
+    const start = JSON_PATH_STEP.lastIndex;
+    const step = JSON_PATH_STEP.exec(path);
+    if (!step || step.index !== start) return undefined;
+    const [, field, all, index, filterKey, ...filterValues] = step;
+    if (field !== undefined) {
+      values = values.flatMap((v) => (isObject(v) && v[field] !== undefined ? [v[field]] : []));
+    } else if (all !== undefined) {
+      wildcard = true;
+      values = values.flatMap(children);
+    } else if (index !== undefined) {
+      const i = Number(index);
+      values = values.flatMap((v) => {
+        if (!Array.isArray(v)) return [];
+        const item = v[i < 0 ? v.length + i : i];
+        return item === undefined ? [] : [item];
+      });
+    } else {
+      const wanted = filterValues.find((value) => value !== undefined);
+      values = values.flatMap((v) =>
+        Array.isArray(v)
+          ? v.filter((item) => isObject(item) && String(item[filterKey]) === wanted)
+          : [],
+      );
     }
-    return match;
   }
-
-  return resolveSimplePath(obj, path);
+  if (wildcard) return values.length > 0 ? values : undefined;
+  return values[0];
 }
 
 /**
@@ -128,6 +148,8 @@ export function toSimpleValue(val: unknown): string {
  */
 export function formatColumnValue(value: unknown, columnType: string): string {
   if (value === null || value === undefined) return '\u2014';
+  if (Array.isArray(value))
+    return value.map((item) => formatColumnValue(item, columnType)).join(', ');
 
   switch (columnType) {
     case 'date':
@@ -140,6 +162,20 @@ export function formatColumnValue(value: unknown, columnType: string): string {
       return String(value);
   }
 }
+
+/** A printer column's cell for one resource, as the list shows it. */
+export function printerColumnValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
+  const fullObj = {
+    metadata: resource.metadata,
+    spec: resource.spec,
+    status: resource.status ?? {},
+  };
+  return formatColumnValue(resolveJsonPath(fullObj, col.jsonPath), col.type);
+}
+
+/** A printer column that says True or False is a condition: the resource's
+ *  status, which the list's card and the detail page's title both carry. */
+export const isConditionValue = (value: string): boolean => value === 'True' || value === 'False';
 
 /**
  * Get columns for the list view.

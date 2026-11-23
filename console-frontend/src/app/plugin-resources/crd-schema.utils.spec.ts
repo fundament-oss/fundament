@@ -1,5 +1,7 @@
 import {
   crdRefToLabel,
+  formatColumnValue,
+  resolveJsonPath,
   fieldNameToLabel,
   kindToLabel,
   kindToSingularLabel,
@@ -151,5 +153,65 @@ describe('resourceSingularLabelMidSentence', () => {
   it('falls back to the kind, keeping acronyms', () => {
     expect(resourceSingularLabelMidSentence(undefined, 'DiskPool')).toBe('disk pool');
     expect(resourceSingularLabelMidSentence(undefined, 'FSCInstallation')).toBe('FSC installation');
+  });
+});
+
+describe('resolveJsonPath', () => {
+  const gateway = {
+    metadata: { name: 'web' },
+    status: {
+      addresses: [
+        { type: 'IPAddress', value: '194.135.48.10' },
+        { type: 'IPAddress', value: '2001:db8::1' },
+      ],
+      conditions: [
+        { type: 'Accepted', status: 'True' },
+        { type: 'Programmed', status: 'False' },
+      ],
+    },
+  };
+
+  it('reads a field path', () => {
+    expect(resolveJsonPath(gateway, '.metadata.name')).toBe('web');
+  });
+
+  it('gives every value a [*] reaches', () => {
+    expect(resolveJsonPath(gateway, '.status.addresses[*].value')).toEqual([
+      '194.135.48.10',
+      '2001:db8::1',
+    ]);
+  });
+
+  it('gives undefined for a [*] that reaches nothing', () => {
+    expect(resolveJsonPath({ status: {} }, '.status.addresses[*].value')).toBeUndefined();
+  });
+
+  it('reads an index, also from the end', () => {
+    expect(resolveJsonPath(gateway, '.status.addresses[0].value')).toBe('194.135.48.10');
+    expect(resolveJsonPath(gateway, '.status.addresses[-1].value')).toBe('2001:db8::1');
+  });
+
+  it('reads the field of a filtered condition', () => {
+    expect(resolveJsonPath(gateway, '.status.conditions[?(@.type=="Programmed")].status')).toBe(
+      'False',
+    );
+    expect(resolveJsonPath(gateway, ".status.conditions[?(@.type == 'Accepted')].status")).toBe(
+      'True',
+    );
+    expect(
+      resolveJsonPath(gateway, '.status.conditions[?(@.type=="Ready")].status'),
+    ).toBeUndefined();
+  });
+
+  it('gives undefined for a path it cannot read', () => {
+    expect(resolveJsonPath(gateway, '.status.conditions[?(@.type!="Ready")]')).toBeUndefined();
+  });
+});
+
+describe('formatColumnValue', () => {
+  it('joins several values with commas, as kubectl does', () => {
+    expect(formatColumnValue(['194.135.48.10', '2001:db8::1'], 'string')).toBe(
+      '194.135.48.10, 2001:db8::1',
+    );
   });
 });

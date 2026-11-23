@@ -211,6 +211,19 @@ nldd-text-cell:not([min-width]) {
   min-width: min-content;
 }
 
+/* The design system puts its notifications at the top right, and carries them
+   into an open sheet so they stay in front of it. A right-hand sheet has its
+   title bar's Cancel/Close there, so a notification raised in a sheet (a save,
+   a plugin finishing its install) covered it until dismissed. In a sheet they
+   start below the title bar instead. The area writes its `top` inline, which
+   only !important outranks. */
+nldd-sheet > #nldd-notifications-area {
+  top: calc(
+    max(var(--semantics-overlays-inset), env(safe-area-inset-top)) +
+      var(--semantics-controls-md-min-size) + var(--primitives-space-12)
+  ) !important;
+}
+
 /* A form-field header of our own, for when the label needs more than text (a
    badge beside it): nldd-form-field's `label` is a plain string rendered in its
    shadow tree. Leave `label` off the field and put this first in its slot; the
