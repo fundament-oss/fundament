@@ -36,8 +36,11 @@ type storedNodePool struct {
 	NodesRead time.Time
 	// OutboxStatus and OutboxMessage are the pool's own latest sync row. A
 	// failed row is why the pool reads error, and the message says why.
-	OutboxStatus  string
-	OutboxMessage string
+	// OutboxSuperseded is set when a later sync completed: it applied the whole
+	// cluster, so the failure no longer describes what Gardener has.
+	OutboxStatus     string
+	OutboxMessage    string
+	OutboxSuperseded bool
 }
 
 // syncState is what the outbox still owes Gardener for the cluster. InFlight
@@ -62,9 +65,10 @@ type nodePoolUpdate struct {
 }
 
 // updating says shoot_updating is set: a change fundament sent reached Gardener
-// and rolls out on a ready cluster. syncPending says a change was saved but
+// and rolls out on a ready cluster. sync.InFlight says a change was saved but
 // its sync has not (yet) applied it to Gardener (see ClusterGetPushState), so
-// what Gardener reports predates the change. Together they gate
+// what Gardener reports predates the change; sync.Blocked says the cluster's own
+// sync gave up, and the pool reports that instead of waiting. Together they gate
 // what an operation can explain: only a change of ours explains a
 // never-classified pool — without one, a NULL status during an operation is an
 // existing pool meeting this feature for the first time mid-reconcile, and
@@ -141,7 +145,7 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	// pool's own failed row wins over the cluster's: it names this pool.
 	if !sync.InFlight {
 		switch {
-		case pool.OutboxStatus == string(dbconst.ClusterOutboxStatus_Failed):
+		case pool.OutboxStatus == string(dbconst.ClusterOutboxStatus_Failed) && !pool.OutboxSuperseded:
 			return dbconst.NodePoolStatus_Error, syncFailureMessage(pool.OutboxMessage), "", true
 		case sync.Blocked:
 			return dbconst.NodePoolStatus_Error, syncFailureMessage(sync.BlockedMessage), "", true
@@ -405,6 +409,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 			ID: rows[i].ID, Name: rows[i].Name, MachineType: rows[i].MachineType, AutoscaleMin: rows[i].AutoscaleMin,
 			Created: rows[i].Created.Time, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String,
 			OutboxStatus: rows[i].OutboxStatus, OutboxMessage: rows[i].OutboxStatusInfo.String,
+			OutboxSuperseded: rows[i].OutboxSuperseded,
 		}
 		if rows[i].Nodes.Valid && rows[i].NodesReady.Valid && rows[i].Observed.Valid {
 			stored[i].Nodes = &shoot.PoolInventory{Nodes: rows[i].Nodes.Int32, NodesReady: rows[i].NodesReady.Int32}

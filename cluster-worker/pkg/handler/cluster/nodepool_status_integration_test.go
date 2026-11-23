@@ -164,6 +164,43 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_waiting"))
 }
 
+// A pool's failed sync row stops describing the pool once a later sync
+// completes: that sync applied the whole cluster, so Gardener has the pool's
+// change, and the current report decides again like for any other pool.
+func TestCheckStatusForgetsAFailedPoolSyncSupersededByALaterSync(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-superseded-pool")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", "Shoot is ready", "healthy", time.Minute)
+
+	// The pool's change ran out of retries; a later change to the cluster
+	// completed and pushed the whole Shoot, this pool's change included.
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', status_info = 'quota exceeded', failed = now()
+		 WHERE tenant.cluster_outbox.node_pool_id = $1`, poolID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed)
+		 VALUES ($1, 'updated', 'trigger', 'completed', now())`, clusterID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusReady, Operation: gardener.OperationReconcile,
+		Message: "Shoot is ready", Healthy: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "ready", status)
+	assert.Empty(t, message)
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_error"))
+}
+
 // A change is in flight while the cluster's own latest sync is queued or
 // retrying, or a node pool's latest row is. A cluster event that is not a sync
 // (the ready fan-out) is not a change.

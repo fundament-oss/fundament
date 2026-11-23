@@ -129,7 +129,9 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	}
 	update := nextShootStatus(&stored, shootStatus)
 	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
-		update = timedOut
+		// The timeout replaces the status, not what the check learned about the
+		// API server: a Shoot that came and went must still forget its access.
+		update = applyAPIAvailability(&stored, shootStatus, &timedOut)
 	}
 	addUpdateWarning(&update, &stored, now, timeouts.updating)
 	stuckDeleting := addDeletingWarning(&update, &stored, now, timeouts.deleting)

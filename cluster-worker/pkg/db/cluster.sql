@@ -122,6 +122,9 @@ ORDER BY
 -- predecessor's), the stored classification, and the node counts last
 -- observed (tenant.node_pool_snapshots, shared with the inventory worker); the
 -- worker-group build query above, with its catalog joins, stays with sync.
+-- outbox_superseded says a sync completed after the pool's latest row: a sync
+-- applies the whole cluster, so the pool's failed row no longer describes what
+-- Gardener has, whichever pool or the cluster itself the later row belonged to.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
@@ -133,20 +136,45 @@ SELECT
     tenant.node_pool_snapshots.nodes,
     tenant.node_pool_snapshots.nodes_ready,
     tenant.node_pool_snapshots.observed,
-    (
+    COALESCE((
         SELECT tenant.cluster_outbox.status
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) AS outbox_status,
+    ), '')::text AS outbox_status,
     (
         SELECT tenant.cluster_outbox.status_info
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) AS outbox_status_info
+    ) AS outbox_status_info,
+    COALESCE((
+        SELECT tenant.cluster_outbox.id > (
+                SELECT tenant.cluster_outbox.id
+                FROM tenant.cluster_outbox
+                WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+                ORDER BY tenant.cluster_outbox.id DESC
+                LIMIT 1
+            )
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.status = 'completed'
+          AND (
+              (
+                  tenant.cluster_outbox.cluster_id = @cluster_id::uuid
+                  AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM tenant.node_pools
+                  WHERE tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
+                    AND tenant.node_pools.cluster_id = @cluster_id::uuid
+              )
+          )
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS outbox_superseded
 FROM
     tenant.node_pools
     LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id

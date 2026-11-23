@@ -199,8 +199,9 @@ from the moment the change's sync row finished:
   same warning and logs an `ALERT` with how long it has been deleting. The status stays
   `deleting`: declaring it deleted would release quota while the Shoot still exists.
 
-A warning is compared with the cluster's latest `status_warning` and recorded once, so a
-stuck state is reported per incident rather than every check.
+A warning is compared with every `status_warning` recorded since the cluster's last
+milestone (ready, healthy, error or lost) and recorded once, so a stuck state is
+reported per incident rather than every check.
 
 ### Lost clusters
 

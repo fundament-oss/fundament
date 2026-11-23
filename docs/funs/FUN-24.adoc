@@ -76,7 +76,7 @@ A state that waits for Gardener had no limit, so a create that never happened an
 |A Shoot deleting this long records the same warning and logs an `ALERT`. The status stays `deleting`: declaring it deleted would release quota while the Shoot still exists.
 |===
 
-A warning is compared with the cluster's latest `status_warning` event and recorded once per incident, not on every check.
+A warning is compared with every `status_warning` event recorded since the cluster's last milestone and recorded once per incident, not on every check.
 
 == Namespace healing
 
@@ -88,7 +88,7 @@ Two ways out remain for an operator: `funops namespace sync <id>` queues a recon
 
 == Sync state
 
-`ClusterGetPushState` returns two answers instead of one flag: `sync_in_flight` (the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`) and `sync_blocked` (the cluster's own latest row is `failed` and no node pool's row is newer, a deleted pool's row included: its sync also pushed the cluster to Gardener). A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster.
+`ClusterGetPushState` returns two answers instead of one flag: `sync_in_flight` (the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`) and `sync_blocked` (the cluster's own latest row is `failed` and no node pool's row is newer, a deleted pool's row included: its sync also pushed the cluster to Gardener). A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster; it stops counting once any later sync completes, since that sync applied the whole cluster.
 
 The status checker uses the split to decide whether Gardener's report can be trusted yet: while a sync is in flight, a pool that is new or `progressing` stays `progressing`; once it settles, the same report classifies the pools.
 

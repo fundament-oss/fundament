@@ -302,6 +302,15 @@ func TestNextShootStatus(t *testing.T) {
 			},
 		},
 		{
+			name:     "pending cluster that reported its shoot disappears as lost",
+			stored:   storedShootState{Status: gardener.StatusPending, Message: "Component is not yet created"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want: shootStatusUpdate{
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
+			},
+		},
+		{
 			name:     "failed cluster whose shoot disappears records the loss",
 			stored:   storedShootState{Status: gardener.StatusError, Message: "quota exceeded"},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
@@ -560,5 +569,14 @@ func TestNextShootStatus_APIServerAvailable(t *testing.T) {
 		ready := nextShootStatus(&lost, &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true, APIServerAvailable: true})
 		assert.True(t, ready.InsertReady)
 		assert.True(t, ready.InsertAPIAvailable)
+	})
+
+	t.Run("a decision that replaces the lifecycle result keeps the API server knowledge", func(t *testing.T) {
+		t.Parallel()
+		seen := storedShootState{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound, APIAvailable: true}
+		timedOut := shootStatusUpdate{Status: gardener.StatusError, Message: msgShootNeverAppeared}
+
+		got := applyAPIAvailability(&seen, &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound}, &timedOut)
+		assert.True(t, got.APIGone, "the Shoot is gone, so its API access must be forgotten")
 	})
 }

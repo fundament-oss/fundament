@@ -609,6 +609,10 @@ func TestNextNodePoolStatusesBlockedSync(t *testing.T) {
 			}},
 		},
 		{
+			name:   "a failed row a later sync superseded",
+			stored: []storedNodePool{{Name: "workers", Status: "progressing", OutboxStatus: "failed", OutboxMessage: "quota exceeded", OutboxSuperseded: true}},
+		},
+		{
 			name:   "a retry in flight is not a failure",
 			stored: []storedNodePool{{Name: "workers", Status: "progressing", OutboxStatus: "failed"}},
 			sync:   syncState{InFlight: true},

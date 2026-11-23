@@ -114,6 +114,14 @@ func (u *shootStatusUpdate) unchanged(stored *storedShootState) bool {
 // database.
 func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	update := nextLifecycleStatus(stored, observed)
+	return applyAPIAvailability(stored, observed, &update)
+}
+
+// applyAPIAvailability fills in what the check learned about the API server,
+// whatever decided the status: a check that replaces the lifecycle decision (a
+// pending timeout) must not lose the knowledge that the Shoot's API server came
+// and went.
+func applyAPIAvailability(stored *storedShootState, observed *gardener.ShootStatus, update *shootStatusUpdate) shootStatusUpdate {
 	switch {
 	// A Shoot that turns ready has a working API server, whether or not the
 	// care controller has said so yet: api_available is the one event that
@@ -129,7 +137,7 @@ func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) s
 	case stored.APIAvailable && shootGone(observed):
 		update.APIGone = true
 	}
-	return update
+	return *update
 }
 
 // shootGone reports whether Gardener says the Shoot is gone or going: a
@@ -178,7 +186,7 @@ func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatu
 		if stored.Status == gardener.StatusError && stored.Message == msgShootNeverAppeared {
 			return shootStatusUpdate{Status: gardener.StatusError, Message: stored.Message}
 		}
-		if shootWasSeen(stored.Status) {
+		if shootWasSeen(stored) {
 			return shootStatusUpdate{
 				Status:  gardener.StatusLost,
 				Message: gardener.MsgShootLost,
@@ -338,15 +346,19 @@ func healthEvent(health dbconst.ClusterShootHealth, message string) statusEvent 
 }
 
 // shootWasSeen reports whether a stored status can only come from a check that
-// found the Shoot in Gardener. A lost cluster's check did not find it.
-func shootWasSeen(status gardener.ShootStatusType) bool {
-	switch status {
+// found the Shoot in Gardener. A lost cluster's check did not find it, and a
+// pending row carries no evidence unless Gardener reported on the Shoot: a wait
+// that only ever saw not-found says nothing about the Shoot having existed.
+func shootWasSeen(stored *storedShootState) bool {
+	switch stored.Status {
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError, gardener.StatusDeleting:
 		return true
-	case "", gardener.StatusPending, gardener.StatusDeleted, gardener.StatusLost:
+	case gardener.StatusPending:
+		return stored.Message != "" && stored.Message != gardener.MsgShootNotFound
+	case "", gardener.StatusDeleted, gardener.StatusLost:
 		return false
 	default:
-		panic(fmt.Sprintf("unhandled shoot status: %s", status))
+		panic(fmt.Sprintf("unhandled shoot status: %s", stored.Status))
 	}
 }
 

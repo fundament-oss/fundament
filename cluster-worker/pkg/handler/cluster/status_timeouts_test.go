@@ -50,6 +50,11 @@ func TestTimedOutPending(t *testing.T) {
 			observed: notFound,
 		},
 		{
+			name:     "a pending row that reported a Shoot does not time out",
+			stored:   storedShootState{Status: gardener.StatusPending, Message: "Component is not yet created", Since: now.Add(-time.Hour)},
+			observed: notFound,
+		},
+		{
 			name:   "a Shoot Gardener is creating is progress, not absence",
 			stored: storedShootState{Status: gardener.StatusPending, Message: "Component is not yet created", Since: now.Add(-time.Hour)},
 			observed: &gardener.ShootStatus{

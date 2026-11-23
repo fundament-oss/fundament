@@ -28,12 +28,14 @@ type statusTimeouts struct {
 // timedOutPending replaces the check's decision for a Shoot Gardener never
 // created: after the limit the cluster reads error, so the console stops
 // showing a create that nothing is running. A cluster whose Shoot once existed
-// is not this case; its not-found is lost, handled by the lifecycle rules.
+// is not this case: a pending row that carries Gardener's own report says the
+// Shoot was there, and its not-found is lost, handled by the lifecycle rules.
 func timedOutPending(stored *storedShootState, observed *gardener.ShootStatus, now time.Time, limit time.Duration) (shootStatusUpdate, bool) {
 	if observed.Status != gardener.StatusPending || observed.Message != gardener.MsgShootNotFound {
 		return shootStatusUpdate{}, false
 	}
-	if stored.Status != gardener.StatusPending || stored.Since.IsZero() || now.Sub(stored.Since) <= limit {
+	if stored.Status != gardener.StatusPending || stored.Message != gardener.MsgShootNotFound ||
+		stored.Since.IsZero() || now.Sub(stored.Since) <= limit {
 		return shootStatusUpdate{}, false
 	}
 	return shootStatusUpdate{
