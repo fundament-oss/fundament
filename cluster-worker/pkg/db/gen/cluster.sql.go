@@ -300,18 +300,19 @@ WITH latest_cluster AS (
     SELECT
         tenant.cluster_outbox.id,
         tenant.cluster_outbox.status,
-        tenant.cluster_outbox.status_info
+        tenant.cluster_outbox.status_info,
+        tenant.cluster_outbox.failed
     FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.cluster_id = $1
       AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
 ),
-latest_pool_row AS (
-    SELECT
-        tenant.cluster_outbox.id
+superseding_pool_row AS (
+    SELECT 1
     FROM tenant.cluster_outbox
     JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
+    CROSS JOIN latest_cluster
     WHERE tenant.node_pools.cluster_id = $1
       AND tenant.cluster_outbox.status <> 'failed'
       -- A pool's sync only applies the cluster once it reached Gardener: before
@@ -325,8 +326,10 @@ latest_pool_row AS (
           WHERE tenant.cluster_outbox.cluster_id = $1
             AND tenant.cluster_outbox.status = 'completed'
       )
-    ORDER BY tenant.cluster_outbox.id DESC
-    LIMIT 1
+      AND (
+          tenant.cluster_outbox.id > latest_cluster.id
+          OR tenant.cluster_outbox.processed > latest_cluster.failed
+      )
 )
 SELECT
     tenant.clusters.shoot_updating,
@@ -364,18 +367,14 @@ SELECT
     )::boolean AS sync_queued,
     COALESCE((
         SELECT latest_cluster.status = 'failed'
-            AND NOT EXISTS (
-                SELECT 1 FROM latest_pool_row WHERE latest_pool_row.id > latest_cluster.id
-            )
+            AND NOT EXISTS (SELECT 1 FROM superseding_pool_row)
         FROM latest_cluster
     ), false)::boolean AS sync_blocked,
     (
         SELECT latest_cluster.status_info
         FROM latest_cluster
         WHERE latest_cluster.status = 'failed'
-          AND NOT EXISTS (
-              SELECT 1 FROM latest_pool_row WHERE latest_pool_row.id > latest_cluster.id
-          )
+          AND NOT EXISTS (SELECT 1 FROM superseding_pool_row)
     ) AS sync_blocked_message
 FROM
     tenant.clusters
@@ -416,6 +415,11 @@ type ClusterGetPushStateRow struct {
 // Gardener, failed change and all. Two later rows do not lift it: one that
 // failed itself, and one of a cluster that never reached Gardener — neither
 // sync applied the cluster's change.
+// The pool rows that came after the cluster's own latest sync. Ids order the
+// inserts, not the runs: the worker claims by retry_after, so a row in backoff
+// runs after higher ids. A queued row counts by its id, a completed one also by
+// having finished after the failure was recorded, when its handler read the
+// change that the failed row never applied.
 func (q *Queries) ClusterGetPushState(ctx context.Context, arg ClusterGetPushStateParams) (ClusterGetPushStateRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetPushState, arg.ClusterID)
 	var i ClusterGetPushStateRow
@@ -951,14 +955,8 @@ SELECT
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
     ) AS outbox_status_info,
-    COALESCE((
-        SELECT tenant.cluster_outbox.id > (
-                SELECT tenant.cluster_outbox.id
-                FROM tenant.cluster_outbox
-                WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
-                ORDER BY tenant.cluster_outbox.id DESC
-                LIMIT 1
-            )
+    EXISTS (
+        SELECT 1
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.status = 'completed'
           AND (
@@ -982,9 +980,27 @@ SELECT
               WHERE tenant.cluster_outbox.cluster_id = $1::uuid
                 AND tenant.cluster_outbox.status = 'completed'
           )
-        ORDER BY tenant.cluster_outbox.id DESC
-        LIMIT 1
-    ), false)::boolean AS outbox_superseded
+          -- Ids order the inserts, not the runs: the worker claims by
+          -- retry_after, so a row in backoff runs after higher ids. One that
+          -- finished after the pool's row failed applied the cluster, and that
+          -- pool's change, all the same.
+          AND (
+              tenant.cluster_outbox.id > (
+                  SELECT tenant.cluster_outbox.id
+                  FROM tenant.cluster_outbox
+                  WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+                  ORDER BY tenant.cluster_outbox.id DESC
+                  LIMIT 1
+              )
+              OR tenant.cluster_outbox.processed > (
+                  SELECT tenant.cluster_outbox.failed
+                  FROM tenant.cluster_outbox
+                  WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+                  ORDER BY tenant.cluster_outbox.id DESC
+                  LIMIT 1
+              )
+          )
+    )::boolean AS outbox_superseded
 FROM
     tenant.node_pools
     LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id

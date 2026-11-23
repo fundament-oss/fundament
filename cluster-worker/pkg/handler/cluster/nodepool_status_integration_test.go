@@ -240,16 +240,55 @@ func TestCheckStatusForgetsAFailedPoolSyncSupersededByALaterSync(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_error"))
 }
 
+// Ids order the inserts, not the runs: the worker claims a row in retry
+// backoff after higher ids. A sync inserted before the pool's row that
+// processed after the failure was recorded applied the cluster all the same,
+// so it supersedes the failed row.
+func TestCheckStatusForgetsAFailedPoolSyncProcessedByAnOlderRow(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-superseded-by-processed")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", "Shoot is ready", "healthy", time.Minute)
+
+	// The pool's change ran out of retries. A row inserted before it, still
+	// waiting out its backoff, ran afterwards and pushed the whole Shoot.
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', status_info = 'quota exceeded', failed = now() - interval '1 minute'
+		 WHERE tenant.cluster_outbox.node_pool_id = $1`, poolID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (id, node_pool_id, event, source, status, processed)
+		 VALUES ('018f0000-0000-7000-8000-000000000001', $1, 'updated', 'trigger', 'completed', now())`, poolID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusReady, Operation: gardener.OperationReconcile,
+		Message: "Shoot is ready", Healthy: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "ready", status)
+	assert.Empty(t, message)
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_error"))
+}
+
 // A change is in flight while the cluster's own latest sync is queued or
 // retrying, or a node pool's latest row is. A cluster event that is not a sync
 // (the ready fan-out) is not a change.
 //
 // Blocked is the cluster's own latest sync row failing for good with no pool
-// sync after it that can still apply it: nothing retries it, so the pools say
-// so instead of waiting. A pool's failed row is not blocked at the cluster
-// level — the pool list carries its message, and a later sync may still
-// succeed; a later pool row that failed itself does not lift the block, since
-// nothing applied the cluster's change.
+// sync that came after it and can still apply it, later by insert or by having
+// run after the failure: nothing retries it, so the pools say so instead of
+// waiting. A pool's failed row is not blocked at the cluster level — the pool
+// list carries its message, and a later sync may still succeed; a later pool
+// row that failed itself does not lift the block, since nothing applied the
+// cluster's change.
 func TestClusterGetPushState(t *testing.T) {
 	t.Parallel()
 	db := createTestDB(t)
@@ -345,6 +384,21 @@ func TestClusterGetPushState(t *testing.T) {
 				 WHERE tenant.cluster_outbox.node_pool_id IN (
 				     SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)
 				   AND tenant.cluster_outbox.status = 'pending'`, c)
+			require.NoError(t, err)
+		}},
+		// Ids order the inserts, not the runs: this pool's row was inserted
+		// before the cluster's failed one, but ran after it and applied the
+		// cluster's change.
+		{name: "a failed cluster row superseded by a pool sync processed after it", setup: func(c, _ uuid.UUID) {
+			addClusterRow(c, "updated", "failed")
+			_, err := db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox SET failed = now() - interval '10 minutes'
+				 WHERE tenant.cluster_outbox.cluster_id = $1 AND tenant.cluster_outbox.status = 'failed'`, c)
+			require.NoError(t, err)
+			_, err = db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox SET processed = now()
+				 WHERE tenant.cluster_outbox.node_pool_id IN (
+				     SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)`, c)
 			require.NoError(t, err)
 		}},
 	}

@@ -16,11 +16,16 @@ func TestConfigValidate(t *testing.T) {
 	t.Parallel()
 
 	valid := cluster.Config{
-		StatusPendingTimeout:  20 * time.Minute,
-		StatusUpdatingWarning: 30 * time.Minute,
-		StatusDeletingAlert:   2 * time.Hour,
+		StatusProgressEventInterval: time.Minute,
+		StatusPendingTimeout:        20 * time.Minute,
+		StatusUpdatingWarning:       30 * time.Minute,
+		StatusDeletingAlert:         2 * time.Hour,
 	}
 	require.NoError(t, valid.Validate())
+
+	zeroProgress := valid
+	zeroProgress.StatusProgressEventInterval = 0
+	assert.EqualError(t, zeroProgress.Validate(), "CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL must be positive, got 0s")
 
 	zeroPending := valid
 	zeroPending.StatusPendingTimeout = 0

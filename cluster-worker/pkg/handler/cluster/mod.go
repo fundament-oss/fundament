@@ -65,8 +65,12 @@ type Config struct {
 }
 
 // Validate rejects limits that would invert the safety they add: a limit of
-// zero or less makes the check report the stalled state on its first look.
+// zero or less makes the check report the stalled state on its first look, or
+// records every progress message instead of at most one per interval.
 func (c Config) Validate() error {
+	if c.StatusProgressEventInterval <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL must be positive, got %s", c.StatusProgressEventInterval)
+	}
 	if c.StatusPendingTimeout <= 0 {
 		return fmt.Errorf("CLUSTER_STATUS_PENDING_TIMEOUT must be positive, got %s", c.StatusPendingTimeout)
 	}
