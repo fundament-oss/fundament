@@ -98,6 +98,14 @@ done
     done
 
     echo ")"
+    echo ""
+    echo "// ${type_name}Values holds every ${type_name} the database accepts."
+    echo "var ${type_name}Values = []${type_name}{"
+    for value in $values; do
+      const_value=$(to_pascal_case "$value")
+      echo "	${type_name}_${const_value},"
+    done
+    echo "}"
   done
 } > "$OUTPUT_FILE"
 

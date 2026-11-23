@@ -129,9 +129,20 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	}
 	update := nextShootStatus(&stored, shootStatus)
 	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
-		// The timeout replaces the status, not what the check learned about the
-		// API server: a Shoot that came and went must still forget its access.
-		update = applyAPIAvailability(&stored, shootStatus, &timedOut)
+		// A sync still queued or retrying will apply the change, creating the
+		// Shoot: timing it out would record a failure for a create that is
+		// about to run. This check also runs from the sync path, just before
+		// that apply.
+		push, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+		if err != nil {
+			return 0, fmt.Errorf("load cluster push state: %w", err)
+		}
+		if !push.SyncInFlight {
+			// The timeout replaces the status, not what the check learned about
+			// the API server: a Shoot that came and went must still forget its
+			// access.
+			update = applyAPIAvailability(&stored, shootStatus, &timedOut)
+		}
 	}
 	addUpdateWarning(&update, &stored, now, timeouts.updating)
 	stuckDeleting := addDeletingWarning(&update, &stored, now, timeouts.deleting)

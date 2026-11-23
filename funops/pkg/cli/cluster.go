@@ -31,8 +31,11 @@ type clusterSyncOutput struct {
 
 // Run executes the cluster sync command.
 func (c *ClusterSyncCmd) Run(ctx *Context) error {
-	if c.All == (c.Cluster != "") {
+	if c.All && c.Cluster != "" {
 		return errors.New("give a cluster ID or --all, not both")
+	}
+	if !c.All && c.Cluster == "" {
+		return errors.New("give a cluster ID or --all")
 	}
 
 	var clusterID pgtype.UUID

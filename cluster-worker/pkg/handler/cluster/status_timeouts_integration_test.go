@@ -141,6 +141,35 @@ func TestCheckStatusTimesOutAShootStuckBeforeTheColumnExisted(t *testing.T) {
 	assert.Equal(t, "The Shoot did not appear in Gardener; the cluster's next change tries again.", message)
 }
 
+// A pending Shoot ages past the limit while a sync is still queued: that sync
+// will apply the change and create the Shoot — the sync path runs this check
+// just before that apply — so the check must not record a failure first.
+func TestCheckStatusDoesNotTimeOutWhileASyncIsQueued(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-pending-queued")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "pending", gardener.MsgShootNotFound, "", 21*time.Minute)
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status)
+		 VALUES ($1, 'updated', 'trigger', 'pending')`, clusterID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "pending", *status)
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_error"))
+}
+
 // An update that settled in the outbox long ago and is still rolling out has
 // stalled: the check records a warning once and leaves the updating flag set,
 // so a genuinely stuck update stays visible.
@@ -188,6 +217,36 @@ func TestCheckStatusWarnsOnAStalledUpdate(t *testing.T) {
 
 	require.NoError(t, checkStatus(t, h))
 	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_warning"), "the warning is recorded once")
+}
+
+// A sync row that failed for good never delivered the change, so its finish is
+// no measure of how long Gardener has had it: no stall warning follows from it.
+func TestCheckStatusDoesNotMeasureAStalledUpdateFromAFailedRow(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-failed-row")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 2*time.Hour)
+	setShootStatusSince(t, db, clusterID, 2*time.Hour)
+	setShootUpdating(t, db, clusterID, true)
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, failed)
+		 VALUES ($1, 'updated', 'trigger', 'failed', now() - interval '45 minutes')`, clusterID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		Message: "Reconcile: Waiting until worker resource status is updated", APIServerAvailable: true,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_warning"),
+		"an update whose sync failed never reached Gardener, so it cannot have stalled there")
 }
 
 // While the update's own sync row is still queued, the check does not measure

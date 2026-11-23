@@ -82,6 +82,16 @@ spec:
             {{- end }}
             - name: CLUSTER_MAX_RECONCILE_DELETIONS
               value: {{ $.Values.clusterWorker.maxReconcileDeletions | quote }}
+            - name: CLUSTER_STATUS_WORKERS
+              value: {{ $.Values.clusterWorker.status.workers | quote }}
+            - name: CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL
+              value: {{ $.Values.clusterWorker.status.progressEventInterval | quote }}
+            - name: CLUSTER_STATUS_PENDING_TIMEOUT
+              value: {{ $.Values.clusterWorker.status.pendingTimeout | quote }}
+            - name: CLUSTER_STATUS_UPDATING_WARNING
+              value: {{ $.Values.clusterWorker.status.updatingWarning | quote }}
+            - name: CLUSTER_STATUS_DELETING_ALERT
+              value: {{ $.Values.clusterWorker.status.deletingAlert | quote }}
             {{- else }}
             # Fleet inventory (FUN-23): node, pod and namespace counts per
             # ready shoot, read by the staff fleet view.

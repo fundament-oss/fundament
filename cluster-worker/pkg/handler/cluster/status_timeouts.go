@@ -10,6 +10,10 @@ import (
 // The messages a cluster stuck past a timeout records. They are constants so
 // that the same warning is recorded once, not on every check.
 const (
+	// msgShootNeverAppeared is also an identity: nextLifecycleStatus matches a
+	// stored error against it to tell a cluster that never had a Shoot from one
+	// whose Shoot disappeared. Rewording it strands clusters already in this
+	// state, whose next not-found would read as lost.
 	msgShootNeverAppeared = "The Shoot did not appear in Gardener; the cluster's next change tries again."
 	msgUpdateStalled      = "The update has not finished long after the change reached Gardener."
 	msgDeleteStuck        = "The Shoot has been deleting for a long time."

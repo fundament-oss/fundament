@@ -83,6 +83,15 @@ func failNamespaceSync(t *testing.T, ctx *Context, namespaceID uuid.UUID) {
 }
 
 // One namespace ID queues a reconcile of that namespace only.
+func TestNamespaceSync_Arguments(t *testing.T) {
+	ctx := newTestContext(t)
+
+	require.EqualError(t, (&NamespaceSyncCmd{}).Run(ctx), "give a namespace ID or --all")
+	require.EqualError(t, (&NamespaceSyncCmd{Namespace: uuid.NewString(), All: true}).Run(ctx),
+		"give a namespace ID or --all, not both")
+	require.EqualError(t, (&NamespaceSyncCmd{Namespace: "nope"}).Run(ctx), `namespace ID "nope" is not a UUID`)
+}
+
 func TestNamespaceSync_One(t *testing.T) {
 	ctx := newTestContext(t)
 	namespaces := namespaceTestFixtures(t, ctx, "alpha", "beta")

@@ -162,7 +162,7 @@ SELECT
     catalog.regions.cloud_profile,
     catalog.regions.cloud_profile_region,
     (
-        SELECT COALESCE(tenant.cluster_outbox.processed, tenant.cluster_outbox.failed)
+        SELECT tenant.cluster_outbox.processed
         FROM tenant.cluster_outbox
         LEFT JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
         WHERE (
@@ -225,7 +225,8 @@ type ClusterGetForStatusCheckRow struct {
 // A node pool's sync applies the whole cluster too, and it carries no
 // cluster_id, so its rows count here as well. It is NULL while that row is
 // still queued: the previous row's finish is no measure of an update Gardener
-// has not received yet.
+// has not received yet. A failed row is NULL too: it never delivered the
+// change, so its failure time is no measure either.
 func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
 	var i ClusterGetForStatusCheckRow

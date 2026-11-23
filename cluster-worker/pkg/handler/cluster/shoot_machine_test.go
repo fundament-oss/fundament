@@ -57,22 +57,15 @@ func TestShootLifecycleCoversEveryEmittedUpdate(t *testing.T) {
 func TestShootLifecycleMatchesTheDatabaseConstraint(t *testing.T) {
 	t.Parallel()
 
-	dbStatuses := []dbconst.ClusterShootStatus{
-		dbconst.ClusterShootStatus_Pending,
-		dbconst.ClusterShootStatus_Progressing,
-		dbconst.ClusterShootStatus_Ready,
-		dbconst.ClusterShootStatus_Error,
-		dbconst.ClusterShootStatus_Deleting,
-		dbconst.ClusterShootStatus_Deleted,
-		dbconst.ClusterShootStatus_Lost,
-	}
-	require.Len(t, dbStatuses, len(shootStatuses))
+	// dbconst is generated from the constraint, so comparing with it ties the
+	// machine to the database rather than to a list copied here.
+	require.Len(t, dbconst.ClusterShootStatusValues, len(shootStatuses))
 
 	declared := make(map[gardener.ShootStatusType]bool, len(shootStatuses))
 	for _, status := range shootStatuses {
 		declared[status] = true
 	}
-	for _, status := range dbStatuses {
+	for _, status := range dbconst.ClusterShootStatusValues {
 		assert.True(t, declared[gardener.ShootStatusType(status)], "the database allows %q, the machine does not", status)
 	}
 }

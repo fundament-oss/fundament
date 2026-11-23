@@ -32,8 +32,11 @@ type namespaceSyncOutput struct {
 
 // Run executes the namespace sync command.
 func (c *NamespaceSyncCmd) Run(ctx *Context) error {
-	if c.All == (c.Namespace != "") {
+	if c.All && c.Namespace != "" {
 		return errors.New("give a namespace ID or --all, not both")
+	}
+	if !c.All && c.Namespace == "" {
+		return errors.New("give a namespace ID or --all")
 	}
 
 	var namespaceID pgtype.UUID
