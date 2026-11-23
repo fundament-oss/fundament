@@ -17,11 +17,18 @@ type storedShootState struct {
 	// cluster (the sync handler sets it).
 	Updating bool
 	// LastWarning is the message of the latest status_warning event. It is
-	// only loaded when Gardener reports an error it retries.
+	// loaded when a warning may be recorded, so the same one is not repeated.
 	LastWarning string
 	// APIAvailable is set once the shoot's API server was seen available
 	// (shoot_api_available).
 	APIAvailable bool
+	// Since is when the stored status began (shoot_status_since); zero when it
+	// is unknown, which turns timeouts off for the check.
+	Since time.Time
+	// UpdateSettled is when the cluster's latest sync row finished; zero when
+	// no sync has finished. An update still rolling out long after it settled
+	// has stalled.
+	UpdateSettled time.Time
 }
 
 // progressRecord is the cluster's latest status_progressing event: when, and
@@ -163,6 +170,11 @@ func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatu
 	if observed.Status == gardener.StatusPending && observed.Message == gardener.MsgShootNotFound {
 		if stored.Status == gardener.StatusLost {
 			return shootStatusUpdate{Status: gardener.StatusLost, Message: stored.Message}
+		}
+		// A cluster timed out into error never had a Shoot, so nothing
+		// disappeared: its not-found is the same wait, not lost.
+		if stored.Status == gardener.StatusError && stored.Message == msgShootNeverAppeared {
+			return shootStatusUpdate{Status: gardener.StatusError, Message: stored.Message}
 		}
 		if shootWasSeen(stored.Status) {
 			return shootStatusUpdate{

@@ -43,6 +43,16 @@ type Config struct {
 	// StatusProgressEventInterval is the shortest time between two recorded
 	// progress messages of one cluster while Gardener runs an operation.
 	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
+	// StatusPendingTimeout is how long a Shoot may stay pending without
+	// Gardener ever reporting it before the cluster is recorded as error.
+	StatusPendingTimeout time.Duration `env:"STATUS_PENDING_TIMEOUT" envDefault:"20m"`
+	// StatusUpdatingWarning is how long Gardener may take to finish an update
+	// after its sync settled before the check records a warning.
+	StatusUpdatingWarning time.Duration `env:"STATUS_UPDATING_WARNING" envDefault:"30m"`
+	// StatusDeletingAlert is how long a Shoot may be deleting before the check
+	// records a warning and raises an alert. The status is left alone: forcing
+	// deleted would release the cluster's quota while Gardener still has it.
+	StatusDeletingAlert time.Duration `env:"STATUS_DELETING_ALERT" envDefault:"2h"`
 	// MaxReconcileDeletions is the most Shoots one reconcile pass starts to
 	// delete. A pass that would delete more deletes none and logs an error,
 	// since that points at a database problem rather than users deleting

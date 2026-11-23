@@ -97,15 +97,29 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	// still carry a new reason for a pool.
 	poolRecheck := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
 
+	now := time.Now()
+	timeouts := statusTimeouts{
+		pending:  h.cfg.StatusPendingTimeout,
+		updating: h.cfg.StatusUpdatingWarning,
+		deleting: h.cfg.StatusDeletingAlert,
+	}
 	stored := storedShootState{
 		Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
 		Message:  cluster.ShootStatusMessage.String,
 		Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
 		Updating: cluster.ShootUpdating,
 
-		APIAvailable: cluster.ShootApiAvailable.Valid,
+		APIAvailable:  cluster.ShootApiAvailable.Valid,
+		Since:         cluster.ShootStatusSince.Time,
+		UpdateSettled: cluster.UpdateSettled.Time,
 	}
-	if shootStatus.Status == gardener.StatusError && shootStatus.Retrying {
+	// A warning records once, compared against the latest one, so it is loaded
+	// when a rule may record one: an error Gardener retries, an update that may
+	// have stalled, or a Shoot that may be stuck deleting.
+	if (shootStatus.Status == gardener.StatusError && shootStatus.Retrying) ||
+		cluster.ShootUpdating ||
+		cluster.ShootStatus.String == string(gardener.StatusDeleting) ||
+		shootStatus.Status == gardener.StatusDeleting {
 		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return 0, fmt.Errorf("load last warning: %w", err)
@@ -113,13 +127,18 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		stored.LastWarning = lastWarning.String
 	}
 	update := nextShootStatus(&stored, shootStatus)
+	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
+		update = timedOut
+	}
+	addUpdateWarning(&update, &stored, now, timeouts.updating)
+	stuckDeleting := addDeletingWarning(&update, &stored, now, timeouts.deleting)
 	var retryAfter time.Duration
 	if update.Status == gardener.StatusProgressing || update.Updating {
 		last, err := h.lastProgress(ctx, cluster.ID)
 		if err != nil {
 			return 0, err
 		}
-		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
+		retryAfter = addProgressEvent(&update, last, now, h.cfg.StatusProgressEventInterval)
 	}
 	retryAfter = soonest(retryAfter, poolRecheck)
 	if update.unchanged(&stored) {
@@ -148,9 +167,13 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		case dbconst.ClusterEventEventType_StatusLost:
 			h.logger.Error("ALERT: shoot disappeared from Gardener, not recreating it", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
 		case dbconst.ClusterEventEventType_StatusWarning:
-			h.logger.Warn("gardener is retrying a failed shoot operation", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
+			h.logger.Warn("shoot status warning", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		default:
 		}
+	}
+	if stuckDeleting {
+		h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
+			"deleting_for", now.Sub(stored.Since).Round(time.Minute))
 	}
 
 	h.logger.Debug("updated shoot status",
@@ -192,10 +215,27 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 	apiGone := cluster.ShootApiAvailable.Valid
 
 	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
+		now := time.Now()
 		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message, APIGone: apiGone}
 		stored := storedShootState{
 			Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String,
 			APIAvailable: cluster.ShootApiAvailable.Valid,
+			Since:        cluster.ShootStatusSince.Time,
+		}
+		// A deletion that has lasted past its limit warns once and alerts, so
+		// someone looks at a Shoot Gardener is not finishing. The status stays
+		// deleting: forcing deleted would release the quota while the Shoot
+		// still exists.
+		if deletingTooLong(&stored, now, h.cfg.StatusDeletingAlert) {
+			lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return 0, fmt.Errorf("load last warning: %w", err)
+			}
+			stored.LastWarning = lastWarning.String
+			if addDeletingWarning(&deleting, &stored, now, h.cfg.StatusDeletingAlert) {
+				h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
+					"deleting_for", now.Sub(stored.Since).Round(time.Minute))
+			}
 		}
 		if deleting.unchanged(&stored) {
 			return 0, nil

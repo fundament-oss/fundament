@@ -154,9 +154,19 @@ SELECT
     tenant.clusters.shoot_api_available,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_status_since,
     tenant.organizations.name AS organization_name,
     catalog.regions.cloud_profile,
     catalog.regions.cloud_profile_region,
+    (
+        SELECT COALESCE(tenant.cluster_outbox.processed, tenant.cluster_outbox.failed)
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+          AND tenant.cluster_outbox.status IN ('completed', 'failed')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) AS update_settled,
     (
         tenant.clusters.shoot_status IS NOT NULL
         -- reached Gardener: the test ClusterHasEverBeenSynced spells out
@@ -192,15 +202,20 @@ type ClusterGetForStatusCheckRow struct {
 	ShootApiAvailable  pgtype.Timestamptz
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
+	ShootStatusSince   pgtype.Timestamptz
 	OrganizationName   string
 	CloudProfile       pgtype.Text
 	CloudProfileRegion pgtype.Text
+	UpdateSettled      pgtype.Timestamptz
 	Synced             bool
 }
 
 // Load one cluster for a status check, active or soft-deleted. synced says
 // whether the cluster has reached Gardener at all (a status was recorded or
 // an outbox row completed); before that there is no Shoot to check.
+// shoot_status_since is when the stored status began, so a check knows how
+// long one has lasted; update_settled is when the cluster's latest sync row
+// finished, so a check knows how long Gardener has had to roll out a change.
 func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
 	var i ClusterGetForStatusCheckRow
@@ -217,9 +232,11 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 		&i.ShootApiAvailable,
 		&i.OrganizationID,
 		&i.ShootStatusUpdated,
+		&i.ShootStatusSince,
 		&i.OrganizationName,
 		&i.CloudProfile,
 		&i.CloudProfileRegion,
+		&i.UpdateSettled,
 		&i.Synced,
 	)
 	return i, err
@@ -601,6 +618,7 @@ SET
     shoot_health = NULL,
     shoot_updating = false,
     shoot_api_available = NULL,
+    shoot_status_since = now(),
     shoot_status_updated = now()
 WHERE
     id = $2
@@ -671,6 +689,10 @@ SET
         WHEN $6::boolean THEN COALESCE(shoot_api_available, now())
         ELSE shoot_api_available
     END,
+    shoot_status_since = CASE
+        WHEN shoot_status IS DISTINCT FROM $1 THEN now()
+        ELSE COALESCE(shoot_status_since, now())
+    END,
     shoot_status_updated = now()
 WHERE
     id = $7
@@ -692,6 +714,9 @@ type ClusterUpdateShootStatusParams struct {
 // updating is set while an update fundament pushed rolls out. Writes nothing
 // when the row changed since it was read (checked_at is the
 // shoot_status_updated read then), such as the sync handler marking an update.
+// shoot_status_since moves only when the status itself changes, so timeouts
+// measure how long a status lasted, not how long since its message last moved;
+// a row from before the column was added takes the first moment it is seen.
 // shoot_api_available keeps the first time the API server was seen available;
 // api_gone clears it when the Shoot is gone or being deleted, so a recreated
 // Shoot is announced again.

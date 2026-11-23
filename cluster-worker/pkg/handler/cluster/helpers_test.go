@@ -93,6 +93,17 @@ func newTestHandlerWithConfig(t *testing.T, db *testDB, mock *gardener.MockClien
 	if cfg.ReconcileInterval == 0 {
 		cfg.ReconcileInterval = 5 * time.Minute
 	}
+	// Zero would time a cluster out on its first check, so tests that do not
+	// set them get the production defaults.
+	if cfg.StatusPendingTimeout == 0 {
+		cfg.StatusPendingTimeout = 20 * time.Minute
+	}
+	if cfg.StatusUpdatingWarning == 0 {
+		cfg.StatusUpdatingWarning = 30 * time.Minute
+	}
+	if cfg.StatusDeletingAlert == 0 {
+		cfg.StatusDeletingAlert = 2 * time.Hour
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
