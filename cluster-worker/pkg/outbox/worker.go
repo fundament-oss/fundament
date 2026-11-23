@@ -347,8 +347,14 @@ func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx p
 
 	// Happy path: mark processed and commit in the same transaction.
 	qtx := w.queries.WithTx(tx)
-	if err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID}); err != nil {
+	processed, err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID})
+	if err != nil {
 		return false, fmt.Errorf("mark as processed: %w", err)
+	}
+	if processed == 0 {
+		// The row was moved on by another writer. The handler's work stands, but
+		// the outbox log should not claim a completion the row does not carry.
+		w.logRowMovedOn(row, "completed")
 	}
 
 	if err := tx.Commit(ctx); err != nil {

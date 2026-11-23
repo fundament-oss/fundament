@@ -74,6 +74,9 @@ type nodePoolUpdate struct {
 // existing pool meeting this feature for the first time mid-reconcile, and
 // relabeling it would hide its live metrics.
 //
+// observed is nil while the Shoot does not exist, which leaves the sync-failure
+// rules as the only thing a pool can report.
+//
 // nodes holds each pool's own node counts by pool name, as the shoot's API
 // server lists them, counting only nodes created since the pool was; nil when
 // they were not read, which leaves the shoot-wide rules alone.
@@ -111,9 +114,10 @@ func otherPoolNames(stored []storedNodePool, i int) []string {
 
 // classifyNodePool decides one pool's status from the shoot-level report.
 // ok is false when the report says nothing about this pool, which keeps the
-// stored value: no shoot yet, shoot deleting, a failure that does not name
-// the pool, or an operation in flight that does not name it either — a
-// routine reconcile says nothing about pools whose machines stand. A pool
+// stored value: shoot deleting, a failure that does not name the pool, or an
+// operation in flight that does not name it either — a routine reconcile says
+// nothing about pools whose machines stand. A nil report says the Shoot is not
+// there yet: only a sync that gave up has something to report then. A pool
 // stored waiting/error stays stuck while the worker detail exists:
 // EveryNodeReady names only the first failing machine deployment, so a detail
 // naming another pool — even on a shoot that turned ready while unhealthy —
@@ -126,13 +130,6 @@ func otherPoolNames(stored []storedNodePool, i int) []string {
 // names the pool and the shoot lists at least autoscale_min of its nodes,
 // all Ready, it is ready whatever the other pools do.
 func classifyNodePool(pool *storedNodePool, otherPools []string, observed *gardener.ShootStatus, pushed bool, sync syncState, nodes shoot.PoolInventory, counted bool) (status dbconst.NodePoolStatus, message, gardenerText string, ok bool) {
-	operationRuns := shootOperationRuns(observed)
-
-	// The cluster's initial create builds every pool, so it explains a
-	// never-classified pool even though no outbox change of ours is pending:
-	// the create's own outbox row completes before the first check runs.
-	creating := creatingShoot(observed)
-
 	// What Gardener reports predates this pool: its change has not left the
 	// outbox, so a complaint can only be about a deleted predecessor of the
 	// same name, and a ready shoot is the state before the change.
@@ -142,7 +139,9 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	// A sync that gave up is not in flight: nothing will apply the change, and
 	// Gardener's report predates it for good. The pool says so, with the reason
 	// the row recorded, instead of waiting behind a gate that never opens. The
-	// pool's own failed row wins over the cluster's: it names this pool.
+	// pool's own failed row wins over the cluster's: it names this pool. This
+	// is also all a pool can say when the Shoot does not exist: the sync that
+	// would have created it is exactly the one that failed.
 	if !sync.InFlight {
 		switch {
 		case pool.OutboxStatus == string(dbconst.ClusterOutboxStatus_Failed) && !pool.OutboxSuperseded:
@@ -151,6 +150,16 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 			return dbconst.NodePoolStatus_Error, syncFailureMessage(sync.BlockedMessage), "", true
 		}
 	}
+	if observed == nil {
+		return "", "", "", false
+	}
+
+	operationRuns := shootOperationRuns(observed)
+
+	// The cluster's initial create builds every pool, so it explains a
+	// never-classified pool even though no outbox change of ours is pending:
+	// the create's own outbox row completes before the first check runs.
+	creating := creatingShoot(observed)
 
 	machineType := pool.MachineType
 	if pushed {
@@ -380,15 +389,22 @@ func nodePoolEvents(pool *storedNodePool, next dbconst.NodePoolStatus, message s
 }
 
 // updateNodePoolStatuses loads the cluster's pools, classifies them against
-// the observed shoot status, and persists changes plus their events — each
+// the observed shoot status (or, without a Shoot, against a sync that gave
+// up), and persists changes plus their events — each
 // pool's row and events in one transaction, so a crash cannot keep a status
 // whose event was lost. Best-effort alongside the cluster check: failures
 // log and move on; the next check retries. It returns how soon to check
 // again while the pools' nodes are read, or 0.
 func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) time.Duration {
+	// A Shoot that is not there yet has no machines to report, but a sync that
+	// gave up will never create it, and the pools say why instead of staying
+	// blank. A Shoot that is going or gone says nothing about its pools.
+	report := observed
 	switch observed.Status {
-	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
-		return 0 // nothing a pool could learn from these
+	case gardener.StatusPending:
+		report = nil
+	case gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
+		return 0
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
@@ -434,12 +450,12 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		Blocked:        push.SyncBlocked,
 		BlockedMessage: push.SyncBlockedMessage.String,
 	}
-	if h.poolNodes != nil && readsPoolNodes(stored, observed, push.ShootUpdating || sync.InFlight) {
+	if report != nil && h.poolNodes != nil && readsPoolNodes(stored, report, push.ShootUpdating || sync.InFlight) {
 		counts = h.poolNodesFor(ctx, cluster.ID, stored)
 		recheck = poolNodeRecheck
 	}
 	updated := make(map[uuid.UUID]bool, len(stored))
-	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, sync, ownNodeCounts(counts)) {
+	for _, update := range nextNodePoolStatuses(stored, report, push.ShootUpdating, sync, ownNodeCounts(counts)) {
 		var poolCounts *shoot.PoolInventory
 		if c, ok := counts[update.Name]; ok {
 			poolCounts = &c.all

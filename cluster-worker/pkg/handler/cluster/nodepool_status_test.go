@@ -629,6 +629,22 @@ func TestNextNodePoolStatusesBlockedSync(t *testing.T) {
 	}
 }
 
+// A create that failed for good leaves no Shoot to read: the pools still say
+// why they were never built, and a sync that may still run says nothing.
+func TestNextNodePoolStatusesBlockedWithoutAShoot(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "workers"}}
+
+	assert.Equal(t, []nodePoolUpdate{{
+		Name: "workers", Status: dbconst.NodePoolStatus_Error, Message: "The last sync to Gardener failed: invalid machine type",
+		Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool workers: The last sync to Gardener failed: invalid machine type"}},
+	}}, nextNodePoolStatuses(stored, nil, false, syncState{Blocked: true, BlockedMessage: "invalid machine type"}, nil))
+
+	assert.Empty(t, nextNodePoolStatuses(stored, nil, false, syncState{InFlight: true}, nil),
+		"a create still queued may yet run")
+}
+
 func TestNextNodePoolStatusesPlainReason(t *testing.T) {
 	t.Parallel()
 

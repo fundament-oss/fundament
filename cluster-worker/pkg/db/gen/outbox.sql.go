@@ -292,7 +292,7 @@ func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedPara
 	return result.RowsAffected(), nil
 }
 
-const outboxMarkProcessed = `-- name: OutboxMarkProcessed :exec
+const outboxMarkProcessed = `-- name: OutboxMarkProcessed :execrows
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),
@@ -307,10 +307,13 @@ type OutboxMarkProcessedParams struct {
 }
 
 // Only a runnable row completes: the status guard is the last line of defence
-// if a row was moved by another worker before this write ran.
-func (q *Queries) OutboxMarkProcessed(ctx context.Context, arg OutboxMarkProcessedParams) error {
-	_, err := q.db.Exec(ctx, outboxMarkProcessed, arg.ID)
-	return err
+// if a row was moved before this write ran. Zero rows says so.
+func (q *Queries) OutboxMarkProcessed(ctx context.Context, arg OutboxMarkProcessedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, outboxMarkProcessed, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const outboxMarkRetry = `-- name: OutboxMarkRetry :one

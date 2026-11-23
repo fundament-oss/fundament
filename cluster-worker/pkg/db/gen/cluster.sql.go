@@ -182,7 +182,15 @@ SELECT
             WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
               AND tenant.cluster_outbox.status = 'completed'
         )
-    )::boolean AS synced
+        -- A sync that gave up: no Shoot may exist, but its status and its
+        -- pools still have to say why.
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'failed'
+        )
+    )::boolean AS checkable
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -213,12 +221,13 @@ type ClusterGetForStatusCheckRow struct {
 	CloudProfile       pgtype.Text
 	CloudProfileRegion pgtype.Text
 	UpdateSettled      pgtype.Timestamptz
-	Synced             bool
+	Checkable          bool
 }
 
-// Load one cluster for a status check, active or soft-deleted. synced says
-// whether the cluster has reached Gardener at all (a status was recorded or
-// an outbox row completed); before that there is no Shoot to check.
+// Load one cluster for a status check, active or soft-deleted. checkable says
+// whether a check can learn anything: the cluster reached Gardener (a status
+// was recorded or an outbox row completed) or a sync of it gave up. Before
+// either there is no Shoot to read and no failure to record.
 // shoot_status_since is when the stored status began, so a check knows how
 // long one has lasted; update_settled is when the cluster's latest sync
 // finished, so a check knows how long Gardener has had to roll out a change.
@@ -248,7 +257,7 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 		&i.CloudProfile,
 		&i.CloudProfileRegion,
 		&i.UpdateSettled,
-		&i.Synced,
+		&i.Checkable,
 	)
 	return i, err
 }
@@ -551,6 +560,12 @@ WHERE
             WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
               AND tenant.cluster_outbox.status = 'completed'
         )
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'failed'
+        )
     )
     AND (
         tenant.clusters.deleted IS NULL
@@ -563,8 +578,9 @@ ORDER BY
 // IDs of every cluster the status sweep checks. A deleted cluster is always
 // checked: one that never reached Gardener still has to be recorded as
 // deleted, or it keeps its name and its quota. An active cluster is checked
-// once it has reached Gardener (a status was recorded or an outbox row
-// completed).
+// once a check can learn something: a status was recorded, an outbox row
+// completed, or a sync gave up. A create that failed for good has no Shoot to
+// wait for, and its status and its pools still have to say why.
 func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, clusterListForStatusSweep)
 	if err != nil {

@@ -76,7 +76,9 @@ func TestOutboxLateFailureWriteLeavesCompletedRowAlone(t *testing.T) {
 
 			// Worker A claimed the row, its handler failed, and it rolled back:
 			// the row is pending and unlocked. Worker B claims and completes it.
-			require.NoError(t, queries.OutboxMarkProcessed(t.Context(), dbgen.OutboxMarkProcessedParams{ID: id}))
+			processed, err := queries.OutboxMarkProcessed(t.Context(), dbgen.OutboxMarkProcessedParams{ID: id})
+			require.NoError(t, err)
+			require.EqualValues(t, 1, processed)
 
 			// Worker A now records its failure.
 			tc.write(t, queries, id)
@@ -104,7 +106,9 @@ func TestOutboxMarkProcessedLeavesFailedRowAlone(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1, rows)
 
-	require.NoError(t, queries.OutboxMarkProcessed(t.Context(), dbgen.OutboxMarkProcessedParams{ID: id}))
+	processed, err := queries.OutboxMarkProcessed(t.Context(), dbgen.OutboxMarkProcessedParams{ID: id})
+	require.NoError(t, err)
+	require.Zero(t, processed, "a failed row is not completed")
 
 	assert.Equal(t, "failed", outboxRowStatus(t, db, id),
 		"a failed row is not completed by a late success write")

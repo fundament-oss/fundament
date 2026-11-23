@@ -22,9 +22,9 @@ ORDER BY id ASC
 LIMIT 1
 FOR NO KEY UPDATE SKIP LOCKED;
 
--- name: OutboxMarkProcessed :exec
+-- name: OutboxMarkProcessed :execrows
 -- Only a runnable row completes: the status guard is the last line of defence
--- if a row was moved by another worker before this write ran.
+-- if a row was moved before this write ran. Zero rows says so.
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),

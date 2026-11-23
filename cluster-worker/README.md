@@ -82,7 +82,8 @@ sequenceDiagram
   Gardener's create tasks, ready while the health checks settle, then healthy), and by
   a sweep of every cluster at startup and every `STATUS_INTERVAL` (30m).
   The sweep catches what produces no event: a Shoot deleted while cluster-worker was not
-  running, or a cluster that never got a Shoot. Deleted clusters are checked until their
+  running, or a cluster that never got a Shoot (one whose sync gave up is checked too, so
+  its status and its pools can say why). Deleted clusters are checked until their
   shoot is gone. Both only queue cluster IDs; `CLUSTER_STATUS_WORKERS` workers take them
   off the queue. A cluster queued twice is checked once, never by two workers at the same
   time, and a failed check is retried with backoff. In real mode the startup sweep waits

@@ -66,7 +66,7 @@ func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter ti
 	// A deleted cluster is checked even when it never reached Gardener: there is
 	// no Shoot to wait for, and the check records that nothing is left to
 	// delete. Until it does, the cluster keeps its name and its quota.
-	if !cluster.Synced && !cluster.Deleted.Valid {
+	if !cluster.Checkable && !cluster.Deleted.Valid {
 		return 0, ErrClusterNotSynced
 	}
 
@@ -197,10 +197,12 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		"health", update.Health)
 
 	if update.Status == gardener.StatusError {
+		// The recorded message, not Gardener's: on the timeout path they differ,
+		// and the alert should say what the cluster says.
 		h.logger.Error("ALERT: shoot reconciliation failed",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
-			"message", shootStatus.Message)
+			"message", update.Message)
 	}
 	return retryAfter, nil
 }
@@ -259,16 +261,14 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		// someone looks at a Shoot Gardener is not finishing. The status stays
 		// deleting: forcing deleted would release the quota while the Shoot
 		// still exists.
+		var stuckDeleting bool
 		if deletingTooLong(&stored, now, h.cfg.StatusDeletingAlert) {
 			warnings, err := h.loadWarnings(ctx, cluster.ID)
 			if err != nil {
 				return 0, err
 			}
 			stored.Warnings = warnings
-			if addDeletingWarning(&deleting, &stored, now, h.cfg.StatusDeletingAlert) {
-				h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
-					"deleting_for", now.Sub(stored.Since).Round(time.Minute))
-			}
+			stuckDeleting = addDeletingWarning(&deleting, &stored, now, h.cfg.StatusDeletingAlert)
 		}
 		if deleting.unchanged(&stored) {
 			return 0, nil
@@ -282,6 +282,12 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 			// dropping the transition: no event is guaranteed to bring us back.
 			h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
 			return statusRetryBaseDelay, nil
+		}
+		// The alert follows the write: a check that lost the race recorded no
+		// warning, and a second check on the same incident must not alert again.
+		if stuckDeleting {
+			h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
+				"deleting_for", now.Sub(stored.Since).Round(time.Minute))
 		}
 		h.logger.Debug("shoot still being deleted", "cluster_id", cluster.ID, "status", shootStatus.Status)
 		return 0, nil

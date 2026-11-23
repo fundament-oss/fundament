@@ -443,3 +443,25 @@ func TestCheckStatusIgnoresFailedNodeRead(t *testing.T) {
 	_, _, counted := getNodePoolCount(t, db, clusterID, "small")
 	assert.False(t, counted)
 }
+
+// A create that failed for good leaves the cluster without a Shoot. The sweep
+// still reaches it, and the pools report why they were never built instead of
+// staying blank behind a gate that never opens.
+func TestCheckStatusRecordsAFailedCreateOnItsPools(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-failed-create")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsFailed(t, db, clusterID, "invalid machine type")
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "error", status)
+	assert.Equal(t, "The last sync to Gardener failed: invalid machine type", message)
+	assertEventExists(t, db, clusterID, "nodepool_error")
+	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the sweep checked the cluster once")
+}
