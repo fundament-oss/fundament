@@ -10,9 +10,9 @@ import {
   emptyStateHtml,
   errorBox,
   fetchCephCapacity,
-  hintHtml,
-  humanizeQuantity,
-  escapeHtml,
+  freeSpace,
+  addInfoButton,
+  REPLICAS_INFO,
   latestRead,
   loadingHtml,
   navigateToDetail,
@@ -44,7 +44,7 @@ const METADATA_SERVERS = {
   name: 'metadataServers',
   id: 'mds-count',
   label: 'Metadata servers',
-  hint: 'Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.',
+  hint: 'Each gets a standby that takes over if it fails.',
   min: 1,
   max: 5,
   default: 1,
@@ -54,7 +54,7 @@ const GATEWAY_INSTANCES = {
   name: 'gatewayInstances',
   id: 'rgw-count',
   label: 'Gateway instances',
-  hint: 'Gateway pods serving the S3 API. 1 is right unless request throughput demands more.',
+  hint: 'Pods that serve the S3 API. With 1, the S3 API is down while that pod restarts.',
   min: 1,
   max: 5,
   default: 1,
@@ -68,10 +68,12 @@ export const BLOCKSTORAGE = {
   emptyMessage: 'No block storage yet',
   noneSelected: 'No block storage selected.',
   storageClassPrefix: 'ceph-',
-  detailHint: "Volumes are placed across all of the shared Ceph cluster's disks.",
-  createIntro: `Block storage provides ReadWriteOnce volumes, each mounted by one node at a
-    time, over the shared Ceph cluster's disks. It needs at least one DiskPool
-    contributing disks; without one it stays Degraded.`,
+  // The info box on the list and detail pages.
+  about: [
+    'Block storage gives a pod its own disk-like volume (ReadWriteOnce), for example for a database.',
+    'It needs a disk pool with disks; without one it stays Degraded.',
+    REPLICAS_INFO,
+  ],
   intFields: [],
   defaultToggle: true,
   nameMaxLength: 63,
@@ -85,10 +87,12 @@ export const FILESTORAGE = {
   emptyMessage: 'No file storage yet',
   noneSelected: 'No file storage selected.',
   storageClassPrefix: 'cephfs-',
-  detailHint: 'Volumes can be mounted by many pods across nodes.',
-  createIntro: `File storage provides ReadWriteMany volumes over the shared Ceph cluster's
-    disks, which many pods on many nodes can mount at once. It needs at least one
-    DiskPool contributing disks; without one it stays Degraded.`,
+  about: [
+    'File storage gives volumes that many pods on different nodes can use at the same time (ReadWriteMany), for example for shared files.',
+    'It needs a disk pool with disks; without one it stays Degraded.',
+    'Metadata servers keep track of files and folders. Each one gets a standby that takes over when it fails.',
+    REPLICAS_INFO,
+  ],
   intFields: [METADATA_SERVERS],
   defaultToggle: false,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
@@ -104,11 +108,11 @@ export const OBJECTSTORAGE = {
   emptyMessage: 'No object storage yet',
   noneSelected: 'No object storage selected.',
   storageClassPrefix: OBJECT_STORAGE_CLASS_PREFIX,
-  detailHint: `Create buckets below; each bucket's endpoint and credentials are
-    stored in its namespace, named after the bucket.`,
-  createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
-    disks. It needs at least one DiskPool contributing disks; without one it
-    stays Degraded.`,
+  about: [
+    'Object storage gives S3-compatible buckets that apps reach over HTTP. Create buckets on this storage\'s page or on a project\'s Buckets page.',
+    'It needs a disk pool with disks; without one it stays Degraded.',
+    REPLICAS_INFO,
+  ],
   intFields: [GATEWAY_INSTANCES],
   defaultToggle: false,
   // The CRD caps ObjectStorage names at 30: Rook rejects CephObjectStore
@@ -149,6 +153,14 @@ function specFrom(cfg, form) {
   return spec;
 }
 
+// The operator sets the failure domain to host only when the copies land on
+// two or more nodes (ComputeReplication); osd keeps them on one node's disks.
+export function copiesOnSeparateNodes(failureDomain) {
+  if (failureDomain === 'host') return 'Yes';
+  if (failureDomain === 'osd') return 'No';
+  return failureDomain ?? '—';
+}
+
 export async function consumerListPage(cfg) {
   const list = document.getElementById('list');
   list.innerHTML = loadingHtml(`Loading ${cfg.labelMidSentence}…`);
@@ -158,19 +170,20 @@ export async function consumerListPage(cfg) {
   document.getElementById('create-btn').addEventListener('click', () => {
     fundament.openSheet({ view: 'create' });
   });
+  addInfoButton(document.getElementById('page-actions'), `About ${cfg.labelMidSentence}`, cfg.about);
   const nextRead = latestRead();
   fundament.onResourcesChanged(() => renderList(list, cfg, nextRead()));
 
   await renderList(list, cfg, nextRead());
 }
 
-// "StorageClass ceph-default · 2 replicas · host failure domain", and why a
-// resource is not Ready when its status says so.
+// "StorageClass ceph-default · 2 replicas · default", and why a resource is
+// not Ready when its status says so. The failure domain stays on the detail
+// page, as whether the copies are on separate nodes.
 function summary(item) {
   const status = item.status ?? {};
   const parts = [`StorageClass ${status.storageClassName ?? '—'}`];
   if (status.replicas) parts.push(`${status.replicas} ${status.replicas === 1 ? 'replica' : 'replicas'}`);
-  if (status.failureDomain) parts.push(`${status.failureDomain} failure domain`);
   if (item.spec?.default) parts.push('default');
   if (status.message) parts.push(status.message);
   return parts.join(' · ');
@@ -187,7 +200,7 @@ async function renderList(list, cfg, isCurrent) {
       list.innerHTML = emptyStateHtml({
         icon: 'cylinder-split-slash',
         text: cfg.emptyMessage,
-        supportingText: 'It needs a disk pool contributing disks first.',
+        supportingText: 'Create a disk pool with disks first.',
       });
       return;
     }
@@ -216,7 +229,7 @@ export async function consumerDetailPage(cfg) {
   const resource = { ...GROUP_VERSION, resource: cfg.resource };
   const name = ctx.resource?.name;
 
-  function renderReadOnly(item) {
+  function renderReadOnly(item, cap) {
     const status = item.status ?? {};
 
     // The phase is the badge beside the Console's title; the message says why.
@@ -228,16 +241,12 @@ export async function consumerDetailPage(cfg) {
       pairs.push([field.label, String(item.spec?.[field.name] ?? field.default)]);
     }
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
-    pairs.push(['Failure domain', status.failureDomain ?? '—']);
+    pairs.push(['Copies on separate nodes', copiesOnSeparateNodes(status.failureDomain)]);
+    const free = freeSpace(cap, status.replicas);
+    if (free) pairs.push(free);
     if (status.message) pairs.push(['Message', status.message]);
 
-    return sectionHtml(
-      'Status',
-      `${renderKeyValueList(pairs, 'Status')}
-      <nldd-spacer size="12"></nldd-spacer>
-      ${hintHtml(cfg.detailHint)}
-      <div data-role="capacity"></div>`,
-    );
+    return sectionHtml('Status', renderKeyValueList(pairs, 'Status'));
   }
 
   const nextRead = latestRead();
@@ -250,9 +259,14 @@ export async function consumerDetailPage(cfg) {
   async function showDetail() {
     const isCurrent = nextRead();
     try {
-      const item = await fundament.k8s.get({ ...resource, name });
+      // Users cannot run ceph df, but the CephCluster status carries the raw
+      // numbers. fetchCephCapacity never throws: without them the row is left out.
+      const [item, cap] = await Promise.all([
+        fundament.k8s.get({ ...resource, name }),
+        fetchCephCapacity(),
+      ]);
       if (!isCurrent()) return;
-      content.innerHTML = renderReadOnly(item);
+      content.innerHTML = renderReadOnly(item, cap);
       if (!extraMounted && extra && cfg.detailSection) {
         extraMounted = true;
         cfg.detailSection(extra, item, ctx, cfg);
@@ -264,17 +278,6 @@ export async function consumerDetailPage(cfg) {
       document.getElementById('edit-btn').onclick = () => {
         fundament.openSheet({ view: 'edit', resource: { name } });
       };
-      // Filled in after the fact: users cannot run ceph df, but the
-      // CephCluster status carries the raw numbers.
-      fetchCephCapacity().then((cap) => {
-        const el = content.querySelector('[data-role="capacity"]');
-        if (!cap || !el || !isCurrent()) return;
-        el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
-          `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
-          + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster; `
-          + 'divide by the replica count for usable space.',
-        ))}`;
-      });
     } catch (err) {
       if (!isCurrent()) return;
       actions.hidden = true;
@@ -286,6 +289,8 @@ export async function consumerDetailPage(cfg) {
     content.innerHTML = errorBox(cfg.noneSelected, 'Cannot show this page');
     return;
   }
+  // In the actions group, which shows once the resource has loaded.
+  addInfoButton(document.getElementById('page-actions'), `About ${cfg.labelMidSentence}`, cfg.about);
   // The edit sheet saved: show what it saved.
   fundament.onResourcesChanged(() => showDetail());
   await showDetail();
@@ -349,11 +354,6 @@ export async function consumerEditPage(cfg, ctx) {
 export function consumerCreatePage(cfg) {
   const body = document.getElementById('content');
   body.innerHTML = `
-    <nldd-rich-text>
-      <p>${cfg.createIntro}</p>
-    </nldd-rich-text>
-    <nldd-spacer size="12"></nldd-spacer>
-
     <nldd-form>
       <form novalidate>
         ${errorBannerHtml('error-banner')}
@@ -364,7 +364,7 @@ export function consumerCreatePage(cfg) {
                             required maxlength="${cfg.nameMaxLength}" no-spellcheck></nldd-text-field>`,
           {
             errorId: 'consumer-name-error',
-            hint: `Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).`,
+            hint: `Lowercase letters, digits and dashes. The StorageClass becomes ${cfg.storageClassPrefix}<name>.`,
           },
         )}
 

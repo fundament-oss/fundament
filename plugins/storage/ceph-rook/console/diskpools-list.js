@@ -1,5 +1,7 @@
 import {
+  addInfoButton,
   bootPage,
+  DISK_POOL_INFO,
   errorBox,
   emptyStateHtml,
   humanizeQuantity,
@@ -22,6 +24,7 @@ await bootPage();
 document.getElementById('create-btn').addEventListener('click', () => {
   fundament.openSheet({ view: 'create' });
 });
+addInfoButton(document.getElementById('page-actions'), 'About disk pools', DISK_POOL_INFO);
 
 // "2 disks · 1.8 TiB", and why a pool is not Ready when it says so. A pool
 // the operator has not counted yet has no count: that is not "0 disks".
@@ -51,7 +54,7 @@ async function renderList() {
       list.innerHTML = emptyStateHtml({
         icon: 'boxes-3',
         text: 'No disk pools yet',
-        supportingText: 'A disk pool hands disks to the shared Ceph cluster. Create one to start.',
+        supportingText: 'Create one to start using disks for storage.',
       });
       return;
     }
