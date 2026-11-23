@@ -131,6 +131,24 @@ describe('PluginRegistryService', () => {
     expect(registry.allPlugins().map((p) => p.installationName)).toEqual(['acme--cert-manager']);
   });
 
+  it('drops a load for a cluster left while it waited for the organization id', async () => {
+    const context = TestBed.inject(OrganizationContextService);
+    context.clearOrganizationId();
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    registry.loadPlugins('cl-1').catch(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const second = registry.loadPlugins('cl-2');
+    await vi.advanceTimersByTimeAsync(0);
+
+    context.setOrganizationId('org-1');
+    await second;
+
+    // Only the load for the cluster on screen fetches the definition.
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps a plugin in the menu while it is still deploying, and follows its phase', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Deploying')];
