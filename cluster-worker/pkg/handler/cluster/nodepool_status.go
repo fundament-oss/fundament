@@ -409,8 +409,10 @@ func nodePoolEvents(pool *storedNodePool, next dbconst.NodePoolStatus, message s
 // pool's row and events in one transaction, so a crash cannot keep a status
 // whose event was lost. Best-effort alongside the cluster check: failures
 // log and move on; the next check retries. It returns how soon to check
-// again while the pools' nodes are read, or 0.
-func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) time.Duration {
+// again while the pools' nodes are read, or 0, and the push state it
+// classified with: nil when it never read one, and the caller must then read
+// it itself.
+func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) (recheck time.Duration, push *db.ClusterGetPushStateRow) {
 	// A Shoot that is not there yet has no machines to report, but a sync that
 	// gave up will never create it, and the pools say why instead of staying
 	// blank. A Shoot that is going or gone says nothing about its pools.
@@ -419,7 +421,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 	case gardener.StatusPending:
 		report = nil
 	case gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
-		return 0
+		return 0, nil
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
@@ -428,10 +430,10 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 	rows, err := h.queries.NodePoolListStatusByClusterID(ctx, db.NodePoolListStatusByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
 		h.logger.Warn("failed to load node pools for status", "cluster_id", cluster.ID, "error", err)
-		return 0
+		return 0, nil
 	}
 	if len(rows) == 0 {
-		return 0
+		return 0, nil
 	}
 
 	stored := make([]storedNodePool, len(rows))
@@ -452,26 +454,24 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 	// Read what is in flight after the pool list, not from the cluster row the
 	// check started with: a pool inserted since then commits together with its
 	// outbox row, and classifying it from the stale state would call it ready.
-	push, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+	loaded, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
 	if err != nil {
 		h.logger.Warn("failed to load cluster push state for node pool status", "cluster_id", cluster.ID, "error", err)
-		return 0
+		return 0, nil
 	}
-	var (
-		counts  map[string]poolNodeCounts
-		recheck time.Duration
-	)
+	push = &loaded
+	var counts map[string]poolNodeCounts
 	sync := syncState{
-		InFlight:       push.SyncInFlight,
-		Blocked:        push.SyncBlocked,
-		BlockedMessage: push.SyncBlockedMessage.String,
+		InFlight:       loaded.SyncInFlight,
+		Blocked:        loaded.SyncBlocked,
+		BlockedMessage: loaded.SyncBlockedMessage.String,
 	}
-	if report != nil && h.poolNodes != nil && readsPoolNodes(stored, report, push.ShootUpdating || sync.InFlight) {
+	if report != nil && h.poolNodes != nil && readsPoolNodes(stored, report, loaded.ShootUpdating || sync.InFlight) {
 		counts = h.poolNodesFor(ctx, cluster.ID, stored)
 		recheck = poolNodeRecheck
 	}
 	updated := make(map[uuid.UUID]bool, len(stored))
-	updates := nextNodePoolStatuses(stored, report, push.ShootUpdating, sync, ownNodeCounts(counts))
+	updates := nextNodePoolStatuses(stored, report, loaded.ShootUpdating, sync, ownNodeCounts(counts))
 	for i := range updates {
 		update := &updates[i]
 		var poolCounts *shoot.PoolInventory
@@ -510,7 +510,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 			h.logger.Warn("failed to record node pool node count", "cluster_id", cluster.ID, "pool", pool.Name, "error", err)
 		}
 	}
-	return recheck
+	return recheck, push
 }
 
 // writeNodePoolStatus commits one pool's status row, its events and, when

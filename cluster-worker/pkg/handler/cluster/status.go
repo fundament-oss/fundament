@@ -94,8 +94,9 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 
 	// Pool status is derived from the same report, before the cluster-level
 	// early return below: a check that changes nothing for the cluster row can
-	// still carry a new reason for a pool.
-	poolRecheck := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
+	// still carry a new reason for a pool. The push state it classified with
+	// serves the timeout below too, rather than reading the same rows twice.
+	poolRecheck, push := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
 
 	now := time.Now()
 	timeouts := statusTimeouts{
@@ -127,10 +128,14 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		// A sync still queued or retrying will apply the change, creating the
 		// Shoot: timing it out would record a failure for a create that is
 		// about to run. This check also runs from the sync path, just before
-		// that apply.
-		push, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
-		if err != nil {
-			return 0, fmt.Errorf("load cluster push state: %w", err)
+		// that apply. Without pools the check above read no push state, so it
+		// is loaded here.
+		if push == nil {
+			loaded, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+			if err != nil {
+				return 0, fmt.Errorf("load cluster push state: %w", err)
+			}
+			push = &loaded
 		}
 		if !push.SyncQueued {
 			// The timeout replaces the status, not what the check learned about

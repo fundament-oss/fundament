@@ -82,8 +82,8 @@ const (
 // SyncContext carries metadata from the outbox row to the sync handler.
 type SyncContext struct {
 	EntityType EntityType                  // which entity type this row represents
-	Event      dbconst.ClusterOutboxEvent  // created, updated, deleted, reconcile, ready
-	Source     dbconst.ClusterOutboxSource // trigger, reconcile, manual, node_pool, status
+	Event      dbconst.ClusterOutboxEvent  // created, updated, deleted, reconcile, ready, api_available
+	Source     dbconst.ClusterOutboxSource // trigger, reconcile, manual, status
 }
 
 // SyncHandler processes an outbox row for a specific entity type.
