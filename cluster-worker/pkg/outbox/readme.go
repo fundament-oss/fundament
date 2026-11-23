@@ -25,10 +25,13 @@ func ReplaceReadmeDiagram(readme string) (string, error) {
 	if start < 0 {
 		return "", errors.New("README is missing the start marker of the outbox diagram")
 	}
-	end := strings.Index(readme, readmeEnd)
-	if end < 0 || end < start {
+	// Only the text after the start marker can close the block: an end marker
+	// earlier in the file belongs to another block, or is a stray one.
+	rest := readme[start+len(readmeBegin):]
+	end := strings.Index(rest, readmeEnd)
+	if end < 0 {
 		return "", errors.New("README is missing the end marker of the outbox diagram")
 	}
-	end += len(readmeEnd)
+	end += start + len(readmeBegin) + len(readmeEnd)
 	return readme[:start] + readmeDiagram() + readme[end:], nil
 }

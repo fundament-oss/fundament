@@ -39,6 +39,7 @@ func newTestContext(t *testing.T) *Context {
 		Output:  OutputTable,
 		Logger:  slog.Default(),
 		DB:      &psqldb.DB{Pool: pool},
+		Ctx:     t.Context(),
 		Queries: db.New(pool),
 	}
 }

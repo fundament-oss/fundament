@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -464,4 +465,43 @@ func TestCheckStatusRecordsAFailedCreateOnItsPools(t *testing.T) {
 	assert.Equal(t, "The last sync to Gardener failed: invalid machine type", message)
 	assertEventExists(t, db, clusterID, "nodepool_error")
 	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the sweep checked the cluster once")
+}
+
+// A status write only lands while the row still holds the status_updated value
+// the check read: a check that decided from an older report cannot undo a
+// newer classification.
+func TestNodePoolUpdateStatusLeavesARowAnotherCheckWrote(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	queries := dbgen.New(db.workerPool)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "pool-cas")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+
+	var checkedAt pgtype.Timestamptz
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT status_updated FROM tenant.node_pools WHERE id = $1`, poolID).Scan(&checkedAt))
+
+	rows, err := queries.NodePoolUpdateStatus(t.Context(), dbgen.NodePoolUpdateStatusParams{
+		NodePoolID: poolID,
+		Status:     pgtype.Text{String: "waiting", Valid: true},
+		Message:    pgtype.Text{String: "first", Valid: true},
+		CheckedAt:  checkedAt,
+	})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, rows)
+
+	// The same read, replayed after the first write: the row moved on.
+	rows, err = queries.NodePoolUpdateStatus(t.Context(), dbgen.NodePoolUpdateStatusParams{
+		NodePoolID: poolID,
+		Status:     pgtype.Text{String: "error", Valid: true},
+		Message:    pgtype.Text{String: "second", Valid: true},
+		CheckedAt:  checkedAt,
+	})
+	require.NoError(t, err)
+	require.Zero(t, rows)
+
+	status, message := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Equal(t, "waiting", status)
+	assert.Equal(t, "first", message)
 }

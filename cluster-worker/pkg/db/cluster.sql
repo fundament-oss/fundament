@@ -122,6 +122,8 @@ ORDER BY
 -- predecessor's), the stored classification, and the node counts last
 -- observed (tenant.node_pool_snapshots, shared with the inventory worker); the
 -- worker-group build query above, with its catalog joins, stays with sync.
+-- status_updated is the value the status write must still find: a check that
+-- decided from an older report must not land after a newer one.
 -- outbox_superseded says a sync completed after the pool's latest row: a sync
 -- applies the whole cluster, so the pool's failed row no longer describes what
 -- Gardener has, whichever pool or the cluster itself the later row belonged to.
@@ -133,6 +135,7 @@ SELECT
     tenant.node_pools.created,
     tenant.node_pools.status,
     tenant.node_pools.status_message,
+    tenant.node_pools.status_updated,
     tenant.node_pool_snapshots.nodes,
     tenant.node_pool_snapshots.nodes_ready,
     tenant.node_pool_snapshots.observed,
@@ -263,7 +266,10 @@ WHERE
 -- row was just read by the same check, and with soft deletes (cluster_id,
 -- name) could meanwhile mean a recreated pool. A cluster that was recorded as
 -- lost while this check ran has had its pools cleared; the pool status the
--- check decided from the old report must not land after that clear.
+-- check decided from the old report must not land after that clear. Writing
+-- only while status_updated still holds the value read with the row keeps a
+-- check that classified from an older report from landing after a newer one;
+-- zero rows says so.
 UPDATE tenant.node_pools
 SET
     status = @status,
@@ -272,6 +278,7 @@ SET
 WHERE
     tenant.node_pools.id = @node_pool_id
     AND tenant.node_pools.deleted IS NULL
+    AND tenant.node_pools.status_updated IS NOT DISTINCT FROM @checked_at
     AND EXISTS (
         SELECT 1
         FROM tenant.clusters
@@ -307,8 +314,9 @@ WHERE
 -- Checks outbox history directly (EXISTS on completed rows with cluster_id set).
 -- This remains true even if the latest outbox row is retrying or failed.
 -- The same "completed outbox row" test is spelled in ClusterListForStatusSweep,
--- ClusterGetForStatusCheck (synced) and organization-api's cluster queries
--- (reached_gardener); change them together.
+-- ClusterGetForStatusCheck (checkable) and the reached_gardener columns of
+-- organization-api's cluster queries and platform-api/pkg/db/fleet.sql; change
+-- them together.
 SELECT EXISTS (
     SELECT 1
     FROM tenant.cluster_outbox

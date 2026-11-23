@@ -140,6 +140,22 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:        nil,
 		},
 		{
+			// The failure came from a sync that never delivered: while its
+			// change is queued the pool is on its way, not ready and not failed.
+			name:        "a failed pool whose retry is queued reads progressing",
+			stored:      []storedNodePool{{Name: "big", Status: "error", Message: "The last sync to Gardener failed: quota exceeded"}},
+			observed:    readyHealthy,
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "big", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
+			name:        "a failed pool whose change rolls out reads progressing",
+			stored:      []storedNodePool{{Name: "big", Status: "error", Message: "The last sync to Gardener failed: quota exceeded"}},
+			observed:    quietReconcile,
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "big", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
 			name:     "ready after the rollout settles the pool",
 			stored:   []storedNodePool{{Name: "big", Status: "progressing"}},
 			observed: readyHealthy,

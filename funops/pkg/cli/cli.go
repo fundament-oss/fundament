@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -22,9 +23,12 @@ type CLI struct {
 
 // Context holds shared dependencies for command execution.
 type Context struct {
-	Debug   bool
-	Output  OutputFormat
-	Logger  *slog.Logger
-	DB      *psqldb.DB
+	Debug  bool
+	Output OutputFormat
+	Logger *slog.Logger
+	DB     *psqldb.DB
+	// Ctx is cancelled on interrupt, so a command waiting on the database
+	// stops instead of running on after the operator gave up.
+	Ctx     context.Context
 	Queries *db.Queries
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -48,7 +47,7 @@ func (c *NamespaceSyncCmd) Run(ctx *Context) error {
 		namespaceID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	queued, err := ctx.Queries.NamespaceQueueSync(context.Background(), db.NamespaceQueueSyncParams{NamespaceID: namespaceID})
+	queued, err := ctx.Queries.NamespaceQueueSync(ctx.Ctx, db.NamespaceQueueSyncParams{NamespaceID: namespaceID})
 	if err != nil {
 		return fmt.Errorf("failed to queue namespace sync: %w", err)
 	}

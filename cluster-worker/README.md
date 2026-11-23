@@ -312,19 +312,24 @@ even on a shoot that turned ready while unhealthy — does not mean this one rec
 A complaint naming a settled pool (`ready`, or NULL from before this feature) only
 turns it `waiting` while the initial create runs or a change of ours is in flight —
 otherwise it is a node problem, which the pool's live metrics status describes. While
-the cluster has a change that has not left the outbox (pending, retrying or failed; the
-state is cluster-wide, not per pool), what Gardener reports may predate it: a pool that
-is new (NULL) or `progressing` stays `progressing` rather than reading ready, and a
-complaint naming it is ignored; a pool stored `ready` keeps its status.
+the cluster has a change that has not left the outbox (pending or retrying; the state is
+cluster-wide, not per pool), what Gardener reports may predate it: a pool that is not
+`ready` reads `progressing`, since the change may be what settles it and its stored
+status — the last sync's failure included — describes a shoot without the change. A
+complaint naming the pool still counts, because it is about machines missing now, and a
+pool stored `ready` keeps its status. A sync that gave up is not in flight: its pools
+read `error` with the row's reason, and with no Shoot at all that is the only thing they
+can report.
 The in-flight state is read after the pool list (a pool's INSERT commits together with
 its outbox row), so a pool inserted mid-check is never classified from a stale
-nothing-in-flight state. Gardener names a pool's machines `<technicalID>-<worker>` plus a
+nothing-in-flight state. A pool's status write carries the `status_updated` it read, so
+a check that classified from an older report cannot land after a newer one. Gardener names a pool's machines `<technicalID>-<worker>` plus a
 provider-specific suffix, so a pool is matched on that whole name. The reason is
 cleaned before it is stored (control characters dropped, capped at 1 KiB): it is node
 and provider text. metal-stack's `no machine available` is stored in plain words, "No
 free `<machine type>` machine is available.", without the type while a change of ours
 is rolling out. Every new waiting or error message is logged with Gardener's text. A failure
-that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
+that names no pool stays cluster-level; a shoot that is deleting leaves pool rows
 untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
 the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
 text as machines churn, so a changed reason refreshes the row silently. A pool

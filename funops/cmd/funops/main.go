@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/alecthomas/kong"
 
@@ -62,11 +64,17 @@ func run(ctx *kong.Context, root *cli.CLI) error {
 
 	queries := db.New(database.Pool)
 
+	// A command that waits on the database stops on Ctrl-C instead of running
+	// on after the operator gave up.
+	opCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	runCtx := &cli.Context{
 		Debug:   root.Debug,
 		Output:  root.Output,
 		Logger:  logger,
 		DB:      database,
+		Ctx:     opCtx,
 		Queries: queries,
 	}
 
