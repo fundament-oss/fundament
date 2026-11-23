@@ -164,22 +164,28 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "nodepool_waiting"))
 }
 
-// A change is in flight while the cluster's own latest sync has not completed,
-// or a node pool's latest row is queued, or failed for a pool still active. A
-// cluster event that is not a sync (the ready fan-out) is not a change.
-func TestClusterGetPushStateSyncPending(t *testing.T) {
+// A change is in flight while the cluster's own latest sync is queued or
+// retrying, or a node pool's latest row is. A cluster event that is not a sync
+// (the ready fan-out) is not a change.
+//
+// Blocked is the cluster's own latest sync row failing for good with no pool
+// sync after it: nothing retries it, so the pools say so instead of waiting. A
+// pool's failed row is not blocked at the cluster level — the pool list carries
+// its message, and a later sync may still succeed.
+func TestClusterGetPushState(t *testing.T) {
 	t.Parallel()
 	db := createTestDB(t)
 	queries := dbgen.New(db.workerPool)
 
 	setPoolRow := func(poolID uuid.UUID, status string) {
 		_, err := db.adminPool.Exec(t.Context(),
-			`UPDATE tenant.cluster_outbox SET status = $2 WHERE node_pool_id = $1`, poolID, status)
+			`UPDATE tenant.cluster_outbox SET status = $2, status_info = 'sync failed' WHERE node_pool_id = $1`, poolID, status)
 		require.NoError(t, err)
 	}
 	addClusterRow := func(clusterID uuid.UUID, event, status string) {
 		_, err := db.adminPool.Exec(t.Context(),
-			`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status) VALUES ($1, $2, 'trigger', $3)`,
+			`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, status_info)
+			 VALUES ($1, $2, 'trigger', $3, 'sync failed')`,
 			clusterID, event, status)
 		require.NoError(t, err)
 	}
@@ -190,19 +196,32 @@ func TestClusterGetPushStateSyncPending(t *testing.T) {
 	}
 
 	cases := []struct {
-		name  string
-		setup func(clusterID, poolID uuid.UUID)
-		want  bool
+		name           string
+		setup          func(clusterID, poolID uuid.UUID)
+		wantInFlight   bool
+		wantBlocked    bool
+		wantMessageSet bool
 	}{
-		{name: "everything synced", setup: func(uuid.UUID, uuid.UUID) {}, want: false},
-		{name: "a pool's create still queued", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "pending") }, want: true},
-		{name: "a pool's sync failed", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "failed") }, want: true},
+		{name: "everything synced", setup: func(uuid.UUID, uuid.UUID) {}},
+		{name: "a pool's create still queued", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "pending") }, wantInFlight: true},
+		{name: "a pool's sync failed", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "failed") }},
 		{name: "a deleted pool's sync failed", setup: func(_, pool uuid.UUID) {
 			deletePool(pool)
 			setPoolRow(pool, "failed")
-		}, want: false},
-		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, want: true},
-		{name: "a ready fan-out row queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "ready", "pending") }, want: false},
+		}},
+		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true},
+		{name: "the cluster's own update failed", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "failed") }, wantBlocked: true, wantMessageSet: true},
+		{name: "a ready fan-out row queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "ready", "pending") }},
+		{name: "a failed cluster row superseded by a later pool sync", setup: func(c, _ uuid.UUID) {
+			addClusterRow(c, "updated", "failed")
+			insertNodePoolReturningID(t, db, c, "later", "n1-standard-4", 1, 2)
+			_, err := db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox SET status = 'completed', processed = now()
+				 WHERE tenant.cluster_outbox.node_pool_id IN (
+				     SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)
+				   AND tenant.cluster_outbox.status = 'pending'`, c)
+			require.NoError(t, err)
+		}},
 	}
 	for i, tc := range cases {
 		clusterID := insertCluster(t, db, acmeCorpOrgID, fmt.Sprintf("push-%d", i))
@@ -212,7 +231,9 @@ func TestClusterGetPushStateSyncPending(t *testing.T) {
 
 		push, err := queries.ClusterGetPushState(t.Context(), dbgen.ClusterGetPushStateParams{ClusterID: clusterID})
 		require.NoError(t, err, tc.name)
-		assert.Equal(t, tc.want, push.SyncPending, tc.name)
+		assert.Equal(t, tc.wantInFlight, push.SyncInFlight, tc.name)
+		assert.Equal(t, tc.wantBlocked, push.SyncBlocked, tc.name)
+		assert.Equal(t, tc.wantMessageSet, push.SyncBlockedMessage.Valid, tc.name)
 	}
 }
 

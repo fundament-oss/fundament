@@ -297,31 +297,60 @@ func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterG
 }
 
 const clusterGetPushState = `-- name: ClusterGetPushState :one
+WITH latest_cluster AS (
+    SELECT
+        tenant.cluster_outbox.id,
+        tenant.cluster_outbox.status,
+        tenant.cluster_outbox.status_info
+    FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+    ORDER BY tenant.cluster_outbox.id DESC
+    LIMIT 1
+),
+latest_pool_row AS (
+    SELECT
+        tenant.cluster_outbox.id
+    FROM tenant.cluster_outbox
+    JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
+    WHERE tenant.node_pools.cluster_id = $1
+      AND tenant.node_pools.deleted IS NULL
+    ORDER BY tenant.cluster_outbox.id DESC
+    LIMIT 1
+)
 SELECT
     tenant.clusters.shoot_updating,
     (
-        COALESCE((
-            SELECT tenant.cluster_outbox.status
-            FROM tenant.cluster_outbox
-            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
-              AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
-            ORDER BY tenant.cluster_outbox.id DESC
-            LIMIT 1
-        ) <> 'completed', false)
+        COALESCE((SELECT latest_cluster.status IN ('pending', 'retrying') FROM latest_cluster), false)
         OR EXISTS (
             SELECT 1
             FROM tenant.node_pools
             WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+              AND tenant.node_pools.deleted IS NULL
               AND COALESCE((
                   SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
-                      OR (tenant.cluster_outbox.status = 'failed' AND tenant.node_pools.deleted IS NULL)
                   FROM tenant.cluster_outbox
                   WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
                   ORDER BY tenant.cluster_outbox.id DESC
                   LIMIT 1
               ), false)
         )
-    )::boolean AS sync_pending
+    )::boolean AS sync_in_flight,
+    COALESCE((
+        SELECT latest_cluster.status = 'failed'
+            AND NOT EXISTS (
+                SELECT 1 FROM latest_pool_row WHERE latest_pool_row.id > latest_cluster.id
+            )
+        FROM latest_cluster
+    ), false)::boolean AS sync_blocked,
+    (
+        SELECT latest_cluster.status_info
+        FROM latest_cluster
+        WHERE latest_cluster.status = 'failed'
+          AND NOT EXISTS (
+              SELECT 1 FROM latest_pool_row WHERE latest_pool_row.id > latest_cluster.id
+          )
+    ) AS sync_blocked_message
 FROM
     tenant.clusters
 WHERE
@@ -333,22 +362,32 @@ type ClusterGetPushStateParams struct {
 }
 
 type ClusterGetPushStateRow struct {
-	ShootUpdating bool
-	SyncPending   bool
+	ShootUpdating      bool
+	SyncInFlight       bool
+	SyncBlocked        bool
+	SyncBlockedMessage pgtype.Text
 }
 
-// What is in flight for the cluster, read AFTER the pool list: a pool's INSERT
-// commits together with its cluster_outbox row, so any pool the list returned
-// has its outbox row visible here. The state read with the cluster row at the
-// start of a check is stale for pools inserted since.
-// sync_pending: a change was saved but its sync has not applied it to Gardener:
-// the cluster's own latest sync row has not completed, or a node pool's latest
-// row (its create, update or delete) is still queued, or failed for a pool that
-// is still active.
+// What the outbox still owes Gardener, read AFTER the pool list: a pool's
+// INSERT commits together with its cluster_outbox row, so any pool the list
+// returned has its outbox row visible here. The state read with the cluster row
+// at the start of a check is stale for pools inserted since.
+//
+// sync_in_flight: a change was saved but its sync has not applied it to
+// Gardener — the cluster's own latest sync row is queued or retrying, or a
+// node pool's latest row (its create, update or delete) is.
+// sync_blocked: the cluster's own latest sync row failed for good, and no pool
+// sync came after it; nothing will retry it, so the pools must say so instead
+// of waiting behind it.
 func (q *Queries) ClusterGetPushState(ctx context.Context, arg ClusterGetPushStateParams) (ClusterGetPushStateRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetPushState, arg.ClusterID)
 	var i ClusterGetPushStateRow
-	err := row.Scan(&i.ShootUpdating, &i.SyncPending)
+	err := row.Scan(
+		&i.ShootUpdating,
+		&i.SyncInFlight,
+		&i.SyncBlocked,
+		&i.SyncBlockedMessage,
+	)
 	return i, err
 }
 
@@ -793,7 +832,21 @@ SELECT
     tenant.node_pools.status_message,
     tenant.node_pool_snapshots.nodes,
     tenant.node_pool_snapshots.nodes_ready,
-    tenant.node_pool_snapshots.observed
+    tenant.node_pool_snapshots.observed,
+    (
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) AS outbox_status,
+    (
+        SELECT tenant.cluster_outbox.status_info
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) AS outbox_status_info
 FROM
     tenant.node_pools
     LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
@@ -810,16 +863,18 @@ type NodePoolListStatusByClusterIDParams struct {
 }
 
 type NodePoolListStatusByClusterIDRow struct {
-	ID            uuid.UUID
-	Name          string
-	MachineType   string
-	AutoscaleMin  int32
-	Created       pgtype.Timestamptz
-	Status        pgtype.Text
-	StatusMessage pgtype.Text
-	Nodes         pgtype.Int4
-	NodesReady    pgtype.Int4
-	Observed      pgtype.Timestamptz
+	ID               uuid.UUID
+	Name             string
+	MachineType      string
+	AutoscaleMin     int32
+	Created          pgtype.Timestamptz
+	Status           pgtype.Text
+	StatusMessage    pgtype.Text
+	Nodes            pgtype.Int4
+	NodesReady       pgtype.Int4
+	Observed         pgtype.Timestamptz
+	OutboxStatus     string
+	OutboxStatusInfo pgtype.Text
 }
 
 // The status path needs only identity, the machine type its reason names, the
@@ -847,6 +902,8 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 			&i.Nodes,
 			&i.NodesReady,
 			&i.Observed,
+			&i.OutboxStatus,
+			&i.OutboxStatusInfo,
 		); err != nil {
 			return nil, err
 		}

@@ -34,6 +34,20 @@ type storedNodePool struct {
 	// NodesRead is when.
 	Nodes     *shoot.PoolInventory
 	NodesRead time.Time
+	// OutboxStatus and OutboxMessage are the pool's own latest sync row. A
+	// failed row is why the pool reads error, and the message says why.
+	OutboxStatus  string
+	OutboxMessage string
+}
+
+// syncState is what the outbox still owes Gardener for the cluster. InFlight
+// and Blocked are mutually exclusive in practice: a queued or retrying row
+// means the sync has not given up, and a blocked cluster has no retry left.
+// BlockedMessage is the failed cluster row's reason.
+type syncState struct {
+	InFlight       bool
+	Blocked        bool
+	BlockedMessage string
 }
 
 type nodePoolUpdate struct {
@@ -59,12 +73,12 @@ type nodePoolUpdate struct {
 // nodes holds each pool's own node counts by pool name, as the shoot's API
 // server lists them, counting only nodes created since the pool was; nil when
 // they were not read, which leaves the shoot-wide rules alone.
-func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus, updating, syncPending bool, nodes map[string]shoot.PoolInventory) []nodePoolUpdate {
+func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus, updating bool, sync syncState, nodes map[string]shoot.PoolInventory) []nodePoolUpdate {
 	var updates []nodePoolUpdate
 	for i := range stored {
 		pool := &stored[i]
 		counts, counted := nodes[pool.Name]
-		next, message, gardenerText, ok := classifyNodePool(pool, otherPoolNames(stored, i), observed, updating || syncPending, syncPending, counts, counted)
+		next, message, gardenerText, ok := classifyNodePool(pool, otherPoolNames(stored, i), observed, updating || sync.InFlight, sync, counts, counted)
 		if !ok || (string(next) == pool.Status && message == pool.Message) {
 			continue
 		}
@@ -107,7 +121,7 @@ func otherPoolNames(stored []storedNodePool, i int) []string {
 // without them every pool would wait for the slowest. When no Gardener text
 // names the pool and the shoot lists at least autoscale_min of its nodes,
 // all Ready, it is ready whatever the other pools do.
-func classifyNodePool(pool *storedNodePool, otherPools []string, observed *gardener.ShootStatus, pushed, syncPending bool, nodes shoot.PoolInventory, counted bool) (status dbconst.NodePoolStatus, message, gardenerText string, ok bool) {
+func classifyNodePool(pool *storedNodePool, otherPools []string, observed *gardener.ShootStatus, pushed bool, sync syncState, nodes shoot.PoolInventory, counted bool) (status dbconst.NodePoolStatus, message, gardenerText string, ok bool) {
 	operationRuns := shootOperationRuns(observed)
 
 	// The cluster's initial create builds every pool, so it explains a
@@ -118,8 +132,21 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	// What Gardener reports predates this pool: its change has not left the
 	// outbox, so a complaint can only be about a deleted predecessor of the
 	// same name, and a ready shoot is the state before the change.
-	staleReport := syncPending &&
+	staleReport := sync.InFlight &&
 		(pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Progressing))
+
+	// A sync that gave up is not in flight: nothing will apply the change, and
+	// Gardener's report predates it for good. The pool says so, with the reason
+	// the row recorded, instead of waiting behind a gate that never opens. The
+	// pool's own failed row wins over the cluster's: it names this pool.
+	if !sync.InFlight {
+		switch {
+		case pool.OutboxStatus == string(dbconst.ClusterOutboxStatus_Failed):
+			return dbconst.NodePoolStatus_Error, syncFailureMessage(pool.OutboxMessage), "", true
+		case sync.Blocked:
+			return dbconst.NodePoolStatus_Error, syncFailureMessage(sync.BlockedMessage), "", true
+		}
+	}
 
 	machineType := pool.MachineType
 	if pushed {
@@ -167,6 +194,15 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	default:
 		return "", "", "", false
 	}
+}
+
+// syncFailureMessage is what a pool shows when the sync that would have
+// applied its change failed for good.
+func syncFailureMessage(reason string) string {
+	if reason == "" {
+		return "The last sync to Gardener failed."
+	}
+	return "The last sync to Gardener failed: " + reason
 }
 
 func shootOperationRuns(observed *gardener.ShootStatus) bool {
@@ -368,6 +404,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		stored[i] = storedNodePool{
 			ID: rows[i].ID, Name: rows[i].Name, MachineType: rows[i].MachineType, AutoscaleMin: rows[i].AutoscaleMin,
 			Created: rows[i].Created.Time, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String,
+			OutboxStatus: rows[i].OutboxStatus, OutboxMessage: rows[i].OutboxStatusInfo.String,
 		}
 		if rows[i].Nodes.Valid && rows[i].NodesReady.Valid && rows[i].Observed.Valid {
 			stored[i].Nodes = &shoot.PoolInventory{Nodes: rows[i].Nodes.Int32, NodesReady: rows[i].NodesReady.Int32}
@@ -387,12 +424,17 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		counts  map[string]poolNodeCounts
 		recheck time.Duration
 	)
-	if h.poolNodes != nil && readsPoolNodes(stored, observed, push.ShootUpdating || push.SyncPending) {
+	sync := syncState{
+		InFlight:       push.SyncInFlight,
+		Blocked:        push.SyncBlocked,
+		BlockedMessage: push.SyncBlockedMessage.String,
+	}
+	if h.poolNodes != nil && readsPoolNodes(stored, observed, push.ShootUpdating || sync.InFlight) {
 		counts = h.poolNodesFor(ctx, cluster.ID, stored)
 		recheck = poolNodeRecheck
 	}
 	updated := make(map[uuid.UUID]bool, len(stored))
-	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, push.SyncPending, ownNodeCounts(counts)) {
+	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, sync, ownNodeCounts(counts)) {
 		var poolCounts *shoot.PoolInventory
 		if c, ok := counts[update.Name]; ok {
 			poolCounts = &c.all
