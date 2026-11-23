@@ -419,6 +419,53 @@ func TestClusterGetPushState(t *testing.T) {
 	}
 }
 
+// A check that did not write the pool's status records counts only while the
+// pool row is still the one it classified: a newer status write, a delete or
+// the clear that follows a lost cluster leaves the snapshot alone.
+func TestNodePoolSnapshotUpsertCheckedKeepsAStaleCheckOut(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	queries := dbgen.New(db.workerPool)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "counts-cas")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+
+	var read pgtype.Timestamptz
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT status_updated FROM tenant.node_pools WHERE id = $1`, poolID).Scan(&read))
+
+	// The pool's row moved on after the check read it.
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET status_updated = now() WHERE id = $1`, poolID)
+	require.NoError(t, err)
+
+	write := func(checkedAt pgtype.Timestamptz) int64 {
+		t.Helper()
+		rows, err := queries.NodePoolSnapshotUpsertChecked(t.Context(), dbgen.NodePoolSnapshotUpsertCheckedParams{
+			NodePoolID: poolID,
+			Observed:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			Nodes:      2,
+			NodesReady: 1,
+			CheckedAt:  checkedAt,
+		})
+		require.NoError(t, err)
+		return rows
+	}
+
+	assert.Zero(t, write(read), "a check that lost the row writes nothing")
+	_, _, ok := getNodePoolCount(t, db, clusterID, "workers")
+	assert.False(t, ok)
+
+	var current pgtype.Timestamptz
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT status_updated FROM tenant.node_pools WHERE id = $1`, poolID).Scan(&current))
+	assert.EqualValues(t, 1, write(current), "the check that read the row still records its counts")
+	nodes, ready, ok := getNodePoolCount(t, db, clusterID, "workers")
+	require.True(t, ok)
+	assert.EqualValues(t, 2, nodes)
+	assert.EqualValues(t, 1, ready)
+}
+
 // Issue 1383: on metal-stack, machine names carry no zone suffix. A cluster
 // being created with one pool metal-api has no machines for reports that pool
 // waiting, with its machine type in plain words; the other pool is not named.

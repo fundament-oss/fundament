@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -120,9 +121,21 @@ func nodeCountChanged(pool *storedNodePool, counts shoot.PoolInventory, now time
 }
 
 // writeNodePoolCount stores one pool's counts on their own, for a pool whose
-// status did not change.
-func (h *Handler) writeNodePoolCount(ctx context.Context, poolID uuid.UUID, counts shoot.PoolInventory) error {
-	return h.queries.NodePoolSnapshotUpsert(ctx, nodePoolSnapshotParams(poolID, counts)) //nolint:wrapcheck // the caller logs it with the pool
+// status did not change. checkedAt is the status_updated the check read: a
+// check that lost the pool to a newer status, a delete or the clear after a
+// lost cluster records nothing.
+func (h *Handler) writeNodePoolCount(ctx context.Context, poolID uuid.UUID, checkedAt pgtype.Timestamptz, counts shoot.PoolInventory) error {
+	_, err := h.queries.NodePoolSnapshotUpsertChecked(ctx, db.NodePoolSnapshotUpsertCheckedParams{
+		NodePoolID: poolID,
+		Observed:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		Nodes:      counts.Nodes,
+		NodesReady: counts.NodesReady,
+		CheckedAt:  checkedAt,
+	})
+	if err != nil {
+		return fmt.Errorf("record node pool counts: %w", err)
+	}
+	return nil
 }
 
 // nodePoolSnapshotParams records one pool's counts in the snapshot row the

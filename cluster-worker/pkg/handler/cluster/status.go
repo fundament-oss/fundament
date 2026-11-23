@@ -128,9 +128,10 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		// A sync still queued or retrying will apply the change, creating the
 		// Shoot: timing it out would record a failure for a create that is
 		// about to run. This check also runs from the sync path, just before
-		// that apply. Without pools the check above read no push state, so it
-		// is loaded here.
-		if push == nil {
+		// that apply. The state the pools were classified with is a moment old,
+		// and a change saved since has its own row: before recording a failure,
+		// read it again. A returned "queued" needs no second read.
+		if push == nil || !push.SyncQueued {
 			loaded, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
 			if err != nil {
 				return 0, fmt.Errorf("load cluster push state: %w", err)

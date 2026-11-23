@@ -1082,6 +1082,60 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 	return items, nil
 }
 
+const nodePoolSnapshotUpsertChecked = `-- name: NodePoolSnapshotUpsertChecked :execrows
+INSERT INTO
+    tenant.node_pool_snapshots (
+        node_pool_id,
+        observed,
+        nodes,
+        nodes_ready
+    )
+SELECT
+    $1,
+    $2,
+    $3,
+    $4
+WHERE EXISTS (
+    SELECT 1
+    FROM tenant.node_pools
+    WHERE tenant.node_pools.id = $1
+      AND tenant.node_pools.deleted IS NULL
+      AND tenant.node_pools.status_updated IS NOT DISTINCT FROM $5
+)
+ON CONFLICT (node_pool_id) DO UPDATE
+SET
+    observed = EXCLUDED.observed,
+    nodes = EXCLUDED.nodes,
+    nodes_ready = EXCLUDED.nodes_ready
+`
+
+type NodePoolSnapshotUpsertCheckedParams struct {
+	NodePoolID uuid.UUID
+	Observed   pgtype.Timestamptz
+	Nodes      int32
+	NodesReady int32
+	CheckedAt  pgtype.Timestamptz
+}
+
+// Record one pool's node counts for a check that did not write the pool's
+// status, while the pool row is still the one that check classified: a newer
+// status write, a soft delete, or the clear that follows a cluster recorded
+// lost leaves the snapshot alone instead of refreshing counts for a pool that
+// no longer has a status.
+func (q *Queries) NodePoolSnapshotUpsertChecked(ctx context.Context, arg NodePoolSnapshotUpsertCheckedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolSnapshotUpsertChecked,
+		arg.NodePoolID,
+		arg.Observed,
+		arg.Nodes,
+		arg.NodesReady,
+		arg.CheckedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :execrows
 UPDATE tenant.node_pools
 SET

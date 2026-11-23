@@ -506,7 +506,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		if !ok || updated[pool.ID] || !nodeCountChanged(pool, c.all, now) {
 			continue
 		}
-		if err := h.writeNodePoolCount(ctx, pool.ID, c.all); err != nil {
+		if err := h.writeNodePoolCount(ctx, pool.ID, pool.StatusUpdated, c.all); err != nil {
 			h.logger.Warn("failed to record node pool node count", "cluster_id", cluster.ID, "pool", pool.Name, "error", err)
 		}
 	}

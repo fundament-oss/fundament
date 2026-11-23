@@ -544,6 +544,37 @@ WHERE
     id = @cluster_id
     AND shoot_status = 'ready';
 
+-- name: NodePoolSnapshotUpsertChecked :execrows
+-- Record one pool's node counts for a check that did not write the pool's
+-- status, while the pool row is still the one that check classified: a newer
+-- status write, a soft delete, or the clear that follows a cluster recorded
+-- lost leaves the snapshot alone instead of refreshing counts for a pool that
+-- no longer has a status.
+INSERT INTO
+    tenant.node_pool_snapshots (
+        node_pool_id,
+        observed,
+        nodes,
+        nodes_ready
+    )
+SELECT
+    @node_pool_id,
+    @observed,
+    @nodes,
+    @nodes_ready
+WHERE EXISTS (
+    SELECT 1
+    FROM tenant.node_pools
+    WHERE tenant.node_pools.id = @node_pool_id
+      AND tenant.node_pools.deleted IS NULL
+      AND tenant.node_pools.status_updated IS NOT DISTINCT FROM @checked_at
+)
+ON CONFLICT (node_pool_id) DO UPDATE
+SET
+    observed = EXCLUDED.observed,
+    nodes = EXCLUDED.nodes,
+    nodes_ready = EXCLUDED.nodes_ready;
+
 -- name: ClusterListWarningMessages :many
 -- The messages of the cluster's status_warning events since its last milestone
 -- (ready, healthy, error or lost), so an error Gardener retries again and again
