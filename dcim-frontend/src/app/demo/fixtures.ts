@@ -34,13 +34,13 @@ import {
 
 // A fixed clock: the same data every run, so a screenshot from yesterday still
 // matches what you see today.
-const NOW = new Date('2026-08-12T09:00:00Z');
+export const NOW = new Date('2026-08-12T09:00:00Z');
 const daysAgo = (days: number) => timestampFromDate(new Date(NOW.getTime() - days * 86_400_000));
 const daysAhead = (days: number) => timestampFromDate(new Date(NOW.getTime() + days * 86_400_000));
 
 /** Ids are uuid-shaped because the API validates them as uuids, and readable in
  *  the middle so a request in the network tab still says what it is about. */
-function id(kind: string, n: number): string {
+export function id(kind: string, n: number): string {
   const tag = kind.slice(0, 8).padEnd(8, '0');
   const seq = String(n).padStart(12, '0');
   return `${tag}-0000-4000-8000-${seq}`;

@@ -174,6 +174,21 @@
                         ></nldd-badge>
                       </nldd-cell>
                     }
+                    <!-- What metal-stack flags as broken, counted the way the
+                         exporter counts it: one machine with a critical issue
+                         is one machine somebody has to look at. The demo
+                         snapshot is the only one that carries these today. -->
+                    @if (item.path === '/bare-metal' && metalAttention() > 0) {
+                      <nldd-cell width="fit-content">
+                        <nldd-badge
+                          color="critical"
+                          [attr.text]="metalAttention()"
+                          [attr.accessible-label]="
+                            metalAttention() + ' machines have a critical issue'
+                          "
+                        ></nldd-badge>
+                      </nldd-cell>
+                    }
                     <!-- The dot is a badge without a number, so it is 12 wide
                          where a one-digit badge is 20. Right-aligned that puts its
                          middle 4 pixels further right than the middle of the badge

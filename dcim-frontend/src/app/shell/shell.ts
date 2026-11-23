@@ -25,6 +25,8 @@ import InventoryStatsService from '../inventory/inventory-stats.service';
 import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
+import MetalMetricsService from '../bare-metal/metal-metrics.service';
+import { machineCounts } from '../bare-metal/metal-derive';
 import opensElsewhere from '../shared/opens-elsewhere';
 import MainPaneDirective from '../shared/main-pane.directive';
 import TaskStatusDialogsComponent from '../task-management/task-status-dialogs/task-status-dialogs';
@@ -48,6 +50,9 @@ const SECTIONS = [
   { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },
   { text: 'Rounds', icon: 'tools', path: '/rounds' },
+  // The estate as metal-stack sees it: partitions, machines and switches,
+  // rather than the assets and racks above.
+  { text: 'Bare metal', icon: 'servers', path: '/bare-metal' },
   // Not part of the data center: the clusters customers run on it (FUN-23).
   // Last, so the sections about the building stay together.
   { text: 'Platform', icon: 'kubernetes', path: '/platform' },
@@ -138,6 +143,8 @@ export default class ShellComponent implements OnInit {
 
   private readonly stats = inject(InventoryStatsService);
 
+  private readonly metalMetrics = inject(MetalMetricsService);
+
   protected readonly health = inject(DatacenterHealthService);
 
   protected readonly taskAttention = inject(TaskAttentionService);
@@ -155,11 +162,19 @@ export default class ShellComponent implements OnInit {
     return s ? s.needsRepair + s.requested : 0;
   });
 
+  /** Machines metal-stack flags with a critical issue, for the badge on Bare
+   *  metal. The demo snapshot is the only one that has them today. */
+  protected readonly metalAttention = computed(() => {
+    const snapshot = this.metalMetrics.snapshot();
+    return snapshot ? machineCounts(snapshot.machines).criticalIssues : 0;
+  });
+
   ngOnInit(): void {
     this.stats.refresh();
     this.cableAttention.refresh();
     this.health.refresh();
     this.taskAttention.refresh();
+    this.metalMetrics.refresh();
   }
 
   protected readonly sections = SECTIONS;
