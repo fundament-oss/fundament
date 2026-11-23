@@ -552,7 +552,9 @@ export default class ResourceDetailComponent implements OnInit {
     const printed = resource
       ? (this.crdDef()?.additionalPrinterColumns ?? [])
           .map((col) => ({ name: col.name, value: printerColumnValue(resource, col) }))
-          .find(({ value }) => isConditionValue(value))
+          // Unknown too: a Gateway's Programmed while it reconciles is still the
+          // column the card carries, not a reason to fall through to Accepted.
+          .find(({ value }) => isConditionValue(value) || value === 'Unknown')
       : undefined;
     if (printed) return this.conditionBadge(printed.name, printed.value);
     const all = this.conditions();

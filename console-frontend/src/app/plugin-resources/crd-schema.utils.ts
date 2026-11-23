@@ -165,11 +165,9 @@ export function formatColumnValue(value: unknown, columnType: string): string {
 
 /** A printer column's cell for one resource, as the list shows it. */
 export function printerColumnValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
-  const fullObj = {
-    metadata: resource.metadata,
-    spec: resource.spec,
-    status: resource.status ?? {},
-  };
+  // The whole resource, so a column on apiVersion, kind or another top-level
+  // field reads too.
+  const fullObj = { ...resource, status: resource.status ?? {} };
   return formatColumnValue(resolveJsonPath(fullObj, col.jsonPath), col.type);
 }
 

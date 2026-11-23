@@ -215,6 +215,9 @@ const routes: Routes = [
         path: 'clusters/:id/projects',
         loadComponent: () =>
           import('./cluster-projects/cluster-projects.component').then((m) => m.default),
+        // The page names itself once, as it opens; reused for another cluster,
+        // it would not, and TitleService would drop "Projects".
+        data: { remountOnParamChange: true },
       },
       {
         // A plugin is installed per cluster, so the plugins are a page of the

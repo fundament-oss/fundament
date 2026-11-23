@@ -77,7 +77,9 @@ describe('emptySupportingText', () => {
   test.each([
     ['no pools', [], needsPool],
     ['a pool without disks', [{ status: { phase: 'Degraded' } }], needsPool],
-    ['a pool not counted yet', [{ status: {} }], needsPool],
+    // Not counted is not zero: the operator may still find disks for it.
+    ['a pool not counted yet', [{ status: {} }], create],
+    ['a pool not counted yet beside one without disks', [{ status: {} }, { status: { phase: 'Degraded' } }], create],
     ['a pool with disks', [{ status: { phase: 'Ready', selectedDiskCount: 2 } }], create],
     ['one of two pools with disks', [{ status: { phase: 'Degraded' } }, { status: { phase: 'Ready', selectedDiskCount: 1 } }], create],
     // The pools could not be read: ask for the storage, not for a pool that may exist.

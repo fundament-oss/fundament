@@ -201,10 +201,11 @@ async function listDiskPools() {
   }
 }
 
-// What an empty list asks for: a disk pool with disks while there is none,
-// else the resource itself.
+// What an empty list asks for: a disk pool with disks while every pool is
+// known to have none, else the resource itself. A pool not counted yet may
+// still get disks, so it does not count as one without.
 export function emptySupportingText(cfg, pools) {
-  const noDisks = pools?.every((pool) => !(selectedDiskCount(pool.status) > 0));
+  const noDisks = pools?.every((pool) => selectedDiskCount(pool.status) === 0);
   return noDisks ? 'Create a disk pool with disks first.' : `Use New ${cfg.labelMidSentence}… to create one.`;
 }
 

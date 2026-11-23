@@ -502,7 +502,14 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       ['autoscaleMax', 'autoscaleMax'],
     ];
     const errors = this.nodePools.controls.flatMap((pool, index) =>
-      fields.filter(([control]) => pool.get(control)?.invalid).map(([, id]) => `${id}-${index}`),
+      fields
+        .filter(([control]) => pool.get(control)?.invalid)
+        // An existing pool keeps its machine type, so with no quota for it the
+        // way out is lowering the maximum, which is also the field to focus.
+        .map(([control, id]) =>
+          control === 'machineType' && this.isExistingPool(index) ? 'autoscaleMax' : id,
+        )
+        .map((id) => `${id}-${index}`),
     );
     return errors[0] ?? null;
   }
@@ -515,7 +522,15 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       const target = this.host.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
       if (!target) return;
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.focus({ preventScroll: true });
+      // The machine type's id is on its form field, which takes no focus: focus
+      // the row that is picked, or else the first one.
+      const control =
+        target.querySelector<HTMLElement>(
+          'nldd-list-item[button]:has(nldd-radio-button[checked])',
+        ) ??
+        target.querySelector<HTMLElement>('nldd-list-item[button]') ??
+        target;
+      control.focus({ preventScroll: true });
     }, 0);
   }
 }

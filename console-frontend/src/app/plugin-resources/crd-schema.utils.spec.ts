@@ -1,6 +1,7 @@
 import {
   crdRefToLabel,
   formatColumnValue,
+  printerColumnValue,
   resolveJsonPath,
   fieldNameToLabel,
   kindToLabel,
@@ -212,6 +213,20 @@ describe('formatColumnValue', () => {
   it('joins several values with commas, as kubectl does', () => {
     expect(formatColumnValue(['194.135.48.10', '2001:db8::1'], 'string')).toBe(
       '194.135.48.10, 2001:db8::1',
+    );
+  });
+});
+
+describe('printerColumnValue', () => {
+  it('reads a top-level field, not only metadata, spec and status', () => {
+    const resource = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'web', uid: 'u', creationTimestamp: '2026-11-19T10:00:00Z' },
+      spec: {},
+    };
+    expect(printerColumnValue(resource, { name: 'Kind', jsonPath: '.kind', type: 'string' })).toBe(
+      'Gateway',
     );
   });
 });
