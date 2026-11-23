@@ -23,12 +23,15 @@ LIMIT 1
 FOR NO KEY UPDATE SKIP LOCKED;
 
 -- name: OutboxMarkProcessed :exec
+-- Only a runnable row completes: the status guard is the last line of defence
+-- if a row was moved by another worker before this write ran.
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),
     status_info = NULL,
     retry_after = NULL
-WHERE id = @id;
+WHERE id = @id
+  AND status IN ('pending', 'retrying');
 
 -- name: OutboxMarkRetry :one
 -- Marks a row for retry with exponential backoff.
@@ -44,13 +47,16 @@ SET retries = retries + 1,
     status = 'retrying',
     status_info = @status_info
 WHERE id = @id
+  AND status IN ('pending', 'retrying')
 RETURNING retries;
 
--- name: OutboxMarkFailed :exec
--- Marks a row as permanently failed after exceeding max retries.
+-- name: OutboxMarkFailed :execrows
+-- Marks a row as permanently failed after exceeding max retries. A row another
+-- worker already completed is left alone; zero rows says so.
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
-WHERE id = @id;
+WHERE id = @id
+  AND status IN ('pending', 'retrying');
 
 -- name: OutboxDeferWithoutRetry :one
 -- Defers a row for later processing without incrementing the retry counter.
@@ -62,6 +68,7 @@ SET retry_after = now() + @delay::interval,
     deferrals = deferrals + 1,
     status_info = @status_info
 WHERE id = @id
+  AND status IN ('pending', 'retrying')
 RETURNING deferrals;
 
 -- name: OutboxLockCluster :one

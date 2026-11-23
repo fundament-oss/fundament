@@ -18,6 +18,7 @@ SET retry_after = now() + $1::interval,
     deferrals = deferrals + 1,
     status_info = $2
 WHERE id = $3
+  AND status IN ('pending', 'retrying')
 RETURNING deferrals
 `
 
@@ -265,10 +266,11 @@ func (q *Queries) OutboxLockCluster(ctx context.Context, arg OutboxLockClusterPa
 	return id, err
 }
 
-const outboxMarkFailed = `-- name: OutboxMarkFailed :exec
+const outboxMarkFailed = `-- name: OutboxMarkFailed :execrows
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = $1
 WHERE id = $2
+  AND status IN ('pending', 'retrying')
 `
 
 type OutboxMarkFailedParams struct {
@@ -276,10 +278,14 @@ type OutboxMarkFailedParams struct {
 	ID         uuid.UUID
 }
 
-// Marks a row as permanently failed after exceeding max retries.
-func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedParams) error {
-	_, err := q.db.Exec(ctx, outboxMarkFailed, arg.StatusInfo, arg.ID)
-	return err
+// Marks a row as permanently failed after exceeding max retries. A row another
+// worker already completed is left alone; zero rows says so.
+func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, outboxMarkFailed, arg.StatusInfo, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const outboxMarkProcessed = `-- name: OutboxMarkProcessed :exec
@@ -289,12 +295,15 @@ SET status = 'completed',
     status_info = NULL,
     retry_after = NULL
 WHERE id = $1
+  AND status IN ('pending', 'retrying')
 `
 
 type OutboxMarkProcessedParams struct {
 	ID uuid.UUID
 }
 
+// Only a runnable row completes: the status guard is the last line of defence
+// if a row was moved by another worker before this write ran.
 func (q *Queries) OutboxMarkProcessed(ctx context.Context, arg OutboxMarkProcessedParams) error {
 	_, err := q.db.Exec(ctx, outboxMarkProcessed, arg.ID)
 	return err
@@ -310,6 +319,7 @@ SET retries = retries + 1,
     status = 'retrying',
     status_info = $3
 WHERE id = $4
+  AND status IN ('pending', 'retrying')
 RETURNING retries
 `
 
