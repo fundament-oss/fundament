@@ -5678,6 +5678,21 @@ WHERE tenant.cluster_outbox.node_pool_id IS NOT NULL
 ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 </view>
 
+<view name="namespace_sync_state" layers="0" collapse-mode="2" max-obj-count="5" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<position x="2400" y="780"/>
+	<definition> <![CDATA[SELECT DISTINCT ON (tenant.cluster_outbox.namespace_id)
+    tenant.cluster_outbox.namespace_id,
+    tenant.cluster_outbox.status AS outbox_status,
+    tenant.cluster_outbox.retries AS outbox_retries,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.id AS outbox_id
+FROM tenant.cluster_outbox
+WHERE tenant.cluster_outbox.namespace_id IS NOT NULL
+ORDER BY namespace_id, outbox_id DESC]]> </definition>
+</view>
+
 <permission>
 	<object name="appstore" type="schema"/>
 	<roles names="fun_fundament_api"/>

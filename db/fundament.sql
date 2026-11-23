@@ -3962,6 +3962,23 @@ ORDER BY node_pool_id, outbox_id DESC;
 ALTER VIEW tenant.node_pool_sync_state OWNER TO fun_fundament_api;
 -- ddl-end --
 
+-- object: tenant.namespace_sync_state | type: VIEW --
+-- DROP VIEW IF EXISTS tenant.namespace_sync_state CASCADE;
+CREATE OR REPLACE VIEW tenant.namespace_sync_state
+AS 
+SELECT DISTINCT ON (tenant.cluster_outbox.namespace_id)
+    tenant.cluster_outbox.namespace_id,
+    tenant.cluster_outbox.status AS outbox_status,
+    tenant.cluster_outbox.retries AS outbox_retries,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.id AS outbox_id
+FROM tenant.cluster_outbox
+WHERE tenant.cluster_outbox.namespace_id IS NOT NULL
+ORDER BY namespace_id, outbox_id DESC;
+-- ddl-end --
+ALTER VIEW tenant.namespace_sync_state OWNER TO fun_fundament_api;
+-- ddl-end --
+
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
