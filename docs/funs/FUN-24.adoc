@@ -86,7 +86,7 @@ The namespace handler had one rule for a failed sync: skip it forever. `SkipIfFa
 
 The skip is now time-boxed. The reconcile loop still skips a namespace whose latest row failed, but only while that failure is younger than an hour. An older failure gets one more attempt; if it fails again, its next attempt waits an hour as well, so a genuinely broken namespace costs one sync an hour rather than one every round. The fan-out when a cluster's API server becomes available still skips nothing: whatever the namespace waited on may be there now.
 
-Two ways out remain for an operator: `funops namespace sync <id>` queues a reconcile immediately, `--all` does so for every namespace whose last sync failed, and `tenant.namespace_sync_state` shows each namespace's latest sync row so the failed ones are visible without a hand-written query.
+Two ways out remain for an operator: `funops namespace sync <id>` queues a reconcile immediately, `--all` does so for every namespace whose last sync failed on a live cluster whose API server answers (the others sync when a change brings their Shoot back), and `tenant.namespace_sync_state` shows each namespace's latest sync row so the failed ones are visible without a hand-written query.
 
 == Sync state
 

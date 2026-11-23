@@ -550,6 +550,10 @@ WHERE
 -- is recorded once, and the same error in a later incident is recorded again.
 -- All of them, not the latest: two warning sources can be active at once, and
 -- compared with one message each would re-add the other's warning every check.
+-- The cutoff is inclusive: created is the transaction timestamp, so a warning
+-- written by the same status update as a milestone shares its created, and a
+-- strict comparison would drop it and record it again on every check. A
+-- milestone is never a status_warning, so the tie costs nothing.
 SELECT DISTINCT
     tenant.cluster_events.message
 FROM
@@ -558,7 +562,7 @@ WHERE
     tenant.cluster_events.cluster_id = @cluster_id
     AND tenant.cluster_events.event_type = 'status_warning'
     AND tenant.cluster_events.message IS NOT NULL
-    AND tenant.cluster_events.created > COALESCE((
+    AND tenant.cluster_events.created >= COALESCE((
         SELECT
             max(tenant.cluster_events.created)
         FROM

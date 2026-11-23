@@ -113,11 +113,17 @@ func (u *shootStatusUpdate) unchanged(stored *storedShootState) bool {
 // what Gardener reports. It is pure so every rule can be tested without a
 // database.
 func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
-	// A confirmed deletion is final: the sweep skips a cluster once its deletion
-	// is confirmed, so only an active row repaired by hand can hold deleted, and
-	// a report about a Shoot does not reopen it.
+	// A confirmed deletion is final: the sweep skips a soft-deleted cluster once
+	// its deletion is confirmed, so only an active row repaired by hand can hold
+	// deleted, and a report about a Shoot does not reopen it. Its API access
+	// goes with the deletion, as on the path that confirms it: nothing behind it
+	// answers, and leaving the flag would keep the cluster in the user and
+	// namespace fan-out.
 	if stored.Status == gardener.StatusDeleted {
-		return shootStatusUpdate{Status: gardener.StatusDeleted, Message: stored.Message, Health: stored.Health}
+		return shootStatusUpdate{
+			Status: gardener.StatusDeleted, Message: stored.Message, Health: stored.Health,
+			APIGone: stored.APIAvailable,
+		}
 	}
 	update := nextLifecycleStatus(stored, observed)
 	return applyAPIAvailability(stored, observed, &update)

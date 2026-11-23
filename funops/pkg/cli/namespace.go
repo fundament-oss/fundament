@@ -72,6 +72,15 @@ func (c *NamespaceSyncCmd) Run(ctx *Context) error {
 		ids = append(ids, uuid.UUID(queued[i].Bytes).String())
 	}
 
+	// On stderr, before the output switch returns, so a run that queued nothing
+	// says why instead of looking like a broken command: --all leaves out the
+	// namespaces of a cluster that is deleted, lost or not answering yet.
+	if len(ids) == 0 {
+		ctx.Logger.Info("no namespace queued: none has a failed sync on a live cluster whose API server answers")
+	} else {
+		ctx.Logger.Info("namespace syncs queued", "count", len(ids))
+	}
+
 	switch ctx.Output {
 	case OutputJSON:
 		return PrintJSON(namespaceSyncOutput{Queued: ids})
@@ -82,8 +91,6 @@ func (c *NamespaceSyncCmd) Run(ctx *Context) error {
 	default:
 		panic(fmt.Sprintf("unhandled output format: %q", ctx.Output))
 	}
-
-	ctx.Logger.Info("namespace syncs queued", "count", len(ids))
 
 	return nil
 }

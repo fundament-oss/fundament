@@ -398,10 +398,12 @@ func TestNextShootStatus(t *testing.T) {
 			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
 		},
 		{
+			// A hand-repaired row keeps the access it had; a deleted cluster has
+			// nothing behind it that answers, so the flag is forgotten.
 			name:     "a confirmed deletion ignores a Shoot that reported ready",
-			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove", APIAvailable: true},
 			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Healthy: true, APIServerAvailable: true},
-			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove", APIGone: true},
 		},
 	}
 

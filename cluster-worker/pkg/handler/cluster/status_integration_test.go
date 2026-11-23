@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	dbgen "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -532,4 +533,27 @@ func TestCheckStatusDeletedClearsAPIAvailable(t *testing.T) {
 	status := getClusterShootStatus(t, db, clusterID)
 	require.NotNil(t, status)
 	assert.Equal(t, "deleted", *status)
+}
+
+// created is the transaction timestamp, so a warning written by the same status
+// update as a milestone event shares it. The cutoff is inclusive, so the next
+// check still sees that warning and does not record it a second time.
+func TestClusterListWarningMessagesKeepsAWarningFromTheMilestonesUpdate(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	queries := dbgen.New(db.workerPool)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "warn-same-created")
+	at := time.Now()
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_events (cluster_id, event_type, message, created)
+		 VALUES ($1, 'status_ready', 'Shoot is ready', $2),
+		        ($1, 'status_warning', 'etcd not ready', $2)`,
+		clusterID, at)
+	require.NoError(t, err)
+
+	messages, err := queries.ClusterListWarningMessages(t.Context(), dbgen.ClusterListWarningMessagesParams{ClusterID: clusterID})
+	require.NoError(t, err)
+	require.Len(t, messages, 1)
+	assert.Equal(t, "etcd not ready", messages[0].String)
 }
