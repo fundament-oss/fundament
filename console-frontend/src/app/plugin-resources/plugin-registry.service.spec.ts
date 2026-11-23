@@ -149,6 +149,28 @@ describe('PluginRegistryService', () => {
     expect(getPluginDefinition).toHaveBeenCalledTimes(1);
   });
 
+  it('does not stall a load when the organization id does not come', async () => {
+    const context = TestBed.inject(OrganizationContextService);
+    context.clearOrganizationId();
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    // The organization fetch failed, or the user is not a member of it: no id
+    // is set. The load ends after one poll, and the list is read again.
+    const load = registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(5000);
+    await load;
+    await vi.advanceTimersToNextTimerAsync();
+    expect(getPluginDefinition).not.toHaveBeenCalled();
+    expect(listReads()).toBe(2);
+
+    // An id that comes later still builds the menu.
+    context.setOrganizationId('org-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+    expect(registry.allPlugins().map((p) => p.installationName)).toEqual(['acme--cert-manager']);
+  });
+
   it('keeps a plugin in the menu while it is still deploying, and follows its phase', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Deploying')];

@@ -401,8 +401,15 @@ export default class PluginRegistryService {
       // plugin would get no sidebar entry until a reload. A page opened by its
       // address loads the cluster before the organization's id is known, so
       // wait for the id first.
-      await this.organizationContext.organizationIdSet();
+      const known = await this.waitForOrganizationId();
       if (generation !== this.generation) return 'stale';
+      if (!known) {
+        // No id yet (the organization fetch failed, or the user is not a
+        // member): leave the menu unbuilt and try again on the next sync, which
+        // also keeps the installation list polled.
+        this.definitionRetryAt = Date.now();
+        return 'incomplete';
+      }
       const fetched = await this.fetchDefinitions(installed);
       if (generation !== this.generation) return 'stale';
       this.plugins.set(fetched.definitions);
@@ -445,6 +452,22 @@ export default class PluginRegistryService {
       return 'unhealthy';
     }
     return this.definitionRetryAt === null ? 'idle' : 'incomplete';
+  }
+
+  /** Waits for the organization's id, but no longer than one poll: an id
+   *  that never comes must not stall this load, and with it every caller that
+   *  joins it. False when the wait ended without an id. */
+  private async waitForOrganizationId(): Promise<boolean> {
+    const timeout = new AbortController();
+    const timer = setTimeout(() => timeout.abort(), PluginRegistryService.POLL_MS);
+    try {
+      await this.organizationContext.organizationIdSet(timeout.signal);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async fetchDefinitions(
