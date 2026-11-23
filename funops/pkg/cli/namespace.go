@@ -1,8 +1,12 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -47,7 +51,13 @@ func (c *NamespaceSyncCmd) Run(ctx *Context) error {
 		namespaceID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	queued, err := ctx.Queries.NamespaceQueueSync(ctx.Ctx, db.NamespaceQueueSyncParams{NamespaceID: namespaceID})
+	// The queue insert can wait behind another transaction's lock; Ctrl-C stops
+	// it instead of holding the operator. The handler is local to this command:
+	// the other commands keep the default kill on interrupt.
+	opCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	queued, err := ctx.Queries.NamespaceQueueSync(opCtx, db.NamespaceQueueSyncParams{NamespaceID: namespaceID})
 	if err != nil {
 		return fmt.Errorf("failed to queue namespace sync: %w", err)
 	}

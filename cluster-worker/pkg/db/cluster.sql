@@ -199,10 +199,11 @@ ORDER BY
 -- active node pool's latest row (its create or update) is. A deleted pool's
 -- row is not counted: removing a pool does not shape the pools that remain.
 -- sync_blocked: the cluster's own latest sync row failed for good, and no
--- pool sync came after it; nothing will retry it, so the pools must say so
--- instead of waiting behind it. Any pool row counts here, a deleted pool's
--- included: that sync applied the whole cluster to Gardener, failed change
--- and all.
+-- pool sync came after it that can still apply it; nothing will retry it, so
+-- the pools must say so instead of waiting behind it. Any pool row counts here,
+-- a deleted pool's included, since such a sync applies the whole cluster to
+-- Gardener, failed change and all — except a later row that failed itself: its
+-- sync never reached Gardener, so nothing applied the cluster's change.
 WITH latest_cluster AS (
     SELECT
         tenant.cluster_outbox.id,
@@ -220,6 +221,7 @@ latest_pool_row AS (
     FROM tenant.cluster_outbox
     JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
     WHERE tenant.node_pools.cluster_id = @cluster_id
+      AND tenant.cluster_outbox.status <> 'failed'
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
 )

@@ -9,6 +9,7 @@ package machine
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -93,7 +94,15 @@ func (t Table[State, Event]) Validate() error {
 		}
 	}
 
+	// The checks below report the first offender, so walk the states in a fixed
+	// order: a table with more than one defect must name the same one every run.
+	ordered := make([]State, 0, len(states))
 	for s := range states {
+		ordered = append(ordered, s)
+	}
+	slices.Sort(ordered)
+
+	for _, s := range ordered {
 		if _, isTerminal := terminal[s]; !isTerminal && exits[s] == 0 {
 			return fmt.Errorf("state %q has no exit", s)
 		}
@@ -115,7 +124,7 @@ func (t Table[State, Event]) Validate() error {
 			queue = append(queue, tr.To)
 		}
 	}
-	for s := range states {
+	for _, s := range ordered {
 		if _, ok := reachable[s]; !ok {
 			return fmt.Errorf("state %q is unreachable from %q", s, t.initial)
 		}

@@ -108,6 +108,16 @@ func TestValidate(t *testing.T) {
 			).Terminal(stateCompleted),
 			wantErr: `state "failed" is unreachable from "pending"`,
 		},
+		{
+			// The first offending state in order, not whichever the map yields.
+			name: "several unreachable states name the first",
+			table: New("many-unreachable", statePending,
+				Transition[state, event]{From: statePending, Event: eventStart, To: stateRunning},
+				Transition[state, event]{From: state("zeta"), Event: eventStart, To: stateRunning},
+				Transition[state, event]{From: state("alpha"), Event: eventStart, To: stateRunning},
+			).Terminal(stateRunning),
+			wantErr: `state "alpha" is unreachable from "pending"`,
+		},
 	}
 
 	for _, tc := range tests {

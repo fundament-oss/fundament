@@ -207,9 +207,11 @@ func TestCheckStatusForgetsAFailedPoolSyncSupersededByALaterSync(t *testing.T) {
 // (the ready fan-out) is not a change.
 //
 // Blocked is the cluster's own latest sync row failing for good with no pool
-// sync after it: nothing retries it, so the pools say so instead of waiting. A
-// pool's failed row is not blocked at the cluster level — the pool list carries
-// its message, and a later sync may still succeed.
+// sync after it that can still apply it: nothing retries it, so the pools say
+// so instead of waiting. A pool's failed row is not blocked at the cluster
+// level — the pool list carries its message, and a later sync may still
+// succeed; a later pool row that failed itself does not lift the block, since
+// nothing applied the cluster's change.
 func TestClusterGetPushState(t *testing.T) {
 	t.Parallel()
 	db := createTestDB(t)
@@ -249,6 +251,11 @@ func TestClusterGetPushState(t *testing.T) {
 		}},
 		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true},
 		{name: "the cluster's own update failed", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "failed") }, wantBlocked: true, wantMessageSet: true},
+		{name: "the cluster's own update failed and a later pool sync failed", setup: func(c, _ uuid.UUID) {
+			addClusterRow(c, "updated", "failed")
+			laterPool := insertNodePoolReturningID(t, db, c, "later", "n1-standard-4", 1, 2)
+			setPoolRow(laterPool, "failed")
+		}, wantBlocked: true, wantMessageSet: true},
 		// A deleted pool's sync applies the whole cluster, failed change and
 		// all, so it clears the block like any other pool's sync.
 		{name: "a failed cluster row superseded by a deleted pool's sync", setup: func(c, pool uuid.UUID) {
