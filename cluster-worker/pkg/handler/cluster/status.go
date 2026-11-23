@@ -114,19 +114,14 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		UpdateSettled: cluster.UpdateSettled.Time,
 	}
 	// A warning records once per incident, compared against the ones already
-	// recorded, so they are loaded when a rule may record one: an error Gardener
-	// retries, an update that may have stalled, or a Shoot that may be stuck
-	// deleting.
-	if (shootStatus.Status == gardener.StatusError && shootStatus.Retrying) ||
-		cluster.ShootUpdating ||
-		cluster.ShootStatus.String == string(gardener.StatusDeleting) ||
-		shootStatus.Status == gardener.StatusDeleting {
-		warnings, err := h.loadWarnings(ctx, cluster.ID)
-		if err != nil {
-			return 0, err
-		}
-		stored.Warnings = warnings
+	// recorded, and a missing entry reads as "not recorded yet": they are
+	// loaded for every check, so a warning rule added later cannot re-record
+	// its warning each time by not being named here.
+	warnings, err := h.loadWarnings(ctx, cluster.ID)
+	if err != nil {
+		return 0, err
 	}
+	stored.Warnings = warnings
 	update := nextShootStatus(&stored, shootStatus)
 	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
 		// A sync still queued or retrying will apply the change, creating the
@@ -137,7 +132,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		if err != nil {
 			return 0, fmt.Errorf("load cluster push state: %w", err)
 		}
-		if !push.SyncInFlight {
+		if !push.SyncQueued {
 			// The timeout replaces the status, not what the check learned about
 			// the API server: a Shoot that came and went must still forget its
 			// access.

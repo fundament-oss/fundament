@@ -198,6 +198,11 @@ ORDER BY
 -- Gardener — the cluster's own latest sync row is queued or retrying, or an
 -- active node pool's latest row (its create or update) is. A deleted pool's
 -- row is not counted: removing a pool does not shape the pools that remain.
+-- sync_queued: some sync of the cluster is still to come, whatever it is: any
+-- of the cluster's or its pools' rows is queued or retrying, a deleted pool's
+-- included, since such a sync creates or updates the whole Shoot. The status
+-- timeout waits for one rather than record a Shoot that never appeared just
+-- before the sync that creates it.
 -- sync_blocked: the cluster's own latest sync row failed for good, and no
 -- pool sync came after it that can still apply it; nothing will retry it, so
 -- the pools must say so instead of waiting behind it. Any pool row counts here,
@@ -255,6 +260,16 @@ SELECT
               ), false)
         )
     )::boolean AS sync_in_flight,
+    (
+        COALESCE((SELECT latest_cluster.status IN ('pending', 'retrying') FROM latest_cluster), false)
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
+            WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+        )
+    )::boolean AS sync_queued,
     COALESCE((
         SELECT latest_cluster.status = 'failed'
             AND NOT EXISTS (

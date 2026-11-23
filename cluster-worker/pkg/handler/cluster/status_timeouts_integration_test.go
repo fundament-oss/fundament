@@ -170,6 +170,36 @@ func TestCheckStatusDoesNotTimeOutWhileASyncIsQueued(t *testing.T) {
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_error"))
 }
 
+// A deleted pool's sync applies the whole cluster too, so a queued one holds
+// the timeout just as the cluster's own row does.
+func TestCheckStatusDoesNotTimeOutWhileADeletedPoolsSyncIsQueued(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "tf-pending-removed-pool")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 1)
+	markClusterSyncsCompleted(t, db, clusterID)
+	setShootState(t, db, clusterID, "pending", gardener.MsgShootNotFound, "", 21*time.Minute)
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET deleted = now() WHERE id = $1`, poolID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'pending' WHERE node_pool_id = $1`, poolID)
+	require.NoError(t, err)
+
+	mock.SetShootStatusOverride(clusterID, &gardener.StatusOverride{
+		Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
+	})
+	require.NoError(t, checkStatus(t, h))
+
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "pending", *status)
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_error"))
+}
+
 // An update that settled in the outbox long ago and is still rolling out has
 // stalled: the check records a warning once and leaves the updating flag set,
 // so a genuinely stuck update stays visible.

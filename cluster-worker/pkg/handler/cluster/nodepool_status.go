@@ -47,9 +47,11 @@ type storedNodePool struct {
 }
 
 // syncState is what the outbox still owes Gardener for the cluster. InFlight
-// and Blocked are mutually exclusive in practice: a queued or retrying row
-// means the sync has not given up, and a blocked cluster has no retry left.
-// BlockedMessage is the failed cluster row's reason.
+// takes precedence over Blocked: a queued or retrying pool row outside the
+// pool the check is classifying will apply the whole cluster when it runs, so
+// its pools wait instead of reporting the failed row. The two can be set
+// together, since a pool row in retry backoff and a later failed cluster row
+// each hold on their own. BlockedMessage is the failed cluster row's reason.
 type syncState struct {
 	InFlight       bool
 	Blocked        bool

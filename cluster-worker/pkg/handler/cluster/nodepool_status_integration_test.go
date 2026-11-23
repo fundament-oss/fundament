@@ -242,17 +242,25 @@ func TestClusterGetPushState(t *testing.T) {
 		neverSynced    bool
 		setup          func(clusterID, poolID uuid.UUID)
 		wantInFlight   bool
+		wantQueued     bool
 		wantBlocked    bool
 		wantMessageSet bool
 	}{
 		{name: "everything synced", setup: func(uuid.UUID, uuid.UUID) {}},
-		{name: "a pool's create still queued", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "pending") }, wantInFlight: true},
+		{name: "a pool's create still queued", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "pending") }, wantInFlight: true, wantQueued: true},
+		// A deleted pool's sync applies the whole cluster, so a queued one means
+		// a Shoot is still to come: not in flight for the pools that remain,
+		// which a pool removal does not shape, but queued all the same.
+		{name: "a deleted pool's sync still queued", setup: func(_, pool uuid.UUID) {
+			deletePool(pool)
+			setPoolRow(pool, "pending")
+		}, wantQueued: true},
 		{name: "a pool's sync failed", setup: func(_, pool uuid.UUID) { setPoolRow(pool, "failed") }},
 		{name: "a deleted pool's sync failed", setup: func(_, pool uuid.UUID) {
 			deletePool(pool)
 			setPoolRow(pool, "failed")
 		}},
-		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true},
+		{name: "the cluster's own update queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "pending") }, wantInFlight: true, wantQueued: true},
 		{name: "the cluster's own update failed", setup: func(c, _ uuid.UUID) { addClusterRow(c, "updated", "failed") }, wantBlocked: true, wantMessageSet: true},
 		{name: "the cluster's own update failed and a later pool sync failed", setup: func(c, _ uuid.UUID) {
 			addClusterRow(c, "updated", "failed")
@@ -301,6 +309,7 @@ func TestClusterGetPushState(t *testing.T) {
 		push, err := queries.ClusterGetPushState(t.Context(), dbgen.ClusterGetPushStateParams{ClusterID: clusterID})
 		require.NoError(t, err, tc.name)
 		assert.Equal(t, tc.wantInFlight, push.SyncInFlight, tc.name)
+		assert.Equal(t, tc.wantQueued, push.SyncQueued, tc.name)
 		assert.Equal(t, tc.wantBlocked, push.SyncBlocked, tc.name)
 		assert.Equal(t, tc.wantMessageSet, push.SyncBlockedMessage.Valid, tc.name)
 	}
