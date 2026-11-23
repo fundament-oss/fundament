@@ -474,11 +474,16 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		if c, ok := counts[update.Name]; ok {
 			poolCounts = &c.all
 		}
-		if err := h.writeNodePoolStatus(ctx, cluster.ID, update, poolCounts); err != nil {
+		applied, err := h.writeNodePoolStatus(ctx, cluster.ID, update, poolCounts)
+		if err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
 		}
-		// A failed write leaves the pool to the counts-only write below.
+		if !applied {
+			// Another check classified the pool first, or it is gone: either way
+			// a status was not written, so the counts-only write below still runs.
+			continue
+		}
 		updated[update.ID] = true
 		if update.Status == dbconst.NodePoolStatus_Waiting || update.Status == dbconst.NodePoolStatus_Error {
 			// Every new message is logged with the text it came from, also
@@ -505,11 +510,13 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 }
 
 // writeNodePoolStatus commits one pool's status row, its events and, when
-// counts is set, the node counts the status was decided on, together.
-func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update *nodePoolUpdate, counts *shoot.PoolInventory) error {
+// counts is set, the node counts the status was decided on, together. It
+// reports whether the status was written: a check that lost the row to a newer
+// one, or a pool that is gone, writes nothing.
+func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update *nodePoolUpdate, counts *shoot.PoolInventory) (bool, error) {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin: %w", err)
+		return false, fmt.Errorf("begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 
@@ -521,17 +528,17 @@ func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, 
 		CheckedAt:  update.StatusUpdated,
 	})
 	if err != nil {
-		return fmt.Errorf("update status: %w", err)
+		return false, fmt.Errorf("update status: %w", err)
 	}
 	if updated == 0 {
 		// Another check classified the pool first, it was soft-deleted after it
 		// was read, or its cluster was recorded as lost and had its pools
 		// cleared: no row, no events.
-		return nil
+		return false, nil
 	}
 	if counts != nil {
 		if err := qtx.NodePoolSnapshotUpsert(ctx, nodePoolSnapshotParams(update.ID, *counts)); err != nil {
-			return fmt.Errorf("record node count: %w", err)
+			return false, fmt.Errorf("record node count: %w", err)
 		}
 	}
 	for _, event := range update.Events {
@@ -540,11 +547,11 @@ func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, 
 			EventType: string(event.Type),
 			Message:   pgtype.Text{String: event.Message, Valid: true},
 		}); err != nil {
-			return fmt.Errorf("create %s event: %w", event.Type, err)
+			return false, fmt.Errorf("create %s event: %w", event.Type, err)
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit: %w", err)
+		return false, fmt.Errorf("commit: %w", err)
 	}
-	return nil
+	return true, nil
 }

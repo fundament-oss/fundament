@@ -5,6 +5,11 @@
 -- has a row waiting is left out; a second run changes nothing. A deleted
 -- namespace is included: its row still has to remove what the namespace left
 -- on the shoot.
+-- The NOT EXISTS guard is not backed by ON CONFLICT here: the partial unique
+-- index cluster_outbox_uq_ns_reconcile covers source 'reconcile' only, and
+-- widening it takes a migration. Two operators queueing one namespace at once
+-- can both pass the guard; that costs one extra sync of an idempotent handler,
+-- never a wrong result.
 INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
 SELECT tenant.namespaces.id, 'reconcile', 'manual'
 FROM tenant.namespaces

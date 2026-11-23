@@ -162,7 +162,9 @@ type NamespaceListFailedForClusterParams struct {
 // for good and whose failure is older than the retry interval. The reconcile
 // loop queues these again, whatever the Shoot already shows: a sync can fail
 // after creating the namespace, converging its LimitRange or role bindings,
-// and the namespace then looks present while staying unusable.
+// and the namespace then looks present while staying unusable. A soft-deleted
+// namespace is left out on purpose: a failed delete row leaves the object on
+// the Shoot, where the reconcile loop's orphan sweep removes it.
 func (q *Queries) NamespaceListFailedForCluster(ctx context.Context, arg NamespaceListFailedForClusterParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, namespaceListFailedForCluster, arg.ClusterID, arg.FailedRetryAfter)
 	if err != nil {

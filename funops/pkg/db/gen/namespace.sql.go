@@ -49,6 +49,11 @@ type NamespaceQueueSyncParams struct {
 // has a row waiting is left out; a second run changes nothing. A deleted
 // namespace is included: its row still has to remove what the namespace left
 // on the shoot.
+// The NOT EXISTS guard is not backed by ON CONFLICT here: the partial unique
+// index cluster_outbox_uq_ns_reconcile covers source 'reconcile' only, and
+// widening it takes a migration. Two operators queueing one namespace at once
+// can both pass the guard; that costs one extra sync of an idempotent handler,
+// never a wrong result.
 func (q *Queries) NamespaceQueueSync(ctx context.Context, arg NamespaceQueueSyncParams) ([]pgtype.UUID, error) {
 	rows, err := q.db.Query(ctx, namespaceQueueSync, arg.NamespaceID)
 	if err != nil {

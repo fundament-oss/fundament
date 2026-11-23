@@ -23,8 +23,9 @@ LIMIT 1
 FOR NO KEY UPDATE SKIP LOCKED;
 
 -- name: OutboxMarkProcessed :execrows
--- Only a runnable row completes: the status guard is the last line of defence
--- if a row was moved before this write ran. Zero rows says so.
+-- Completes the row the caller claimed. The status guard stays as a backstop;
+-- the caller holds the row for update, so it matches one row and a zero is an
+-- error rather than another worker having moved on.
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),

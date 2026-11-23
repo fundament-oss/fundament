@@ -339,9 +339,19 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 		return fmt.Errorf("list namespaces whose sync failed: %w", err)
 	}
 
-	queue := make([]uuid.UUID, 0, len(plan.CreateIDs)+len(failedIDs))
-	queue = append(queue, plan.CreateIDs...)
-	queue = append(queue, failedIDs...)
+	// A namespace can be both missing on the Shoot and failed for good; queue
+	// it once.
+	seen := make(map[uuid.UUID]struct{}, len(plan.CreateIDs)+len(failedIDs))
+	queue := make([]uuid.UUID, 0, len(seen))
+	for _, ids := range [][]uuid.UUID{plan.CreateIDs, failedIDs} {
+		for _, id := range ids {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			queue = append(queue, id)
+		}
+	}
 
 	var errs []error
 	for _, id := range queue {

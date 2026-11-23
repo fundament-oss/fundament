@@ -52,7 +52,9 @@ WHERE tenant.projects.cluster_id = @cluster_id
 -- for good and whose failure is older than the retry interval. The reconcile
 -- loop queues these again, whatever the Shoot already shows: a sync can fail
 -- after creating the namespace, converging its LimitRange or role bindings,
--- and the namespace then looks present while staying unusable.
+-- and the namespace then looks present while staying unusable. A soft-deleted
+-- namespace is left out on purpose: a failed delete row leaves the object on
+-- the Shoot, where the reconcile loop's orphan sweep removes it.
 SELECT tenant.namespaces.id
 FROM tenant.namespaces
 JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id

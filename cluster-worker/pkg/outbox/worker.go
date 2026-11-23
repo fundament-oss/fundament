@@ -352,9 +352,10 @@ func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx p
 		return false, fmt.Errorf("mark as processed: %w", err)
 	}
 	if processed == 0 {
-		// The row was moved on by another writer. The handler's work stands, but
-		// the outbox log should not claim a completion the row does not carry.
-		w.logRowMovedOn(row, "completed")
+		// This transaction holds the row for update, so the guard cannot miss:
+		// a zero here means the query and the worker disagree about what a
+		// claimed row looks like.
+		return false, fmt.Errorf("marked outbox row %s processed %d times", row.ID, processed)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
