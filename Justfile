@@ -3,6 +3,10 @@ mod e2e
 mod test-env
 mod plugins
 
+# "true" when `docker` is Podman, e.g. deploy/podman/bin/docker on PATH (see
+# docs/developer/fundament/getting-started.md). Podman needs a few runtime differences handled.
+podman := if `docker --version 2>/dev/null || true` =~ '(?i)podman' { "true" } else { "false" }
+
 # Kubeconfig of the local k3d clusters, inside the checkout: recipes add and switch their
 # contexts there, so ~/.kube/config and its current context stay as they are. Inside the
 # test-env VM the default kubeconfig stays in use; its scripts write ~/.kube/config. The
@@ -32,6 +36,42 @@ _ensure-k3d-network:
     @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet={{ k3d_subnet }} k3d-fundament > /dev/null \
         || { echo "Could not create the k3d-fundament network on {{ k3d_subnet }}. If another network uses that range, set FUNDAMENT_K3D_SUBNET to a free subnet, e.g. 172.29.0.0/16." >&2; exit 1; }
 
+# k3d starts a registry it creates on the runtime's `bridge` network, which Podman lacks
+# (and reserves as a name). With Podman the registry runs as a plain container instead,
+# under the name and on the network the config's registries.config mirror points at.
+k3d_registry_image := "docker.io/library/registry:2"
+
+# The local registries serve plain HTTP, which Docker allows for localhost and Podman only
+# for registries listed as insecure. Podman also caps each container at 2048 processes,
+# which a k3s node with all of Fundament's pods exceeds (Docker sets no cap). Restart the
+# machine afterwards; the process cap applies to containers created after that.
+# Configure the Podman machine (or a Linux host) for the local clusters
+podman-machine-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ podman }} || { echo "docker is not Podman; nothing to set up." >&2; exit 0; }
+    if docker machine inspect > /dev/null 2>&1; then
+        run() { docker machine ssh "$*"; }
+    else
+        run() { sh -c "$*"; }
+    fi
+    # write FILE CONTENT: write CONTENT to FILE when it differs.
+    write() {
+        if [ "$(run "cat $1 2>/dev/null" || true)" != "$2" ]; then
+            echo "Writing $1"
+            printf '%s\n' "$2" | run "sudo mkdir -p $(dirname "$1") && sudo tee $1 > /dev/null"
+            changed=1
+        fi
+    }
+    changed=0
+    write /etc/containers/registries.conf.d/50-fundament-local.conf \
+        "$(printf '[[registry]]\nlocation = "localhost:5111"\ninsecure = true\n\n[[registry]]\nlocation = "localhost:5112"\ninsecure = true')"
+    write /etc/containers/containers.conf.d/50-fundament-local.conf \
+        "$(printf '[containers]\npids_limit = 0')"
+    if [ "$changed" = 1 ]; then
+        echo "Restart Podman (podman machine stop && podman machine start) to apply this."
+    fi
+
 # Create a local k3d cluster for development with local registry
 cluster-create:
     #!/usr/bin/env bash
@@ -41,7 +81,18 @@ cluster-create:
     # To fix this we we pin an absolute forward-slash path `pwd -W` is a Git Bash extension; elsewhere it falls back to plain pwd.
     export PWD="$(pwd -W 2>/dev/null || pwd)"
     mkdir -p "$(dirname "${KUBECONFIG:-.}")"
-    k3d cluster create --config=deploy/k3d/config.yaml
+    if {{ podman }}; then
+        just podman-machine-setup
+        docker container exists registry.localhost \
+            || docker run -d --name registry.localhost --network k3d-fundament \
+                -p 127.0.0.1:5111:5000 --restart unless-stopped {{ k3d_registry_image }} > /dev/null
+        config=$(mktemp "${TMPDIR:-/tmp}/k3d-fundament.XXXXXX")
+        trap 'rm -f "$config"' EXIT
+        yq 'del(.registries.create)' deploy/k3d/config.yaml > "$config"
+        k3d cluster create --config="$config"
+    else
+        k3d cluster create --config=deploy/k3d/config.yaml
+    fi
     just setup-certs
     just setup-gateway
 
@@ -71,6 +122,10 @@ cluster-start:
         echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just cluster-delete && just cluster-create; with a plugin sandbox, then just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
         exit 1
     fi
+    # k3d starts only the containers it created; with Podman the registry is not one of them.
+    if {{ podman }} && docker container exists registry.localhost; then
+        docker start registry.localhost > /dev/null
+    fi
     k3d cluster start fundament
     # k3d writes the context only at create; merge adds a missing entry and refreshes the
     # API port, which changes on restart.
@@ -89,6 +144,7 @@ cluster-stop:
 cluster-delete:
     k3d cluster delete fundament
     @k3d registry delete registry.localhost 2>/dev/null || true
+    @docker rm -f registry.localhost > /dev/null 2>&1 || true
     @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
     @docker network disconnect -f k3d-fundament k3d-fundament-plugin-serverlb > /dev/null 2>&1 || true
     @docker network rm k3d-fundament 2>/dev/null || true

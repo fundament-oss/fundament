@@ -9,6 +9,8 @@ cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"
 registry_port := "5112"
 export kube_context := "k3d-" + cluster
+# "true" when `docker` is Podman; see podman in the root Justfile.
+podman := if `docker --version 2>/dev/null || true` =~ '(?i)podman' { "true" } else { "false" }
 
 # Both binds are required; see docs/developer/fundament/k3d-block-devices.md.
 # Off by default: they expose the host's devices.
@@ -21,14 +23,29 @@ _default:
 # --- Cluster commands ---
 
 # Create a local K3D cluster for plugin development with local registry
-cluster-create:
-    mkdir -p "$(dirname "${KUBECONFIG:-.}")"
-    k3d cluster create --config=sandbox/k3d-config.yaml
+cluster-create: _k3d-create
 
 # Create the cluster with the host's block devices bound in (storage plugin work)
-cluster-create-storage:
+cluster-create-storage: (_k3d-create storage_volumes)
+
+# With Podman the registry runs as a plain container on the cluster network; see
+# k3d_registry_image in the root Justfile.
+_k3d-create *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p "$(dirname "${KUBECONFIG:-.}")"
-    k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
+    if {{ podman }}; then
+        just podman-machine-setup
+        config=$(mktemp "${TMPDIR:-/tmp}/k3d-{{ cluster }}.XXXXXX")
+        trap 'rm -f "$config"' EXIT
+        yq 'del(.registries.create)' sandbox/k3d-config.yaml > "$config"
+        k3d cluster create --config="$config" {{ flags }}
+        docker container exists {{ registry }} \
+            || docker run -d --name {{ registry }} --network k3d-{{ cluster }} \
+                -p 127.0.0.1:{{ registry_port }}:5000 --restart unless-stopped docker.io/library/registry:2 > /dev/null
+    else
+        k3d cluster create --config=sandbox/k3d-config.yaml {{ flags }}
+    fi
 
 # uncordon is a no-op unless storage disks were ever attached.
 # Start the cluster (creates if it doesn't exist), clearing any leftover cordon
@@ -44,6 +61,10 @@ cluster-start:
             | grep -qE '\[(0\.0\.0\.0|::)?\]'; then
             echo "This cluster publishes its ports on every network address. Recreate it to bind them to loopback: just plugins cluster-delete && just plugins cluster-create && just plugins deploy && just plugin-sandbox-kubeconfig && just plugins sandbox-catalog" >&2
             exit 1
+        fi
+        # k3d starts only the containers it created; with Podman the registry is not one of them.
+        if {{ podman }} && docker container exists {{ registry }}; then
+            docker start {{ registry }} > /dev/null
         fi
         k3d cluster start {{ cluster }}
         # k3d writes the context only at create; merge adds a missing entry and refreshes the
@@ -65,6 +86,7 @@ cluster-stop:
 cluster-delete:
     -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
+    @docker rm -f {{ registry }} > /dev/null 2>&1 || true
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
 
@@ -150,7 +172,7 @@ sandbox-catalog:
         local name=$1 nodeport=$2 service=$3 ip
         docker rm -f "$name" >/dev/null 2>&1 || true
         docker run -d --name "$name" --network k3d-fundament --restart unless-stopped \
-            alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:k3d-fundament-server-0:${nodeport}" >/dev/null
+            docker.io/alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:k3d-fundament-server-0:${nodeport}" >/dev/null
         docker network connect "$sandbox_net" "$name"
         ip=$(docker inspect "$name" --format "{{{{ (index .NetworkSettings.Networks \"$sandbox_net\").IPAddress }}")
         if [ -z "$ip" ]; then

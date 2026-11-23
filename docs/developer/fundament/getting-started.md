@@ -8,7 +8,7 @@ sidebar:
 ## Prerequisites
 
 - [Mise](https://mise.jdx.dev): installs the pinned `just`, `k3d`, `kubectl`, `helm`, `skaffold`, `mkcert`, `go` and `bun` from `mise.toml`
-- [Docker](https://www.docker.com) with at least 16 GiB of memory; 24 GiB recommended when you also run the plugin sandbox
+- [Docker](https://www.docker.com) or [Podman](https://podman.io) with at least 16 GiB of memory; 24 GiB recommended when you also run the plugin sandbox
 - `certutil` (NSS tools), which `mkcert` needs to install the local CA:
 
 | OS | Install |
@@ -26,6 +26,17 @@ The default shared memory limits are too low for PostgreSQL. For embedded-postgr
 kern.sysv.shmall=65536
 kern.sysv.shmmax=16777216
 ```
+
+### Podman
+
+Put `deploy/podman/bin/docker` on your `PATH` as `docker`, e.g. `ln -s "$PWD/deploy/podman/bin/docker" ~/bin/docker`. The recipes, Skaffold and `functl` then run Podman through it, and the recipes detect Podman from `docker --version`. A plain symlink to `podman` is not enough: the stand-in drops Docker's `--provenance` and `--sbom` build flags, which Podman rejects, and prints the digest after a push, which the recipes read. Set `PODMAN` to use another Podman binary, e.g. `podman-remote`.
+
+Podman also needs:
+
+- A rootful machine: k3s needs the cpuset cgroup controller, which rootless containers do not get. `podman machine stop && podman machine set --rootful && podman machine start`
+- The machine's memory raised from its 2–8 GiB default to the amount above: `podman machine set --memory 24576` while it is stopped
+- The Docker API socket at `/var/run/docker.sock`, which k3d and Skaffold use; on macOS, `sudo podman-mac-helper install` points it at the machine
+- `just podman-machine-setup` once per machine, which `cluster-create` also runs: it lists the local registries, which serve plain HTTP, as insecure, and lifts Podman's 2048-process cap per container, which a k3s node running every Fundament pod exceeds. Restart the machine afterwards.
 
 ### Windows
 

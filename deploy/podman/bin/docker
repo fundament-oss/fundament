@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+# Stand-in `docker` CLI for machines with only Podman: put it on PATH as `docker`, e.g.
+#   ln -s "$PWD/deploy/podman/bin/docker" ~/bin/docker
+# The recipes, Skaffold and functl then run Podman through it. Podman takes Docker's
+# arguments, with two differences handled here:
+# - Podman adds no build attestations, has no --provenance and reads --sbom as a preset
+#   name, so Docker's attestation flags are dropped.
+# - `podman push` does not print the pushed manifest digest; it is printed in Docker's
+#   `<tag>: digest: sha256:... ` form, which the recipes parse.
+tool=${PODMAN:-podman}
+
+skip=
+for arg in "$@"; do
+    shift
+    if [ -n "$skip" ]; then
+        skip=
+        continue
+    fi
+    case $arg in
+    --provenance=* | --sbom=*) continue ;;
+    --provenance | --sbom) skip=1; continue ;;
+    esac
+    set -- "$@" "$arg"
+done
+
+if [ "${1:-}" = push ]; then
+    shift
+    digestfile=$(mktemp)
+    trap 'rm -f "$digestfile"' EXIT
+    "$tool" push --digestfile "$digestfile" "$@" || exit
+    # The last argument is the image reference.
+    for ref; do :; done
+    echo "$ref: digest: $(cat "$digestfile")"
+    exit
+fi
+exec "$tool" "$@"
