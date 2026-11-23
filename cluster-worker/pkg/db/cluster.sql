@@ -202,8 +202,9 @@ ORDER BY
 -- pool sync came after it that can still apply it; nothing will retry it, so
 -- the pools must say so instead of waiting behind it. Any pool row counts here,
 -- a deleted pool's included, since such a sync applies the whole cluster to
--- Gardener, failed change and all — except a later row that failed itself: its
--- sync never reached Gardener, so nothing applied the cluster's change.
+-- Gardener, failed change and all. Two later rows do not lift it: one that
+-- failed itself, and one of a cluster that never reached Gardener — neither
+-- sync applied the cluster's change.
 WITH latest_cluster AS (
     SELECT
         tenant.cluster_outbox.id,
@@ -222,6 +223,17 @@ latest_pool_row AS (
     JOIN tenant.node_pools ON tenant.node_pools.id = tenant.cluster_outbox.node_pool_id
     WHERE tenant.node_pools.cluster_id = @cluster_id
       AND tenant.cluster_outbox.status <> 'failed'
+      -- A pool's sync only applies the cluster once it reached Gardener: before
+      -- that it queues the cluster's own sync and completes having changed
+      -- nothing, so it cannot supersede a failed cluster row. The same
+      -- "reached Gardener" test as ClusterHasEverBeenSynced, which gates that
+      -- early return.
+      AND EXISTS (
+          SELECT 1
+          FROM tenant.cluster_outbox AS cluster_sync
+          WHERE cluster_sync.cluster_id = @cluster_id
+            AND cluster_sync.status = 'completed'
+      )
     ORDER BY tenant.cluster_outbox.id DESC
     LIMIT 1
 )

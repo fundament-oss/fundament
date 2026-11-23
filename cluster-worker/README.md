@@ -188,11 +188,13 @@ A status that does not move is not evidence of progress. Three limits watch it, 
 from `shoot_status_since` (the moment the stored status last changed) or, for an update,
 from the moment the change's sync row finished:
 
-- A cluster whose Shoot never appeared in Gardener `CLUSTER_STATUS_PENDING_TIMEOUT` (20m)
-  after its create sync completed turns `error` with "The Shoot did not appear in Gardener;
-  the cluster's next change tries again." and a `status_error` event. The create sync that
-  ran was lost after its row completed; nothing else would report it. A Shoot that once
-  existed is not this case: its absence is `lost`, below.
+- A cluster whose Shoot never appeared in Gardener turns `error` with "The Shoot did not
+  appear in Gardener; the cluster's next change tries again." and a `status_error` event
+  once `CLUSTER_STATUS_PENDING_TIMEOUT` (20m) has passed since `shoot_status_since`, the
+  first check that recorded the Shoot missing — so a cluster seen missing only by the
+  sweep turns `error` up to one sweep interval later. The create sync that ran was lost
+  after its row completed; nothing else would report it. A Shoot that once existed is not
+  this case: its absence is `lost`, below.
 - An update `CLUSTER_STATUS_UPDATING_WARNING` (30m) after its sync row finished records a
   `status_warning` that the update has not finished. The cluster stays `ready` and marked
   as updating (`shoot_updating`) — a warning, not a verdict.

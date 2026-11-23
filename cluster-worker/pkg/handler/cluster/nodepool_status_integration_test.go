@@ -236,7 +236,10 @@ func TestClusterGetPushState(t *testing.T) {
 	}
 
 	cases := []struct {
-		name           string
+		name string
+		// neverSynced skips the completed sync rows every other case starts
+		// with, so the cluster never reached Gardener.
+		neverSynced    bool
 		setup          func(clusterID, poolID uuid.UUID)
 		wantInFlight   bool
 		wantBlocked    bool
@@ -266,6 +269,15 @@ func TestClusterGetPushState(t *testing.T) {
 				 WHERE tenant.cluster_outbox.node_pool_id = $1`, pool)
 			require.NoError(t, err)
 		}},
+		// A pool's sync of a cluster that never reached Gardener changes
+		// nothing: it queues the cluster's own sync and completes. It must not
+		// hide the cluster row's failure.
+		{name: "a failed cluster row not superseded by a pool sync before the Shoot", neverSynced: true, setup: func(c, pool uuid.UUID) {
+			setPoolRow(pool, "completed")
+			addClusterRow(c, "updated", "failed")
+			laterPool := insertNodePoolReturningID(t, db, c, "later", "n1-standard-4", 1, 2)
+			setPoolRow(laterPool, "completed")
+		}, wantBlocked: true, wantMessageSet: true},
 		{name: "a ready fan-out row queued", setup: func(c, _ uuid.UUID) { addClusterRow(c, "ready", "pending") }},
 		{name: "a failed cluster row superseded by a later pool sync", setup: func(c, _ uuid.UUID) {
 			addClusterRow(c, "updated", "failed")
@@ -281,7 +293,9 @@ func TestClusterGetPushState(t *testing.T) {
 	for i, tc := range cases {
 		clusterID := insertCluster(t, db, acmeCorpOrgID, fmt.Sprintf("push-%d", i))
 		poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 2)
-		markClusterSyncsCompleted(t, db, clusterID)
+		if !tc.neverSynced {
+			markClusterSyncsCompleted(t, db, clusterID)
+		}
 		tc.setup(clusterID, poolID)
 
 		push, err := queries.ClusterGetPushState(t.Context(), dbgen.ClusterGetPushStateParams{ClusterID: clusterID})

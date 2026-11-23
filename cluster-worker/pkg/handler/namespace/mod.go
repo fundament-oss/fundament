@@ -342,7 +342,7 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	// A namespace can be both missing on the Shoot and failed for good; queue
 	// it once.
 	seen := make(map[uuid.UUID]struct{}, len(plan.CreateIDs)+len(failedIDs))
-	queue := make([]uuid.UUID, 0, len(seen))
+	queue := make([]uuid.UUID, 0, len(plan.CreateIDs)+len(failedIDs))
 	for _, ids := range [][]uuid.UUID{plan.CreateIDs, failedIDs} {
 		for _, id := range ids {
 			if _, ok := seen[id]; ok {

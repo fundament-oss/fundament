@@ -256,8 +256,10 @@ func awaitsMachines(status string, shaped bool) bool {
 		return true
 	case "":
 		return shaped
-	default:
+	case string(dbconst.NodePoolStatus_Ready), string(dbconst.NodePoolStatus_Error):
 		return false
+	default:
+		panic(fmt.Sprintf("unhandled node pool status %q", status))
 	}
 }
 
