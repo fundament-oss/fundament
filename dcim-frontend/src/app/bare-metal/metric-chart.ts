@@ -15,12 +15,20 @@ import type { ChartSeries } from './metal-metrics';
 Chart.register(...registerables);
 
 /**
- * Two palettes, because the charts draw on a canvas rather than through the
- * design system's CSS: the NLDD tokens are pinned to their light values, so the
- * dark scheme needs its own steps. Both keep adjacent series apart.
+ * The design system's colour primitives, step 600 of lintblauw, mintgroen,
+ * oranje, rood, paars, coolgray and groen. A canvas cannot resolve a
+ * `light-dark()` token, so each scheme carries the hex value that token takes in
+ * that scheme (from `colors.generated.css`). Step 600 keeps every series above
+ * 4.5:1 against the base surface in both schemes.
  */
-const LIGHT = ['#1f6fb2', '#0f766e', '#b45309', '#b91c1c', '#6d28d9', '#475569', '#15803d'];
-const DARK = ['#7ab8e8', '#5eead4', '#fbbf24', '#f87171', '#c4b5fd', '#cbd5e1', '#86efac'];
+const LIGHT = ['#366396', '#006E58', '#9B4A00', '#B62C20', '#794E9B', '#556273', '#326E15'];
+const DARK = ['#608FC5', '#3D9B82', '#DB6D00', '#EA5E4D', '#A679CA', '#7F8DA0', '#5D9B45'];
+
+/** Axis text: `--primitives-color-coolgray-650`. */
+const TEXT = { light: '#4D5867', dark: '#8C99AA' };
+
+/** Grid lines: `--primitives-color-coolgray-200`. */
+const GRID = { light: '#B7C0CC', dark: '#333A45' };
 
 type ChartKind = 'line' | 'bar';
 
@@ -136,8 +144,8 @@ export default class MetricChartComponent {
   private configuration(): ChartConfiguration {
     const dark = this.theme.isDarkMode();
     const palette = dark ? DARK : LIGHT;
-    const text = dark ? '#cbd5e1' : '#475569';
-    const grid = dark ? 'rgba(203, 213, 225, 0.16)' : 'rgba(71, 85, 105, 0.16)';
+    const text = dark ? TEXT.dark : TEXT.light;
+    const grid = dark ? GRID.dark : GRID.light;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const horizontal = this.horizontal();
     const stacked = this.stacked();

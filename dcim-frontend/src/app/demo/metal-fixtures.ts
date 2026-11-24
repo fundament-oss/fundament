@@ -454,42 +454,42 @@ const switches: Switch[] = [
 
 const components: ComponentStatus[] = [
   {
-    id: id('component', 1),
+    id: id('comp', 1),
     type: 'api',
     identifier: 'metal-api',
     up: true,
     tokenLifetimeSeconds: 30 * 86400,
   },
   {
-    id: id('component', 2),
+    id: id('comp', 2),
     type: 'core',
     identifier: 'metal-core-ams1',
     up: true,
     tokenLifetimeSeconds: 8 * 86400,
   },
   {
-    id: id('component', 3),
+    id: id('comp', 3),
     type: 'core',
     identifier: 'metal-core-grn1',
     up: false,
     tokenLifetimeSeconds: 2 * 86400,
   },
   {
-    id: id('component', 4),
+    id: id('comp', 4),
     type: 'exporter',
     identifier: 'metal-metrics-exporter',
     up: true,
     tokenLifetimeSeconds: 14 * 86400,
   },
   {
-    id: id('component', 5),
+    id: id('comp', 5),
     type: 'exporter',
     identifier: 'sonic-exporter',
     up: true,
     tokenLifetimeSeconds: 5 * 86400,
   },
   {
-    id: id('component', 6),
+    id: id('comp', 6),
     type: 'db',
     identifier: 'rethinkdb',
     up: true,
