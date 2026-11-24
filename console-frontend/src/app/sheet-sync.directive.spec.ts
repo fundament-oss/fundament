@@ -1,4 +1,4 @@
-import { rewireFormFields } from './sheet-sync.directive';
+import { quietRestoredTooltip, rewireFormFields } from './sheet-sync.directive';
 
 // happy-dom has no ElementInternals, which the design system's form-associated mixin needs in its
 // constructor. A stub is enough: these tests only exercise validation-item visibility.
@@ -91,5 +91,58 @@ describe('rewireFormFields', () => {
     // Short window on purpose: nothing should ever flip this on, so the only
     // question is whether the rewire itself does by accident.
     expect(await waitFor(shown(error), 100)).toBe(false);
+  });
+});
+
+describe('quietRestoredTooltip', () => {
+  const setup = () => {
+    const sheet = document.createElement('nldd-sheet');
+    const button = document.createElement('nldd-icon-button');
+    const inner = document.createElement('button');
+    button.appendChild(inner);
+    document.body.append(sheet, button);
+    return { sheet, button, inner };
+  };
+
+  const ancestors = (node: HTMLElement): HTMLElement[] =>
+    node.parentElement ? [node.parentElement, ...ancestors(node.parentElement)] : [];
+
+  const focusIn = (target: HTMLElement): FocusEvent => {
+    const event = new FocusEvent('focusin', { bubbles: true, composed: true });
+    Object.defineProperty(event, 'composedPath', { value: () => [target, ...ancestors(target)] });
+    return event;
+  };
+
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('holds back the tooltip of the button focus returns to after a pointer, until focus leaves', () => {
+    const { sheet, button, inner } = setup();
+    document.dispatchEvent(new PointerEvent('pointerdown'));
+    quietRestoredTooltip(focusIn(inner), sheet);
+    expect(button.getAttribute('tooltip-timing')).toBe('never');
+    button.dispatchEvent(new FocusEvent('focusout'));
+    expect(button.hasAttribute('tooltip-timing')).toBe(false);
+  });
+
+  it('leaves the tooltip after the keyboard', () => {
+    const { sheet, button, inner } = setup();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    quietRestoredTooltip(focusIn(inner), sheet);
+    expect(button.hasAttribute('tooltip-timing')).toBe(false);
+  });
+
+  it('leaves a button inside the sheet, and a timing the markup set', () => {
+    const { sheet, button, inner } = setup();
+    document.dispatchEvent(new PointerEvent('pointerdown'));
+    const own = document.createElement('nldd-icon-button');
+    sheet.appendChild(own);
+    quietRestoredTooltip(focusIn(own), sheet);
+    expect(own.hasAttribute('tooltip-timing')).toBe(false);
+
+    button.setAttribute('tooltip-timing', 'instant');
+    quietRestoredTooltip(focusIn(inner), sheet);
+    expect(button.getAttribute('tooltip-timing')).toBe('instant');
   });
 });

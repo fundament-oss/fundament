@@ -73,6 +73,7 @@ spec:
   menu:
     project:
       - crd: dnsendpoints.externaldns.k8s.io
+        label: DNS Endpoints
         list: true
         detail: true
         icon: rectangle-stack

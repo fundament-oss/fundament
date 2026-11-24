@@ -13,6 +13,61 @@ import isPresenting from './presentation/presenting';
 
 type SheetElement = HTMLElement & { show(): void; hide(): void };
 
+/** Whether the last input was a pointer, by the keys the design system counts
+ *  as keyboard use. Its own tracker is not exported. */
+let pointerInput = true;
+const NAVIGATION_KEYS = [
+  'Tab',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Enter',
+  ' ',
+  'Escape',
+];
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'pointerdown',
+    () => {
+      pointerInput = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (NAVIGATION_KEYS.includes(event.key)) pointerInput = false;
+    },
+    true,
+  );
+}
+
+/**
+ * Holds back the tooltip of the icon button a closing sheet hands focus back to.
+ *
+ * A modal <dialog> returns focus on close to what had it before: for a sheet
+ * opened from the Create menu that is the + button, and nldd-tooltip shows on any
+ * focus that is not a touch. After a mouse click on Create project, the button's
+ * "Create" tooltip hung under the notification on the next page. Focus stays
+ * where the dialog put it, so the keyboard and a screen reader keep their place;
+ * only the visual tooltip waits until focus leaves, and only after a pointer.
+ */
+export function quietRestoredTooltip(event: FocusEvent, sheet: HTMLElement): void {
+  if (!pointerInput) return;
+  const button = event
+    .composedPath()
+    .find(
+      (node): node is HTMLElement =>
+        node instanceof HTMLElement && node.localName === 'nldd-icon-button',
+    );
+  if (!button || sheet.contains(button) || button.hasAttribute('tooltip-timing')) return;
+  button.setAttribute('tooltip-timing', 'never');
+  button.addEventListener('focusout', () => button.removeAttribute('tooltip-timing'), {
+    once: true,
+  });
+}
+
 /**
  * Re-arms the wiring of every `nldd-form-field` in a subtree that was just moved.
  *
@@ -48,13 +103,39 @@ export default class SheetSyncDirective implements OnInit, OnDestroy {
 
   private prev = false;
 
+  // While the sheet is open, focus outside it is only ever the dialog handing it
+  // back on close. Capture, so the button hears the setting before its tooltip
+  // hears the focus.
+  private onFocusIn = (event: FocusEvent) => quietRestoredTooltip(event, this.el.nativeElement);
+
+  // Only the sheet's own: a popover inside it sends open and close up through it.
+  private onOpen = (event: Event) => {
+    if (event.target === this.el.nativeElement) {
+      document.addEventListener('focusin', this.onFocusIn, true);
+    }
+  };
+
+  // The sheet emits close after the dialog has given focus back.
+  private onClose = (event?: Event) => {
+    if (!event || event.target === this.el.nativeElement) {
+      document.removeEventListener('focusin', this.onFocusIn, true);
+    }
+  };
+
   ngOnInit(): void {
-    document.body.appendChild(this.el.nativeElement);
-    rewireFormFields(this.el.nativeElement);
+    const el = this.el.nativeElement;
+    document.body.appendChild(el);
+    rewireFormFields(el);
+    el.addEventListener('open', this.onOpen);
+    el.addEventListener('close', this.onClose);
   }
 
   ngOnDestroy(): void {
-    this.el.nativeElement.remove();
+    const el = this.el.nativeElement;
+    el.removeEventListener('open', this.onOpen);
+    el.removeEventListener('close', this.onClose);
+    this.onClose();
+    el.remove();
   }
 
   private sync = effect(() => {

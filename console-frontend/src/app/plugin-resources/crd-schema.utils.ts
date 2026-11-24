@@ -1,4 +1,9 @@
-import type { CrdObjectSchema, CrdPropertySchema, AdditionalPrinterColumn } from './types';
+import type {
+  CrdObjectSchema,
+  CrdPropertySchema,
+  AdditionalPrinterColumn,
+  KubeResource,
+} from './types';
 
 function parsePropertySchema(raw: Record<string, unknown>): CrdPropertySchema {
   const schema: CrdPropertySchema = {
@@ -44,45 +49,60 @@ export function parseObjectSchema(
   return { properties, required: requiredFields };
 }
 
-function resolveSimplePath(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, part) => {
-    if (current === null || current === undefined || typeof current !== 'object') return undefined;
-    return (current as Record<string, unknown>)[part];
-  }, obj);
-}
+// One step of a printer column's JSONPath: a field (".status"), an index
+// ("[0]", "[-1]"), every element ("[*]") or a filter ("[?(@.type=="Ready")]").
+const JSON_PATH_STEP =
+  /\.?([^.[\]]+)|\[(?:(\*)|(-?\d+)|\?\(@\.(\w+)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?))\))\]/y;
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object';
+
+/** What [*] reaches: an array's elements, or an object's values. */
+const children = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) return value;
+  return isObject(value) ? Object.values(value) : [];
+};
 
 /**
- * Resolve a Kubernetes jsonPath expression against a resource object.
+ * Resolve a Kubernetes jsonPath expression against a resource object, as far as
+ * printer columns use it. A path with [*] gives every value it reaches, the way
+ * kubectl prints a Gateway's `.status.addresses[*].value`; any other path gives
+ * its first one, so a filter on a condition's type gives that condition's
+ * field. Anything this does not read gives undefined.
  */
 export function resolveJsonPath(obj: Record<string, unknown>, jsonPath: string): unknown {
   const path = jsonPath.startsWith('.') ? jsonPath.substring(1) : jsonPath;
-
-  // Matches: path[?(@.key == "value")], path[?(@.key == 'value')], path[?(@.key == 42)]
-  const filterMatch = path.match(
-    /^(.+?)\[\?\(@\.(\w+)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?))\)\](?:\.(.+))?$/,
-  );
-
-  if (filterMatch) {
-    const arrayPath = filterMatch[1];
-    const filterKey = filterMatch[2];
-    const filterValue = filterMatch[3] ?? filterMatch[4] ?? filterMatch[5];
-    const remainingPath = filterMatch[6];
-
-    const array = resolveSimplePath(obj, arrayPath);
-    if (!Array.isArray(array)) return undefined;
-
-    const match = array.find(
-      (item: Record<string, unknown>) => String(item[filterKey]) === filterValue,
-    );
-    if (!match) return undefined;
-
-    if (remainingPath) {
-      return resolveSimplePath(match as Record<string, unknown>, remainingPath);
+  let values: unknown[] = [obj];
+  let wildcard = false;
+  JSON_PATH_STEP.lastIndex = 0;
+  while (JSON_PATH_STEP.lastIndex < path.length) {
+    const start = JSON_PATH_STEP.lastIndex;
+    const step = JSON_PATH_STEP.exec(path);
+    if (!step || step.index !== start) return undefined;
+    const [, field, all, index, filterKey, ...filterValues] = step;
+    if (field !== undefined) {
+      values = values.flatMap((v) => (isObject(v) && v[field] !== undefined ? [v[field]] : []));
+    } else if (all !== undefined) {
+      wildcard = true;
+      values = values.flatMap(children);
+    } else if (index !== undefined) {
+      const i = Number(index);
+      values = values.flatMap((v) => {
+        if (!Array.isArray(v)) return [];
+        const item = v[i < 0 ? v.length + i : i];
+        return item === undefined ? [] : [item];
+      });
+    } else {
+      const wanted = filterValues.find((value) => value !== undefined);
+      values = values.flatMap((v) =>
+        Array.isArray(v)
+          ? v.filter((item) => isObject(item) && String(item[filterKey]) === wanted)
+          : [],
+      );
     }
-    return match;
   }
-
-  return resolveSimplePath(obj, path);
+  if (wildcard) return values.length > 0 ? values : undefined;
+  return values[0];
 }
 
 /**
@@ -128,6 +148,8 @@ export function toSimpleValue(val: unknown): string {
  */
 export function formatColumnValue(value: unknown, columnType: string): string {
   if (value === null || value === undefined) return '\u2014';
+  if (Array.isArray(value))
+    return value.map((item) => formatColumnValue(item, columnType)).join(', ');
 
   switch (columnType) {
     case 'date':
@@ -139,6 +161,45 @@ export function formatColumnValue(value: unknown, columnType: string): string {
     default:
       return String(value);
   }
+}
+
+/** A printer column's cell for one resource, as the list shows it. */
+export function printerColumnValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
+  // The whole resource, so a column on apiVersion, kind or another top-level
+  // field reads too.
+  const fullObj = { ...resource, status: resource.status ?? {} };
+  return formatColumnValue(resolveJsonPath(fullObj, col.jsonPath), col.type);
+}
+
+/** Whether a printer column reads one of the resource's conditions, such as
+ *  `.status.conditions[?(@.type=="Ready")].status`. */
+const readsCondition = (col: AdditionalPrinterColumn): boolean =>
+  /\.conditions\[/.test(col.jsonPath);
+
+/**
+ * The badge a printer column's cell gets, the same as a cluster's status, or
+ * null when the cell stays text. The list's card and the detail page's title
+ * both carry it. True or False is a condition the platform keeps, not a word,
+ * so the column names it: "Ready" reads as Ready and Not ready rather than as
+ * True and False, and a column called something else follows along. Unknown is
+ * a condition too, but only from a column that reads one: a phase of Unknown
+ * is a word, and stays text.
+ */
+export function printedConditionBadge(
+  col: AdditionalPrinterColumn,
+  value: string,
+): { text: string; color: string } | null {
+  if (value === 'True') return { text: col.name, color: 'success' };
+  if (value === 'False') {
+    return {
+      text: `Not ${col.name.charAt(0).toLowerCase()}${col.name.slice(1)}`,
+      color: 'warning',
+    };
+  }
+  if (value === 'Unknown' && readsCondition(col)) {
+    return { text: `${col.name} unknown`, color: 'neutral' };
+  }
+  return null;
 }
 
 /**
@@ -302,4 +363,107 @@ export function resourceSingularLabelMidSentence(
   kind: string | undefined,
 ): string {
   return labelMidSentence(menuItem?.singularLabel ?? kindToSingularLabel(kind ?? ''));
+}
+
+/** One row of a status field on the detail page: a heading that what follows
+ *  is indented under, a label with its value, or a label with a nested list of
+ *  conditions. `key` is the field's path, unique within the status. */
+export interface StatusRow {
+  key: string;
+  type: 'heading' | 'value' | 'conditions';
+  depth: number;
+  label: string;
+  value?: string;
+  conditions?: Record<string, unknown>[];
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const isScalar = (value: unknown): boolean => value === null || typeof value !== 'object';
+
+/**
+ * The one word a small item of a list stands for, or null when it is more than
+ * that. Only shapes known to be one thing count: an address is `{type:
+ * IPAddress, value: 172.18.0.2}` and reads as its value, a supported kind is
+ * `{group, kind}` and reads as its kind, and either may leave its first key
+ * out. Any other item, even a small one such as `{name, port}`, keeps all its
+ * fields and is laid out as rows.
+ */
+const ITEM_WORD_KEYS: Record<string, string> = {
+  value: 'value',
+  kind: 'kind',
+  name: 'name',
+  'type,value': 'value',
+  'group,kind': 'kind',
+};
+
+function itemWord(item: unknown): string | null {
+  if (!isPlainObject(item)) return null;
+  const wordKey = ITEM_WORD_KEYS[Object.keys(item).sort().join(',')];
+  const word = wordKey === undefined ? undefined : item[wordKey];
+  return typeof word === 'string' && word !== '' ? word : null;
+}
+
+/**
+ * A status field as rows rather than as JSON, the way `kubectl describe` lays
+ * it out. A list of values, or of items that each stand for a word (a Gateway's
+ * addresses), is one comma-separated row. Any other list is a heading with one
+ * group per item under it, headed by the item's name, or by its number when it
+ * has none and is not the only one (a Gateway's listeners). An object is a
+ * heading with a row per key. Conditions below the top level keep their own
+ * row, which the page shows as badges.
+ */
+export function statusRows(
+  name: string,
+  value: unknown,
+  label: string,
+  depth = 0,
+  path = name,
+): StatusRow[] {
+  const valueRow = (text: string): StatusRow[] => [
+    { key: path, type: 'value', depth, label, value: text },
+  ];
+  const childRows = (object: Record<string, unknown>, childDepth: number, parent: string) =>
+    Object.entries(object).flatMap(([key, child]) =>
+      statusRows(key, child, fieldNameToLabel(key), childDepth, `${parent}.${key}`),
+    );
+
+  if (Array.isArray(value)) {
+    if (depth > 0 && name === 'conditions') {
+      return [
+        { key: path, type: 'conditions', depth, label, conditions: value.filter(isPlainObject) },
+      ];
+    }
+    if (value.length === 0) return valueRow('—');
+    if (value.every(isScalar)) return valueRow(value.map(toSimpleValue).join(', '));
+    const words = value.map(itemWord);
+    if (words.every((word) => word !== null)) return valueRow(words.join(', '));
+    return [
+      { key: path, type: 'heading', depth, label },
+      ...value.flatMap((item, index): StatusRow[] => {
+        const itemPath = `${path}[${index}]`;
+        if (!isPlainObject(item)) {
+          return statusRows(name, item, String(index + 1), depth + 1, itemPath);
+        }
+        const { name: itemName, ...rest } = item;
+        if (typeof itemName === 'string') {
+          return [
+            { key: itemPath, type: 'heading', depth: depth + 1, label: itemName },
+            ...childRows(rest, depth + 2, itemPath),
+          ];
+        }
+        if (value.length === 1) return childRows(item, depth + 1, itemPath);
+        return [
+          { key: itemPath, type: 'heading', depth: depth + 1, label: String(index + 1) },
+          ...childRows(item, depth + 2, itemPath),
+        ];
+      }),
+    ];
+  }
+  if (isPlainObject(value)) {
+    if (Object.keys(value).length === 0) return valueRow('—');
+    return [{ key: path, type: 'heading', depth, label }, ...childRows(value, depth + 1, path)];
+  }
+  return valueRow(toSimpleValue(value));
 }

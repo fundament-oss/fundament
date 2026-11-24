@@ -59,6 +59,7 @@ import {
 } from './theme-cookie';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
+import { TitleService } from './title.service';
 import { inOrganization, organizationOf, withinOrganization } from './address';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
@@ -177,6 +178,11 @@ export default class App implements OnInit {
   protected pageNav = inject(PageNavService);
 
   private navContext = inject(NavContextService);
+
+  /** Made here rather than by the first page that names itself: a cluster's
+   *  own address has no page component, so after a reload there it was never
+   *  made, and the tab kept index.html's "Fundament Console". */
+  private titleService = inject(TitleService);
 
   /** The walkthrough build narrates its own path through the console, so a
    *  coach-mark pointing at the create button only competes with it. */

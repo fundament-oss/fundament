@@ -6,14 +6,16 @@ import {
   input,
 } from '@angular/core';
 import '@nldd/design-system/icon-cell';
+import { ICONS } from '@nldd/design-system/icon';
 import { isCustomIcon } from '../utils/custom-icon';
 
 const FALLBACK_ICON = 'circle-dashed';
-const INVALID_MARKERS = ['/', '.svg', '.png', 'sha256:'];
+const KNOWN_ICONS = new Set(ICONS);
 
 /**
  * A plugin menu icon: an NLDD icon name, or a data: URI drawn as a CSS mask so it
- * follows the text colour. Anything else (URLs, digests) falls back to a placeholder.
+ * follows the text colour. Anything else (URLs, digests, names NLDD does not ship)
+ * falls back to a placeholder, so every menu entry keeps an icon and its text lines up.
  */
 @Component({
   selector: 'app-plugin-menu-icon',
@@ -42,8 +44,7 @@ export default class PluginMenuIconComponent {
 
   protected iconName = computed(() => {
     const value = this.icon();
-    if (!value || INVALID_MARKERS.some((marker) => value.includes(marker))) return FALLBACK_ICON;
-    return value;
+    return value && KNOWN_ICONS.has(value) ? value : FALLBACK_ICON;
   });
 
   protected maskStyle = computed(() => {

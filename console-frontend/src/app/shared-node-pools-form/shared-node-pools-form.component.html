@@ -42,7 +42,10 @@
                 ></nldd-button>
               }
             </nldd-title>
-            <nldd-form-field label="Machine type">
+            <nldd-form-field
+              label="Machine type"
+              [id]="'machineType-' + $index"
+            >
               @if (isExistingPool(poolIndex)) {
                 <!-- One row, not the list to choose from: an existing pool keeps
                      its type, and saving another one would replace the pool. -->
