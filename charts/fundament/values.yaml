@@ -96,6 +96,7 @@ images:
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
   marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
+  marketplaceAnalysisWorker: ghcr.io/fundament-oss/fundament/marketplace-analysis-worker:latest
   # One source (platform-api/), built once per binary (BINARY=...).
   platformPublicApi: ghcr.io/fundament-oss/fundament/platform-public-api:latest
   platformAdminApi: ghcr.io/fundament-oss/fundament/platform-admin-api:latest
@@ -621,6 +622,47 @@ marketplaceAdminApi:
     enabled: false
     parentRefs: []
     hostnames: []
+
+# Analyzes the container image of each submitted plugin version (FUN-24): its
+# file list and, through Trivy, its packages, which the review backoffice shows
+# as a diff against the previous approved version. Public images only.
+marketplaceAnalysisWorker:
+  enabled: false
+  replicas: 1
+  # Trivy decompresses and parses whole images, so it needs headroom.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  logLevel: info
+  jobTimeout: "10m"
+  maxRetries: 5
+  # Caps the compressed layers and, separately, the decompressed bytes.
+  maxImageBytes: 4294967296
+  maxFiles: 200000
+  # Holds one image tarball and Trivy's cache; above maxImageBytes.
+  workDirSizeLimit: 6Gi
+  # "from=to" pairs: a stored reference's registry host, and the one to pull
+  # from instead.
+  registryRewrites: []
+  # Registries the worker may reach over plain http.
+  insecureRegistries: []
+  # Registries that may resolve to a non-public address. Local development
+  # only: every other registry is refused one.
+  allowedPrivateRegistries: []
+  networkPolicy:
+    enabled: true
+    refusedCidrs:
+      - 10.0.0.0/8
+      - 100.64.0.0/10
+      - 127.0.0.0/8
+      - 169.254.0.0/16
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    # More egress rules, e.g. to a local registry.
+    extraEgress: []
 
 # Platform Public API: anonymous per-organization counts for the console's
 # /platform page (FUN-23).

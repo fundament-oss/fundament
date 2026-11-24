@@ -22,15 +22,19 @@ import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/segmented-control';
+import '@nldd/design-system/code-viewer';
+import { createPatch, OMIT_HEADERS } from 'diff';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
 import MarkdownComponent from '../markdown.component';
+import ImageAnalysisComponent from './image-analysis.component';
 import opensElsewhere from '../utils/opens-elsewhere';
 import AdminReviewService, {
   type PluginSubmission,
   type SubmissionHistoryEntry,
+  baseVersionFor,
 } from './admin-review.service';
 import ReviewQueueFiltersService from './review-queue-filters.service';
 import {
@@ -52,6 +56,18 @@ type DecisionMode = 'reject' | 'changes';
 // publisher wrote: a reviewer has to be able to check both.
 type DescriptionView = 'preview' | 'source';
 
+// The manifest's changes against the base version, or the whole file.
+type ManifestView = 'changes' | 'full';
+
+// What the manifest is compared with. Known only once the history is in, since
+// the base is picked from it.
+type ManifestBase =
+  | { state: 'loading' }
+  // No version of this plugin was approved before this one.
+  | { state: 'none' }
+  | { state: 'unavailable'; reason: string }
+  | { state: 'loaded'; version: string; manifest: string };
+
 // A history entry with what its row in the nldd-step-cell timeline needs.
 interface HistoryRow extends SubmissionHistoryEntry {
   // A round under the newer round of the same version is a minor step of it.
@@ -67,7 +83,7 @@ interface HistoryRow extends SubmissionHistoryEntry {
 // send it back with a note, or reject it with a reason and optional feedback.
 @Component({
   selector: 'app-submission-detail',
-  imports: [RouterLink, PluginIconComponent, MarkdownComponent],
+  imports: [RouterLink, PluginIconComponent, MarkdownComponent, ImageAnalysisComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './submission-detail.component.html',
@@ -103,6 +119,44 @@ export default class SubmissionDetailComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   descriptionView = signal<DescriptionView>('preview');
+
+  // The version this one is compared with; undefined until the history is in,
+  // null when there is none. The image analysis compares against it too.
+  baseVersion = signal<SubmissionHistoryEntry | null | undefined>(undefined);
+
+  manifestBase = signal<ManifestBase>({ state: 'loading' });
+
+  manifestView = signal<ManifestView>('changes');
+
+  manifestNote = computed(() => {
+    const base = this.manifestBase();
+    switch (base.state) {
+      case 'loading':
+        return 'Looking up the previous approved version...';
+      case 'none':
+        return 'No earlier version of this plugin was approved, so the full manifest is shown.';
+      case 'unavailable':
+        return base.reason;
+      case 'loaded':
+        return this.manifestDiff()
+          ? `Compared with ${base.version}, the most recent approved version before this one.`
+          : `Identical to the manifest of ${base.version}.`;
+      default:
+        throw new Error(`unhandled manifest base state: ${JSON.stringify(base satisfies never)}`);
+    }
+  });
+
+  // A unified diff of the manifest against the base, without file headers
+  // (nldd-code-viewer leaves those out anyway). Empty when there is no base or
+  // nothing changed, in which case the page shows the full manifest only.
+  manifestDiff = computed(() => {
+    const base = this.manifestBase();
+    const current = this.submission()?.manifest ?? '';
+    if (base.state !== 'loaded' || !current || base.manifest === current) return '';
+    return createPatch('definition.yaml', base.manifest, current, '', '', {
+      headerOptions: OMIT_HEADERS,
+    });
+  });
 
   // Every review round of this plugin, newest first. Loaded after the
   // submission and on its own: a page that fails to list the history still
@@ -184,6 +238,9 @@ export default class SubmissionDetailComponent implements OnInit {
     this.history.set(null);
     this.historyError.set(null);
     this.descriptionView.set('preview');
+    this.baseVersion.set(undefined);
+    this.manifestBase.set({ state: 'loading' });
+    this.manifestView.set('changes');
     this.showDecisionSheet.set(false);
 
     if (!id) {
@@ -210,11 +267,39 @@ export default class SubmissionDetailComponent implements OnInit {
     }
 
     if (!submission) return;
+    let history: SubmissionHistoryEntry[];
     try {
-      const history = await this.service.listPluginHistory(submission.pluginId);
-      if (isCurrent()) this.history.set(history);
+      history = await this.service.listPluginHistory(submission.pluginId);
+      if (!isCurrent()) return;
+      this.history.set(history);
     } catch (error) {
-      if (isCurrent()) this.historyError.set(connectErrorMessage(error));
+      if (!isCurrent()) return;
+      this.historyError.set(connectErrorMessage(error));
+      this.baseVersion.set(null);
+      this.manifestBase.set({
+        state: 'unavailable',
+        reason:
+          'The submission history could not be loaded, so there is no version to compare with.',
+      });
+      return;
+    }
+
+    const base = baseVersionFor(history, submission.pluginVersionId) ?? null;
+    this.baseVersion.set(base);
+    if (!base) {
+      this.manifestBase.set({ state: 'none' });
+      return;
+    }
+    try {
+      const manifest = await this.service.getVersionManifest(base.pluginVersionId);
+      if (isCurrent()) this.manifestBase.set({ state: 'loaded', version: base.version, manifest });
+    } catch (error) {
+      if (isCurrent()) {
+        this.manifestBase.set({
+          state: 'unavailable',
+          reason: `The manifest of ${base.version || 'the previous version'} could not be loaded: ${connectErrorMessage(error)}`,
+        });
+      }
     }
   }
 
@@ -230,6 +315,11 @@ export default class SubmissionDetailComponent implements OnInit {
   onDescriptionViewChange(event: Event) {
     const { value } = (event as CustomEvent<{ value: string }>).detail;
     this.descriptionView.set(value === 'source' ? 'source' : 'preview');
+  }
+
+  onManifestViewChange(event: Event) {
+    const { value } = (event as CustomEvent<{ value: string }>).detail;
+    this.manifestView.set(value === 'full' ? 'full' : 'changes');
   }
 
   async approve() {

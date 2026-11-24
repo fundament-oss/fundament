@@ -5,7 +5,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Plugin, PluginVersion, RejectionReason, Submission } from "./common_pb";
+import type { ChangeSummary, ImageAnalysis, ImageFile, ImagePackage, Plugin, PluginVersion, RejectionReason, Reviewer, Submission } from "./common_pb";
 import { file_admin_v1_common } from "./common_pb";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
@@ -17,7 +17,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file admin/v1/review.proto.
  */
 export const file_admin_v1_review: GenFile = /*@__PURE__*/
-  fileDesc("ChVhZG1pbi92MS9yZXZpZXcucHJvdG8SCGFkbWluLnYxIlQKFkxpc3RTdWJtaXNzaW9uc1JlcXVlc3QSOgoGc3RhdHVzGAogASgOMiAubWFya2V0cGxhY2UudjEuU3VibWlzc2lvblN0YXR1c0IIukgFggECEAEiRAoXTGlzdFN1Ym1pc3Npb25zUmVzcG9uc2USKQoLc3VibWlzc2lvbnMYCiADKAsyFC5hZG1pbi52MS5TdWJtaXNzaW9uIjcKFEdldFN1Ym1pc3Npb25SZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBIkEKFUdldFN1Ym1pc3Npb25SZXNwb25zZRIoCgpzdWJtaXNzaW9uGAogASgLMhQuYWRtaW4udjEuU3VibWlzc2lvbiJaChhBcHByb3ZlU3VibWlzc2lvblJlcXVlc3QSHwoNc3VibWlzc2lvbl9pZBgKIAEoCUIIukgFcgOwAQESHQoIZmVlZGJhY2sYFCABKAlCC7pICNgBAXIDGKAfIkUKGUFwcHJvdmVTdWJtaXNzaW9uUmVzcG9uc2USKAoKc3VibWlzc2lvbhgKIAEoCzIULmFkbWluLnYxLlN1Ym1pc3Npb24iVgoVUmVxdWVzdENoYW5nZXNSZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBEhwKCGZlZWRiYWNrGBQgASgJQgq6SAdyBRABGKAfIkIKFlJlcXVlc3RDaGFuZ2VzUmVzcG9uc2USKAoKc3VibWlzc2lvbhgKIAEoCzIULmFkbWluLnYxLlN1Ym1pc3Npb24ikAEKF1JlamVjdFN1Ym1pc3Npb25SZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBEjUKBnJlYXNvbhgUIAEoDjIZLmFkbWluLnYxLlJlamVjdGlvblJlYXNvbkIKukgHggEEEAEgABIdCghmZWVkYmFjaxgeIAEoCUILukgI2AEBcgMYoB8iRAoYUmVqZWN0U3VibWlzc2lvblJlc3BvbnNlEigKCnN1Ym1pc3Npb24YCiABKAsyFC5hZG1pbi52MS5TdWJtaXNzaW9uIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCI4ChNMaXN0UGx1Z2luc1Jlc3BvbnNlEiEKB3BsdWdpbnMYCiADKAsyEC5hZG1pbi52MS5QbHVnaW4iLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIjUKEUdldFBsdWdpblJlc3BvbnNlEiAKBnBsdWdpbhgKIAEoCzIQLmFkbWluLnYxLlBsdWdpbiI+ChdHZXRQbHVnaW5WZXJzaW9uUmVxdWVzdBIjChFwbHVnaW5fdmVyc2lvbl9pZBgKIAEoCUIIukgFcgOwAQEiRAoYR2V0UGx1Z2luVmVyc2lvblJlc3BvbnNlEigKB3ZlcnNpb24YCiABKAsyFy5hZG1pbi52MS5QbHVnaW5WZXJzaW9uIhcKFUxpc3RDYXRlZ29yaWVzUmVxdWVzdCJGChZMaXN0Q2F0ZWdvcmllc1Jlc3BvbnNlEiwKCmNhdGVnb3JpZXMYCiADKAsyGC5tYXJrZXRwbGFjZS52MS5DYXRlZ29yeSIXChVMaXN0UHVibGlzaGVyc1JlcXVlc3QiRwoWTGlzdFB1Ymxpc2hlcnNSZXNwb25zZRItCgpwdWJsaXNoZXJzGAogAygLMhkubWFya2V0cGxhY2UudjEuUHVibGlzaGVyMt4GCg1SZXZpZXdTZXJ2aWNlElYKD0xpc3RTdWJtaXNzaW9ucxIgLmFkbWluLnYxLkxpc3RTdWJtaXNzaW9uc1JlcXVlc3QaIS5hZG1pbi52MS5MaXN0U3VibWlzc2lvbnNSZXNwb25zZRJQCg1HZXRTdWJtaXNzaW9uEh4uYWRtaW4udjEuR2V0U3VibWlzc2lvblJlcXVlc3QaHy5hZG1pbi52MS5HZXRTdWJtaXNzaW9uUmVzcG9uc2USXAoRQXBwcm92ZVN1Ym1pc3Npb24SIi5hZG1pbi52MS5BcHByb3ZlU3VibWlzc2lvblJlcXVlc3QaIy5hZG1pbi52MS5BcHByb3ZlU3VibWlzc2lvblJlc3BvbnNlElMKDlJlcXVlc3RDaGFuZ2VzEh8uYWRtaW4udjEuUmVxdWVzdENoYW5nZXNSZXF1ZXN0GiAuYWRtaW4udjEuUmVxdWVzdENoYW5nZXNSZXNwb25zZRJZChBSZWplY3RTdWJtaXNzaW9uEiEuYWRtaW4udjEuUmVqZWN0U3VibWlzc2lvblJlcXVlc3QaIi5hZG1pbi52MS5SZWplY3RTdWJtaXNzaW9uUmVzcG9uc2USSgoLTGlzdFBsdWdpbnMSHC5hZG1pbi52MS5MaXN0UGx1Z2luc1JlcXVlc3QaHS5hZG1pbi52MS5MaXN0UGx1Z2luc1Jlc3BvbnNlEkQKCUdldFBsdWdpbhIaLmFkbWluLnYxLkdldFBsdWdpblJlcXVlc3QaGy5hZG1pbi52MS5HZXRQbHVnaW5SZXNwb25zZRJZChBHZXRQbHVnaW5WZXJzaW9uEiEuYWRtaW4udjEuR2V0UGx1Z2luVmVyc2lvblJlcXVlc3QaIi5hZG1pbi52MS5HZXRQbHVnaW5WZXJzaW9uUmVzcG9uc2USUwoOTGlzdENhdGVnb3JpZXMSHy5hZG1pbi52MS5MaXN0Q2F0ZWdvcmllc1JlcXVlc3QaIC5hZG1pbi52MS5MaXN0Q2F0ZWdvcmllc1Jlc3BvbnNlElMKDkxpc3RQdWJsaXNoZXJzEh8uYWRtaW4udjEuTGlzdFB1Ymxpc2hlcnNSZXF1ZXN0GiAuYWRtaW4udjEuTGlzdFB1Ymxpc2hlcnNSZXNwb25zZUJjWldnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFkbWluLWFwaS9wa2cvcHJvdG8vZ2VuL2FkbWluL3YxO2FkbWludjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_admin_v1_common, file_buf_validate_validate, file_google_protobuf_go_features, file_marketplace_v1_common]);
+  fileDesc("ChVhZG1pbi92MS9yZXZpZXcucHJvdG8SCGFkbWluLnYxIlQKFkxpc3RTdWJtaXNzaW9uc1JlcXVlc3QSOgoGc3RhdHVzGAogASgOMiAubWFya2V0cGxhY2UudjEuU3VibWlzc2lvblN0YXR1c0IIukgFggECEAEiRAoXTGlzdFN1Ym1pc3Npb25zUmVzcG9uc2USKQoLc3VibWlzc2lvbnMYCiADKAsyFC5hZG1pbi52MS5TdWJtaXNzaW9uIjcKFEdldFN1Ym1pc3Npb25SZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBIkEKFUdldFN1Ym1pc3Npb25SZXNwb25zZRIoCgpzdWJtaXNzaW9uGAogASgLMhQuYWRtaW4udjEuU3VibWlzc2lvbiJaChhBcHByb3ZlU3VibWlzc2lvblJlcXVlc3QSHwoNc3VibWlzc2lvbl9pZBgKIAEoCUIIukgFcgOwAQESHQoIZmVlZGJhY2sYFCABKAlCC7pICNgBAXIDGKAfIkUKGUFwcHJvdmVTdWJtaXNzaW9uUmVzcG9uc2USKAoKc3VibWlzc2lvbhgKIAEoCzIULmFkbWluLnYxLlN1Ym1pc3Npb24iVgoVUmVxdWVzdENoYW5nZXNSZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBEhwKCGZlZWRiYWNrGBQgASgJQgq6SAdyBRABGKAfIkIKFlJlcXVlc3RDaGFuZ2VzUmVzcG9uc2USKAoKc3VibWlzc2lvbhgKIAEoCzIULmFkbWluLnYxLlN1Ym1pc3Npb24ikAEKF1JlamVjdFN1Ym1pc3Npb25SZXF1ZXN0Eh8KDXN1Ym1pc3Npb25faWQYCiABKAlCCLpIBXIDsAEBEjUKBnJlYXNvbhgUIAEoDjIZLmFkbWluLnYxLlJlamVjdGlvblJlYXNvbkIKukgHggEEEAEgABIdCghmZWVkYmFjaxgeIAEoCUILukgI2AEBcgMYoB8iRAoYUmVqZWN0U3VibWlzc2lvblJlc3BvbnNlEigKCnN1Ym1pc3Npb24YCiABKAsyFC5hZG1pbi52MS5TdWJtaXNzaW9uIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCI4ChNMaXN0UGx1Z2luc1Jlc3BvbnNlEiEKB3BsdWdpbnMYCiADKAsyEC5hZG1pbi52MS5QbHVnaW4iLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIjUKEUdldFBsdWdpblJlc3BvbnNlEiAKBnBsdWdpbhgKIAEoCzIQLmFkbWluLnYxLlBsdWdpbiI+ChdHZXRQbHVnaW5WZXJzaW9uUmVxdWVzdBIjChFwbHVnaW5fdmVyc2lvbl9pZBgKIAEoCUIIukgFcgOwAQEiRAoYR2V0UGx1Z2luVmVyc2lvblJlc3BvbnNlEigKB3ZlcnNpb24YCiABKAsyFy5hZG1pbi52MS5QbHVnaW5WZXJzaW9uIhcKFUxpc3RDYXRlZ29yaWVzUmVxdWVzdCJGChZMaXN0Q2F0ZWdvcmllc1Jlc3BvbnNlEiwKCmNhdGVnb3JpZXMYCiADKAsyGC5tYXJrZXRwbGFjZS52MS5DYXRlZ29yeSIXChVMaXN0UHVibGlzaGVyc1JlcXVlc3QiRwoWTGlzdFB1Ymxpc2hlcnNSZXNwb25zZRItCgpwdWJsaXNoZXJzGAogAygLMhkubWFya2V0cGxhY2UudjEuUHVibGlzaGVyIhYKFExpc3RSZXZpZXdlcnNSZXF1ZXN0Ij4KFUxpc3RSZXZpZXdlcnNSZXNwb25zZRIlCglyZXZpZXdlcnMYCiADKAsyEi5hZG1pbi52MS5SZXZpZXdlciLuAQoXR2V0SW1hZ2VBbmFseXNpc1JlcXVlc3QSIwoRcGx1Z2luX3ZlcnNpb25faWQYCiABKAlCCLpIBXIDsAEBEisKFmJhc2VfcGx1Z2luX3ZlcnNpb25faWQYFCABKAlCC7pICNgBAXIDsAEBEhoKEmZpbGVzX2NoYW5nZXNfb25seRgeIAEoCBIdCgtmaWxlc19xdWVyeRgoIAEoCUIIukgFcgMYyAESIwoPZmlsZXNfcGFnZV9zaXplGDIgASgFQgq6SAcaBRjQDygAEiEKEGZpbGVzX3BhZ2VfdG9rZW4YPCABKAlCB7pIBHICGBQi5AIKGEdldEltYWdlQW5hbHlzaXNSZXNwb25zZRIpCghhbmFseXNpcxgKIAEoCzIXLmFkbWluLnYxLkltYWdlQW5hbHlzaXMSJQoEYmFzZRgUIAEoCzIXLmFkbWluLnYxLkltYWdlQW5hbHlzaXMSEAoIY29tcGFyZWQYHiABKAgSKAoIcGFja2FnZXMYKCADKAsyFi5hZG1pbi52MS5JbWFnZVBhY2thZ2USIgoFZmlsZXMYMiADKAsyEy5hZG1pbi52MS5JbWFnZUZpbGUSHQoVbmV4dF9maWxlc19wYWdlX3Rva2VuGDwgASgJEjAKD3BhY2thZ2Vfc3VtbWFyeRhGIAEoCzIXLmFkbWluLnYxLkNoYW5nZVN1bW1hcnkSLQoMZmlsZV9zdW1tYXJ5GFAgASgLMhcuYWRtaW4udjEuQ2hhbmdlU3VtbWFyeRIWCg5maWxlc19tYXRjaGluZxhaIAEoBSI1Cg5HZXRTYm9tUmVxdWVzdBIjChFwbHVnaW5fdmVyc2lvbl9pZBgKIAEoCUIIukgFcgOwAQEiHwoPR2V0U2JvbVJlc3BvbnNlEgwKBHNib20YCiABKAwyywgKDVJldmlld1NlcnZpY2USVgoPTGlzdFN1Ym1pc3Npb25zEiAuYWRtaW4udjEuTGlzdFN1Ym1pc3Npb25zUmVxdWVzdBohLmFkbWluLnYxLkxpc3RTdWJtaXNzaW9uc1Jlc3BvbnNlElAKDUdldFN1Ym1pc3Npb24SHi5hZG1pbi52MS5HZXRTdWJtaXNzaW9uUmVxdWVzdBofLmFkbWluLnYxLkdldFN1Ym1pc3Npb25SZXNwb25zZRJcChFBcHByb3ZlU3VibWlzc2lvbhIiLmFkbWluLnYxLkFwcHJvdmVTdWJtaXNzaW9uUmVxdWVzdBojLmFkbWluLnYxLkFwcHJvdmVTdWJtaXNzaW9uUmVzcG9uc2USUwoOUmVxdWVzdENoYW5nZXMSHy5hZG1pbi52MS5SZXF1ZXN0Q2hhbmdlc1JlcXVlc3QaIC5hZG1pbi52MS5SZXF1ZXN0Q2hhbmdlc1Jlc3BvbnNlElkKEFJlamVjdFN1Ym1pc3Npb24SIS5hZG1pbi52MS5SZWplY3RTdWJtaXNzaW9uUmVxdWVzdBoiLmFkbWluLnYxLlJlamVjdFN1Ym1pc3Npb25SZXNwb25zZRJKCgtMaXN0UGx1Z2lucxIcLmFkbWluLnYxLkxpc3RQbHVnaW5zUmVxdWVzdBodLmFkbWluLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USRAoJR2V0UGx1Z2luEhouYWRtaW4udjEuR2V0UGx1Z2luUmVxdWVzdBobLmFkbWluLnYxLkdldFBsdWdpblJlc3BvbnNlElkKEEdldFBsdWdpblZlcnNpb24SIS5hZG1pbi52MS5HZXRQbHVnaW5WZXJzaW9uUmVxdWVzdBoiLmFkbWluLnYxLkdldFBsdWdpblZlcnNpb25SZXNwb25zZRJTCg5MaXN0Q2F0ZWdvcmllcxIfLmFkbWluLnYxLkxpc3RDYXRlZ29yaWVzUmVxdWVzdBogLmFkbWluLnYxLkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USUwoOTGlzdFB1Ymxpc2hlcnMSHy5hZG1pbi52MS5MaXN0UHVibGlzaGVyc1JlcXVlc3QaIC5hZG1pbi52MS5MaXN0UHVibGlzaGVyc1Jlc3BvbnNlElAKDUxpc3RSZXZpZXdlcnMSHi5hZG1pbi52MS5MaXN0UmV2aWV3ZXJzUmVxdWVzdBofLmFkbWluLnYxLkxpc3RSZXZpZXdlcnNSZXNwb25zZRJZChBHZXRJbWFnZUFuYWx5c2lzEiEuYWRtaW4udjEuR2V0SW1hZ2VBbmFseXNpc1JlcXVlc3QaIi5hZG1pbi52MS5HZXRJbWFnZUFuYWx5c2lzUmVzcG9uc2USPgoHR2V0U2JvbRIYLmFkbWluLnYxLkdldFNib21SZXF1ZXN0GhkuYWRtaW4udjEuR2V0U2JvbVJlc3BvbnNlQmNaV2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvbWFya2V0cGxhY2UtYWRtaW4tYXBpL3BrZy9wcm90by9nZW4vYWRtaW4vdjE7YWRtaW52MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_admin_v1_common, file_buf_validate_validate, file_google_protobuf_go_features, file_marketplace_v1_common]);
 
 /**
  * @generated from message admin.v1.ListSubmissionsRequest
@@ -376,6 +376,193 @@ export const ListPublishersResponseSchema: GenMessage<ListPublishersResponse> = 
   messageDesc(file_admin_v1_review, 19);
 
 /**
+ * @generated from message admin.v1.ListReviewersRequest
+ */
+export type ListReviewersRequest = Message<"admin.v1.ListReviewersRequest"> & {
+};
+
+/**
+ * Describes the message admin.v1.ListReviewersRequest.
+ * Use `create(ListReviewersRequestSchema)` to create a new message.
+ */
+export const ListReviewersRequestSchema: GenMessage<ListReviewersRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 20);
+
+/**
+ * @generated from message admin.v1.ListReviewersResponse
+ */
+export type ListReviewersResponse = Message<"admin.v1.ListReviewersResponse"> & {
+  /**
+   * @generated from field: repeated admin.v1.Reviewer reviewers = 10;
+   */
+  reviewers: Reviewer[];
+};
+
+/**
+ * Describes the message admin.v1.ListReviewersResponse.
+ * Use `create(ListReviewersResponseSchema)` to create a new message.
+ */
+export const ListReviewersResponseSchema: GenMessage<ListReviewersResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 21);
+
+/**
+ * @generated from message admin.v1.GetImageAnalysisRequest
+ */
+export type GetImageAnalysisRequest = Message<"admin.v1.GetImageAnalysisRequest"> & {
+  /**
+   * @generated from field: string plugin_version_id = 10;
+   */
+  pluginVersionId: string;
+
+  /**
+   * The version to compare with. Empty lists the version on its own, with
+   * every entry's change UNSPECIFIED.
+   *
+   * @generated from field: string base_plugin_version_id = 20;
+   */
+  basePluginVersionId: string;
+
+  /**
+   * Leave out UNCHANGED files. Packages are always served whole: they run to
+   * a few thousand at most, and the backoffice filters them itself.
+   *
+   * @generated from field: bool files_changes_only = 30;
+   */
+  filesChangesOnly: boolean;
+
+  /**
+   * Case-insensitive substring of a file path.
+   *
+   * @generated from field: string files_query = 40;
+   */
+  filesQuery: string;
+
+  /**
+   * Files per page; 0 means 500.
+   *
+   * @generated from field: int32 files_page_size = 50;
+   */
+  filesPageSize: number;
+
+  /**
+   * @generated from field: string files_page_token = 60;
+   */
+  filesPageToken: string;
+};
+
+/**
+ * Describes the message admin.v1.GetImageAnalysisRequest.
+ * Use `create(GetImageAnalysisRequestSchema)` to create a new message.
+ */
+export const GetImageAnalysisRequestSchema: GenMessage<GetImageAnalysisRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 22);
+
+/**
+ * @generated from message admin.v1.GetImageAnalysisResponse
+ */
+export type GetImageAnalysisResponse = Message<"admin.v1.GetImageAnalysisResponse"> & {
+  /**
+   * @generated from field: admin.v1.ImageAnalysis analysis = 10;
+   */
+  analysis?: ImageAnalysis | undefined;
+
+  /**
+   * The base version's analysis. Absent when no base was asked for.
+   *
+   * @generated from field: admin.v1.ImageAnalysis base = 20;
+   */
+  base?: ImageAnalysis | undefined;
+
+  /**
+   * Whether entries carry a change: both analyses completed.
+   *
+   * @generated from field: bool compared = 30;
+   */
+  compared: boolean;
+
+  /**
+   * Every package, sorted by name.
+   *
+   * @generated from field: repeated admin.v1.ImagePackage packages = 40;
+   */
+  packages: ImagePackage[];
+
+  /**
+   * One page, after files_changes_only and files_query, sorted by path.
+   *
+   * @generated from field: repeated admin.v1.ImageFile files = 50;
+   */
+  files: ImageFile[];
+
+  /**
+   * @generated from field: string next_files_page_token = 60;
+   */
+  nextFilesPageToken: string;
+
+  /**
+   * Over the whole lists, before any filtering.
+   *
+   * @generated from field: admin.v1.ChangeSummary package_summary = 70;
+   */
+  packageSummary?: ChangeSummary | undefined;
+
+  /**
+   * @generated from field: admin.v1.ChangeSummary file_summary = 80;
+   */
+  fileSummary?: ChangeSummary | undefined;
+
+  /**
+   * How many files pass files_changes_only and files_query, over all pages.
+   *
+   * @generated from field: int32 files_matching = 90;
+   */
+  filesMatching: number;
+};
+
+/**
+ * Describes the message admin.v1.GetImageAnalysisResponse.
+ * Use `create(GetImageAnalysisResponseSchema)` to create a new message.
+ */
+export const GetImageAnalysisResponseSchema: GenMessage<GetImageAnalysisResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 23);
+
+/**
+ * @generated from message admin.v1.GetSbomRequest
+ */
+export type GetSbomRequest = Message<"admin.v1.GetSbomRequest"> & {
+  /**
+   * @generated from field: string plugin_version_id = 10;
+   */
+  pluginVersionId: string;
+};
+
+/**
+ * Describes the message admin.v1.GetSbomRequest.
+ * Use `create(GetSbomRequestSchema)` to create a new message.
+ */
+export const GetSbomRequestSchema: GenMessage<GetSbomRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 24);
+
+/**
+ * @generated from message admin.v1.GetSbomResponse
+ */
+export type GetSbomResponse = Message<"admin.v1.GetSbomResponse"> & {
+  /**
+   * CycloneDX JSON.
+   *
+   * @generated from field: bytes sbom = 10;
+   */
+  sbom: Uint8Array;
+};
+
+/**
+ * Describes the message admin.v1.GetSbomResponse.
+ * Use `create(GetSbomResponseSchema)` to create a new message.
+ */
+export const GetSbomResponseSchema: GenMessage<GetSbomResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_review, 25);
+
+/**
  * ReviewService is the Fundament backoffice API. It acts on submissions from
  * every publishing organization, so the authz question is "is a Fundament
  * reviewer", not "owns this plugin". Deployed separately from the developer API
@@ -486,6 +673,40 @@ export const ReviewService: GenService<{
     methodKind: "unary";
     input: typeof ListPublishersRequestSchema;
     output: typeof ListPublishersResponseSchema;
+  },
+  /**
+   * Fundament staff who decided a submission, so a Submission's
+   * reviewer_user_id resolves to a name. Includes staff who have since left:
+   * they still made the decision.
+   *
+   * @generated from rpc admin.v1.ReviewService.ListReviewers
+   */
+  listReviewers: {
+    methodKind: "unary";
+    input: typeof ListReviewersRequestSchema;
+    output: typeof ListReviewersResponseSchema;
+  },
+  /**
+   * What the version's container image contains, packages and files, as a
+   * diff against a base version (FUN-24). The diff, its filtering and the
+   * paging of the file list happen here: a file list runs to 200k entries.
+   *
+   * @generated from rpc admin.v1.ReviewService.GetImageAnalysis
+   */
+  getImageAnalysis: {
+    methodKind: "unary";
+    input: typeof GetImageAnalysisRequestSchema;
+    output: typeof GetImageAnalysisResponseSchema;
+  },
+  /**
+   * The CycloneDX SBOM the analysis produced, verbatim, for download.
+   *
+   * @generated from rpc admin.v1.ReviewService.GetSbom
+   */
+  getSbom: {
+    methodKind: "unary";
+    input: typeof GetSbomRequestSchema;
+    output: typeof GetSbomResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_admin_v1_review, 0);

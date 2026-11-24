@@ -149,6 +149,13 @@ build:
         buildArgs:
           BINARY: platform-admin-api
 
+    # Last, so the hotreload profile's patches by index stay valid. It has no
+    # hotreload image: it ships the trivy binary, which air's image lacks.
+    - image: marketplace-analysis-worker
+      context: .
+      docker:
+        dockerfile: marketplace-analysis-worker/Dockerfile
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -179,6 +186,7 @@ deploy:
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
           images.marketplaceRegistryApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_api}}"
           images.marketplaceAdminApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_api}}"
+          images.marketplaceAnalysisWorker: "{{.IMAGE_FULLY_QUALIFIED_marketplace_analysis_worker}}"
           images.marketplaceRegistryFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_frontend}}"
           images.marketplaceAdminFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_frontend}}"
           images.platformPublicApi: "{{.IMAGE_FULLY_QUALIFIED_platform_public_api}}"

@@ -280,6 +280,17 @@ const (
 	PluginDefinitionStatus_Withdrawn        PluginDefinitionStatus = "withdrawn"
 )
 
+// PluginImageAnalyseStatus represents valid values for appstore.plugin_image_analyses.status.
+type PluginImageAnalyseStatus string
+
+const (
+	PluginImageAnalyseStatus_Pending   PluginImageAnalyseStatus = "pending"
+	PluginImageAnalyseStatus_Running   PluginImageAnalyseStatus = "running"
+	PluginImageAnalyseStatus_Retrying  PluginImageAnalyseStatus = "retrying"
+	PluginImageAnalyseStatus_Completed PluginImageAnalyseStatus = "completed"
+	PluginImageAnalyseStatus_Failed    PluginImageAnalyseStatus = "failed"
+)
+
 // PluginLabelName represents valid values for appstore.plugin_labels.name.
 type PluginLabelName string
 

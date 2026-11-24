@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
@@ -92,6 +93,28 @@ func TestAdminRoleCannotReadUsers(t *testing.T) {
 	var count int
 	err := env.servicePool.QueryRow(context.Background(),
 		`SELECT count(*) FROM tenant.users`).Scan(&count)
+	require.Error(t, err)
+	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
+}
+
+// Reviewers resolve to a name through dcim.users, but the role reads only the
+// id and name columns: contact details stay out of the backoffice.
+func TestAdminRoleReadsReviewerNamesOnly(t *testing.T) {
+	env := newTestEnv(t)
+	reviewerID := uuid.New()
+	_, err := env.superPool.Exec(context.Background(),
+		`INSERT INTO dcim.users (id, name, email) VALUES ($1, 'Alice', 'alice@fundament.test')`, reviewerID)
+	require.NoError(t, err)
+
+	var name string
+	err = env.servicePool.QueryRow(context.Background(),
+		`SELECT name FROM dcim.users WHERE id = $1`, reviewerID).Scan(&name)
+	require.NoError(t, err)
+	assert.Equal(t, "Alice", name)
+
+	var email string
+	err = env.servicePool.QueryRow(context.Background(),
+		`SELECT email FROM dcim.users WHERE id = $1`, reviewerID).Scan(&email)
 	require.Error(t, err)
 	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
 }

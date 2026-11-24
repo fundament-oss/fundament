@@ -76,6 +76,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_marketplace_analysis_worker"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -1015,6 +1019,37 @@ END;]]> </definition>
 	</return-type>
 	<definition> <![CDATA[BEGIN
     PERFORM pg_notify('cluster_outbox', '');
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
+<function name="plugin_image_analysis_enqueue"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<comment> <![CDATA[Queues the image analysis of a submitted version. SECURITY DEFINER because the registry role inserts submissions and holds no grant on the analysis table. A resubmission retries an analysis that failed, for example once the publisher made the image public.]]> </comment>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<configuration name="search_path" value="pg_catalog"/>
+	<definition> <![CDATA[BEGIN
+    INSERT INTO appstore.plugin_image_analyses (plugin_definition_id)
+    VALUES (NEW.plugin_definition_id)
+    ON CONFLICT ON CONSTRAINT plugin_image_analyses_uq_plugin_definition_id DO UPDATE
+    SET status = 'pending',
+        status_info = NULL,
+        retries = 0,
+        retry_after = NULL
+    WHERE appstore.plugin_image_analyses.status = 'failed';
+    PERFORM pg_notify('plugin_image_analysis', '');
     RETURN NEW;
 END;]]> </definition>
 </function>
@@ -1993,7 +2028,7 @@ END;]]> </definition>
 	</column>
 	<column name="reviewer_user_id">
 		<type name="uuid" length="0"/>
-		<comment> <![CDATA[Which store reviewers authenticate against is undecided, so this carries no foreign key.]]> </comment>
+		<comment> <![CDATA[The deciding Fundament staff member, a dcim.users id. No foreign key: the reviewer store was undecided when the first rows were written.]]> </comment>
 	</column>
 	<column name="rejection_reason">
 		<type name="text" length="0"/>
@@ -2044,6 +2079,89 @@ END;]]> </definition>
 		<idxelement use-sorting="false">
 			<column name="plugin_definition_id"/>
 		</idxelement>
+</index>
+
+<table name="plugin_image_analyses" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="18" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<comment> <![CDATA[What a plugin version's container image contains: its packages (from a Trivy SBOM) and its files, shown to the reviewer as a diff against the version before it (FUN-24). Doubles as the queue of marketplace-analysis-worker, one row per version.]]> </comment>
+	<position x="1980" y="2200"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_definition_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="status" not-null="true" default-value="'pending'">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status_info">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Why the last attempt failed, worded for the reviewer.]]> </comment>
+	</column>
+	<column name="retries" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="retry_after">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[For a retrying row, when it may be claimed again. For a running row, when its lease expires: a worker that died mid-analysis leaves the row claimable again after that.]]> </comment>
+	</column>
+	<column name="image_digest" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Digest of the platform manifest that was analyzed. Differs from the reference's digest when that points at an index.]]> </comment>
+	</column>
+	<column name="platform" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+	</column>
+	<column name="platforms" not-null="true" default-value="'[]'">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[Every platform the image index offers, so the reviewer sees which one was analyzed. Empty for a single-platform image.]]> </comment>
+	</column>
+	<column name="packages" not-null="true" default-value="'[]'">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[Packages from the SBOM, normalized to {purl, name, version, type, licenses}.]]> </comment>
+	</column>
+	<column name="files" not-null="true" default-value="'[]'">
+		<type name="jsonb" length="0"/>
+		<comment> <![CDATA[The flattened filesystem as {path, size, mode, sha256}, sorted by path and capped (see files_truncated).]]> </comment>
+	</column>
+	<column name="files_truncated" not-null="true" default-value="false">
+		<type name="boolean" length="0"/>
+	</column>
+	<column name="sbom">
+		<type name="bytea" length="0"/>
+		<comment> <![CDATA[The CycloneDX JSON Trivy produced, verbatim, for download.]]> </comment>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="analyzed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="plugin_image_analyses_pk" type="pk-constr" table="appstore.plugin_image_analyses">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugin_image_analyses_uq_plugin_definition_id" type="uq-constr" nulls-not-distinct="true" table="appstore.plugin_image_analyses">
+		<columns names="plugin_definition_id,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugin_image_analyses_ck_status" type="ck-constr" table="appstore.plugin_image_analyses">
+			<expression> <![CDATA[status IN ('pending', 'running', 'retrying', 'completed', 'failed')]]> </expression>
+	</constraint>
+	<constraint name="plugin_image_analyses_ck_analyzed" type="ck-constr" table="appstore.plugin_image_analyses">
+			<expression> <![CDATA[(status = 'completed') = (analyzed IS NOT NULL)]]> </expression>
+	</constraint>
+</table>
+
+<index name="plugin_image_analyses_idx_claimable" table="appstore.plugin_image_analyses"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="created"/>
+		</idxelement>
+	<predicate> <![CDATA[status IN ('pending', 'running', 'retrying') AND deleted IS NULL]]> </predicate>
 </index>
 
 <table name="plugin_allowed_organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
@@ -2317,6 +2435,19 @@ END;]]> </definition>
 <policy name="submissions_update_admin" table="appstore.submissions" command="UPDATE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_image_analyses_select_admin" table="appstore.plugin_image_analyses" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_image_analyses_all_analysis_worker" table="appstore.plugin_image_analyses" command="ALL" permissive="true">	<roles names="fun_marketplace_analysis_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_select_analysis_worker" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_analysis_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
 <policy name="plugins_tags_select_admin" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
@@ -3214,6 +3345,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.project_members">
 		<function signature="tenant.cluster_outbox_project_member_trigger()"/>
+</trigger>
+
+<trigger name="plugin_image_analysis_enqueue" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
+	 table="appstore.submissions">
+		<function signature="appstore.plugin_image_analysis_enqueue()"/>
 </trigger>
 
 <table name="idempotency_keys" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="18" z-value="0">
@@ -4667,6 +4804,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="plugin_image_analyses_fk_plugin_definition" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugin_definitions" table="appstore.plugin_image_analyses">
+	<columns names="plugin_definition_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="plugin_allowed_organizations_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugin_allowed_organizations">
 	<columns names="plugin_id" ref-type="src-columns"/>
@@ -5196,6 +5339,12 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="appstore.submissions"
 	 dst-table="appstore.plugin_definitions" reference-fk="submissions_fk_plugin_definition"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugin_image_analyses_plugin_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="appstore.plugin_image_analyses"
+	 dst-table="appstore.plugin_definitions" reference-fk="plugin_image_analyses_fk_plugin_definition"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_submissions_users" type="relfk" layers="0"
@@ -6470,6 +6619,21 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 </permission>
 <permission>
 	<object name="dcim" type="schema"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="id" parent="dcim.users" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="name" parent="dcim.users" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="dcim" type="schema"/>
 	<roles names="fun_dcim_authn_api"/>
 	<privileges usage="true"/>
 </permission>
@@ -6670,6 +6834,41 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="tenant.worker_heartbeats" type="table"/>
 	<roles names="fun_platform_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore" type="schema"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="id" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="image" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="status" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="deleted" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_image_analyses" type="table"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_image_analyses" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>

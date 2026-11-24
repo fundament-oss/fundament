@@ -44,9 +44,9 @@ message Submission {
 
   // Set once a decision is made.
   google.protobuf.Timestamp reviewed = 80;
-  // The deciding Fundament staff member. Which store they come from is
-  // undecided — tenant.users or dcim.users — so do not assume this shares a
-  // namespace with submitter_user_id.
+  // The deciding Fundament staff member (dcim.users), resolved through this
+  // service's ListReviewers. Not the same namespace as submitter_user_id,
+  // which is a tenant.users id.
   string reviewer_user_id = 90;
   RejectionReason rejection_reason = 100;
   string feedback = 110;
@@ -103,4 +103,86 @@ message PluginVersion {
   string manifest_error = 130;
   // Menu icon data: URIs, sorted by digest.
   repeated string menu_icons = 140;
+  // The definition.yaml as stored, not a re-serialization: definition_hash is
+  // the sha256 of exactly these bytes. Carried so the reviewer can read, and
+  // diff, what the version declares.
+  bytes manifest = 150;
+}
+
+// A Fundament staff member who decided a submission (dcim.users). Name only:
+// the backoffice shows who decided, and has no use for contact details.
+message Reviewer {
+  string id = 10;
+  string name = 20;
+}
+
+enum ImageAnalysisStatus {
+  // No analysis exists for the version (yet).
+  IMAGE_ANALYSIS_STATUS_UNSPECIFIED = 0;
+  IMAGE_ANALYSIS_STATUS_PENDING = 1;
+  IMAGE_ANALYSIS_STATUS_RUNNING = 2;
+  // An attempt failed and another is scheduled; status_info says why.
+  IMAGE_ANALYSIS_STATUS_RETRYING = 3;
+  IMAGE_ANALYSIS_STATUS_COMPLETED = 4;
+  // Retrying will not help; status_info says why. A new submission round
+  // queues the analysis again.
+  IMAGE_ANALYSIS_STATUS_FAILED = 5;
+}
+
+// How an entry differs from the base version.
+enum Change {
+  // Not compared: there is no base, or one of the two analyses is not done.
+  CHANGE_UNSPECIFIED = 0;
+  CHANGE_UNCHANGED = 1;
+  CHANGE_ADDED = 2;
+  CHANGE_REMOVED = 3;
+  // A package at another version, or a file with other contents, mode or
+  // link target.
+  CHANGE_CHANGED = 4;
+}
+
+// One version's image analysis, without its lists.
+message ImageAnalysis {
+  string plugin_version_id = 10;
+  ImageAnalysisStatus status = 20;
+  string status_info = 30;
+  google.protobuf.Timestamp analyzed = 40;
+  // The platform manifest that was analyzed.
+  string image_digest = 50;
+  string platform = 60;
+  // Every platform the image index offers; empty for a single-platform image.
+  repeated string platforms = 70;
+  // The file list stopped at its cap, so a file diff may report files as
+  // added or removed that only fell past the cap.
+  bool files_truncated = 80;
+}
+
+message ChangeSummary {
+  int32 unchanged = 10;
+  int32 added = 20;
+  int32 removed = 30;
+  int32 changed = 40;
+}
+
+message ImagePackage {
+  string name = 10;
+  // Empty for a REMOVED package, which carries base_version instead.
+  string version = 20;
+  // The ecosystem, from the purl: deb, apk, golang, npm, ...
+  string type = 30;
+  string purl = 40;
+  repeated string licenses = 50;
+  Change change = 60;
+  // Set for CHANGED and REMOVED.
+  string base_version = 70;
+}
+
+message ImageFile {
+  string path = 10;
+  int64 size = 20;
+  // Permission bits, e.g. 0755.
+  uint32 mode = 30;
+  // Symlink or hard link target; empty for a regular file.
+  string link = 40;
+  Change change = 50;
 }

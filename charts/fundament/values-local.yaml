@@ -370,6 +370,33 @@ marketplaceAdminApi:
     hostnames:
       - marketplace-admin-api.fundament.localhost
 
+# Plugin image analysis (FUN-24). `just plugins publish` records images as
+# localhost:5112/..., which only containerd's k3d mirror rewrites; the worker
+# pulls them from the sandbox registry instead, once `just plugins
+# registry-to-fundament` has joined it to this cluster's network. That
+# registry is plain http on a private address, so it is allowlisted here, and
+# only here.
+marketplaceAnalysisWorker:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  resources: {}
+  registryRewrites:
+    - localhost:5112=plugin-registry.localhost:5000
+  insecureRegistries:
+    - plugin-registry.localhost:5000
+  allowedPrivateRegistries:
+    - plugin-registry.localhost:5000
+  networkPolicy:
+    extraEgress:
+      # The k3d-fundament docker network (FUNDAMENT_K3D_SUBNET).
+      - to:
+          - ipBlock:
+              cidr: 172.19.0.0/16
+        ports:
+          - protocol: TCP
+            port: 5000
+
 # Anonymous platform overview the console's /platform page reads (FUN-23).
 platformPublicApi:
   enabled: true

@@ -46,6 +46,7 @@ const history: SubmissionHistoryEntry[] = [
     version: '1.0.0',
     status: 'pending',
     submittedAt: '2026-11-04',
+    submittedMs: Date.parse('2026-11-04'),
   },
   {
     id: 's2',
@@ -53,6 +54,7 @@ const history: SubmissionHistoryEntry[] = [
     version: '0.9.0',
     status: 'approved',
     submittedAt: '2026-10-02',
+    submittedMs: Date.parse('2026-10-02'),
     reviewedAt: '2026-10-03',
   },
   {
@@ -61,6 +63,7 @@ const history: SubmissionHistoryEntry[] = [
     version: '0.9.0',
     status: 'changes_requested',
     submittedAt: '2026-09-28',
+    submittedMs: Date.parse('2026-09-28'),
     reviewedAt: '2026-09-29',
   },
 ];
@@ -75,6 +78,7 @@ async function render(
   value: PluginSubmission,
   rounds: SubmissionHistoryEntry[] = history,
   queueParams: Params = {},
+  manifests: Record<string, string> = {},
 ): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     providers: [
@@ -85,6 +89,9 @@ async function render(
         useValue: {
           getSubmission: async () => value,
           listPluginHistory: async () => rounds,
+          getVersionManifest: async (pluginVersionId: string) => manifests[pluginVersionId] ?? '',
+          // The image analysis has its own spec; here it only has to not fail.
+          getImageAnalysis: () => new Promise(() => {}),
           approve: async () => {},
         },
       },
@@ -94,7 +101,11 @@ async function render(
   const fixture = TestBed.createComponent(DetailComponent);
   fixture.detectChanges();
   await fixture.whenStable();
-  // The history is fetched once the submission is in: let both settle.
+  // The history is fetched once the submission is in, and the base manifest
+  // once the history is: let all three settle.
+  await new Promise((resolve) => {
+    setTimeout(resolve);
+  });
   await new Promise((resolve) => {
     setTimeout(resolve);
   });
@@ -236,5 +247,62 @@ describe('SubmissionDetailComponent', () => {
     expect(steps.map((step) => step.level)).toEqual(['major', 'major', 'minor']);
     expect(steps.map((step) => step.position)).toEqual(['first', 'between', 'last']);
     expect(steps.map((step) => step.status)).toEqual(['current', 'past', 'past']);
+  });
+
+  describe('manifest', () => {
+    const OLD = 'spec:\n  image: example@sha256:aaa\n';
+    const NEW = 'spec:\n  image: example@sha256:bbb\n';
+
+    function viewer(root: HTMLElement) {
+      return root.querySelector('nldd-code-viewer');
+    }
+
+    function note(root: HTMLElement) {
+      return root.querySelector('[data-testid="manifest-note"]')?.textContent?.trim();
+    }
+
+    it('shows the changes against the version approved before it', async () => {
+      const root = await render({ ...submission, manifest: NEW }, history, {}, { v2: OLD });
+
+      expect(note(root)).toBe(
+        'Compared with 0.9.0, the most recent approved version before this one.',
+      );
+      expect(viewer(root)?.hasAttribute('diff')).toBe(true);
+      expect(viewer(root)?.textContent).toContain('-  image: example@sha256:aaa');
+      expect(viewer(root)?.textContent).toContain('+  image: example@sha256:bbb');
+    });
+
+    it('switches to the full manifest', async () => {
+      const root = await render({ ...submission, manifest: NEW }, history, {}, { v2: OLD });
+      const control = Array.from(root.querySelectorAll('nldd-segmented-control')).find(
+        (element) => element.getAttribute('accessible-label') === 'Show the manifest as',
+      );
+
+      control?.dispatchEvent(new CustomEvent('change', { detail: { value: 'full' } }));
+      await new Promise((resolve) => {
+        setTimeout(resolve);
+      });
+
+      expect(viewer(root)?.hasAttribute('diff')).toBe(false);
+      expect(viewer(root)?.textContent).toBe(NEW);
+    });
+
+    it('shows the full manifest when no earlier version was approved', async () => {
+      const firstOnly = history.filter((entry) => entry.pluginVersionId === 'v3');
+      const root = await render({ ...submission, manifest: NEW }, firstOnly);
+
+      expect(note(root)).toBe(
+        'No earlier version of this plugin was approved, so the full manifest is shown.',
+      );
+      expect(viewer(root)?.hasAttribute('diff')).toBe(false);
+      expect(viewer(root)?.textContent).toBe(NEW);
+    });
+
+    it('says so when the manifest did not change', async () => {
+      const root = await render({ ...submission, manifest: OLD }, history, {}, { v2: OLD });
+
+      expect(note(root)).toBe('Identical to the manifest of 0.9.0.');
+      expect(viewer(root)?.hasAttribute('diff')).toBe(false);
+    });
   });
 });

@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -866,6 +866,38 @@ $function$;
 ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: appstore.plugin_image_analysis_enqueue | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS appstore.plugin_image_analysis_enqueue() CASCADE;
+CREATE OR REPLACE FUNCTION appstore.plugin_image_analysis_enqueue ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	SET search_path = pg_catalog
+	AS 
+$function$
+BEGIN
+    INSERT INTO appstore.plugin_image_analyses (plugin_definition_id)
+    VALUES (NEW.plugin_definition_id)
+    ON CONFLICT ON CONSTRAINT plugin_image_analyses_uq_plugin_definition_id DO UPDATE
+    SET status = 'pending',
+        status_info = NULL,
+        retries = 0,
+        retry_after = NULL
+    WHERE appstore.plugin_image_analyses.status = 'failed';
+    PERFORM pg_notify('plugin_image_analysis', '');
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION appstore.plugin_image_analysis_enqueue() OWNER TO fun_owner;
+-- ddl-end --
+COMMENT ON FUNCTION appstore.plugin_image_analysis_enqueue() IS E'Queues the image analysis of a submitted version. SECURITY DEFINER because the registry role inserts submissions and holds no grant on the analysis table. A resubmission retries an analysis that failed, for example once the publisher made the image public.';
+-- ddl-end --
+
 -- object: authn.current_user_id | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.current_user_id() CASCADE;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
@@ -1656,7 +1688,7 @@ CREATE TABLE appstore.submissions (
 -- ddl-end --
 COMMENT ON TABLE appstore.submissions IS E'One review round for one plugin version. The version''s own status column stays authoritative; this table records who submitted, who decided, when and why.';
 -- ddl-end --
-COMMENT ON COLUMN appstore.submissions.reviewer_user_id IS E'Which store reviewers authenticate against is undecided, so this carries no foreign key.';
+COMMENT ON COLUMN appstore.submissions.reviewer_user_id IS E'The deciding Fundament staff member, a dcim.users id. No foreign key: the reviewer store was undecided when the first rows were written.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.submissions.submitted IS E'A submission is created by being submitted, so this is also its creation timestamp and there is no separate created column.';
 -- ddl-end --
@@ -1684,6 +1716,62 @@ USING btree
 (
 	plugin_definition_id
 );
+-- ddl-end --
+
+-- object: appstore.plugin_image_analyses | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_image_analyses CASCADE;
+CREATE TABLE appstore.plugin_image_analyses (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_definition_id uuid NOT NULL,
+	status text NOT NULL DEFAULT 'pending',
+	status_info text,
+	retries integer NOT NULL DEFAULT 0,
+	retry_after timestamptz,
+	image_digest text NOT NULL DEFAULT '',
+	platform text NOT NULL DEFAULT '',
+	platforms jsonb NOT NULL DEFAULT '[]',
+	packages jsonb NOT NULL DEFAULT '[]',
+	files jsonb NOT NULL DEFAULT '[]',
+	files_truncated boolean NOT NULL DEFAULT false,
+	sbom bytea,
+	created timestamptz NOT NULL DEFAULT now(),
+	analyzed timestamptz,
+	deleted timestamptz,
+	CONSTRAINT plugin_image_analyses_pk PRIMARY KEY (id),
+	CONSTRAINT plugin_image_analyses_uq_plugin_definition_id UNIQUE NULLS NOT DISTINCT (plugin_definition_id,deleted),
+	CONSTRAINT plugin_image_analyses_ck_status CHECK (status IN ('pending', 'running', 'retrying', 'completed', 'failed')),
+	CONSTRAINT plugin_image_analyses_ck_analyzed CHECK ((status = 'completed') = (analyzed IS NOT NULL))
+);
+-- ddl-end --
+COMMENT ON TABLE appstore.plugin_image_analyses IS E'What a plugin version''s container image contains: its packages (from a Trivy SBOM) and its files, shown to the reviewer as a diff against the version before it (FUN-24). Doubles as the queue of marketplace-analysis-worker, one row per version.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.status_info IS E'Why the last attempt failed, worded for the reviewer.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.retry_after IS E'For a retrying row, when it may be claimed again. For a running row, when its lease expires: a worker that died mid-analysis leaves the row claimable again after that.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.image_digest IS E'Digest of the platform manifest that was analyzed. Differs from the reference''s digest when that points at an index.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.platforms IS E'Every platform the image index offers, so the reviewer sees which one was analyzed. Empty for a single-platform image.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.packages IS E'Packages from the SBOM, normalized to {purl, name, version, type, licenses}.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.files IS E'The flattened filesystem as {path, size, mode, sha256}, sorted by path and capped (see files_truncated).';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_image_analyses.sbom IS E'The CycloneDX JSON Trivy produced, verbatim, for download.';
+-- ddl-end --
+ALTER TABLE appstore.plugin_image_analyses OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_image_analyses ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_image_analyses_idx_claimable | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.plugin_image_analyses_idx_claimable CASCADE;
+CREATE INDEX plugin_image_analyses_idx_claimable ON appstore.plugin_image_analyses
+USING btree
+(
+	created
+)
+WHERE (status IN ('pending', 'running', 'retrying') AND deleted IS NULL);
 -- ddl-end --
 
 -- object: appstore.plugin_allowed_organizations | type: TABLE --
@@ -2029,6 +2117,34 @@ CREATE POLICY submissions_update_admin ON appstore.submissions
 	TO fun_marketplace_admin_api
 	USING (true)
 	WITH CHECK (true);
+-- ddl-end --
+
+-- object: plugin_image_analyses_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_image_analyses_select_admin ON appstore.plugin_image_analyses CASCADE;
+CREATE POLICY plugin_image_analyses_select_admin ON appstore.plugin_image_analyses
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_image_analyses_all_analysis_worker | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_image_analyses_all_analysis_worker ON appstore.plugin_image_analyses CASCADE;
+CREATE POLICY plugin_image_analyses_all_analysis_worker ON appstore.plugin_image_analyses
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_analysis_worker
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: plugin_definitions_select_analysis_worker | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_select_analysis_worker ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_select_analysis_worker ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_analysis_worker
+	USING (true);
 -- ddl-end --
 
 -- object: plugins_tags_select_admin | type: POLICY --
@@ -3057,6 +3173,15 @@ CREATE OR REPLACE TRIGGER cluster_outbox_project_member
 	ON tenant.project_members
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_project_member_trigger();
+-- ddl-end --
+
+-- object: plugin_image_analysis_enqueue | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS plugin_image_analysis_enqueue ON appstore.submissions CASCADE;
+CREATE OR REPLACE TRIGGER plugin_image_analysis_enqueue
+	AFTER INSERT 
+	ON appstore.submissions
+	FOR EACH ROW
+	EXECUTE PROCEDURE appstore.plugin_image_analysis_enqueue();
 -- ddl-end --
 
 -- object: tenant.idempotency_keys | type: TABLE --
@@ -4105,6 +4230,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- object: submissions_fk_plugin_definition | type: CONSTRAINT --
 -- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_plugin_definition CASCADE;
 ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_plugin_definition FOREIGN KEY (plugin_definition_id)
+REFERENCES appstore.plugin_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_image_analyses_fk_plugin_definition | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_image_analyses DROP CONSTRAINT IF EXISTS plugin_image_analyses_fk_plugin_definition CASCADE;
+ALTER TABLE appstore.plugin_image_analyses ADD CONSTRAINT plugin_image_analyses_fk_plugin_definition FOREIGN KEY (plugin_definition_id)
 REFERENCES appstore.plugin_definitions (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
@@ -5918,6 +6050,30 @@ GRANT SELECT
 -- ddl-end --
 
 
+-- object: "grant_U_7413d9a388" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA dcim
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_23b703665a | type: PERMISSION --
+GRANT SELECT(id)
+   ON TABLE dcim.users
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_cfcee38721 | type: PERMISSION --
+GRANT SELECT(name)
+   ON TABLE dcim.users
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
 -- object: "grant_U_2ff84b3919" | type: PERMISSION --
 GRANT USAGE
    ON SCHEMA dcim
@@ -6242,6 +6398,62 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT
    ON TABLE tenant.worker_heartbeats
    TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_2f84a2e8d2" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_82b78eda4a | type: PERMISSION --
+GRANT SELECT(id)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_24706dbb31 | type: PERMISSION --
+GRANT SELECT(image)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_57960a8cde | type: PERMISSION --
+GRANT SELECT(status)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_0e4ba568bb | type: PERMISSION --
+GRANT SELECT(deleted)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_4beefee2c7 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_8018d9484e | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_admin_api;
 
 -- ddl-end --
 

@@ -33,6 +33,7 @@ var Roles = []Role{
 	{Name: "fun_marketplace_registry_api"},
 	{Name: "fun_marketplace_admin_api"},
 	{Name: "fun_marketplace_install_api"},
+	{Name: "fun_marketplace_analysis_worker"},
 	{Name: "fun_platform_public_api"},
 	{Name: "fun_platform_admin_api"},
 }

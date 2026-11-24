@@ -60,6 +60,46 @@ func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionS
 	return result.RowsAffected(), nil
 }
 
+const reviewerList = `-- name: ReviewerList :many
+SELECT dcim.users.id, dcim.users.name
+FROM dcim.users
+WHERE dcim.users.id IN (
+	SELECT appstore.submissions.reviewer_user_id
+	FROM appstore.submissions
+	WHERE appstore.submissions.reviewer_user_id IS NOT NULL
+	  AND appstore.submissions.deleted IS NULL
+)
+ORDER BY dcim.users.name, dcim.users.id
+`
+
+type ReviewerListRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// The staff who decided a round, so a Submission's reviewer_user_id resolves
+// to a name. Soft-deleted users stay in: someone who has since left still made
+// the decision. The role can read dcim.users.id and name only, not email.
+func (q *Queries) ReviewerList(ctx context.Context) ([]ReviewerListRow, error) {
+	rows, err := q.db.Query(ctx, reviewerList)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReviewerListRow
+	for rows.Next() {
+		var i ReviewerListRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const submissionDecide = `-- name: SubmissionDecide :execrows
 UPDATE appstore.submissions SET
 	reviewer_user_id = $1::uuid,
