@@ -365,22 +365,6 @@ profiles:
         path: /build/artifacts/21/sync
         value: {}
 
-  # On top of hotreload: run the registry and admin storefronts from their production image to save about 2GB
-  - name: no-hotreload-registry-admin
-    patches:
-      - op: replace
-        path: /build/artifacts/18/docker/dockerfile
-        value: marketplace-frontend/Dockerfile
-      - op: add
-        path: /build/artifacts/18/sync
-        value: null
-      - op: replace
-        path: /build/artifacts/19/docker/dockerfile
-        value: marketplace-frontend/Dockerfile
-      - op: add
-        path: /build/artifacts/19/sync
-        value: null
-
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)
   - name: debug
     patches:
