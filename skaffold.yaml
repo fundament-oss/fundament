@@ -365,8 +365,7 @@ profiles:
         path: /build/artifacts/21/sync
         value: {}
 
-  # On top of hotreload, to save memory
-  # prevent hot reload of marketplace to safe about 2GB
+  # On top of hotreload: run the registry and admin storefronts from their production image to save about 2GB
   - name: no-hotreload-registry-admin
     patches:
       - op: replace
