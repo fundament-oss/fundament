@@ -115,7 +115,7 @@ build:
         dockerfile: marketplace-admin-api/Dockerfile
 
     # The storefront image built for the other two audiences (FUN-20). The
-    # hotreload profile swaps the dockerfile by index; START_SCRIPT is consumed
+    # hotreload profile swaps the dockerfile by index; NG_CONFIGURATION is consumed
     # by the hotreload image and ignored (unconsumed ARG) by the production one.
     - image: marketplace-registry-frontend
       context: .
@@ -123,7 +123,7 @@ build:
         dockerfile: marketplace-frontend/Dockerfile
         buildArgs:
           BUILD_SCRIPT: build:registry
-          START_SCRIPT: start:registry
+          NG_CONFIGURATION: registry
 
     - image: marketplace-admin-frontend
       context: .
@@ -131,7 +131,7 @@ build:
         dockerfile: marketplace-frontend/Dockerfile
         buildArgs:
           BUILD_SCRIPT: build:admin
-          START_SCRIPT: start:admin
+          NG_CONFIGURATION: admin
 
     # One source tree, two binaries (FUN-23): the anonymous overview and the
     # staff fleet view. Appended last, as the hotreload profile patches by index.
@@ -364,6 +364,23 @@ profiles:
       - op: add
         path: /build/artifacts/21/sync
         value: {}
+
+  # On top of hotreload, to save memory
+  # prevent hot reload of marketplace to safe about 2GB
+  - name: no-hotreload-registry-admin
+    patches:
+      - op: replace
+        path: /build/artifacts/18/docker/dockerfile
+        value: marketplace-frontend/Dockerfile
+      - op: add
+        path: /build/artifacts/18/sync
+        value: null
+      - op: replace
+        path: /build/artifacts/19/docker/dockerfile
+        value: marketplace-frontend/Dockerfile
+      - op: add
+        path: /build/artifacts/19/sync
+        value: null
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)
   - name: debug

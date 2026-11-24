@@ -67,6 +67,7 @@ just dev-hotreload
   - Adding, moving or deleting a file rebuilds the image and redeploys.
 - Every deploy resets the databases to the test data.
 - `Ctrl-C` stops watching; the deployment keeps running.
+- `just dev-hotreload --profile no-hotreload-registry-admin` runs the marketplace developer portal and review backoffice from their production image, about 2GB RAM less. Their code is then not hot-reloaded, and every edit under `marketplace-frontend/` rebuilds both images.
 - It runs in mock mode: clusters exist only in the database. For real clusters, see [Test environment](./test-env.md).
 
 The cluster runs on the docker network `k3d-fundament`, subnet `172.19.0.0/16`. If another network on your machine uses that range, creating it fails; set `FUNDAMENT_K3D_SUBNET` to a free subnet, e.g. `export FUNDAMENT_K3D_SUBNET=172.29.0.0/16` in your shell profile or `$env:FUNDAMENT_K3D_SUBNET = "172.29.0.0/16"` in `$PROFILE`, and run `just cluster-start` again. It is read whenever the network is created, also after `just cluster-delete`; an existing network keeps the subnet it has.
