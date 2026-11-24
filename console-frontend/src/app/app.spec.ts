@@ -332,7 +332,7 @@ describe('App', () => {
         {
           provide: OrganizationDataService,
           useValue: {
-            userOrganizations: signal([]),
+            userOrganizations: signal([{ id: 'org-1', name: 'acme-corp' }]),
             organizations: signal([]),
             clusterSummaries: signal([]),
             clustersLoaded: signal(false),
@@ -344,7 +344,9 @@ describe('App', () => {
       ]);
       const app = TestBed.createComponent(App).componentInstance;
       app.selectedOrgId.set('org-1');
-      app.currentUrl.set('/projects/p-1/plugin-resources/acme--openftv/openftvmanagers');
+      app.currentUrl.set(
+        '/organizations/acme-corp/projects/p-1/plugin-resources/acme--openftv/openftvmanagers',
+      );
       TestBed.tick();
       return { app, projects, registry };
     }
@@ -378,7 +380,7 @@ describe('App', () => {
       projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
       TestBed.tick();
 
-      app.currentUrl.set('/projects/new');
+      app.currentUrl.set('/organizations/acme-corp/projects/new');
       TestBed.tick();
 
       expect(registry.reset).toHaveBeenCalledTimes(1);
@@ -401,7 +403,7 @@ describe('App', () => {
       projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
       TestBed.tick();
 
-      app.currentUrl.set('/clusters');
+      app.currentUrl.set('/organizations/acme-corp/clusters');
       TestBed.tick();
 
       expect(registry.reset).toHaveBeenCalledTimes(1);
@@ -425,7 +427,10 @@ describe('App', () => {
       {
         provide: OrganizationDataService,
         useValue: {
-          userOrganizations: signal([]),
+          userOrganizations: signal([
+            { id: 'org-1', name: 'acme-corp' },
+            { id: 'org-2', name: 'globex' },
+          ]),
           organizations: signal([]),
           clusterSummaries: signal([]),
           clustersLoaded: signal(false),
@@ -473,6 +478,22 @@ describe('App', () => {
     TestBed.tick();
     expect(reset).toHaveBeenCalled();
     expect(loadPlugins).not.toHaveBeenCalled();
+
+    // Switching organizations selects the new one before it navigates away
+    // from the old one's cluster. That cluster is not read as the new
+    // organization in between.
+    app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    TestBed.tick();
+    loadPlugins.mockClear();
+    app.selectedOrgId.set(null);
+    TestBed.tick();
+    app.selectedOrgId.set('org-2');
+    TestBed.tick();
+    expect(loadPlugins).not.toHaveBeenCalled();
+
+    app.currentUrl.set('/organizations/globex/clusters/c3');
+    TestBed.tick();
+    expect(loadPlugins).toHaveBeenLastCalledWith('c3', { fresh: true });
   });
 });
 
