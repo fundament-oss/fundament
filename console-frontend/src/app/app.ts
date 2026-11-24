@@ -325,17 +325,31 @@ export default class App implements OnInit {
     // torn down: a page other than the one it loaded for resets, but on a refresh
     // it has loaded nothing, so a load a resource page started meanwhile is not
     // cut off.
+    //
+    // Not before an organization is selected. A cluster page opened by its
+    // address knows its cluster before that, but the plugins' definitions are
+    // read as the organization: without one install.v1 refuses them as an
+    // invalid argument, the registry takes that for a version the catalog will
+    // never have, and the cluster's menu stays without its plugins until an
+    // installation changes.
+    //
+    // Nor while the address still names another organization. Switching
+    // organizations selects the new one before it navigates away, and until
+    // that navigation ends the address is the old organization's cluster: read
+    // as the new one, its definitions are refused the same way.
     effect(() => {
       const orgId = this.selectedOrgId();
+      const addressed = organizationOf(this.navContext.currentUrl());
       const context = this.navContext.context();
       const projectId = context.kind === 'project' ? context.projectId : null;
       const pageClusterId = context.kind === 'cluster' ? context.clusterId : null;
       const clusterId = this.navContext.clusterId();
 
       untracked(() => {
+        const inOrg = !!orgId && !!addressed && addressed === this.organizationNameOf(orgId);
         let key: string | null = null;
-        if (projectId) key = `${orgId}/${projectId}`;
-        else if (pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
+        if (inOrg && projectId) key = `${orgId}/${projectId}`;
+        else if (inOrg && pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
 
         if (key && clusterId) {
           const opened = key !== this.pluginsLoadedFor;
