@@ -1,0 +1,26 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Push an image to zot from inside the cluster with crane, then list the repositories
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubectl() { command kubectl --context {{ kube_context }} "$@"; }
+
+    kubectl -n zot rollout status deployment/zot --timeout=120s
+    kubectl -n zot delete pod zot-test --ignore-not-found >/dev/null
+    catalog=$(kubectl -n zot run zot-test --rm -i --restart=Never \
+        --image=gcr.io/go-containerregistry/crane:debug --command -- sh -euc '
+            crane copy --insecure busybox:1.37 zot.zot.svc:5000/test/busybox:1.37 >&2
+            crane catalog --insecure zot.zot.svc:5000
+        ')
+    echo "${catalog}"
+    if ! grep -qx test/busybox <<<"${catalog}"; then
+        echo "test/busybox is not in the zot catalog" >&2
+        exit 1
+    fi
+    echo "zot works: test/busybox is in the catalog"
+
+# Remove the pushed test image
+test-cleanup:
+    kubectl --context {{ kube_context }} -n zot run zot-test-cleanup --rm -i --restart=Never \
+        --image=gcr.io/go-containerregistry/crane:debug -- delete --insecure zot.zot.svc:5000/test/busybox:1.37

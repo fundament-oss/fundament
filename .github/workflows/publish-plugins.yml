@@ -24,6 +24,7 @@ on:
           - gateway-api/istio
           - openfsc
           - storage/ceph-rook
+          - zot
       submit:
         description: Open a review round for the published version
         type: boolean

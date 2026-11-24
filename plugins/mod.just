@@ -4,6 +4,7 @@ mod external-dns
 mod openfsc
 mod envoy-gateway 'gateway-api/envoy-gateway'
 mod ceph-rook 'storage/ceph-rook'
+mod zot
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"

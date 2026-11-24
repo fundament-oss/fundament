@@ -40,6 +40,7 @@ plugins/
 | [Gateway API (Istio)](gateway-api/istio/README.md) | `gateway-api/istio` | none |
 | [OpenFSC](openfsc/README.md) | `openfsc` | `openfsc` |
 | [Ceph Storage (Rook)](../docs/developer/plugins/example-ceph-rook.md) | `storage/ceph-rook` | `ceph-rook` |
+| [zot](zot/README.md) | `zot` | `zot` |
 
 ## Images
 

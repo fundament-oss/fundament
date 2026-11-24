@@ -282,6 +282,8 @@ jobs:
             dockerfile: plugins/openfsc/Dockerfile
           - image-name: ceph-rook-plugin
             dockerfile: plugins/storage/ceph-rook/Dockerfile
+          - image-name: zot-plugin
+            dockerfile: plugins/zot/Dockerfile
     permissions:
       contents: read
       packages: write
