@@ -31,20 +31,21 @@ func (s *AuthnServer) GetUserInfo(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	// A soft-deleted account no longer resolves: its token is refused, as on
-	// refresh. A database failure is Unavailable, not Unauthenticated, so the
-	// console does not read an outage as a sign-out.
-	row, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: claims.UserID()})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("user not found"))
-		}
-		s.logger.Error("failed to resolve user for user info", "error", err)
-		return nil, connect.NewError(connect.CodeUnavailable, errors.New("temporarily unavailable"))
-	}
-
 	u := protoUserFromClaims(claims)
-	u.SetEmail(row.Email.String)
+
+	// A soft-deleted account no longer resolves: its token is refused, as on
+	// refresh. Any other database failure answers from the token alone, without
+	// the email address. The console's auth guard calls this on every page load
+	// and treats any error as a sign-out, so an outage must not fail it.
+	row, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: claims.UserID()})
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("user not found"))
+	case err != nil:
+		s.logger.Warn("failed to read user email for user info, answering without it", "error", err)
+	default:
+		u.SetEmail(row.Email.String)
+	}
 
 	return authnv1.GetUserInfoResponse_builder{
 		User: u,

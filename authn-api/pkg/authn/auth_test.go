@@ -189,16 +189,17 @@ func TestGetUserInfo_SoftDeletedUserIsRefused(t *testing.T) {
 	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
 
-// A database failure is Unavailable, not Unauthenticated: the console must not
-// read the outage as a sign-out.
-func TestGetUserInfo_DatabaseOutageIsUnavailable(t *testing.T) {
+// A database failure still answers from the token, without the email address:
+// the console reads any error here as a sign-out.
+func TestGetUserInfo_DatabaseOutageAnswersFromToken(t *testing.T) {
 	env := newRefreshEnv(t)
 	userID := seedUser(t, env, "Alice", false)
 	env.servicePool.Close()
 
-	_, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
-	require.Error(t, err)
-	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
+	assert.Empty(t, resp.GetUser().GetEmail())
 }
 
 func TestNew_RejectsInvalidLifetimes(t *testing.T) {
