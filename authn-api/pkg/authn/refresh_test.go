@@ -167,6 +167,28 @@ func TestHandleRefresh_RenameLandsOnRefresh(t *testing.T) {
 	assert.Equal(t, "Alice Renamed", claims.Name)
 }
 
+// The email address comes from the account too, so a changed address lands
+// on the next refresh.
+func TestHandleRefresh_EmailLandsOnRefresh(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	_, err := env.superPool.Exec(context.Background(),
+		`UPDATE tenant.users SET email = $2 WHERE id = $1`, userID, "alice@example.org")
+	require.NoError(t, err)
+
+	rec := postRefresh(env.server, mintUserToken(t, userID))
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var resp authnhttp.RefreshResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	claims := &auth.Claims{}
+	_, err = jwt.ParseWithClaims(resp.AccessToken, claims, func(*jwt.Token) (any, error) { return refreshTestSecret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	require.NoError(t, err)
+	assert.Equal(t, "alice@example.org", claims.Email)
+}
+
 // A soft-deleted user's well-signed token must not be refreshed: the session
 // ends in a forced re-login, not an indefinite extension.
 func TestHandleRefresh_SoftDeletedUserIsRefused(t *testing.T) {

@@ -141,6 +141,7 @@ type User struct {
 	xxx_hidden_Name            string                 `protobuf:"bytes,30,opt,name=name"`
 	xxx_hidden_ExternalRef     string                 `protobuf:"bytes,40,opt,name=external_ref,json=externalRef"`
 	xxx_hidden_Groups          []string               `protobuf:"bytes,50,rep,name=groups"`
+	xxx_hidden_Email           string                 `protobuf:"bytes,60,opt,name=email"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -205,6 +206,13 @@ func (x *User) GetGroups() []string {
 	return nil
 }
 
+func (x *User) GetEmail() string {
+	if x != nil {
+		return x.xxx_hidden_Email
+	}
+	return ""
+}
+
 func (x *User) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -225,6 +233,10 @@ func (x *User) SetGroups(v []string) {
 	x.xxx_hidden_Groups = v
 }
 
+func (x *User) SetEmail(v string) {
+	x.xxx_hidden_Email = v
+}
+
 type User_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -238,6 +250,8 @@ type User_builder struct {
 	ExternalRef string
 	// Groups the user belongs to
 	Groups []string
+	// Email address on the user's account; empty when it has none
+	Email string
 }
 
 func (b0 User_builder) Build() *User {
@@ -249,6 +263,7 @@ func (b0 User_builder) Build() *User {
 	x.xxx_hidden_Name = b.Name
 	x.xxx_hidden_ExternalRef = b.ExternalRef
 	x.xxx_hidden_Groups = b.Groups
+	x.xxx_hidden_Email = b.Email
 	return m0
 }
 
@@ -709,14 +724,15 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
 	"\x04user\x18\n" +
-	" \x01(\v2\x0e.authn.v1.UserR\x04user\"\x90\x01\n" +
+	" \x01(\v2\x0e.authn.v1.UserR\x04user\"\xa6\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12)\n" +
 	"\x10organization_ids\x18\x14 \x03(\tR\x0forganizationIds\x12\x12\n" +
 	"\x04name\x18\x1e \x01(\tR\x04name\x12!\n" +
 	"\fexternal_ref\x18( \x01(\tR\vexternalRef\x12\x16\n" +
-	"\x06groups\x182 \x03(\tR\x06groups\"\x16\n" +
+	"\x06groups\x182 \x03(\tR\x06groups\x12\x14\n" +
+	"\x05email\x18< \x01(\tR\x05email\"\x16\n" +
 	"\x14ExchangeTokenRequest\"x\n" +
 	"\x15ExchangeTokenResponse\x12!\n" +
 	"\faccess_token\x18\n" +

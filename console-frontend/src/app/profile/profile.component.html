@@ -26,7 +26,7 @@
       </nldd-title>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-rich-text spacing="flat">
-        <p>Your name and password come from your login provider and cannot be changed here.</p>
+        <p>Your name, email address and password come from your login provider and cannot be changed here.</p>
       </nldd-rich-text>
       <nldd-spacer size="12"></nldd-spacer>
       @if (isLoading()) {
@@ -60,6 +60,15 @@
               width="fit-content"
               horizontal-alignment="right"
               [attr.text]="userInfo()?.name || 'Unknown'"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Email address"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="userInfo()?.email || 'Unknown'"
             ></nldd-text-cell>
           </nldd-list-item>
           <nldd-list-item>

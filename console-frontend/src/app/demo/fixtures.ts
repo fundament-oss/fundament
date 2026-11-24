@@ -40,6 +40,7 @@ export const ORG_ID = 'org-fundament';
 export const demoUser = create(UserSchema, {
   id: 'user-demo',
   name: 'Demi de Demonstratie',
+  email: 'demi@fundament.example',
   organizationIds: [ORG_ID],
   groups: ['platform-team'],
 });

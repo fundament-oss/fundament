@@ -42,6 +42,7 @@ func protoUserFromClaims(claims *auth.Claims) *authnv1.User {
 		Id:              claims.Subject,
 		OrganizationIds: organizationIds,
 		Name:            claims.Name,
+		Email:           claims.Email,
 		Groups:          claims.Groups,
 	}.Build()
 }

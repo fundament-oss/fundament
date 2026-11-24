@@ -58,6 +58,7 @@ func (s *AuthnServer) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		ID:              row.ID,
 		OrganizationIDs: organizationIDs,
 		Name:            row.Name,
+		Email:           row.Email.String,
 	}
 
 	// The lookups take time; near the limit they can carry the session past it.

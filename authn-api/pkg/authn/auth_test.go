@@ -134,6 +134,52 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
 
+// TestGenerateJWT_CarriesEmail verifies that the account's email address
+// travels in the user token, which is where GetUserInfo reads it from.
+func TestGenerateJWT_CarriesEmail(t *testing.T) {
+	secret := []byte("test-secret")
+	server := &AuthnServer{
+		config: &Config{JWTSecret: secret, TokenExpiry: 15 * time.Minute, SessionMaxAge: time.Hour},
+	}
+
+	tokenStr, err := server.generateJWT(&user{ID: uuid.New(), Name: "alice", Email: "alice@example.org"}, nil, newSession(amrOIDC))
+	require.NoError(t, err)
+
+	claims := &auth.Claims{}
+	_, err = jwt.ParseWithClaims(tokenStr, claims, func(_ *jwt.Token) (any, error) { return secret, nil })
+	require.NoError(t, err)
+	assert.Equal(t, "alice@example.org", claims.Email)
+}
+
+// TestGetUserInfo_ReturnsEmail verifies that GetUserInfo hands the email
+// claim of a user token to the caller.
+func TestGetUserInfo_ReturnsEmail(t *testing.T) {
+	secret := []byte("test-secret")
+	server := &AuthnServer{
+		config:    &Config{JWTSecret: secret, TokenExpiry: time.Minute, SessionMaxAge: time.Hour},
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		validator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
+	}
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server)
+	mux := http.NewServeMux()
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	tokenStr, err := server.generateJWT(&user{ID: uuid.New(), Name: "alice", Email: "alice@example.org"}, nil, newSession(amrOIDC))
+	require.NoError(t, err)
+
+	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+tokenStr)
+
+	resp, err := client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, "alice", resp.GetUser().GetName())
+	assert.Equal(t, "alice@example.org", resp.GetUser().GetEmail())
+}
+
 func TestNew_RejectsInvalidLifetimes(t *testing.T) {
 	tests := []struct {
 		name          string

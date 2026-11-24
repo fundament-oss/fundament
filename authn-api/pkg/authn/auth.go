@@ -33,6 +33,7 @@ type user struct {
 	ID              uuid.UUID
 	OrganizationIDs []uuid.UUID
 	Name            string
+	Email           string
 	ExternalRef     string
 }
 
@@ -192,6 +193,7 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, sess sessi
 		},
 		OrganizationIDs: u.OrganizationIDs,
 		Name:            u.Name,
+		Email:           u.Email,
 		Groups:          groups,
 		AuthTime:        jwt.NewNumericDate(sess.authTime),
 		AMR:             sess.amr,
