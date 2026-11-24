@@ -276,9 +276,7 @@ describe('statusRows', () => {
         { type: 'IPAddress', value: '172.18.0.2' },
         { type: 'IPAddress', value: '172.18.0.3' },
       ]),
-    ).toEqual([
-      { type: 'value', depth: 0, label: 'Addresses', value: '172.18.0.2, 172.18.0.3' },
-    ]);
+    ).toEqual([{ type: 'value', depth: 0, label: 'Addresses', value: '172.18.0.2, 172.18.0.3' }]);
   });
 
   it('lays a Gateway listener out under its name', () => {
@@ -301,6 +299,17 @@ describe('statusRows', () => {
       { type: 'value', depth: 2, label: 'Attached Routes', value: '2' },
       { type: 'value', depth: 2, label: 'Supported Kinds', value: 'HTTPRoute, GRPCRoute' },
       { type: 'conditions', depth: 2, label: 'Conditions', conditions: [accepted] },
+    ]);
+  });
+
+  it('keeps every field of a small item that is not a known one-word shape', () => {
+    expect(rows('ports', [{ name: 'http', port: 80 }])).toEqual([
+      { type: 'heading', depth: 0, label: 'Ports' },
+      { type: 'heading', depth: 1, label: 'http' },
+      { type: 'value', depth: 2, label: 'Port', value: '80' },
+    ]);
+    expect(rows('kinds', [{ kind: 'HTTPRoute' }, { group: 'g', kind: 'GRPCRoute' }])).toEqual([
+      { type: 'value', depth: 0, label: 'Kinds', value: 'HTTPRoute, GRPCRoute' },
     ]);
   });
 

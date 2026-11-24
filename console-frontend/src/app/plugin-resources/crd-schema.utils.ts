@@ -384,16 +384,25 @@ const isScalar = (value: unknown): boolean => value === null || typeof value !==
 
 /**
  * The one word a small item of a list stands for, or null when it is more than
- * that. An address is `{type: IPAddress, value: 172.18.0.2}` and reads as its
- * value; a supported kind is `{group, kind}` and reads as its kind. Two keys at
- * most: an item with more says more than its name.
+ * that. Only shapes known to be one thing count: an address is `{type:
+ * IPAddress, value: 172.18.0.2}` and reads as its value, a supported kind is
+ * `{group, kind}` and reads as its kind, and either may leave its first key
+ * out. Any other item, even a small one such as `{name, port}`, keeps all its
+ * fields and is laid out as rows.
  */
+const ITEM_WORD_KEYS: Record<string, string> = {
+  value: 'value',
+  kind: 'kind',
+  name: 'name',
+  'type,value': 'value',
+  'group,kind': 'kind',
+};
+
 function itemWord(item: unknown): string | null {
   if (!isPlainObject(item)) return null;
-  const entries = Object.entries(item);
-  if (entries.length > 2 || !entries.every(([, value]) => isScalar(value))) return null;
-  const word = ['value', 'kind', 'name'].map((key) => item[key]).find((value) => value);
-  return typeof word === 'string' ? word : null;
+  const wordKey = ITEM_WORD_KEYS[Object.keys(item).sort().join(',')];
+  const word = wordKey === undefined ? undefined : item[wordKey];
+  return typeof word === 'string' && word !== '' ? word : null;
 }
 
 /**
