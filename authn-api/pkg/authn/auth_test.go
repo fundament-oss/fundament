@@ -207,6 +207,28 @@ func TestGetUserInfo_DatabaseOutageAnswersFromToken(t *testing.T) {
 	assert.Empty(t, resp.GetUser().GetEmail())
 }
 
+// A database that hangs instead of failing also answers from the token, once
+// the lookup's deadline passes, rather than holding up the console.
+func TestGetUserInfo_HangingDatabaseAnswersFromToken(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+
+	// An exclusive lock held by another connection blocks the account lookup
+	// until the lock's transaction ends.
+	tx, err := env.superPool.Begin(context.Background())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+	_, err = tx.Exec(context.Background(), `LOCK TABLE tenant.users IN ACCESS EXCLUSIVE MODE`)
+	require.NoError(t, err)
+
+	start := time.Now()
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), userInfoLookupTimeout+2*time.Second)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
+	assert.Empty(t, resp.GetUser().GetEmail())
+}
+
 func TestNew_RejectsInvalidLifetimes(t *testing.T) {
 	tests := []struct {
 		name          string

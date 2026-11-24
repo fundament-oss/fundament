@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"errors"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5"
@@ -11,6 +12,11 @@ import (
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/common/auth"
 )
+
+// userInfoLookupTimeout bounds the account lookup in GetUserInfo, so a
+// database that hangs rather than failing fast still falls back to the token
+// in time for the console's auth check.
+const userInfoLookupTimeout = 2 * time.Second
 
 // GetUserInfo is the RPC handler for getting user information from a valid JWT.
 //
@@ -36,8 +42,11 @@ func (s *AuthnServer) GetUserInfo(
 	// A soft-deleted account no longer resolves: its token is refused, as on
 	// refresh. Any other database failure answers from the token alone, without
 	// the email address. The console's auth guard calls this on every page load
-	// and treats any error as a sign-out, so an outage must not fail it.
-	row, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: claims.UserID()})
+	// and treats any error as a sign-out, so an outage must not fail it, and a
+	// hang must not hold it up.
+	lookupCtx, cancel := context.WithTimeout(ctx, userInfoLookupTimeout)
+	defer cancel()
+	row, err := s.queries.UserGetByID(lookupCtx, db.UserGetByIDParams{ID: claims.UserID()})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("user not found"))
