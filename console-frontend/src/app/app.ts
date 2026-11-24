@@ -319,6 +319,13 @@ export default class App implements OnInit {
     // torn down: a page other than the one it loaded for resets, but on a refresh
     // it has loaded nothing, so a load a resource page started meanwhile is not
     // cut off.
+    //
+    // Not before an organization is selected. A cluster page opened by its
+    // address knows its cluster before that, but the plugins' definitions are
+    // read as the organization: without one install.v1 refuses them as an
+    // invalid argument, the registry takes that for a version the catalog will
+    // never have, and the cluster's menu stays without its plugins until an
+    // installation changes.
     effect(() => {
       const orgId = this.selectedOrgId();
       const context = this.navContext.context();
@@ -328,8 +335,8 @@ export default class App implements OnInit {
 
       untracked(() => {
         let key: string | null = null;
-        if (projectId) key = `${orgId}/${projectId}`;
-        else if (pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
+        if (orgId && projectId) key = `${orgId}/${projectId}`;
+        else if (orgId && pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
 
         if (key && clusterId) {
           const opened = key !== this.pluginsLoadedFor;

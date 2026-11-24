@@ -444,7 +444,14 @@ describe('App', () => {
     TestBed.overrideComponent(App, { set: { template: '' } });
     const app = TestBed.createComponent(App).componentInstance;
 
+    // A cluster page opened by its address knows its cluster before the
+    // organization is selected. The definitions are read as the organization,
+    // so the load waits for it rather than read them without one.
     app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    TestBed.tick();
+    expect(loadPlugins).not.toHaveBeenCalled();
+
+    app.selectedOrgId.set('org-1');
     TestBed.tick();
     expect(loadPlugins).toHaveBeenLastCalledWith('c2', { fresh: true });
 
