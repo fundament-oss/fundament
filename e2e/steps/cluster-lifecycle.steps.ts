@@ -13,6 +13,7 @@ import { ensureNodePool } from '../support/clusters.ts';
 import { pollUntil } from '../support/poll.ts';
 import { withClusterAccess } from '../support/kube.ts';
 import { shootForCluster } from '../support/shoot.ts';
+import { ClusterStatus } from '../support/generated/v1/common_pb.ts';
 
 function clusterService(world: ICustomWorld): ClusterService {
   world.clusterService ??= new ClusterService(
@@ -103,8 +104,26 @@ When('I delete the cluster', { timeout: 30_000 }, async function (this: ICustomW
   this.testData.lifecycleClusterDeleted = true;
 });
 
+// The authz-worker handles the deletion within seconds; until Gardener confirms
+// the shoot is gone the cluster must stay readable, so this reads it a few
+// times over that window.
 Then(
-  'within {int} minutes the cluster is no longer listed',
+  'the cluster and its node pools stay readable while it is deleting',
+  { timeout: 60_000 },
+  async function (this: ICustomWorld) {
+    const service = clusterService(this);
+    const id = this.testData.lifecycleClusterId as string;
+    for (let i = 0; i < 5; i++) {
+      const cluster = await service.getCluster(id);
+      expect(cluster?.status, 'GetCluster while deleting').toBe(ClusterStatus.DELETING);
+      expect((await service.listNodePools(id)).length, 'ListNodePools while deleting').toBeGreaterThan(0);
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
+    }
+  },
+);
+
+Then(
+  'within {int} minutes the cluster is gone',
   { timeout: -1 },
   async function (this: ICustomWorld, minutes: number) {
     await waitForClusterDeleted(
