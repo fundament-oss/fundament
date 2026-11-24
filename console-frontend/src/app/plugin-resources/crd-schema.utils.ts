@@ -364,3 +364,97 @@ export function resourceSingularLabelMidSentence(
 ): string {
   return labelMidSentence(menuItem?.singularLabel ?? kindToSingularLabel(kind ?? ''));
 }
+
+/** One row of a status field on the detail page: a heading that what follows
+ *  is indented under, a label with its value, or a label with a nested list of
+ *  conditions. `key` is the field's path, unique within the status. */
+export interface StatusRow {
+  key: string;
+  type: 'heading' | 'value' | 'conditions';
+  depth: number;
+  label: string;
+  value?: string;
+  conditions?: Record<string, unknown>[];
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const isScalar = (value: unknown): boolean => value === null || typeof value !== 'object';
+
+/**
+ * The one word a small item of a list stands for, or null when it is more than
+ * that. An address is `{type: IPAddress, value: 172.18.0.2}` and reads as its
+ * value; a supported kind is `{group, kind}` and reads as its kind. Two keys at
+ * most: an item with more says more than its name.
+ */
+function itemWord(item: unknown): string | null {
+  if (!isPlainObject(item)) return null;
+  const entries = Object.entries(item);
+  if (entries.length > 2 || !entries.every(([, value]) => isScalar(value))) return null;
+  const word = ['value', 'kind', 'name'].map((key) => item[key]).find((value) => value);
+  return typeof word === 'string' ? word : null;
+}
+
+/**
+ * A status field as rows rather than as JSON, the way `kubectl describe` lays
+ * it out. A list of values, or of items that each stand for a word (a Gateway's
+ * addresses), is one comma-separated row. Any other list is a heading with one
+ * group per item under it, headed by the item's name, or by its number when it
+ * has none and is not the only one (a Gateway's listeners). An object is a
+ * heading with a row per key. Conditions below the top level keep their own
+ * row, which the page shows as badges.
+ */
+export function statusRows(
+  name: string,
+  value: unknown,
+  label: string,
+  depth = 0,
+  path = name,
+): StatusRow[] {
+  const valueRow = (text: string): StatusRow[] => [
+    { key: path, type: 'value', depth, label, value: text },
+  ];
+  const childRows = (object: Record<string, unknown>, childDepth: number, parent: string) =>
+    Object.entries(object).flatMap(([key, child]) =>
+      statusRows(key, child, fieldNameToLabel(key), childDepth, `${parent}.${key}`),
+    );
+
+  if (Array.isArray(value)) {
+    if (depth > 0 && name === 'conditions') {
+      return [
+        { key: path, type: 'conditions', depth, label, conditions: value.filter(isPlainObject) },
+      ];
+    }
+    if (value.length === 0) return valueRow('—');
+    if (value.every(isScalar)) return valueRow(value.map(toSimpleValue).join(', '));
+    const words = value.map(itemWord);
+    if (words.every((word) => word !== null)) return valueRow(words.join(', '));
+    return [
+      { key: path, type: 'heading', depth, label },
+      ...value.flatMap((item, index): StatusRow[] => {
+        const itemPath = `${path}[${index}]`;
+        if (!isPlainObject(item)) {
+          return statusRows(name, item, String(index + 1), depth + 1, itemPath);
+        }
+        const { name: itemName, ...rest } = item;
+        if (typeof itemName === 'string') {
+          return [
+            { key: itemPath, type: 'heading', depth: depth + 1, label: itemName },
+            ...childRows(rest, depth + 2, itemPath),
+          ];
+        }
+        if (value.length === 1) return childRows(item, depth + 1, itemPath);
+        return [
+          { key: itemPath, type: 'heading', depth: depth + 1, label: String(index + 1) },
+          ...childRows(item, depth + 2, itemPath),
+        ];
+      }),
+    ];
+  }
+  if (isPlainObject(value)) {
+    if (Object.keys(value).length === 0) return valueRow('—');
+    return [{ key: path, type: 'heading', depth, label }, ...childRows(value, depth + 1, path)];
+  }
+  return valueRow(toSimpleValue(value));
+}

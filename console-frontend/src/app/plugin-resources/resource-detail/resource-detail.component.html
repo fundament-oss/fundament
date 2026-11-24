@@ -145,16 +145,55 @@
               ></nldd-text-cell>
             </nldd-list-item>
             <!-- What the status reports on its own belongs with the facts about
-                 the resource, so the Status block below keeps to the conditions. -->
-            @for (entry of flatStatusFields(); track entry[0]) {
+                 the resource, so the Status block below keeps to the conditions.
+                 A list or an object is laid out under its name, indented a
+                 level per step down, instead of printed as JSON. -->
+            @for (row of statusRows(); track row.key) {
               <nldd-list-item>
-                <nldd-text-cell [attr.text]="statusLabel(entry[0])"></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  [attr.text]="formatSimpleValue(entry[1])"
-                ></nldd-text-cell>
+                @if (row.depth > 0) {
+                  <nldd-spacer-cell [attr.size]="statusIndent(row.depth)"></nldd-spacer-cell>
+                }
+                @if (row.type === 'heading') {
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="row.label"
+                  ></nldd-text-cell>
+                } @else {
+                  <nldd-text-cell [attr.text]="row.label"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  @if (row.type === 'conditions') {
+                    <!-- A listener's conditions as the badges the title carries,
+                         so Accepted and Programmed read the same everywhere.
+                         Full width, not fit-content: an nldd-cell never shrinks,
+                         so fit-content badges ran out of a narrow card instead
+                         of wrapping, and took the label's room. -->
+                    <nldd-cell
+                      width="full"
+                      horizontal-alignment="right"
+                    >
+                      <div class="flex flex-wrap justify-end gap-1">
+                        @for (cond of row.conditions; track $index) {
+                          <nldd-badge
+                            [attr.color]="
+                              conditionBadge(asRecordValue(cond, 'type'), cond['status']).color
+                            "
+                            [attr.text]="
+                              conditionBadge(asRecordValue(cond, 'type'), cond['status']).text
+                            "
+                          ></nldd-badge>
+                        } @empty {
+                          <span>&mdash;</span>
+                        }
+                      </div>
+                    </nldd-cell>
+                  } @else {
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="row.value"
+                    ></nldd-text-cell>
+                  }
+                }
               </nldd-list-item>
             }
           </nldd-list>

@@ -10,6 +10,7 @@ import {
   labelMidSentence,
   resourceListLabel,
   resourceSingularLabelMidSentence,
+  statusRows,
 } from './crd-schema.utils';
 
 describe('kindToLabel', () => {
@@ -256,5 +257,94 @@ describe('printedConditionBadge', () => {
   it('leaves any other value as text', () => {
     expect(printedConditionBadge(phase, 'Ready')).toBeNull();
     expect(printedConditionBadge(ready, '\u2014')).toBeNull();
+  });
+});
+
+describe('statusRows', () => {
+  const rows = (name: string, value: unknown) =>
+    statusRows(name, value, fieldNameToLabel(name)).map(({ key, ...row }) => row);
+
+  it('reads a scalar as one row', () => {
+    expect(rows('phase', 'Ready')).toEqual([
+      { type: 'value', depth: 0, label: 'Phase', value: 'Ready' },
+    ]);
+  });
+
+  it('reads a Gateway address by its value', () => {
+    expect(
+      rows('addresses', [
+        { type: 'IPAddress', value: '172.18.0.2' },
+        { type: 'IPAddress', value: '172.18.0.3' },
+      ]),
+    ).toEqual([
+      { type: 'value', depth: 0, label: 'Addresses', value: '172.18.0.2, 172.18.0.3' },
+    ]);
+  });
+
+  it('lays a Gateway listener out under its name', () => {
+    const accepted = { type: 'Accepted', status: 'True', reason: 'Accepted' };
+    expect(
+      rows('listeners', [
+        {
+          name: 'http',
+          attachedRoutes: 2,
+          supportedKinds: [
+            { group: 'gateway.networking.k8s.io', kind: 'HTTPRoute' },
+            { group: 'gateway.networking.k8s.io', kind: 'GRPCRoute' },
+          ],
+          conditions: [accepted],
+        },
+      ]),
+    ).toEqual([
+      { type: 'heading', depth: 0, label: 'Listeners' },
+      { type: 'heading', depth: 1, label: 'http' },
+      { type: 'value', depth: 2, label: 'Attached Routes', value: '2' },
+      { type: 'value', depth: 2, label: 'Supported Kinds', value: 'HTTPRoute, GRPCRoute' },
+      { type: 'conditions', depth: 2, label: 'Conditions', conditions: [accepted] },
+    ]);
+  });
+
+  it('numbers items without a name, and only when there are several', () => {
+    const item = (replicas: number) => ({ replicas, ready: true, zone: 'a' });
+    expect(rows('pools', [item(1)])).toEqual([
+      { type: 'heading', depth: 0, label: 'Pools' },
+      { type: 'value', depth: 1, label: 'Replicas', value: '1' },
+      { type: 'value', depth: 1, label: 'Ready', value: 'true' },
+      { type: 'value', depth: 1, label: 'Zone', value: 'a' },
+    ]);
+    expect(rows('pools', [item(1), item(2)]).filter((row) => row.type === 'heading')).toEqual([
+      { type: 'heading', depth: 0, label: 'Pools' },
+      { type: 'heading', depth: 1, label: '1' },
+      { type: 'heading', depth: 1, label: '2' },
+    ]);
+  });
+
+  it('lays an object out under its name, a row per key', () => {
+    expect(rows('certificate', { notAfter: null, serial: 'abc' })).toEqual([
+      { type: 'heading', depth: 0, label: 'Certificate' },
+      { type: 'value', depth: 1, label: 'Not After', value: '\u2014' },
+      { type: 'value', depth: 1, label: 'Serial', value: 'abc' },
+    ]);
+  });
+
+  it('shows an empty list or object as a dash', () => {
+    expect(rows('addresses', [])).toEqual([
+      { type: 'value', depth: 0, label: 'Addresses', value: '\u2014' },
+    ]);
+    expect(rows('selector', {})).toEqual([
+      { type: 'value', depth: 0, label: 'Selector', value: '\u2014' },
+    ]);
+  });
+
+  it('gives every row a unique key', () => {
+    const keys = statusRows(
+      'listeners',
+      [
+        { name: 'http', attachedRoutes: 0 },
+        { name: 'https', attachedRoutes: 1 },
+      ],
+      'Listeners',
+    ).map((row) => row.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
