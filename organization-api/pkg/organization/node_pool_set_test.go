@@ -83,13 +83,14 @@ func Test_NodePool_List_OrdersByCreation(t *testing.T) {
 	clusterID, err := q.createCluster("c")
 	require.NoError(t, err)
 
-	first := []*organizationv1.NodePoolSpec{
+	pools := []*organizationv1.NodePoolSpec{
 		spec("node-pool-2", "n1-standard-1", 1, 2),
 		spec("node-pool-10", "n1-standard-1", 1, 2),
 		spec("node-pool-1", "n1-standard-1", 1, 2),
+		spec("a-later", "n1-standard-1", 1, 2),
 	}
-	require.NoError(t, q.setNodePools(clusterID, first...))
-	require.NoError(t, q.setNodePools(clusterID, append(first, spec("a-later", "n1-standard-1", 1, 2))...))
+	require.NoError(t, q.setNodePools(clusterID, pools[:3]...))
+	require.NoError(t, q.setNodePools(clusterID, pools...))
 
 	want := []string{"node-pool-2", "node-pool-10", "node-pool-1", "a-later"}
 	for range 3 {

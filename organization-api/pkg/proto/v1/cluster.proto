@@ -349,6 +349,8 @@ message ListNodePoolsRequest {
 
 // List node pools response
 message ListNodePoolsResponse {
+  // Oldest first. Pools created in one SetNodePools call keep the order of
+  // that request.
   repeated NodePool node_pools = 10;
 }
 
