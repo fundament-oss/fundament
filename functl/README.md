@@ -92,7 +92,9 @@ registry_url: https://marketplace-registry-api.my-own-fundament.example
 Only `functl plugin publish` needs `registry_url`.
 
 For local development the repo's `mise.toml` sets `FUNCTL_URL` to the local
-skaffold installation, which overrides the default and the config file.
+skaffold installation, which overrides the default and the config file. Its
+test data has an API key for Alice in `acme-corp`:
+`functl auth login fun_LocalDevAliceAcmeCorpKey0000004KyU0e`.
 
 ### Environment variables
 
