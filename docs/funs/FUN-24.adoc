@@ -1,0 +1,101 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 24
+:state: discussion
+
+= FUN-24 Cluster-worker state machines
+
+== Introduction
+
+A cluster in Fundament moves through states that are written by several parts: the API inserts an outbox row, the sync handler applies it to Gardener, the status checker records what Gardener reports, and the reconcile loop compares the two. Each part wrote its own row without saying which state it expected to find, so the rules lived in the order the code happened to run in. A lost write was only visible as a status that never changed, and a status that never changed was indistinguishable from one that had nothing to report.
+
+This FUN makes the states explicit in three places, each enforcing the same rule at its own layer:
+
+* a transition table in Go for the outbox row and the Shoot status;
+* expected-state guards in the SQL that writes those rows;
+* a database `CHECK` on the Shoot status values, so a row cannot hold a value the code cannot name.
+
+It also adds time limits to the states that wait for Gardener with nothing to show for it, so a stuck cluster ends in something visible instead of staying quiet.
+
+== The outbox row
+
+`tenant.cluster_outbox` has four states: `pending`, `completed`, `retrying` and `failed`. A worker claims a row with `FOR NO KEY UPDATE SKIP LOCKED` without changing its status: `pending` covers both "waiting" and "being applied". A row whose precondition is not met keeps its status and gets a `retry_after`; a new cluster's row parks at `retry_after = 'infinity'` until its first node pool exists.
+
+[cols="1,1,3"]
+|===
+|From |To |When
+
+|`pending` |`completed` |the change reached Gardener
+|`pending` |`retrying` |the attempt failed and may be retried
+|`pending` |`failed` |the attempt failed and will not be retried
+|`retrying` |`completed` |a later attempt reached Gardener
+|`retrying` |`retrying` |an attempt failed again
+|`retrying` |`failed` |the attempt failed after `OUTBOX_MAX_RETRIES`
+|===
+
+`completed` and `failed` are terminal. The table is `machine.Must(machine.New(...))` in `cluster-worker/pkg/outbox`: `Must` validates it at startup, rejecting duplicate and unreachable edges, and renders the mermaid diagram in the README from the same table, so the drawing cannot promise an edge the worker refuses. A test compares the README's generated block with the table, and `go generate ./cluster-worker/pkg/outbox/` rewrites it.
+
+Every status write carries the status it expects (`WHERE status IN ('pending','retrying')`). A worker that lost the row to another worker, or to the sweeper, writes nothing and does not overwrite the winner's outcome.
+
+== The Shoot status
+
+`tenant.clusters.shoot_status` holds the status Gardener reports: `pending`, `progressing`, `ready`, `error`, `deleting`, `deleted` and `lost`.
+
+Unlike the outbox row, this is a complete graph: every status can follow every other, except that nothing follows `deleted`. Gardener can report any state at any check — an error while progressing, a `Migrate` that sends a ready Shoot back to `progressing`, a Shoot recreated after a change that starts at `pending` again — and the status rule set derives each update from the stored and observed state rather than from an expected transition. `TestShootLifecycleCoversEveryEmittedUpdate` enumerates the stored states against every status the rules can produce, so an update the worker emits but the machine does not declare fails CI.
+
+`deleted` is final: the status sweep skips a cluster once its deletion is confirmed, and the deletion path in the code sets it once.
+
+The same seven values appear in `common/dbconst.ClusterShootStatus`, in the `clusters_ck_shoot_status` `CHECK` constraint on `tenant.clusters`, and in the machine's state list. A parity test pins the machine to the constants and a `dbconst` generator pins the constants to the constraint, so the console, the database and the worker cannot drift apart silently.
+
+=== Guards
+
+The status checker reads a cluster row and writes it back under a compare-and-swap: the update carries `shoot_status_updated` as it was read, and applies only while the row still holds that value. Of two checks racing on one row, exactly one writes and records its follow-up rows (events, the ready outbox row, the API-available row); the other sees zero rows and schedules a short retry, from the new state.
+
+The ready outbox row and the API-available outbox row are inserted in the same transaction as the status update that causes them, so a status cannot be recorded without the work it triggers.
+
+=== Timeouts
+
+A state that waits for Gardener had no limit, so a create that never happened and a deletion Gardener never finished both looked the same as a recent one. `tenant.clusters.shoot_status_since` records when the stored status last changed (a status write moves it only when the status differs); the pending and deleting limits read it, while the updating limit measures from when the cluster's latest sync row completed:
+
+[cols="2,1,4"]
+|===
+|Setting |Default |Effect
+
+|`CLUSTER_STATUS_PENDING_TIMEOUT`
+|20m
+|A `pending` cluster whose Shoot never appeared in Gardener turns `error`, with a `status_error` event naming the failed create. A Shoot that once existed is `lost`, not this.
+
+|`CLUSTER_STATUS_UPDATING_WARNING`
+|30m
+|An update whose sync row finished this long ago but that Gardener still reports running records a `status_warning`. The cluster stays `ready`, marked as updating.
+
+|`CLUSTER_STATUS_DELETING_ALERT`
+|2h
+|A Shoot deleting this long records the same warning and logs an `ALERT`. The status stays `deleting`: declaring it deleted would release quota while the Shoot still exists.
+|===
+
+A warning is compared with every `status_warning` event recorded since the cluster's last milestone and recorded once per incident, not on every check.
+
+A create that Gardener keeps failing and retrying has no timeout: the cluster stays `progressing` with the current retrying error recorded as a warning. Gardener is still working on it and may recover, so the limit that would escalate it does not exist yet.
+
+== Namespace healing
+
+The namespace handler had one rule for a failed sync: skip it forever. `SkipIfFailed` kept the reconcile loop from spending a row every five minutes on a namespace that could not succeed, but a namespace that failed on a transient condition stayed broken until someone noticed, and noticing meant reading `cluster_outbox` by hand.
+
+The skip is now time-boxed. The reconcile loop still skips a namespace whose latest row failed, but only while that failure is younger than an hour. An older failure gets one more attempt; if it fails again, its next attempt waits an hour as well, so a genuinely broken namespace costs one sync an hour rather than one every round. The fan-out when a cluster's API server becomes available still skips nothing: whatever the namespace waited on may be there now.
+
+Two ways out remain for an operator: `funops namespace sync <id>` queues a reconcile immediately, `--all` does so for every namespace whose last sync failed on a live cluster whose API server answers (the others sync when a change brings their Shoot back), and `tenant.namespace_sync_state` shows each namespace's latest sync row so the failed ones are visible without a hand-written query.
+
+== Sync state
+
+`ClusterGetPushState` returns three answers instead of one flag. `sync_in_flight` says whether a change is still on its way: the cluster's own latest sync row, or any active node pool's latest row, is `pending`/`retrying`. A deleted pool's row is left out: removing a pool does not shape the pools that remain. `sync_blocked` says the cluster's own latest row is `failed` and no node pool sync that came after it — inserted later, or run after the failure was recorded — is still going or completed; a later row that failed itself changed nothing. A deleted pool's row counts for `sync_blocked`: its sync also pushed the cluster to Gardener, so it lifts the block. `sync_queued` is the widest: some sync of the cluster is still to come, a deleted pool's row included, so the status timeout waits for it instead of recording a Shoot that never appeared just before the sync that creates it. A failed pool row is reported per pool, through `outbox_status` and `outbox_status_info` on the pool's status, so one failed pool does not read as a failed cluster; it stops counting once any later sync completes, since that sync applied the whole cluster.
+
+The status checker uses the split to decide whether Gardener's report can be trusted yet: while a sync is in flight, a pool that is not `ready` reads `progressing` (a complaint naming it still counts, being about machines missing now); once it settles, the same report classifies the pools. A cluster whose create gave up has no Shoot at all, so the sweep checks it too: its pools report the sync's failure, and its status records that no Shoot ever appeared.
+
+== Consequences
+
+* Every state write names the state it expects, so a lost write is silent by design rather than by accident, and the retry that follows decides from the new state.
+* A new status value needs three edits: the `CHECK` constraint (through `db/fundament.dbm`), the `dbconst` constants and the machine's state list. Two tests fail until all three match.
+* `cluster-worker/README.md` documents the outbox diagram and the status rules; its diagram is generated from the machine and checked by a test.

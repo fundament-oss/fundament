@@ -314,12 +314,15 @@ func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx p
 				"entity_type", entityType,
 				"error", processErr)
 			_ = tx.Rollback(ctx)
-			markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+			marked, markErr := w.queries.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
 				ID:         row.ID,
 				StatusInfo: pgtype.Text{String: processErr.Error(), Valid: true},
 			})
 			if markErr != nil {
 				return false, fmt.Errorf("mark failed for non-retryable error: %w", markErr)
+			}
+			if marked == 0 {
+				w.logRowMovedOn(row, "failed")
 			}
 			return true, nil
 		}
@@ -344,8 +347,15 @@ func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx p
 
 	// Happy path: mark processed and commit in the same transaction.
 	qtx := w.queries.WithTx(tx)
-	if err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID}); err != nil {
+	processed, err := qtx.OutboxMarkProcessed(ctx, db.OutboxMarkProcessedParams{ID: row.ID})
+	if err != nil {
 		return false, fmt.Errorf("mark as processed: %w", err)
+	}
+	if processed == 0 {
+		// This transaction holds the row for update, so the guard cannot miss:
+		// a zero here means the query and the worker disagree about what a
+		// claimed row looks like.
+		return false, fmt.Errorf("marked outbox row %s processed %d times", row.ID, processed)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -377,11 +387,15 @@ func (w *Worker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.Ou
 			"max_retries", w.cfg.MaxRetries,
 			"error", processErr)
 
-		if err := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
+		marked, err := qtx.OutboxMarkFailed(ctx, db.OutboxMarkFailedParams{
 			ID:         row.ID,
 			StatusInfo: statusInfo,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("mark outbox failed: %w", err)
+		}
+		if marked == 0 {
+			w.logRowMovedOn(row, "failed")
 		}
 		return nil
 	}
@@ -392,6 +406,10 @@ func (w *Worker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.Ou
 		MaxBackoff:   durationToInterval(w.cfg.MaxBackoff),
 		StatusInfo:   statusInfo,
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.logRowMovedOn(row, "retrying")
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("mark outbox retry: %w", err)
 	}
@@ -402,6 +420,16 @@ func (w *Worker) handleRowError(ctx context.Context, qtx *db.Queries, row *db.Ou
 		"error", processErr)
 
 	return nil
+}
+
+// logRowMovedOn records a guarded write that matched no row: this worker
+// released its lock before writing and another worker finalized the row in
+// between. The row's outcome stands; this attempt is a no-op.
+func (w *Worker) logRowMovedOn(row *db.OutboxGetAndLockRow, outcome string) {
+	w.logger.Info("outbox row already finalized, leaving it",
+		"outbox_id", row.ID,
+		"claimed_status", row.Status,
+		"attempted_outcome", outcome)
 }
 
 // entityFromRow determines the entity type and ID from the outbox row's FK columns.
@@ -454,6 +482,10 @@ func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetA
 		Delay:      durationToInterval(deferralDelay(w.cfg.PreconditionDelay, row.Deferrals, precondErr)),
 		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
 	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			w.logRowMovedOn(row, "deferred")
+			return true, nil
+		}
 		return false, fmt.Errorf("defer outbox row: %w", err)
 	}
 
@@ -559,6 +591,10 @@ func (w *Worker) deferPark(ctx context.Context, row *db.OutboxGetAndLockRow, ent
 		Delay:      durationToInterval(parkRetryDelay),
 		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
 	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			w.logRowMovedOn(row, "deferred")
+			return nil
+		}
 		return fmt.Errorf("defer outbox row after park lock timeout: %w", err)
 	}
 	w.logger.Info("cluster row held by another transaction, deferring the park",

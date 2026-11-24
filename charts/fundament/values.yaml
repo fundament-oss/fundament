@@ -291,6 +291,16 @@ clusterWorker:
     interval: 15m
     workers: 4
     timeout: 30s
+  # The status path: how many checks run at once, the shortest gap between two
+  # recorded progress messages of one cluster, and the limits after which a
+  # stuck pending, updating or deleting cluster is reported. See the
+  # configuration table in cluster-worker/README.md.
+  status:
+    workers: 2
+    progressEventInterval: 1m
+    pendingTimeout: 20m
+    updatingWarning: 30m
+    deletingAlert: 2h
   gardenerMode: mock # mock or real
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""

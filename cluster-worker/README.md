@@ -82,7 +82,8 @@ sequenceDiagram
   Gardener's create tasks, ready while the health checks settle, then healthy), and by
   a sweep of every cluster at startup and every `STATUS_INTERVAL` (30m).
   The sweep catches what produces no event: a Shoot deleted while cluster-worker was not
-  running, or a cluster that never got a Shoot. Deleted clusters are checked until their
+  running, or a cluster that never got a Shoot (one whose sync gave up is checked too, so
+  its status and its pools can say why). Deleted clusters are checked until their
   shoot is gone. Both only queue cluster IDs; `CLUSTER_STATUS_WORKERS` workers take them
   off the queue. A cluster queued twice is checked once, never by two workers at the same
   time, and a failed check is retried with backoff. In real mode the startup sweep waits
@@ -98,6 +99,12 @@ sequenceDiagram
   cluster's delete sync has settled: a delete the Gardener API rejects fails at once instead
   of retrying, so the reconcile loop takes that shoot over on its next pass. A shoot without
   a cluster row is only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
+  A namespace whose sync failed for good is left alone until its failure is an hour old,
+  and then gets one more attempt: a hopeless namespace does not cost a sync every round,
+  and one that failed on a transient condition heals without an operator.
+  `funops namespace sync <id>` (or `--all`, for every namespace whose last sync failed)
+  queues that attempt now, and `tenant.namespace_sync_state` shows each namespace's latest
+  sync row.
 - **No tenant DNS.** Every sync writes the `shoot-dns-service` extension as disabled on the
   shoot (never on the local provider, whose Gardener does not register it), so cluster admins
   cannot publish DNS names under the shoot domain. `funops cluster sync --all` queues a sync
@@ -109,42 +116,43 @@ sequenceDiagram
 Two state machines: the outbox row a change produces, and the cluster's `shoot_status`
 as the console shows it.
 
+The outbox row's status. A worker claims a row by locking it
+(`FOR NO KEY UPDATE SKIP LOCKED`) without changing the status, so `pending` covers both
+"waiting" and "being synced". A row whose precondition is not met yet keeps its status and
+gets a `retry_after` (deferred); a new cluster's row parks until its first node pool by
+setting `retry_after` to `infinity`. Every status write carries the status it expects
+(`WHERE status IN ('pending','retrying')`), so a worker that lost a row to another worker
+leaves the winner's outcome alone.
+
+<!-- BEGIN GENERATED: cluster outbox row -->
+
 ```mermaid
 stateDiagram-v2
-    direction TB
-
-    state "cluster_outbox row" as outbox {
-        [*] --> Pending: trigger, reconcile or status loop inserts it
-        Pending --> Claimed: worker locks it (SKIP LOCKED)
-        Claimed --> Completed: handler succeeded
-        Claimed --> Retrying: handler failed
-        Claimed --> Pending: precondition not met yet (deferred)
-        Claimed --> Parked: new cluster without a node pool
-        Parked --> Pending: first node pool inserted, or cluster deleted (trigger)
-        Claimed --> Pending: worker died, transaction rolled back
-        Retrying --> Claimed: backoff elapsed
-        Retrying --> Failed: retries exhausted
-    }
-
-    state "tenant.clusters.shoot_status" as status {
-        [*] --> pending: shoot not in Gardener yet
-        pending --> progressing
-        progressing --> ready: last operation succeeded
-        progressing --> error: last operation failed, no retry
-        error --> progressing: retried
-        ready --> progressing: migrate or restore
-        ready --> deleting: cluster deleted
-        progressing --> deleting: cluster deleted
-        deleting --> deleted: shoot gone
-        progressing --> lost: shoot gone, cluster not deleted
-        ready --> lost: shoot gone, cluster not deleted
-        error --> lost: shoot gone, cluster not deleted
-        deleting --> lost: shoot gone, cluster not deleted
-        lost --> progressing: a change creates the shoot again
-    }
+    state "pending" as s0
+    [*] --> s0
+    state "completed" as s1
+    s0 --> s1 : completed
+    state "retrying" as s2
+    s0 --> s2 : retried
+    state "failed" as s3
+    s0 --> s3 : failed
+    s2 --> s1 : completed
+    s2 --> s2 : retried
+    s2 --> s3 : failed
+    s1 --> [*]
+    s3 --> [*]
 ```
 
-`tenant.clusters.shoot_status`, as the console shows it:
+<!-- END GENERATED: cluster outbox row -->
+
+`tenant.clusters.shoot_status`, as the console shows it. Every status can follow every
+other, except that `deleted` only follows itself: Gardener can report any state at any
+check — an error while progressing, a migrate that sends a ready Shoot back to
+`progressing`, a Shoot recreated after a change that starts `pending` again — and a
+deleted cluster's check writes `deleting` or `deleted` whatever status the row held.
+`deleted` is final: the sweep skips a cluster once its deletion is confirmed, and a
+report never reopens one. `TestShootLifecycleCoversEveryEmittedUpdate` pins the status
+rules to that set.
 
 | Status | Meaning |
 |---|---|
@@ -174,6 +182,35 @@ once per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` (1m). A change inside that win
 recorded when the window ends, if the message is still new, so a reconcile stuck on one
 task always records that task. A create of 10 to 15 minutes records about 10 to 15
 progress events.
+
+### Stalled statuses
+
+A status that does not move is not evidence of progress. Three limits watch the states
+that wait for Gardener with nothing to show them, measured from `shoot_status_since` (the
+moment the stored status last changed) or, for an update, from the moment the change's
+sync row finished:
+
+- A cluster whose Shoot never appeared in Gardener turns `error` with "The Shoot did not
+  appear in Gardener; the cluster's next change tries again." and a `status_error` event
+  once `CLUSTER_STATUS_PENDING_TIMEOUT` (20m) has passed since `shoot_status_since`, the
+  first check that recorded the Shoot missing — so a cluster seen missing only by the
+  sweep turns `error` up to one sweep interval later. The create sync that ran was lost
+  after its row completed; nothing else would report it. A Shoot that once existed is not
+  this case: its absence is `lost`, below.
+- An update `CLUSTER_STATUS_UPDATING_WARNING` (30m) after its sync row finished records a
+  `status_warning` that the update has not finished. The cluster stays `ready` and marked
+  as updating (`shoot_updating`) — a warning, not a verdict.
+- A Shoot that has been `deleting` for `CLUSTER_STATUS_DELETING_ALERT` (2h) records the
+  same warning and logs an `ALERT` with how long it has been deleting. The status stays
+  `deleting`: declaring it deleted would release quota while the Shoot still exists.
+
+A create Gardener keeps failing and retrying is not one of these: the cluster stays
+`progressing` with the current retrying error recorded as a warning, because Gardener is
+still working and may recover. No limit escalates it.
+
+A warning is compared with every `status_warning` recorded since the cluster's last
+milestone (ready, healthy, error or lost) and recorded once, so a stuck state is
+reported per incident rather than every check.
 
 ### Lost clusters
 
@@ -283,19 +320,24 @@ even on a shoot that turned ready while unhealthy — does not mean this one rec
 A complaint naming a settled pool (`ready`, or NULL from before this feature) only
 turns it `waiting` while the initial create runs or a change of ours is in flight —
 otherwise it is a node problem, which the pool's live metrics status describes. While
-the cluster has a change that has not left the outbox (pending, retrying or failed; the
-state is cluster-wide, not per pool), what Gardener reports may predate it: a pool that
-is new (NULL) or `progressing` stays `progressing` rather than reading ready, and a
-complaint naming it is ignored; a pool stored `ready` keeps its status.
+the cluster has a change that has not left the outbox (pending or retrying; the state is
+cluster-wide, not per pool), what Gardener reports may predate it: a pool that is not
+`ready` reads `progressing`, since the change may be what settles it and its stored
+status — the last sync's failure included — describes a shoot without the change. A
+complaint naming the pool still counts, because it is about machines missing now, and a
+pool stored `ready` keeps its status. A sync that gave up is not in flight: its pools
+read `error` with the row's reason, and with no Shoot at all that is the only thing they
+can report.
 The in-flight state is read after the pool list (a pool's INSERT commits together with
 its outbox row), so a pool inserted mid-check is never classified from a stale
-nothing-in-flight state. Gardener names a pool's machines `<technicalID>-<worker>` plus a
+nothing-in-flight state. A pool's status write carries the `status_updated` it read, so
+a check that classified from an older report cannot land after a newer one. Gardener names a pool's machines `<technicalID>-<worker>` plus a
 provider-specific suffix, so a pool is matched on that whole name. The reason is
 cleaned before it is stored (control characters dropped, capped at 1 KiB): it is node
 and provider text. metal-stack's `no machine available` is stored in plain words, "No
 free `<machine type>` machine is available.", without the type while a change of ours
 is rolling out. Every new waiting or error message is logged with Gardener's text. A failure
-that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
+that names no pool stays cluster-level; a shoot that is deleting leaves pool rows
 untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
 the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
 text as machines churn, so a changed reason refreshes the row silently. A pool
@@ -406,6 +448,9 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
+| `CLUSTER_STATUS_PENDING_TIMEOUT` | `20m` | how long a pending Shoot may be missing from Gardener before the cluster turns `error`; see [Stalled statuses](#stalled-statuses) |
+| `CLUSTER_STATUS_UPDATING_WARNING` | `30m` | how long an update may stay unfinished after its sync row completed before a warning is recorded |
+| `CLUSTER_STATUS_DELETING_ALERT` | `2h` | how long a Shoot may stay deleting before a warning is recorded and an `ALERT` logged |
 | `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off. Helm: `clusterWorker.maxReconcileDeletions`; see [Too many deletions in one pass](#too-many-deletions-in-one-pass) |
 | `INVENTORY_INTERVAL` | `15m` | how often every ready cluster is counted; see [Fleet inventory](#fleet-inventory) |
 | `INVENTORY_WORKERS` | `4` | clusters counted at once |

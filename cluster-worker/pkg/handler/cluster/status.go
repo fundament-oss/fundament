@@ -63,7 +63,10 @@ func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter ti
 		}
 		return 0, fmt.Errorf("load cluster %s: %w", id, err)
 	}
-	if !cluster.Synced {
+	// A deleted cluster is checked even when it never reached Gardener: there is
+	// no Shoot to wait for, and the check records that nothing is left to
+	// delete. Until it does, the cluster keeps its name and its quota.
+	if !cluster.Checkable && !cluster.Deleted.Valid {
 		return 0, ErrClusterNotSynced
 	}
 
@@ -77,7 +80,7 @@ func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter ti
 		}
 		deleted := cluster.Deleted.Time
 		clusterToSync.Deleted = &deleted
-		return 0, h.checkDeletedCluster(ctx, &cluster, clusterToSync)
+		return h.checkDeletedCluster(ctx, &cluster, clusterToSync)
 	}
 	return h.checkActiveCluster(ctx, &cluster, clusterToSync)
 }
@@ -91,32 +94,66 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 
 	// Pool status is derived from the same report, before the cluster-level
 	// early return below: a check that changes nothing for the cluster row can
-	// still carry a new reason for a pool.
-	poolRecheck := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
+	// still carry a new reason for a pool. The push state it classified with
+	// serves the timeout below too, rather than reading the same rows twice.
+	poolRecheck, push := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
 
+	now := time.Now()
+	timeouts := statusTimeouts{
+		pending:  h.cfg.StatusPendingTimeout,
+		updating: h.cfg.StatusUpdatingWarning,
+		deleting: h.cfg.StatusDeletingAlert,
+	}
 	stored := storedShootState{
 		Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
 		Message:  cluster.ShootStatusMessage.String,
 		Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
 		Updating: cluster.ShootUpdating,
 
-		APIAvailable: cluster.ShootApiAvailable.Valid,
+		APIAvailable:  cluster.ShootApiAvailable.Valid,
+		Since:         cluster.ShootStatusSince.Time,
+		UpdateSettled: cluster.UpdateSettled.Time,
 	}
-	if shootStatus.Status == gardener.StatusError && shootStatus.Retrying {
-		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("load last warning: %w", err)
-		}
-		stored.LastWarning = lastWarning.String
+	// A warning records once per incident, compared against the ones already
+	// recorded, and a missing entry reads as "not recorded yet": they are
+	// loaded for every check, so a warning rule added later cannot re-record
+	// its warning each time by not being named here.
+	warnings, err := h.loadWarnings(ctx, cluster.ID)
+	if err != nil {
+		return 0, err
 	}
+	stored.Warnings = warnings
 	update := nextShootStatus(&stored, shootStatus)
+	if timedOut, ok := timedOutPending(&stored, shootStatus, now, timeouts.pending); ok {
+		// A sync still queued or retrying will apply the change, creating the
+		// Shoot: timing it out would record a failure for a create that is
+		// about to run. This check also runs from the sync path, just before
+		// that apply. The state the pools were classified with is a moment old,
+		// and a change saved since has its own row: before recording a failure,
+		// read it again. A returned "queued" needs no second read.
+		if push == nil || !push.SyncQueued {
+			loaded, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+			if err != nil {
+				return 0, fmt.Errorf("load cluster push state: %w", err)
+			}
+			push = &loaded
+		}
+		if !push.SyncQueued {
+			// The timeout replaces the status, not what the check learned about
+			// the API server: a Shoot that came and went must still forget its
+			// access.
+			update = applyAPIAvailability(&stored, shootStatus, &timedOut)
+		}
+	}
+	addUpdateWarning(&update, &stored, now, timeouts.updating)
+	stuckDeleting := addDeletingWarning(&update, &stored, now, timeouts.deleting)
 	var retryAfter time.Duration
 	if update.Status == gardener.StatusProgressing || update.Updating {
 		last, err := h.lastProgress(ctx, cluster.ID)
 		if err != nil {
 			return 0, err
 		}
-		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
+		retryAfter = addProgressEvent(&update, last, now, h.cfg.StatusProgressEventInterval)
 	}
 	retryAfter = soonest(retryAfter, poolRecheck)
 	if update.unchanged(&stored) {
@@ -145,9 +182,13 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		case dbconst.ClusterEventEventType_StatusLost:
 			h.logger.Error("ALERT: shoot disappeared from Gardener, not recreating it", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
 		case dbconst.ClusterEventEventType_StatusWarning:
-			h.logger.Warn("gardener is retrying a failed shoot operation", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
+			h.logger.Warn("shoot status warning", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		default:
 		}
+	}
+	if stuckDeleting {
+		h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
+			"deleting_for", now.Sub(stored.Since).Round(time.Minute))
 	}
 
 	h.logger.Debug("updated shoot status",
@@ -157,12 +198,29 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		"health", update.Health)
 
 	if update.Status == gardener.StatusError {
+		// The recorded message, not Gardener's: on the timeout path they differ,
+		// and the alert should say what the cluster says.
 		h.logger.Error("ALERT: shoot reconciliation failed",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
-			"message", shootStatus.Message)
+			"message", update.Message)
 	}
 	return retryAfter, nil
+}
+
+// loadWarnings reads the warning messages the cluster recorded since its last
+// milestone, as a set, so a check does not repeat one and two warning sources
+// do not displace each other.
+func (h *Handler) loadWarnings(ctx context.Context, clusterID uuid.UUID) (map[string]bool, error) {
+	rows, err := h.queries.ClusterListWarningMessages(ctx, db.ClusterListWarningMessagesParams{ClusterID: clusterID})
+	if err != nil {
+		return nil, fmt.Errorf("load warning messages: %w", err)
+	}
+	warnings := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		warnings[row.String] = true
+	}
+	return warnings, nil
 }
 
 // lastProgress loads the cluster's latest status_progressing event.
@@ -178,30 +236,62 @@ func (h *Handler) lastProgress(ctx context.Context, clusterID uuid.UUID) (progre
 }
 
 // checkDeletedCluster confirms that a soft-deleted cluster's Shoot is gone.
-func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) error {
+func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) (time.Duration, error) {
 	shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 	if err != nil {
-		return fmt.Errorf("get deleted shoot status: %w", err)
+		return 0, fmt.Errorf("get deleted shoot status: %w", err)
 	}
 
 	// The Shoot of a deleted cluster is going or gone: forget that its API
 	// server was available, so nothing queued for it treats it as reachable.
 	apiGone := cluster.ShootApiAvailable.Valid
 
-	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
+	// Not found is how a gone Shoot reads; a report of the deletion itself is
+	// the same answer, should the client ever see one.
+	confirmedGone := shootStatus.Status == gardener.StatusDeleted ||
+		(shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound)
+	if !confirmedGone {
+		now := time.Now()
 		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message, APIGone: apiGone}
 		stored := storedShootState{
 			Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String,
 			APIAvailable: cluster.ShootApiAvailable.Valid,
+			Since:        cluster.ShootStatusSince.Time,
+		}
+		// A deletion that has lasted past its limit warns once and alerts, so
+		// someone looks at a Shoot Gardener is not finishing. The status stays
+		// deleting: forcing deleted would release the quota while the Shoot
+		// still exists.
+		var stuckDeleting bool
+		if deletingTooLong(&stored, now, h.cfg.StatusDeletingAlert) {
+			warnings, err := h.loadWarnings(ctx, cluster.ID)
+			if err != nil {
+				return 0, err
+			}
+			stored.Warnings = warnings
+			stuckDeleting = addDeletingWarning(&deleting, &stored, now, h.cfg.StatusDeletingAlert)
 		}
 		if deleting.unchanged(&stored) {
-			return nil
+			return 0, nil
 		}
-		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {
-			return err
+		written, err := h.writeShootStatus(ctx, cluster, &deleting)
+		if err != nil {
+			return 0, err
+		}
+		if !written {
+			// The row changed after it was read. Check again shortly instead of
+			// dropping the transition: no event is guaranteed to bring us back.
+			h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
+			return statusRetryBaseDelay, nil
+		}
+		// The alert follows the write: a check that lost the race recorded no
+		// warning, and a second check on the same incident must not alert again.
+		if stuckDeleting {
+			h.logger.Error("ALERT: shoot stuck deleting", "cluster_id", cluster.ID, "name", cluster.Name,
+				"deleting_for", now.Sub(stored.Since).Round(time.Minute))
 		}
 		h.logger.Debug("shoot still being deleted", "cluster_id", cluster.ID, "status", shootStatus.Status)
-		return nil
+		return 0, nil
 	}
 
 	written, err := h.writeShootStatus(ctx, cluster, &shootStatusUpdate{
@@ -211,12 +301,14 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		APIGone: apiGone,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if written {
-		h.logger.Info("confirmed shoot deletion", "cluster_id", cluster.ID, "name", cluster.Name)
+	if !written {
+		h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
+		return statusRetryBaseDelay, nil
 	}
-	return nil
+	h.logger.Info("confirmed shoot deletion", "cluster_id", cluster.ID, "name", cluster.Name)
+	return 0, nil
 }
 
 // writeShootStatus records a status update with its events and, on a

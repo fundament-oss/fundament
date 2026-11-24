@@ -22,13 +22,17 @@ ORDER BY id ASC
 LIMIT 1
 FOR NO KEY UPDATE SKIP LOCKED;
 
--- name: OutboxMarkProcessed :exec
+-- name: OutboxMarkProcessed :execrows
+-- Completes the row the caller claimed. The status guard stays as a backstop;
+-- the caller holds the row for update, so it matches one row and a zero is an
+-- error rather than another worker having moved on.
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),
     status_info = NULL,
     retry_after = NULL
-WHERE id = @id;
+WHERE id = @id
+  AND status IN ('pending', 'retrying');
 
 -- name: OutboxMarkRetry :one
 -- Marks a row for retry with exponential backoff.
@@ -44,13 +48,16 @@ SET retries = retries + 1,
     status = 'retrying',
     status_info = @status_info
 WHERE id = @id
+  AND status IN ('pending', 'retrying')
 RETURNING retries;
 
--- name: OutboxMarkFailed :exec
--- Marks a row as permanently failed after exceeding max retries.
+-- name: OutboxMarkFailed :execrows
+-- Marks a row as permanently failed after exceeding max retries. A row another
+-- worker already completed is left alone; zero rows says so.
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = @status_info
-WHERE id = @id;
+WHERE id = @id
+  AND status IN ('pending', 'retrying');
 
 -- name: OutboxDeferWithoutRetry :one
 -- Defers a row for later processing without incrementing the retry counter.
@@ -62,6 +69,7 @@ SET retry_after = now() + @delay::interval,
     deferrals = deferrals + 1,
     status_info = @status_info
 WHERE id = @id
+  AND status IN ('pending', 'retrying')
 RETURNING deferrals;
 
 -- name: OutboxLockCluster :one
@@ -137,10 +145,11 @@ WHERE NOT EXISTS (
 -- Conditionally insert a reconcile outbox row for a namespace.
 -- Skips insert if the namespace already has an active (pending/retrying) row.
 -- With skip_if_failed it also skips a namespace whose latest row failed for
--- good: the periodic reconcile loop sets it, so
--- a namespace that cannot succeed is not retried every round. The fan-out when
--- the cluster's API server becomes available does not: whatever the namespace
--- waited on may be there now. Safe to call repeatedly (idempotent).
+-- good within failed_retry_after: the periodic reconcile loop sets it, so a
+-- namespace that cannot succeed is not retried every round, but a failure
+-- older than that gets one more attempt. The fan-out when the cluster's API
+-- server becomes available does not skip at all: whatever the namespace waited
+-- on may be there now. Safe to call repeatedly (idempotent).
 -- The NOT EXISTS guard is evaluated against the caller's snapshot, so two
 -- concurrent callers (ready fan-out + reconcile loop) could both pass it; the
 -- ON CONFLICT clause lets the partial unique index cluster_outbox_uq_ns_reconcile
@@ -155,12 +164,14 @@ WHERE NOT EXISTS (
 AND NOT (
     @skip_if_failed::boolean
     AND COALESCE((
-        SELECT tenant.cluster_outbox.status
+        SELECT
+            tenant.cluster_outbox.status = 'failed'
+            AND tenant.cluster_outbox.failed > now() - @failed_retry_after::interval
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.namespace_id = @namespace_id
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) = 'failed', false)
+    ), false)
 )
 ON CONFLICT (namespace_id) WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'))
 DO NOTHING;

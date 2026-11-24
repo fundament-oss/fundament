@@ -140,6 +140,22 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:        nil,
 		},
 		{
+			// The failure came from a sync that never delivered: while its
+			// change is queued the pool is on its way, not ready and not failed.
+			name:        "a failed pool whose retry is queued reads progressing",
+			stored:      []storedNodePool{{Name: "big", Status: "error", Message: "The last sync to Gardener failed: quota exceeded"}},
+			observed:    readyHealthy,
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "big", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
+			name:        "a failed pool whose change rolls out reads progressing",
+			stored:      []storedNodePool{{Name: "big", Status: "error", Message: "The last sync to Gardener failed: quota exceeded"}},
+			observed:    quietReconcile,
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "big", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
 			name:     "ready after the rollout settles the pool",
 			stored:   []storedNodePool{{Name: "big", Status: "progressing"}},
 			observed: readyHealthy,
@@ -380,7 +396,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 	for _, tt := range slices.Concat(tests, ownNodesTests) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.updating, tt.syncPending, tt.nodes))
+			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.updating, syncState{InFlight: tt.syncPending}, tt.nodes))
 		})
 	}
 }
@@ -397,6 +413,15 @@ func TestReasonText(t *testing.T) {
 	cleaned := reasonText(long)
 	assert.Equal(t, maxReasonLen, len([]rune(cleaned)))
 	assert.Equal(t, "…", string([]rune(cleaned)[maxReasonLen-1]))
+}
+
+// A failed sync's message carries Gardener or HTTP error text, so it is cleaned
+// like every other stored pool reason.
+func TestSyncFailureMessageSanitizes(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "The last sync to Gardener failed.", syncFailureMessage(""))
+	assert.Equal(t, "The last sync to Gardener failed: two  lines", syncFailureMessage("two \nlines\x1b"))
 }
 
 // The waiting reason a pool stores went through reasonText.
@@ -568,6 +593,74 @@ func TestPoolReasonOwnNameRepeated(t *testing.T) {
 	assert.Equal(t, "No free local-medium machine is available.", reason)
 }
 
+// A sync that gave up is not a pending change: the pool says the last sync
+// failed, with the reason the row recorded, instead of waiting behind a gate
+// that never opens.
+func TestNextNodePoolStatusesBlockedSync(t *testing.T) {
+	t.Parallel()
+
+	observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile}
+
+	tests := []struct {
+		name   string
+		stored []storedNodePool
+		sync   syncState
+		want   []nodePoolUpdate
+	}{
+		{
+			name:   "the pool's own row failed",
+			stored: []storedNodePool{{Name: "workers", Status: "progressing", OutboxStatus: "failed", OutboxMessage: "quota exceeded"}},
+			want: []nodePoolUpdate{{
+				Name: "workers", Status: dbconst.NodePoolStatus_Error, Message: "The last sync to Gardener failed: quota exceeded",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool workers: The last sync to Gardener failed: quota exceeded"}},
+			}},
+		},
+		{
+			name:   "the cluster's own row failed",
+			stored: []storedNodePool{{Name: "workers"}},
+			sync:   syncState{Blocked: true, BlockedMessage: "invalid machine type"},
+			want: []nodePoolUpdate{{
+				Name: "workers", Status: dbconst.NodePoolStatus_Error, Message: "The last sync to Gardener failed: invalid machine type",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool workers: The last sync to Gardener failed: invalid machine type"}},
+			}},
+		},
+		{
+			name:   "a failed row a later sync superseded",
+			stored: []storedNodePool{{Name: "workers", Status: "progressing", OutboxStatus: "failed", OutboxMessage: "quota exceeded", OutboxSuperseded: true}},
+		},
+		{
+			name:   "a retry in flight is not a failure",
+			stored: []storedNodePool{{Name: "workers", Status: "progressing", OutboxStatus: "failed"}},
+			sync:   syncState{InFlight: true},
+			want:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, observed, false, tt.sync, nil))
+		})
+	}
+}
+
+// A create that failed for good leaves no Shoot to read: the pools still say
+// why they were never built, and a sync that may still run says nothing.
+func TestNextNodePoolStatusesBlockedWithoutAShoot(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "workers"}}
+
+	assert.Equal(t, []nodePoolUpdate{{
+		Name: "workers", Status: dbconst.NodePoolStatus_Error, Message: "The last sync to Gardener failed: invalid machine type",
+		Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool workers: The last sync to Gardener failed: invalid machine type"}},
+	}}, nextNodePoolStatuses(stored, nil, false, syncState{Blocked: true, BlockedMessage: "invalid machine type"}, nil))
+
+	assert.Empty(t, nextNodePoolStatuses(stored, nil, false, syncState{InFlight: true}, nil),
+		"a create still queued may yet run")
+}
+
 func TestNextNodePoolStatusesPlainReason(t *testing.T) {
 	t.Parallel()
 
@@ -577,7 +670,7 @@ func TestNextNodePoolStatusesPlainReason(t *testing.T) {
 		t.Parallel()
 		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
 		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool.", GardenerText: metalMessage()}},
-			nextNodePoolStatuses(stored, observed, false, true, nil))
+			nextNodePoolStatuses(stored, observed, false, syncState{InFlight: true}, nil))
 	})
 
 	// The change left the outbox and reached Gardener, which has not
@@ -586,14 +679,14 @@ func TestNextNodePoolStatusesPlainReason(t *testing.T) {
 		t.Parallel()
 		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage(), TechnicalID: metalTechnicalID}
 		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool.", GardenerText: metalMessage()}},
-			nextNodePoolStatuses(stored, observed, true, false, nil))
+			nextNodePoolStatuses(stored, observed, true, syncState{}, nil))
 	})
 
 	t.Run("a failure past the stored text cap is still recognised", func(t *testing.T) {
 		t.Parallel()
 		long := `task "Waiting until shoot worker nodes have been reconciled" failed: ` + strings.Repeat("x", maxReasonLen) + " " + metalMessage()
 		observed := &gardener.ShootStatus{Status: gardener.StatusError, LastErrors: []string{long}, TechnicalID: metalTechnicalID}
-		updates := nextNodePoolStatuses(stored, observed, false, false, nil)
+		updates := nextNodePoolStatuses(stored, observed, false, syncState{}, nil)
 		require.Len(t, updates, 1)
 		assert.Equal(t, "No free c1-large-x86 machine is available.", updates[0].Message)
 	})
@@ -615,5 +708,5 @@ func TestNextNodePoolStatusesMetalCreate(t *testing.T) {
 		{Name: "small", Status: dbconst.NodePoolStatus_Progressing},
 		{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: reason, GardenerText: metalMessage(),
 			Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool medium: " + reason}}},
-	}, nextNodePoolStatuses(stored, observed, false, false, nil))
+	}, nextNodePoolStatuses(stored, observed, false, syncState{}, nil))
 }

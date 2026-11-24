@@ -18,6 +18,7 @@ SET retry_after = now() + $1::interval,
     deferrals = deferrals + 1,
     status_info = $2
 WHERE id = $3
+  AND status IN ('pending', 'retrying')
 RETURNING deferrals
 `
 
@@ -173,35 +174,39 @@ WHERE NOT EXISTS (
 AND NOT (
     $2::boolean
     AND COALESCE((
-        SELECT tenant.cluster_outbox.status
+        SELECT
+            tenant.cluster_outbox.status = 'failed'
+            AND tenant.cluster_outbox.failed > now() - $3::interval
         FROM tenant.cluster_outbox
         WHERE tenant.cluster_outbox.namespace_id = $1
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) = 'failed', false)
+    ), false)
 )
 ON CONFLICT (namespace_id) WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'))
 DO NOTHING
 `
 
 type OutboxInsertReconcileForNamespaceParams struct {
-	NamespaceID  pgtype.UUID
-	SkipIfFailed bool
+	NamespaceID      pgtype.UUID
+	SkipIfFailed     bool
+	FailedRetryAfter pgtype.Interval
 }
 
 // Conditionally insert a reconcile outbox row for a namespace.
 // Skips insert if the namespace already has an active (pending/retrying) row.
 // With skip_if_failed it also skips a namespace whose latest row failed for
-// good: the periodic reconcile loop sets it, so
-// a namespace that cannot succeed is not retried every round. The fan-out when
-// the cluster's API server becomes available does not: whatever the namespace
-// waited on may be there now. Safe to call repeatedly (idempotent).
+// good within failed_retry_after: the periodic reconcile loop sets it, so a
+// namespace that cannot succeed is not retried every round, but a failure
+// older than that gets one more attempt. The fan-out when the cluster's API
+// server becomes available does not skip at all: whatever the namespace waited
+// on may be there now. Safe to call repeatedly (idempotent).
 // The NOT EXISTS guard is evaluated against the caller's snapshot, so two
 // concurrent callers (ready fan-out + reconcile loop) could both pass it; the
 // ON CONFLICT clause lets the partial unique index cluster_outbox_uq_ns_reconcile
 // absorb that race deterministically instead of raising a duplicate-key error.
 func (q *Queries) OutboxInsertReconcileForNamespace(ctx context.Context, arg OutboxInsertReconcileForNamespaceParams) error {
-	_, err := q.db.Exec(ctx, outboxInsertReconcileForNamespace, arg.NamespaceID, arg.SkipIfFailed)
+	_, err := q.db.Exec(ctx, outboxInsertReconcileForNamespace, arg.NamespaceID, arg.SkipIfFailed, arg.FailedRetryAfter)
 	return err
 }
 
@@ -265,10 +270,11 @@ func (q *Queries) OutboxLockCluster(ctx context.Context, arg OutboxLockClusterPa
 	return id, err
 }
 
-const outboxMarkFailed = `-- name: OutboxMarkFailed :exec
+const outboxMarkFailed = `-- name: OutboxMarkFailed :execrows
 UPDATE tenant.cluster_outbox
 SET status = 'failed', failed = now(), status_info = $1
 WHERE id = $2
+  AND status IN ('pending', 'retrying')
 `
 
 type OutboxMarkFailedParams struct {
@@ -276,28 +282,39 @@ type OutboxMarkFailedParams struct {
 	ID         uuid.UUID
 }
 
-// Marks a row as permanently failed after exceeding max retries.
-func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedParams) error {
-	_, err := q.db.Exec(ctx, outboxMarkFailed, arg.StatusInfo, arg.ID)
-	return err
+// Marks a row as permanently failed after exceeding max retries. A row another
+// worker already completed is left alone; zero rows says so.
+func (q *Queries) OutboxMarkFailed(ctx context.Context, arg OutboxMarkFailedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, outboxMarkFailed, arg.StatusInfo, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
-const outboxMarkProcessed = `-- name: OutboxMarkProcessed :exec
+const outboxMarkProcessed = `-- name: OutboxMarkProcessed :execrows
 UPDATE tenant.cluster_outbox
 SET status = 'completed',
     processed = now(),
     status_info = NULL,
     retry_after = NULL
 WHERE id = $1
+  AND status IN ('pending', 'retrying')
 `
 
 type OutboxMarkProcessedParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) OutboxMarkProcessed(ctx context.Context, arg OutboxMarkProcessedParams) error {
-	_, err := q.db.Exec(ctx, outboxMarkProcessed, arg.ID)
-	return err
+// Completes the row the caller claimed. The status guard stays as a backstop;
+// the caller holds the row for update, so it matches one row and a zero is an
+// error rather than another worker having moved on.
+func (q *Queries) OutboxMarkProcessed(ctx context.Context, arg OutboxMarkProcessedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, outboxMarkProcessed, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const outboxMarkRetry = `-- name: OutboxMarkRetry :one
@@ -310,6 +327,7 @@ SET retries = retries + 1,
     status = 'retrying',
     status_info = $3
 WHERE id = $4
+  AND status IN ('pending', 'retrying')
 RETURNING retries
 `
 

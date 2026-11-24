@@ -302,6 +302,15 @@ func TestNextShootStatus(t *testing.T) {
 			},
 		},
 		{
+			name:     "pending cluster that reported its shoot disappears as lost",
+			stored:   storedShootState{Status: gardener.StatusPending, Message: "Component is not yet created"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want: shootStatusUpdate{
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
+			},
+		},
+		{
 			name:     "failed cluster whose shoot disappears records the loss",
 			stored:   storedShootState{Status: gardener.StatusError, Message: "quota exceeded"},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
@@ -345,19 +354,19 @@ func TestNextShootStatus(t *testing.T) {
 		},
 		{
 			name:     "same retried error again writes no second warning",
-			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.", LastWarning: "etcd not ready. Operation will be retried."},
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.", Warnings: map[string]bool{"etcd not ready. Operation will be retried.": true}},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
 			want:     shootStatusUpdate{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.", Warning: true},
 		},
 		{
 			name:     "same retried error after progress in between writes no second warning",
-			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Deploying gardener-resource-manager", LastWarning: "etcd not ready. Operation will be retried."},
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Deploying gardener-resource-manager", Warnings: map[string]bool{"etcd not ready. Operation will be retried.": true}},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
 			want:     shootStatusUpdate{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.", Warning: true},
 		},
 		{
 			name:     "a different retried error is a new warning",
-			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting", LastWarning: "etcd not ready. Operation will be retried."},
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting", Warnings: map[string]bool{"etcd not ready. Operation will be retried.": true}},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "token not yet generated. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
 			want: shootStatusUpdate{
 				Status: gardener.StatusProgressing, Message: "token not yet generated. Operation will be retried.", Warning: true,
@@ -378,6 +387,23 @@ func TestNextShootStatus(t *testing.T) {
 			stored:   storedShootState{},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 			want:     shootStatusUpdate{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+		},
+		{
+			// The sweep skips a confirmed deletion, so an active row holding it
+			// is one repaired by hand: a report about the Shoot does not reopen
+			// it, and nothing is recorded for it.
+			name:     "a confirmed deletion is not reopened",
+			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove"},
+		},
+		{
+			// A hand-repaired row keeps the access it had; a deleted cluster has
+			// nothing behind it that answers, so the flag is forgotten.
+			name:     "a confirmed deletion ignores a Shoot that reported ready",
+			stored:   storedShootState{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove", APIAvailable: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Healthy: true, APIServerAvailable: true},
+			want:     shootStatusUpdate{Status: gardener.StatusDeleted, Message: "Deleted; no Shoot to remove", APIGone: true},
 		},
 	}
 
@@ -560,5 +586,14 @@ func TestNextShootStatus_APIServerAvailable(t *testing.T) {
 		ready := nextShootStatus(&lost, &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true, APIServerAvailable: true})
 		assert.True(t, ready.InsertReady)
 		assert.True(t, ready.InsertAPIAvailable)
+	})
+
+	t.Run("a decision that replaces the lifecycle result keeps the API server knowledge", func(t *testing.T) {
+		t.Parallel()
+		seen := storedShootState{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound, APIAvailable: true}
+		timedOut := shootStatusUpdate{Status: gardener.StatusError, Message: msgShootNeverAppeared}
+
+		got := applyAPIAvailability(&seen, &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound}, &timedOut)
+		assert.True(t, got.APIGone, "the Shoot is gone, so its API access must be forgotten")
 	})
 }

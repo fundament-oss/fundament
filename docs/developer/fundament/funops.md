@@ -59,11 +59,22 @@ funops plugin list [--status <status|all>]
 funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] [--feedback <text>]
 funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
 funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
+funops namespace sync <namespace-id>
+funops namespace sync --all
 ```
 
 Organizations are addressed by name, users by ID or email address. Every
 command takes `-o json` for scripting and `--debug` for more logging. Data goes
 to stdout and messages to stderr, so the output can be piped.
+
+`funops namespace sync` queues a reconcile of one namespace, or of every
+namespace whose latest sync failed (`--all`). The cluster-worker leaves a failed
+namespace alone until its failure is an hour old; this queues the attempt now,
+for a namespace whose cause has been fixed. `--all` leaves out namespaces of a
+cluster that cannot converge now: a deleted cluster, one that lost its Shoot, or
+one whose API server has not answered yet. Those sync when a change creates the
+Shoot again or its API server becomes reachable. `tenant.namespace_sync_state`
+shows each namespace's latest sync row.
 
 ## Add a new user to an organization
 

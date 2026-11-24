@@ -16,12 +16,21 @@ type storedShootState struct {
 	// Updating is set while an update fundament pushed rolls out on a ready
 	// cluster (the sync handler sets it).
 	Updating bool
-	// LastWarning is the message of the latest status_warning event. It is
-	// only loaded when Gardener reports an error it retries.
-	LastWarning string
+	// Warnings holds the messages already recorded as status_warning since the
+	// last milestone (ready, healthy, error or lost). It is loaded when a
+	// warning may be recorded, so the same one is not repeated; a set, because
+	// two warning sources can be active at once.
+	Warnings map[string]bool
 	// APIAvailable is set once the shoot's API server was seen available
 	// (shoot_api_available).
 	APIAvailable bool
+	// Since is when the stored status began (shoot_status_since); zero when it
+	// is unknown, which turns timeouts off for the check.
+	Since time.Time
+	// UpdateSettled is when the cluster's latest sync row finished; zero when
+	// no sync has finished. An update still rolling out long after it settled
+	// has stalled.
+	UpdateSettled time.Time
 }
 
 // progressRecord is the cluster's latest status_progressing event: when, and
@@ -104,7 +113,27 @@ func (u *shootStatusUpdate) unchanged(stored *storedShootState) bool {
 // what Gardener reports. It is pure so every rule can be tested without a
 // database.
 func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+	// A confirmed deletion is final: the sweep skips a soft-deleted cluster once
+	// its deletion is confirmed, so only an active row repaired by hand can hold
+	// deleted, and a report about a Shoot does not reopen it. Its API access
+	// goes with the deletion, as on the path that confirms it: nothing behind it
+	// answers, and leaving the flag would keep the cluster in the user and
+	// namespace fan-out.
+	if stored.Status == gardener.StatusDeleted {
+		return shootStatusUpdate{
+			Status: gardener.StatusDeleted, Message: stored.Message, Health: stored.Health,
+			APIGone: stored.APIAvailable,
+		}
+	}
 	update := nextLifecycleStatus(stored, observed)
+	return applyAPIAvailability(stored, observed, &update)
+}
+
+// applyAPIAvailability fills in what the check learned about the API server,
+// whatever decided the status: a check that replaces the lifecycle decision (a
+// pending timeout) must not lose the knowledge that the Shoot's API server came
+// and went.
+func applyAPIAvailability(stored *storedShootState, observed *gardener.ShootStatus, update *shootStatusUpdate) shootStatusUpdate {
 	switch {
 	// A Shoot that turns ready has a working API server, whether or not the
 	// care controller has said so yet: api_available is the one event that
@@ -120,7 +149,7 @@ func nextShootStatus(stored *storedShootState, observed *gardener.ShootStatus) s
 	case stored.APIAvailable && shootGone(observed):
 		update.APIGone = true
 	}
-	return update
+	return *update
 }
 
 // shootGone reports whether Gardener says the Shoot is gone or going: a
@@ -164,7 +193,12 @@ func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatu
 		if stored.Status == gardener.StatusLost {
 			return shootStatusUpdate{Status: gardener.StatusLost, Message: stored.Message}
 		}
-		if shootWasSeen(stored.Status) {
+		// A cluster timed out into error never had a Shoot, so nothing
+		// disappeared: its not-found is the same wait, not lost.
+		if stored.Status == gardener.StatusError && stored.Message == msgShootNeverAppeared {
+			return shootStatusUpdate{Status: gardener.StatusError, Message: stored.Message}
+		}
+		if shootWasSeen(stored) {
 			return shootStatusUpdate{
 				Status:  gardener.StatusLost,
 				Message: gardener.MsgShootLost,
@@ -186,7 +220,7 @@ func nextLifecycleStatus(stored *storedShootState, observed *gardener.ShootStatu
 			warning.Health = stored.Health
 			warning.Updating = stored.Updating
 		}
-		if observed.Message != stored.LastWarning {
+		if !stored.Warnings[observed.Message] {
 			warning.Events = []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: observed.Message}}
 		}
 		return warning
@@ -324,15 +358,19 @@ func healthEvent(health dbconst.ClusterShootHealth, message string) statusEvent 
 }
 
 // shootWasSeen reports whether a stored status can only come from a check that
-// found the Shoot in Gardener. A lost cluster's check did not find it.
-func shootWasSeen(status gardener.ShootStatusType) bool {
-	switch status {
+// found the Shoot in Gardener. A lost cluster's check did not find it, and a
+// pending row carries no evidence unless Gardener reported on the Shoot: a wait
+// that only ever saw not-found says nothing about the Shoot having existed.
+func shootWasSeen(stored *storedShootState) bool {
+	switch stored.Status {
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError, gardener.StatusDeleting:
 		return true
-	case "", gardener.StatusPending, gardener.StatusDeleted, gardener.StatusLost:
+	case gardener.StatusPending:
+		return stored.Message != "" && stored.Message != gardener.MsgShootNotFound
+	case "", gardener.StatusDeleted, gardener.StatusLost:
 		return false
 	default:
-		panic(fmt.Sprintf("unhandled shoot status: %s", status))
+		panic(fmt.Sprintf("unhandled shoot status: %s", stored.Status))
 	}
 }
 

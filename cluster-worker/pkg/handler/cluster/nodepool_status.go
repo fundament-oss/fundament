@@ -34,6 +34,28 @@ type storedNodePool struct {
 	// NodesRead is when.
 	Nodes     *shoot.PoolInventory
 	NodesRead time.Time
+	// StatusUpdated is when the stored status was written: a status write only
+	// lands while it still holds, so a check cannot undo a newer one.
+	StatusUpdated pgtype.Timestamptz
+	// OutboxStatus and OutboxMessage are the pool's own latest sync row. A
+	// failed row is why the pool reads error, and the message says why.
+	// OutboxSuperseded is set when a later sync completed: it applied the whole
+	// cluster, so the failure no longer describes what Gardener has.
+	OutboxStatus     string
+	OutboxMessage    string
+	OutboxSuperseded bool
+}
+
+// syncState is what the outbox still owes Gardener for the cluster. InFlight
+// takes precedence over Blocked: a queued or retrying pool row outside the
+// pool the check is classifying will apply the whole cluster when it runs, so
+// its pools wait instead of reporting the failed row. The two can be set
+// together, since a pool row in retry backoff and a later failed cluster row
+// each hold on their own. BlockedMessage is the failed cluster row's reason.
+type syncState struct {
+	InFlight       bool
+	Blocked        bool
+	BlockedMessage string
 }
 
 type nodePoolUpdate struct {
@@ -41,6 +63,9 @@ type nodePoolUpdate struct {
 	Name    string
 	Status  dbconst.NodePoolStatus
 	Message string
+	// StatusUpdated is the status_updated read with the row; the write only
+	// applies while it still holds.
+	StatusUpdated pgtype.Timestamptz
 	// GardenerText is the cleaned Gardener text a waiting or error status was
 	// decided on, for the log; Message may put it in plain words.
 	GardenerText string
@@ -48,33 +73,38 @@ type nodePoolUpdate struct {
 }
 
 // updating says shoot_updating is set: a change fundament sent reached Gardener
-// and rolls out on a ready cluster. syncPending says a change was saved but
+// and rolls out on a ready cluster. sync.InFlight says a change was saved but
 // its sync has not (yet) applied it to Gardener (see ClusterGetPushState), so
-// what Gardener reports predates the change. Together they gate
+// what Gardener reports predates the change; sync.Blocked says the cluster's own
+// sync gave up, and the pool reports that instead of waiting. Together they gate
 // what an operation can explain: only a change of ours explains a
 // never-classified pool — without one, a NULL status during an operation is an
 // existing pool meeting this feature for the first time mid-reconcile, and
 // relabeling it would hide its live metrics.
 //
+// observed is nil while the Shoot does not exist, which leaves the sync-failure
+// rules as the only thing a pool can report.
+//
 // nodes holds each pool's own node counts by pool name, as the shoot's API
 // server lists them, counting only nodes created since the pool was; nil when
 // they were not read, which leaves the shoot-wide rules alone.
-func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus, updating, syncPending bool, nodes map[string]shoot.PoolInventory) []nodePoolUpdate {
+func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus, updating bool, sync syncState, nodes map[string]shoot.PoolInventory) []nodePoolUpdate {
 	var updates []nodePoolUpdate
 	for i := range stored {
 		pool := &stored[i]
 		counts, counted := nodes[pool.Name]
-		next, message, gardenerText, ok := classifyNodePool(pool, otherPoolNames(stored, i), observed, updating || syncPending, syncPending, counts, counted)
+		next, message, gardenerText, ok := classifyNodePool(pool, otherPoolNames(stored, i), observed, updating || sync.InFlight, sync, counts, counted)
 		if !ok || (string(next) == pool.Status && message == pool.Message) {
 			continue
 		}
 		updates = append(updates, nodePoolUpdate{
-			ID:           pool.ID,
-			Name:         pool.Name,
-			Status:       next,
-			Message:      message,
-			GardenerText: gardenerText,
-			Events:       nodePoolEvents(pool, next, message),
+			ID:            pool.ID,
+			Name:          pool.Name,
+			Status:        next,
+			Message:       message,
+			StatusUpdated: pool.StatusUpdated,
+			GardenerText:  gardenerText,
+			Events:        nodePoolEvents(pool, next, message),
 		})
 	}
 	return updates
@@ -93,9 +123,10 @@ func otherPoolNames(stored []storedNodePool, i int) []string {
 
 // classifyNodePool decides one pool's status from the shoot-level report.
 // ok is false when the report says nothing about this pool, which keeps the
-// stored value: no shoot yet, shoot deleting, a failure that does not name
-// the pool, or an operation in flight that does not name it either — a
-// routine reconcile says nothing about pools whose machines stand. A pool
+// stored value: shoot deleting, a failure that does not name the pool, or an
+// operation in flight that does not name it either — a routine reconcile says
+// nothing about pools whose machines stand. A nil report says the Shoot is not
+// there yet: only a sync that gave up has something to report then. A pool
 // stored waiting/error stays stuck while the worker detail exists:
 // EveryNodeReady names only the first failing machine deployment, so a detail
 // naming another pool — even on a shoot that turned ready while unhealthy —
@@ -107,7 +138,25 @@ func otherPoolNames(stored []storedNodePool, i int) []string {
 // without them every pool would wait for the slowest. When no Gardener text
 // names the pool and the shoot lists at least autoscale_min of its nodes,
 // all Ready, it is ready whatever the other pools do.
-func classifyNodePool(pool *storedNodePool, otherPools []string, observed *gardener.ShootStatus, pushed, syncPending bool, nodes shoot.PoolInventory, counted bool) (status dbconst.NodePoolStatus, message, gardenerText string, ok bool) {
+func classifyNodePool(pool *storedNodePool, otherPools []string, observed *gardener.ShootStatus, pushed bool, sync syncState, nodes shoot.PoolInventory, counted bool) (status dbconst.NodePoolStatus, message, gardenerText string, ok bool) {
+	// A sync that gave up is not in flight: nothing will apply the change, and
+	// Gardener's report predates it for good. The pool says so, with the reason
+	// the row recorded, instead of waiting behind a gate that never opens. The
+	// pool's own failed row wins over the cluster's: it names this pool. This
+	// is also all a pool can say when the Shoot does not exist: the sync that
+	// would have created it is exactly the one that failed.
+	if !sync.InFlight {
+		switch {
+		case pool.OutboxStatus == string(dbconst.ClusterOutboxStatus_Failed) && !pool.OutboxSuperseded:
+			return dbconst.NodePoolStatus_Error, syncFailureMessage(pool.OutboxMessage), "", true
+		case sync.Blocked:
+			return dbconst.NodePoolStatus_Error, syncFailureMessage(sync.BlockedMessage), "", true
+		}
+	}
+	if observed == nil {
+		return "", "", "", false
+	}
+
 	operationRuns := shootOperationRuns(observed)
 
 	// The cluster's initial create builds every pool, so it explains a
@@ -115,19 +164,26 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	// the create's own outbox row completes before the first check runs.
 	creating := creatingShoot(observed)
 
-	// What Gardener reports predates this pool: its change has not left the
-	// outbox, so a complaint can only be about a deleted predecessor of the
-	// same name, and a ready shoot is the state before the change.
-	staleReport := syncPending &&
-		(pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Progressing))
-
 	machineType := pool.MachineType
 	if pushed {
 		// Until Gardener reconciles our change its text can describe the
 		// machines before it, and the change may be this pool's machine type.
 		machineType = ""
 	}
-	if text, reason := poolReason(pool.Name, otherPools, observed, machineType); text != "" && !staleReport {
+	text, reason := poolReason(pool.Name, otherPools, observed, machineType)
+
+	// A queued change has not reached Gardener, so its report predates the
+	// change. A ready pool is the state the change rolls out from, and stays;
+	// any other pool is shown as progressing, since the change may be exactly
+	// what settles it and its stored status — the last sync's failure included
+	// — describes a Shoot without the change. A complaint naming the pool is
+	// about machines missing now, so a waiting or error pool keeps it.
+	if sync.InFlight && pool.Status != string(dbconst.NodePoolStatus_Ready) &&
+		(text == "" || !poolStuck(pool.Status)) {
+		return dbconst.NodePoolStatus_Progressing, "", "", true
+	}
+
+	if text != "" {
 		settled := pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Ready)
 		if settled && !pushed && !creating {
 			// A complaint about a settled pool with no change of ours in
@@ -142,15 +198,12 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 		return dbconst.NodePoolStatus_Waiting, reason, reasonText(text), true
 	}
 
-	if counted && !staleReport && ownNodesStand(pool, nodes) && awaitsMachines(pool.Status, pushed || creating) {
+	if counted && ownNodesStand(pool, nodes) && awaitsMachines(pool.Status, pushed || creating) {
 		return dbconst.NodePoolStatus_Ready, "", "", true
 	}
 
 	switch {
 	case observed.Status == gardener.StatusReady:
-		if staleReport {
-			return dbconst.NodePoolStatus_Progressing, "", "", true
-		}
 		if pool.Status == "" && pushed {
 			// The change reached Gardener but the gardenlet has not started
 			// on it: the pool's machines are coming.
@@ -167,6 +220,15 @@ func classifyNodePool(pool *storedNodePool, otherPools []string, observed *garde
 	default:
 		return "", "", "", false
 	}
+}
+
+// syncFailureMessage is what a pool shows when the sync that would have
+// applied its change failed for good.
+func syncFailureMessage(reason string) string {
+	if reason == "" {
+		return "The last sync to Gardener failed."
+	}
+	return "The last sync to Gardener failed: " + reasonText(reason)
 }
 
 func shootOperationRuns(observed *gardener.ShootStatus) bool {
@@ -196,8 +258,10 @@ func awaitsMachines(status string, shaped bool) bool {
 		return true
 	case "":
 		return shaped
-	default:
+	case string(dbconst.NodePoolStatus_Ready), string(dbconst.NodePoolStatus_Error):
 		return false
+	default:
+		panic(fmt.Sprintf("unhandled node pool status %q", status))
 	}
 }
 
@@ -340,15 +404,24 @@ func nodePoolEvents(pool *storedNodePool, next dbconst.NodePoolStatus, message s
 }
 
 // updateNodePoolStatuses loads the cluster's pools, classifies them against
-// the observed shoot status, and persists changes plus their events — each
+// the observed shoot status (or, without a Shoot, against a sync that gave
+// up), and persists changes plus their events — each
 // pool's row and events in one transaction, so a crash cannot keep a status
 // whose event was lost. Best-effort alongside the cluster check: failures
 // log and move on; the next check retries. It returns how soon to check
-// again while the pools' nodes are read, or 0.
-func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) time.Duration {
+// again while the pools' nodes are read, or 0, and the push state it
+// classified with: nil when it never read one, and the caller must then read
+// it itself.
+func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) (recheck time.Duration, push *db.ClusterGetPushStateRow) {
+	// A Shoot that is not there yet has no machines to report, but a sync that
+	// gave up will never create it, and the pools say why instead of staying
+	// blank. A Shoot that is going or gone says nothing about its pools.
+	report := observed
 	switch observed.Status {
-	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
-		return 0 // nothing a pool could learn from these
+	case gardener.StatusPending:
+		report = nil
+	case gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
+		return 0, nil
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
@@ -357,10 +430,10 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 	rows, err := h.queries.NodePoolListStatusByClusterID(ctx, db.NodePoolListStatusByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
 		h.logger.Warn("failed to load node pools for status", "cluster_id", cluster.ID, "error", err)
-		return 0
+		return 0, nil
 	}
 	if len(rows) == 0 {
-		return 0
+		return 0, nil
 	}
 
 	stored := make([]storedNodePool, len(rows))
@@ -368,6 +441,9 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		stored[i] = storedNodePool{
 			ID: rows[i].ID, Name: rows[i].Name, MachineType: rows[i].MachineType, AutoscaleMin: rows[i].AutoscaleMin,
 			Created: rows[i].Created.Time, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String,
+			StatusUpdated: rows[i].StatusUpdated,
+			OutboxStatus:  rows[i].OutboxStatus, OutboxMessage: rows[i].OutboxStatusInfo.String,
+			OutboxSuperseded: rows[i].OutboxSuperseded,
 		}
 		if rows[i].Nodes.Valid && rows[i].NodesReady.Valid && rows[i].Observed.Valid {
 			stored[i].Nodes = &shoot.PoolInventory{Nodes: rows[i].Nodes.Int32, NodesReady: rows[i].NodesReady.Int32}
@@ -378,30 +454,40 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 	// Read what is in flight after the pool list, not from the cluster row the
 	// check started with: a pool inserted since then commits together with its
 	// outbox row, and classifying it from the stale state would call it ready.
-	push, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+	loaded, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
 	if err != nil {
 		h.logger.Warn("failed to load cluster push state for node pool status", "cluster_id", cluster.ID, "error", err)
-		return 0
+		return 0, nil
 	}
-	var (
-		counts  map[string]poolNodeCounts
-		recheck time.Duration
-	)
-	if h.poolNodes != nil && readsPoolNodes(stored, observed, push.ShootUpdating || push.SyncPending) {
+	push = &loaded
+	var counts map[string]poolNodeCounts
+	sync := syncState{
+		InFlight:       loaded.SyncInFlight,
+		Blocked:        loaded.SyncBlocked,
+		BlockedMessage: loaded.SyncBlockedMessage.String,
+	}
+	if report != nil && h.poolNodes != nil && readsPoolNodes(stored, report, loaded.ShootUpdating || sync.InFlight) {
 		counts = h.poolNodesFor(ctx, cluster.ID, stored)
 		recheck = poolNodeRecheck
 	}
 	updated := make(map[uuid.UUID]bool, len(stored))
-	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, push.SyncPending, ownNodeCounts(counts)) {
+	updates := nextNodePoolStatuses(stored, report, loaded.ShootUpdating, sync, ownNodeCounts(counts))
+	for i := range updates {
+		update := &updates[i]
 		var poolCounts *shoot.PoolInventory
 		if c, ok := counts[update.Name]; ok {
 			poolCounts = &c.all
 		}
-		if err := h.writeNodePoolStatus(ctx, cluster.ID, &update, poolCounts); err != nil {
+		applied, err := h.writeNodePoolStatus(ctx, cluster.ID, cluster.ShootStatus.String, update, poolCounts)
+		if err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
 		}
-		// A failed write leaves the pool to the counts-only write below.
+		if !applied {
+			// Another check classified the pool first, or it is gone: either way
+			// a status was not written, so the counts-only write below still runs.
+			continue
+		}
 		updated[update.ID] = true
 		if update.Status == dbconst.NodePoolStatus_Waiting || update.Status == dbconst.NodePoolStatus_Error {
 			// Every new message is logged with the text it came from, also
@@ -420,38 +506,46 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		if !ok || updated[pool.ID] || !nodeCountChanged(pool, c.all, now) {
 			continue
 		}
-		if err := h.writeNodePoolCount(ctx, pool.ID, c.all); err != nil {
+		if err := h.writeNodePoolCount(ctx, pool.ID, pool.StatusUpdated, c.all); err != nil {
 			h.logger.Warn("failed to record node pool node count", "cluster_id", cluster.ID, "pool", pool.Name, "error", err)
 		}
 	}
-	return recheck
+	return recheck, push
 }
 
 // writeNodePoolStatus commits one pool's status row, its events and, when
-// counts is set, the node counts the status was decided on, together.
-func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update *nodePoolUpdate, counts *shoot.PoolInventory) error {
+// counts is set, the node counts the status was decided on, together. It
+// reports whether the status was written: a check that lost the row to a newer
+// one, a pool that is gone, or a cluster another check recorded as lost since
+// this one read it, writes nothing. clusterStatus is the status this check
+// read from the cluster row.
+func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, clusterStatus string, update *nodePoolUpdate, counts *shoot.PoolInventory) (bool, error) {
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin: %w", err)
+		return false, fmt.Errorf("begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 
 	qtx := h.queries.WithTx(tx)
 	updated, err := qtx.NodePoolUpdateStatus(ctx, db.NodePoolUpdateStatusParams{
-		NodePoolID: update.ID,
-		Status:     pgtype.Text{String: string(update.Status), Valid: true},
-		Message:    pgtype.Text{String: update.Message, Valid: update.Message != ""},
+		NodePoolID:    update.ID,
+		Status:        pgtype.Text{String: string(update.Status), Valid: true},
+		Message:       pgtype.Text{String: update.Message, Valid: update.Message != ""},
+		CheckedAt:     update.StatusUpdated,
+		ClusterStatus: clusterStatus,
 	})
 	if err != nil {
-		return fmt.Errorf("update status: %w", err)
+		return false, fmt.Errorf("update status: %w", err)
 	}
 	if updated == 0 {
-		// The pool was soft-deleted after it was read: no row, no events.
-		return nil
+		// Another check classified the pool first, it was soft-deleted after it
+		// was read, or its cluster was recorded as lost and had its pools
+		// cleared: no row, no events.
+		return false, nil
 	}
 	if counts != nil {
 		if err := qtx.NodePoolSnapshotUpsert(ctx, nodePoolSnapshotParams(update.ID, *counts)); err != nil {
-			return fmt.Errorf("record node count: %w", err)
+			return false, fmt.Errorf("record node count: %w", err)
 		}
 	}
 	for _, event := range update.Events {
@@ -460,11 +554,11 @@ func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, 
 			EventType: string(event.Type),
 			Message:   pgtype.Text{String: event.Message, Valid: true},
 		}); err != nil {
-			return fmt.Errorf("create %s event: %w", event.Type, err)
+			return false, fmt.Errorf("create %s event: %w", event.Type, err)
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit: %w", err)
+		return false, fmt.Errorf("commit: %w", err)
 	}
-	return nil
+	return true, nil
 }

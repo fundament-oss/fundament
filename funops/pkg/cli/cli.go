@@ -14,6 +14,7 @@ type CLI struct {
 	Output OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 
 	Cluster      ClusterCmd      `cmd:"" help:"Manage clusters."`
+	Namespace    NamespaceCmd    `cmd:"" help:"Manage namespaces."`
 	Organization OrganizationCmd `cmd:"" help:"Manage organizations and their members."`
 	Plugin       PluginCmd       `cmd:"" help:"Review submitted plugin versions."`
 	User         UserCmd         `cmd:"" help:"Manage users."`

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -44,6 +45,18 @@ const (
 	// ManagedByValue is the value of LabelManagedBy on managed namespaces.
 	ManagedByValue = "cluster-worker"
 )
+
+// failedRetryAfter is how long a namespace's failed sync is left alone before
+// the reconcile loop queues one more attempt. A namespace that cannot succeed
+// should not be retried every round, but one that failed on a transient
+// condition should not need an operator to notice. It is passed to the queries
+// through failedRetryAfterInterval: a NULL interval would silently turn the
+// skip off.
+const failedRetryAfter = time.Hour
+
+func failedRetryAfterInterval() pgtype.Interval {
+	return pgtype.Interval{Microseconds: failedRetryAfter.Microseconds(), Valid: true}
+}
 
 // Handler reconciles tenant.namespaces rows to v1/Namespace resources on the
 // owning shoot cluster.
@@ -274,7 +287,8 @@ func (h *Handler) enqueueClusterNamespaces(ctx context.Context, clusterID uuid.U
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
 			// A cluster whose API server became available retries a failed namespace too.
-			SkipIfFailed: false,
+			SkipIfFailed:     false,
+			FailedRetryAfter: failedRetryAfterInterval(),
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", nsID, err))
 		}
@@ -320,12 +334,40 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 
 	plan := BuildPlan(activeIDs, clusterNamespaces)
 
+	// A namespace whose sync failed long ago is queued again even when the
+	// Shoot already shows it: its sync may have failed after creating the
+	// namespace, on its LimitRange or role bindings.
+	failedIDs, err := h.queries.NamespaceListFailedForCluster(ctx, db.NamespaceListFailedForClusterParams{
+		ClusterID:        clusterID,
+		FailedRetryAfter: failedRetryAfterInterval(),
+	})
+	if err != nil {
+		return fmt.Errorf("list namespaces whose sync failed: %w", err)
+	}
+
+	// A namespace can be both missing on the Shoot and failed for good; queue
+	// it once.
+	seen := make(map[uuid.UUID]struct{}, len(plan.CreateIDs)+len(failedIDs))
+	queue := make([]uuid.UUID, 0, len(plan.CreateIDs)+len(failedIDs))
+	for _, ids := range [][]uuid.UUID{plan.CreateIDs, failedIDs} {
+		for _, id := range ids {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			queue = append(queue, id)
+		}
+	}
+
 	var errs []error
-	for _, id := range plan.CreateIDs {
+	for _, id := range queue {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
-			// A namespace whose sync failed for good would fail again every round.
-			SkipIfFailed: true,
+			// A namespace whose sync failed for good would fail again every
+			// round, so a recent failure is left alone; an old one gets one
+			// more attempt.
+			SkipIfFailed:     true,
+			FailedRetryAfter: failedRetryAfterInterval(),
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", id, err))
 		}

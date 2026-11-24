@@ -128,7 +128,7 @@ func TestClusterSync_One(t *testing.T) {
 func TestClusterSync_Arguments(t *testing.T) {
 	ctx := newTestContext(t)
 
-	require.EqualError(t, (&ClusterSyncCmd{}).Run(ctx), "give a cluster ID or --all, not both")
+	require.EqualError(t, (&ClusterSyncCmd{}).Run(ctx), "give a cluster ID or --all")
 	require.EqualError(t, (&ClusterSyncCmd{Cluster: uuid.NewString(), All: true}).Run(ctx), "give a cluster ID or --all, not both")
 	require.EqualError(t, (&ClusterSyncCmd{Cluster: "nope"}).Run(ctx), `cluster ID "nope" is not a UUID`)
 }

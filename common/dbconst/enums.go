@@ -16,6 +16,18 @@ const (
 	AssetEventEventType_Note           AssetEventEventType = "note"
 )
 
+// AssetEventEventTypeValues holds every AssetEventEventType the database accepts.
+var AssetEventEventTypeValues = []AssetEventEventType{
+	AssetEventEventType_Received,
+	AssetEventEventType_Deployed,
+	AssetEventEventType_Moved,
+	AssetEventEventType_RmaSent,
+	AssetEventEventType_RmaReceived,
+	AssetEventEventType_Decommissioned,
+	AssetEventEventType_Reserved,
+	AssetEventEventType_Note,
+}
+
 // AssetStatus represents valid values for dcim.assets.status.
 type AssetStatus string
 
@@ -27,6 +39,16 @@ const (
 	AssetStatus_InTransit      AssetStatus = "in_transit"
 	AssetStatus_Reserved       AssetStatus = "reserved"
 )
+
+// AssetStatusValues holds every AssetStatus the database accepts.
+var AssetStatusValues = []AssetStatus{
+	AssetStatus_InStock,
+	AssetStatus_Deployed,
+	AssetStatus_Rma,
+	AssetStatus_Decommissioned,
+	AssetStatus_InTransit,
+	AssetStatus_Reserved,
+}
 
 // ClusterEventEventType represents valid values for tenant.cluster_events.event_type.
 type ClusterEventEventType string
@@ -53,6 +75,29 @@ const (
 	ClusterEventEventType_SyncWaitingForPrecondition ClusterEventEventType = "sync_waiting_for_precondition"
 )
 
+// ClusterEventEventTypeValues holds every ClusterEventEventType the database accepts.
+var ClusterEventEventTypeValues = []ClusterEventEventType{
+	ClusterEventEventType_SyncRequested,
+	ClusterEventEventType_SyncClaimed,
+	ClusterEventEventType_SyncSucceeded,
+	ClusterEventEventType_SyncFailed,
+	ClusterEventEventType_StatusProgressing,
+	ClusterEventEventType_StatusReady,
+	ClusterEventEventType_StatusError,
+	ClusterEventEventType_StatusDeleted,
+	ClusterEventEventType_StatusHealthy,
+	ClusterEventEventType_StatusUnhealthy,
+	ClusterEventEventType_StatusWarning,
+	ClusterEventEventType_StatusLost,
+	ClusterEventEventType_StatusApiAvailable,
+	ClusterEventEventType_UserSyncSucceeded,
+	ClusterEventEventType_UserSyncFailed,
+	ClusterEventEventType_NodepoolWaiting,
+	ClusterEventEventType_NodepoolError,
+	ClusterEventEventType_NodepoolReady,
+	ClusterEventEventType_SyncWaitingForPrecondition,
+}
+
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
 type ClusterEventSyncAction string
 
@@ -60,6 +105,12 @@ const (
 	ClusterEventSyncAction_Sync   ClusterEventSyncAction = "sync"
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
+
+// ClusterEventSyncActionValues holds every ClusterEventSyncAction the database accepts.
+var ClusterEventSyncActionValues = []ClusterEventSyncAction{
+	ClusterEventSyncAction_Sync,
+	ClusterEventSyncAction_Delete,
+}
 
 // ClusterOutboxEvent represents valid values for tenant.cluster_outbox.event.
 type ClusterOutboxEvent string
@@ -73,6 +124,16 @@ const (
 	ClusterOutboxEvent_ApiAvailable ClusterOutboxEvent = "api_available"
 )
 
+// ClusterOutboxEventValues holds every ClusterOutboxEvent the database accepts.
+var ClusterOutboxEventValues = []ClusterOutboxEvent{
+	ClusterOutboxEvent_Created,
+	ClusterOutboxEvent_Updated,
+	ClusterOutboxEvent_Deleted,
+	ClusterOutboxEvent_Reconcile,
+	ClusterOutboxEvent_Ready,
+	ClusterOutboxEvent_ApiAvailable,
+}
+
 // ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
 type ClusterOutboxSource string
 
@@ -82,6 +143,14 @@ const (
 	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
 	ClusterOutboxSource_Status    ClusterOutboxSource = "status"
 )
+
+// ClusterOutboxSourceValues holds every ClusterOutboxSource the database accepts.
+var ClusterOutboxSourceValues = []ClusterOutboxSource{
+	ClusterOutboxSource_Trigger,
+	ClusterOutboxSource_Reconcile,
+	ClusterOutboxSource_Manual,
+	ClusterOutboxSource_Status,
+}
 
 // ClusterOutboxStatus represents valid values for tenant.cluster_outbox.status.
 type ClusterOutboxStatus string
@@ -93,6 +162,14 @@ const (
 	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
 )
 
+// ClusterOutboxStatusValues holds every ClusterOutboxStatus the database accepts.
+var ClusterOutboxStatusValues = []ClusterOutboxStatus{
+	ClusterOutboxStatus_Pending,
+	ClusterOutboxStatus_Completed,
+	ClusterOutboxStatus_Retrying,
+	ClusterOutboxStatus_Failed,
+}
+
 // ClusterShootHealth represents valid values for tenant.clusters.shoot_health.
 type ClusterShootHealth string
 
@@ -100,6 +177,36 @@ const (
 	ClusterShootHealth_Healthy   ClusterShootHealth = "healthy"
 	ClusterShootHealth_Unhealthy ClusterShootHealth = "unhealthy"
 )
+
+// ClusterShootHealthValues holds every ClusterShootHealth the database accepts.
+var ClusterShootHealthValues = []ClusterShootHealth{
+	ClusterShootHealth_Healthy,
+	ClusterShootHealth_Unhealthy,
+}
+
+// ClusterShootStatus represents valid values for tenant.clusters.shoot_status.
+type ClusterShootStatus string
+
+const (
+	ClusterShootStatus_Pending     ClusterShootStatus = "pending"
+	ClusterShootStatus_Progressing ClusterShootStatus = "progressing"
+	ClusterShootStatus_Ready       ClusterShootStatus = "ready"
+	ClusterShootStatus_Error       ClusterShootStatus = "error"
+	ClusterShootStatus_Deleting    ClusterShootStatus = "deleting"
+	ClusterShootStatus_Deleted     ClusterShootStatus = "deleted"
+	ClusterShootStatus_Lost        ClusterShootStatus = "lost"
+)
+
+// ClusterShootStatusValues holds every ClusterShootStatus the database accepts.
+var ClusterShootStatusValues = []ClusterShootStatus{
+	ClusterShootStatus_Pending,
+	ClusterShootStatus_Progressing,
+	ClusterShootStatus_Ready,
+	ClusterShootStatus_Error,
+	ClusterShootStatus_Deleting,
+	ClusterShootStatus_Deleted,
+	ClusterShootStatus_Lost,
+}
 
 // DeviceCatalogCategory represents valid values for dcim.device_catalogs.category.
 type DeviceCatalogCategory string
@@ -128,6 +235,31 @@ const (
 	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
+// DeviceCatalogCategoryValues holds every DeviceCatalogCategory the database accepts.
+var DeviceCatalogCategoryValues = []DeviceCatalogCategory{
+	DeviceCatalogCategory_Server,
+	DeviceCatalogCategory_Switch,
+	DeviceCatalogCategory_Pdu,
+	DeviceCatalogCategory_PatchPanel,
+	DeviceCatalogCategory_Sfp,
+	DeviceCatalogCategory_Nic,
+	DeviceCatalogCategory_Cpu,
+	DeviceCatalogCategory_Dimm,
+	DeviceCatalogCategory_Disk,
+	DeviceCatalogCategory_Cable,
+	DeviceCatalogCategory_Adapter,
+	DeviceCatalogCategory_PowerSupply,
+	DeviceCatalogCategory_CableManager,
+	DeviceCatalogCategory_ConsoleServer,
+	DeviceCatalogCategory_Storage,
+	DeviceCatalogCategory_Cooling,
+	DeviceCatalogCategory_Firewall,
+	DeviceCatalogCategory_Kvm,
+	DeviceCatalogCategory_Gpu,
+	DeviceCatalogCategory_Transceiver,
+	DeviceCatalogCategory_Other,
+}
+
 // DriftFindingKind represents valid values for tenant.drift_findings.kind.
 type DriftFindingKind string
 
@@ -139,6 +271,15 @@ const (
 	DriftFindingKind_ShootInvalidClusterId     DriftFindingKind = "shoot_invalid_cluster_id"
 )
 
+// DriftFindingKindValues holds every DriftFindingKind the database accepts.
+var DriftFindingKindValues = []DriftFindingKind{
+	DriftFindingKind_ShootWithoutCluster,
+	DriftFindingKind_ShootOfDeletedCluster,
+	DriftFindingKind_ClusterWithoutShoot,
+	DriftFindingKind_KubernetesVersionMismatch,
+	DriftFindingKind_ShootInvalidClusterId,
+}
+
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
 type LogicalConnectionConnectionType string
 
@@ -148,6 +289,13 @@ const (
 	LogicalConnectionConnectionType_Console LogicalConnectionConnectionType = "console"
 )
 
+// LogicalConnectionConnectionTypeValues holds every LogicalConnectionConnectionType the database accepts.
+var LogicalConnectionConnectionTypeValues = []LogicalConnectionConnectionType{
+	LogicalConnectionConnectionType_Network,
+	LogicalConnectionConnectionType_Power,
+	LogicalConnectionConnectionType_Console,
+}
+
 // LogicalDesignStatus represents valid values for dcim.logical_designs.status.
 type LogicalDesignStatus string
 
@@ -156,6 +304,13 @@ const (
 	LogicalDesignStatus_Active   LogicalDesignStatus = "active"
 	LogicalDesignStatus_Archived LogicalDesignStatus = "archived"
 )
+
+// LogicalDesignStatusValues holds every LogicalDesignStatus the database accepts.
+var LogicalDesignStatusValues = []LogicalDesignStatus{
+	LogicalDesignStatus_Draft,
+	LogicalDesignStatus_Active,
+	LogicalDesignStatus_Archived,
+}
 
 // LogicalDeviceRole represents valid values for dcim.logical_devices.role.
 type LogicalDeviceRole string
@@ -175,6 +330,22 @@ const (
 	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
 )
 
+// LogicalDeviceRoleValues holds every LogicalDeviceRole the database accepts.
+var LogicalDeviceRoleValues = []LogicalDeviceRole{
+	LogicalDeviceRole_Compute,
+	LogicalDeviceRole_Tor,
+	LogicalDeviceRole_Spine,
+	LogicalDeviceRole_Core,
+	LogicalDeviceRole_Pdu,
+	LogicalDeviceRole_PatchPanel,
+	LogicalDeviceRole_Storage,
+	LogicalDeviceRole_Firewall,
+	LogicalDeviceRole_LoadBalancer,
+	LogicalDeviceRole_ConsoleServer,
+	LogicalDeviceRole_CableManager,
+	LogicalDeviceRole_Adapter,
+}
+
 // NodePoolStatus represents valid values for tenant.node_pools.status.
 type NodePoolStatus string
 
@@ -185,6 +356,14 @@ const (
 	NodePoolStatus_Ready       NodePoolStatus = "ready"
 )
 
+// NodePoolStatusValues holds every NodePoolStatus the database accepts.
+var NodePoolStatusValues = []NodePoolStatus{
+	NodePoolStatus_Progressing,
+	NodePoolStatus_Waiting,
+	NodePoolStatus_Error,
+	NodePoolStatus_Ready,
+}
+
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
 type OrganizationsUserPermission string
 
@@ -192,6 +371,12 @@ const (
 	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
 	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
 )
+
+// OrganizationsUserPermissionValues holds every OrganizationsUserPermission the database accepts.
+var OrganizationsUserPermissionValues = []OrganizationsUserPermission{
+	OrganizationsUserPermission_Admin,
+	OrganizationsUserPermission_Viewer,
+}
 
 // OrganizationsUserStatus represents valid values for tenant.organizations_users.status.
 type OrganizationsUserStatus string
@@ -203,6 +388,14 @@ const (
 	OrganizationsUserStatus_Revoked  OrganizationsUserStatus = "revoked"
 )
 
+// OrganizationsUserStatusValues holds every OrganizationsUserStatus the database accepts.
+var OrganizationsUserStatusValues = []OrganizationsUserStatus{
+	OrganizationsUserStatus_Pending,
+	OrganizationsUserStatus_Accepted,
+	OrganizationsUserStatus_Declined,
+	OrganizationsUserStatus_Revoked,
+}
+
 // OutboxStatus represents valid values for authz.outbox.status.
 type OutboxStatus string
 
@@ -212,6 +405,14 @@ const (
 	OutboxStatus_Retrying  OutboxStatus = "retrying"
 	OutboxStatus_Failed    OutboxStatus = "failed"
 )
+
+// OutboxStatusValues holds every OutboxStatus the database accepts.
+var OutboxStatusValues = []OutboxStatus{
+	OutboxStatus_Pending,
+	OutboxStatus_Completed,
+	OutboxStatus_Retrying,
+	OutboxStatus_Failed,
+}
 
 // PhysicalConnectionCableType represents valid values for dcim.physical_connections.cable_type.
 type PhysicalConnectionCableType string
@@ -232,6 +433,23 @@ const (
 	PhysicalConnectionCableType_Other   PhysicalConnectionCableType = "other"
 )
 
+// PhysicalConnectionCableTypeValues holds every PhysicalConnectionCableType the database accepts.
+var PhysicalConnectionCableTypeValues = []PhysicalConnectionCableType{
+	PhysicalConnectionCableType_Cat5e,
+	PhysicalConnectionCableType_Cat6,
+	PhysicalConnectionCableType_Cat6a,
+	PhysicalConnectionCableType_Cat7,
+	PhysicalConnectionCableType_Cat8,
+	PhysicalConnectionCableType_Dac,
+	PhysicalConnectionCableType_Aoc,
+	PhysicalConnectionCableType_Mmf,
+	PhysicalConnectionCableType_Smf,
+	PhysicalConnectionCableType_Power,
+	PhysicalConnectionCableType_Console,
+	PhysicalConnectionCableType_Usb,
+	PhysicalConnectionCableType_Other,
+}
+
 // PhysicalConnectionColor represents valid values for dcim.physical_connections.color.
 type PhysicalConnectionColor string
 
@@ -248,6 +466,20 @@ const (
 	PhysicalConnectionColor_White     PhysicalConnectionColor = "white"
 )
 
+// PhysicalConnectionColorValues holds every PhysicalConnectionColor the database accepts.
+var PhysicalConnectionColorValues = []PhysicalConnectionColor{
+	PhysicalConnectionColor_DarkGrey,
+	PhysicalConnectionColor_LightGrey,
+	PhysicalConnectionColor_Red,
+	PhysicalConnectionColor_Green,
+	PhysicalConnectionColor_Blue,
+	PhysicalConnectionColor_Yellow,
+	PhysicalConnectionColor_Purple,
+	PhysicalConnectionColor_Orange,
+	PhysicalConnectionColor_Teal,
+	PhysicalConnectionColor_White,
+}
+
 // PhysicalConnectionStatus represents valid values for dcim.physical_connections.status.
 type PhysicalConnectionStatus string
 
@@ -259,6 +491,15 @@ const (
 	PhysicalConnectionStatus_Decommissioned PhysicalConnectionStatus = "decommissioned"
 )
 
+// PhysicalConnectionStatusValues holds every PhysicalConnectionStatus the database accepts.
+var PhysicalConnectionStatusValues = []PhysicalConnectionStatus{
+	PhysicalConnectionStatus_ToOrder,
+	PhysicalConnectionStatus_Ordered,
+	PhysicalConnectionStatus_ReadyToInstall,
+	PhysicalConnectionStatus_Connected,
+	PhysicalConnectionStatus_Decommissioned,
+}
+
 // PlacementSlotType represents valid values for dcim.placements.slot_type.
 type PlacementSlotType string
 
@@ -267,6 +508,13 @@ const (
 	PlacementSlotType_Power PlacementSlotType = "power"
 	PlacementSlotType_ZeroU PlacementSlotType = "zero_u"
 )
+
+// PlacementSlotTypeValues holds every PlacementSlotType the database accepts.
+var PlacementSlotTypeValues = []PlacementSlotType{
+	PlacementSlotType_Unit,
+	PlacementSlotType_Power,
+	PlacementSlotType_ZeroU,
+}
 
 // PluginDefinitionStatus represents valid values for appstore.plugin_definitions.status.
 type PluginDefinitionStatus string
@@ -280,6 +528,16 @@ const (
 	PluginDefinitionStatus_Withdrawn        PluginDefinitionStatus = "withdrawn"
 )
 
+// PluginDefinitionStatusValues holds every PluginDefinitionStatus the database accepts.
+var PluginDefinitionStatusValues = []PluginDefinitionStatus{
+	PluginDefinitionStatus_Draft,
+	PluginDefinitionStatus_Pending,
+	PluginDefinitionStatus_ChangesRequested,
+	PluginDefinitionStatus_Approved,
+	PluginDefinitionStatus_Rejected,
+	PluginDefinitionStatus_Withdrawn,
+}
+
 // PluginLabelName represents valid values for appstore.plugin_labels.name.
 type PluginLabelName string
 
@@ -289,6 +547,13 @@ const (
 	PluginLabelName_Support9To17  PluginLabelName = "support_9_to_17"
 )
 
+// PluginLabelNameValues holds every PluginLabelName the database accepts.
+var PluginLabelNameValues = []PluginLabelName{
+	PluginLabelName_Core,
+	PluginLabelName_Rijksoverheid,
+	PluginLabelName_Support9To17,
+}
+
 // PluginVisibility represents valid values for appstore.plugins.visibility.
 type PluginVisibility string
 
@@ -296,6 +561,12 @@ const (
 	PluginVisibility_Public     PluginVisibility = "public"
 	PluginVisibility_Restricted PluginVisibility = "restricted"
 )
+
+// PluginVisibilityValues holds every PluginVisibility the database accepts.
+var PluginVisibilityValues = []PluginVisibility{
+	PluginVisibility_Public,
+	PluginVisibility_Restricted,
+}
 
 // PortCompatibilitieCompatibleCategory represents valid values for dcim.port_compatibilities.compatible_category.
 type PortCompatibilitieCompatibleCategory string
@@ -317,6 +588,24 @@ const (
 	PortCompatibilitieCompatibleCategory_ConsoleServer PortCompatibilitieCompatibleCategory = "console_server"
 )
 
+// PortCompatibilitieCompatibleCategoryValues holds every PortCompatibilitieCompatibleCategory the database accepts.
+var PortCompatibilitieCompatibleCategoryValues = []PortCompatibilitieCompatibleCategory{
+	PortCompatibilitieCompatibleCategory_Server,
+	PortCompatibilitieCompatibleCategory_Switch,
+	PortCompatibilitieCompatibleCategory_Pdu,
+	PortCompatibilitieCompatibleCategory_PatchPanel,
+	PortCompatibilitieCompatibleCategory_Sfp,
+	PortCompatibilitieCompatibleCategory_Nic,
+	PortCompatibilitieCompatibleCategory_Cpu,
+	PortCompatibilitieCompatibleCategory_Dimm,
+	PortCompatibilitieCompatibleCategory_Disk,
+	PortCompatibilitieCompatibleCategory_Cable,
+	PortCompatibilitieCompatibleCategory_Adapter,
+	PortCompatibilitieCompatibleCategory_PowerSupply,
+	PortCompatibilitieCompatibleCategory_CableManager,
+	PortCompatibilitieCompatibleCategory_ConsoleServer,
+}
+
 // PortDefinitionDirection represents valid values for dcim.port_definitions.direction.
 type PortDefinitionDirection string
 
@@ -325,6 +614,13 @@ const (
 	PortDefinitionDirection_Out   PortDefinitionDirection = "out"
 	PortDefinitionDirection_Bidir PortDefinitionDirection = "bidir"
 )
+
+// PortDefinitionDirectionValues holds every PortDefinitionDirection the database accepts.
+var PortDefinitionDirectionValues = []PortDefinitionDirection{
+	PortDefinitionDirection_In,
+	PortDefinitionDirection_Out,
+	PortDefinitionDirection_Bidir,
+}
 
 // PortDefinitionPortType represents valid values for dcim.port_definitions.port_type.
 type PortDefinitionPortType string
@@ -338,6 +634,16 @@ const (
 	PortDefinitionPortType_Console  PortDefinitionPortType = "console"
 )
 
+// PortDefinitionPortTypeValues holds every PortDefinitionPortType the database accepts.
+var PortDefinitionPortTypeValues = []PortDefinitionPortType{
+	PortDefinitionPortType_Network,
+	PortDefinitionPortType_PowerIn,
+	PortDefinitionPortType_PowerOut,
+	PortDefinitionPortType_Slot,
+	PortDefinitionPortType_Bay,
+	PortDefinitionPortType_Console,
+}
+
 // ProjectMemberRole represents valid values for tenant.project_members.role.
 type ProjectMemberRole string
 
@@ -345,6 +651,12 @@ const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
+
+// ProjectMemberRoleValues holds every ProjectMemberRole the database accepts.
+var ProjectMemberRoleValues = []ProjectMemberRole{
+	ProjectMemberRole_Admin,
+	ProjectMemberRole_Viewer,
+}
 
 // SubmissionRejectionReason represents valid values for appstore.submissions.rejection_reason.
 type SubmissionRejectionReason string
@@ -358,6 +670,16 @@ const (
 	SubmissionRejectionReason_Other              SubmissionRejectionReason = "other"
 )
 
+// SubmissionRejectionReasonValues holds every SubmissionRejectionReason the database accepts.
+var SubmissionRejectionReasonValues = []SubmissionRejectionReason{
+	SubmissionRejectionReason_IncompleteMetadata,
+	SubmissionRejectionReason_Duplicate,
+	SubmissionRejectionReason_SecurityConcerns,
+	SubmissionRejectionReason_NamingGuidelines,
+	SubmissionRejectionReason_OutOfScope,
+	SubmissionRejectionReason_Other,
+}
+
 // TaskPriority represents valid values for dcim.tasks.priority.
 type TaskPriority string
 
@@ -369,6 +691,15 @@ const (
 	TaskPriority_Urgent TaskPriority = "urgent"
 )
 
+// TaskPriorityValues holds every TaskPriority the database accepts.
+var TaskPriorityValues = []TaskPriority{
+	TaskPriority_None,
+	TaskPriority_Low,
+	TaskPriority_Medium,
+	TaskPriority_High,
+	TaskPriority_Urgent,
+}
+
 // TaskStatus represents valid values for dcim.tasks.status.
 type TaskStatus string
 
@@ -378,6 +709,13 @@ const (
 	TaskStatus_Done  TaskStatus = "done"
 )
 
+// TaskStatusValues holds every TaskStatus the database accepts.
+var TaskStatusValues = []TaskStatus{
+	TaskStatus_Todo,
+	TaskStatus_Doing,
+	TaskStatus_Done,
+}
+
 // WorkerHeartbeatWorker represents valid values for tenant.worker_heartbeats.worker.
 type WorkerHeartbeatWorker string
 
@@ -385,3 +723,9 @@ const (
 	WorkerHeartbeatWorker_Reconcile WorkerHeartbeatWorker = "reconcile"
 	WorkerHeartbeatWorker_Inventory WorkerHeartbeatWorker = "inventory"
 )
+
+// WorkerHeartbeatWorkerValues holds every WorkerHeartbeatWorker the database accepts.
+var WorkerHeartbeatWorkerValues = []WorkerHeartbeatWorker{
+	WorkerHeartbeatWorker_Reconcile,
+	WorkerHeartbeatWorker_Inventory,
+}

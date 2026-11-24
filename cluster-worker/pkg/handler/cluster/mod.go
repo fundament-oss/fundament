@@ -43,6 +43,16 @@ type Config struct {
 	// StatusProgressEventInterval is the shortest time between two recorded
 	// progress messages of one cluster while Gardener runs an operation.
 	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
+	// StatusPendingTimeout is how long a Shoot may stay pending without
+	// Gardener ever reporting it before the cluster is recorded as error.
+	StatusPendingTimeout time.Duration `env:"STATUS_PENDING_TIMEOUT" envDefault:"20m"`
+	// StatusUpdatingWarning is how long Gardener may take to finish an update
+	// after its sync settled before the check records a warning.
+	StatusUpdatingWarning time.Duration `env:"STATUS_UPDATING_WARNING" envDefault:"30m"`
+	// StatusDeletingAlert is how long a Shoot may be deleting before the check
+	// records a warning and raises an alert. The status is left alone: forcing
+	// deleted would release the cluster's quota while Gardener still has it.
+	StatusDeletingAlert time.Duration `env:"STATUS_DELETING_ALERT" envDefault:"2h"`
 	// MaxReconcileDeletions is the most Shoots one reconcile pass starts to
 	// delete. A pass that would delete more deletes none and logs an error,
 	// since that points at a database problem rather than users deleting
@@ -52,6 +62,25 @@ type Config struct {
 	// every pass so readers can tell a fresh record from a stale one. Set from
 	// the reconcile loop's own config, not from the environment.
 	ReconcileInterval time.Duration
+}
+
+// Validate rejects limits that would invert the safety they add: a limit of
+// zero or less makes the check report the stalled state on its first look, or
+// records every progress message instead of at most one per interval.
+func (c Config) Validate() error {
+	if c.StatusProgressEventInterval <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL must be positive, got %s", c.StatusProgressEventInterval)
+	}
+	if c.StatusPendingTimeout <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_PENDING_TIMEOUT must be positive, got %s", c.StatusPendingTimeout)
+	}
+	if c.StatusUpdatingWarning <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_UPDATING_WARNING must be positive, got %s", c.StatusUpdatingWarning)
+	}
+	if c.StatusDeletingAlert <= 0 {
+		return fmt.Errorf("CLUSTER_STATUS_DELETING_ALERT must be positive, got %s", c.StatusDeletingAlert)
+	}
+	return nil
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, finishing

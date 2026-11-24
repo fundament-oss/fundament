@@ -93,6 +93,17 @@ func newTestHandlerWithConfig(t *testing.T, db *testDB, mock *gardener.MockClien
 	if cfg.ReconcileInterval == 0 {
 		cfg.ReconcileInterval = 5 * time.Minute
 	}
+	// Zero would time a cluster out on its first check, so tests that do not
+	// set them get the production defaults.
+	if cfg.StatusPendingTimeout == 0 {
+		cfg.StatusPendingTimeout = 20 * time.Minute
+	}
+	if cfg.StatusUpdatingWarning == 0 {
+		cfg.StatusUpdatingWarning = 30 * time.Minute
+	}
+	if cfg.StatusDeletingAlert == 0 {
+		cfg.StatusDeletingAlert = 2 * time.Hour
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
@@ -199,6 +210,21 @@ func markOutboxFailed(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one outbox row to be marked failed")
+}
+
+// markClusterSyncsFailed fails every outbox row of a cluster and of its node
+// pools, as when a create ran out of retries everywhere.
+func markClusterSyncsFailed(t *testing.T, db *testDB, clusterID uuid.UUID, reason string) {
+	t.Helper()
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now(), status_info = $2
+		 WHERE tenant.cluster_outbox.cluster_id = $1
+		    OR tenant.cluster_outbox.node_pool_id IN (
+		        SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)`,
+		clusterID, reason,
+	)
+	require.NoError(t, err)
 }
 
 // setShootStatus directly sets shoot_status with updated = now() - 1 min to avoid

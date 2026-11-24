@@ -5,8 +5,11 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
@@ -323,6 +326,62 @@ func TestNamespaceReconcile_SkipsNamespaceWhoseSyncFailed(t *testing.T) {
 	require.NoError(t, h.Reconcile(ctx))
 
 	require.Equal(t, 0, countPendingNamespaceReconcile(t, db, nsID), "a namespace whose sync failed for good is not queued again")
+}
+
+// failNamespaceOutboxAgo marks a namespace's outbox rows failed at a given
+// time, so a test can age a failure past the retry interval.
+func failNamespaceOutboxAgo(t *testing.T, db *testDB, nsID uuid.UUID, ago time.Duration) {
+	t.Helper()
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now() - $2::interval, status_info = 'cannot succeed'
+		 WHERE namespace_id = $1`, nsID, pgtype.Interval{Microseconds: ago.Microseconds(), Valid: true})
+	require.NoError(t, err)
+}
+
+// A failed namespace sync is retried once its failure is old enough: what it
+// failed on may have been fixed without anyone noticing.
+func TestNamespaceReconcile_RetriesANamespaceWhoseSyncFailedLongAgo(t *testing.T) {
+	db := createTestDB(t)
+	h := newNamespaceHandler(t, db, newMockShoot(t))
+	ctx := t.Context()
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-reconcile-old-failure")
+	setShootStatus(t, db, clusterID, "ready")
+	projectID := insertProject(t, db, clusterID, "proj-reconcile-old-failure")
+	nsID := insertNamespace(t, db, projectID, "team-a")
+	failNamespaceOutboxAgo(t, db, nsID, 2*time.Hour)
+
+	require.NoError(t, h.Reconcile(ctx))
+	assert.Equal(t, 1, countPendingNamespaceReconcile(t, db, nsID), "a failure older than an hour gets one more attempt")
+
+	// That attempt failed again just now, so the next round leaves it alone
+	// until the new failure is an hour old.
+	failNamespaceOutbox(t, db, nsID)
+	require.NoError(t, h.Reconcile(ctx))
+	assert.Equal(t, 0, countPendingNamespaceReconcile(t, db, nsID), "one attempt per failure, not one per round")
+}
+
+// A namespace already on the Shoot is retried too when its sync failed long
+// ago: the failure may have come after its creation, on its LimitRange or
+// role bindings, which the Shoot-side namespace does not show.
+func TestNamespaceReconcile_RetriesANamespacePresentOnTheShoot(t *testing.T) {
+	db := createTestDB(t)
+	mock := newMockShoot(t)
+	h := newNamespaceHandler(t, db, mock)
+	ctx := t.Context()
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-reconcile-present")
+	setShootStatus(t, db, clusterID, "ready")
+	projectID := insertProject(t, db, clusterID, "proj-reconcile-present")
+	nsID := insertNamespace(t, db, projectID, "team-a")
+
+	// Materialize the namespace on the Shoot first, so reconcile sees nothing
+	// missing, then age a failure on its row.
+	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
+	failNamespaceOutboxAgo(t, db, nsID, 2*time.Hour)
+
+	require.NoError(t, h.Reconcile(ctx))
+	assert.Equal(t, 1, countPendingNamespaceReconcile(t, db, nsID), "an old failure is retried even when the Shoot shows the namespace")
 }
 
 // A cluster whose API server becomes available queues every namespace again,
