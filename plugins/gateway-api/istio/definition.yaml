@@ -130,22 +130,22 @@ spec:
         detail: true
         icon: server
       - crd: httproutes.gateway.networking.k8s.io
-        label: HTTP routes
+        label: HTTP Routes
         list: true
         detail: true
         icon: globe
       - crd: grpcroutes.gateway.networking.k8s.io
-        label: gRPC routes
+        label: GRPC Routes
         list: true
         detail: true
         icon: lightning
       - crd: tcproutes.gateway.networking.k8s.io
-        label: TCP routes
+        label: TCP Routes
         list: true
         detail: true
         icon: power-plug
       - crd: tlsroutes.gateway.networking.k8s.io
-        label: TLS routes
+        label: TLS Routes
         list: true
         detail: true
         icon: lock

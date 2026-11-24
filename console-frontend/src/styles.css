@@ -196,27 +196,35 @@ html.presenting-full {
   --fund-modal-inset-left: 0px;
 }
 
-/* An nldd-text-cell without a width is `full`, which the design system compiles
-   to flex-basis: 0 with min-width: 0. Beside a `fit-content` value cell (basis
-   auto, so max-content) a row too narrow for both leaves the label a shrink
-   weight of zero: it stays at 0px, the value takes the row, and overflow-wrap:
-   anywhere breaks the label one character per line — "O / r / g / a / n …".
-   A label has no reason to go below its longest word. Document rules outrank a
-   shadow tree's :host rules whatever the specificity, so this reaches every
-   cell at once; :not([min-width]) leaves the escape hatch, since the component
-   writes that attribute as an inline style of its own.
-   Still a defect in @nldd/design-system 0.8.91: text-cell.styles.js is
-   unchanged since 0.8.86, when this was reported upstream. */
-nldd-text-cell:not([min-width]) {
-  min-width: min-content;
+/* WORKAROUND, remove when @nldd/design-system is upgraded to the release with
+   https://github.com/NederlandseDigitaleDienst/design-system/pull/496 (fixes
+   issue #494). An nldd-text-cell without a width is `full`: flex-basis 0 and
+   min-width 0. Beside a `fit-content` value cell (basis max-content) a row too
+   narrow for both leaves the label a shrink weight of zero, so it stays at 0px,
+   the value takes the row, and the text's overflow-wrap: anywhere breaks the
+   label one character per line ("L / i / s / t / e / n …"). A min-width of
+   min-content does not help: with `anywhere`, min-content is one character.
+   #496 gives a full-width cell a floor of --semantics-cells-min-width (160px);
+   this applies the same floor ahead of it, but only to a label followed by a
+   fit-content cell, the case the issue is about: an nldd-table cell sits in a
+   fixed grid track that a floor would push it out of. Document rules outrank
+   a shadow tree's :host rules; :not([min-width]) keeps the attribute's own
+   value, which the component writes as an inline style. */
+nldd-text-cell:is(:not([width]), [width='full'], [width='']):not([min-width]):has(
+    ~ nldd-text-cell[width='fit-content']
+  ) {
+  min-width: var(--semantics-cells-min-width, 160px);
 }
 
 /* The design system puts its notifications at the top right, and carries them
    into an open sheet so they stay in front of it. A right-hand sheet has its
    title bar's Cancel/Close there, so a notification raised in a sheet (a save,
    a plugin finishing its install) covered it until dismissed. In a sheet they
-   start below the title bar instead. The area writes its `top` inline, which
-   only !important outranks. */
+   start below the title bar instead. On a sheet whose heading is short, that
+   puts a notification over the end of the heading until it goes: deliberately,
+   since the heading is text that comes back, not a control, and pushing them
+   below it would tie their place to every sheet's heading height. The area
+   writes its `top` inline, which only !important outranks. */
 nldd-sheet > #nldd-notifications-area {
   top: calc(
     max(var(--semantics-overlays-inset), env(safe-area-inset-top)) +
