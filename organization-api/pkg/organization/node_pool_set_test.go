@@ -74,6 +74,36 @@ func Test_NodePool_Set_CreatesResizesAndRemoves(t *testing.T) {
 	assert.Equal(t, [3]any{"n1-standard-1", int32(1), int32(1)}, sizes["c"])
 }
 
+// Pools list oldest first. The pools one set creates share a created timestamp,
+// so they keep the order of the request, not of their names.
+func Test_NodePool_List_OrdersByCreation(t *testing.T) {
+	t.Parallel()
+	q := newQuotaEnv(t)
+	q.setNodeQuota(t, offeringN1Standard1, 10)
+	clusterID, err := q.createCluster("c")
+	require.NoError(t, err)
+
+	pools := []*organizationv1.NodePoolSpec{
+		spec("node-pool-2", "n1-standard-1", 1, 2),
+		spec("node-pool-10", "n1-standard-1", 1, 2),
+		spec("node-pool-1", "n1-standard-1", 1, 2),
+		spec("a-later", "n1-standard-1", 1, 2),
+	}
+	require.NoError(t, q.setNodePools(clusterID, pools[:3]...))
+	require.NoError(t, q.setNodePools(clusterID, pools...))
+
+	want := []string{"node-pool-2", "node-pool-10", "node-pool-1", "a-later"}
+	for range 3 {
+		res, err := q.client.ListNodePools(q.ctx, organizationv1.ListNodePoolsRequest_builder{ClusterId: clusterID}.Build())
+		require.NoError(t, err)
+		names := make([]string, 0, len(res.GetNodePools()))
+		for _, pool := range res.GetNodePools() {
+			names = append(names, pool.GetName())
+		}
+		assert.Equal(t, want, names)
+	}
+}
+
 // A form built from an earlier read must not remove a pool someone else added
 // since: with expected_current set, a changed cluster refuses the set.
 func Test_NodePool_Set_RefusesAStaleExpectedSet(t *testing.T) {

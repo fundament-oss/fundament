@@ -234,7 +234,9 @@ FROM tenant.node_pools
     LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
     LEFT JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
 WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.deleted IS NULL
-ORDER BY tenant.node_pools.created DESC
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id
 `
 
 type NodePoolListByClusterIDParams struct {
@@ -263,6 +265,9 @@ type NodePoolListByClusterIDRow struct {
 
 // Each pool with its own latest sync row (view node_pool_sync_state) and the
 // node counts last observed on the shoot (tenant.node_pool_snapshots).
+// Oldest first, as the cluster-worker hands them to Gardener. Pools created in
+// one SetNodePools call share a created timestamp (now() is the transaction's
+// start), so the uuidv7 id breaks the tie in the order they were inserted.
 func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]NodePoolListByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
 	if err != nil {
