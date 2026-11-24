@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -148,7 +149,11 @@ func callGetUserInfo(t *testing.T, server *AuthnServer, token string) (*authnv1.
 	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
 	ctx, callInfo := connect.NewClientContext(context.Background())
 	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
-	return client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+	resp, err := client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("get user info: %w", err)
+	}
+	return resp, nil
 }
 
 // The email address comes from the account, not the token, so a token minted
