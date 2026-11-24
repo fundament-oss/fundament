@@ -107,7 +107,7 @@ func (q *Queries) GetApiKeyByID(ctx context.Context, arg GetApiKeyByIDParams) (G
 }
 
 const getClusterByID = `-- name: GetClusterByID :one
-SELECT id, organization_id, deleted
+SELECT id, organization_id, deleted, shoot_status
 FROM tenant.clusters
 WHERE id = $1
 `
@@ -120,12 +120,18 @@ type GetClusterByIDRow struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Deleted        pgtype.Timestamptz
+	ShootStatus    pgtype.Text
 }
 
 func (q *Queries) GetClusterByID(ctx context.Context, arg GetClusterByIDParams) (GetClusterByIDRow, error) {
 	row := q.db.QueryRow(ctx, getClusterByID, arg.ID)
 	var i GetClusterByIDRow
-	err := row.Scan(&i.ID, &i.OrganizationID, &i.Deleted)
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Deleted,
+		&i.ShootStatus,
+	)
 	return i, err
 }
 
