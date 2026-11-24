@@ -60,7 +60,7 @@ spec:
               properties:
                 phase:
                   type: string
-                  description: The plugin phase, such as Running, Degraded or Installing.
+                  description: The plugin phase, such as running, degraded or installing.
                 message:
                   type: string
                 address:

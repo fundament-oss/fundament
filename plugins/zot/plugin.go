@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
+	"golang.org/x/mod/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +39,28 @@ const (
 // the cluster.
 var chartValues = map[string]string{
 	"service.type": "ClusterIP",
+}
+
+// valuesHashAnnotation is the annotation on the zot Deployment with the hash of
+// chartValues. install skips helm only when it matches, so a plugin version
+// that changes chartValues but keeps chartVersion still upgrades the release.
+const valuesHashAnnotation = "zot.fundament.io/values-hash"
+
+// installValues returns chartValues plus the Deployment annotation with their
+// hash. The dots in the annotation key are escaped for helm --set.
+func installValues() map[string]string {
+	values := maps.Clone(chartValues)
+	values[`deploymentAnnotations.zot\.fundament\.io/values-hash`] = valuesHash()
+	return values
+}
+
+// valuesHash is a stable hash of chartValues.
+func valuesHash() string {
+	sum := sha256.New()
+	for _, key := range slices.Sorted(maps.Keys(chartValues)) {
+		_, _ = fmt.Fprintf(sum, "%s=%s\n", key, chartValues[key]) // a hash.Hash never fails a write
+	}
+	return hex.EncodeToString(sum.Sum(nil))[:16]
 }
 
 // serviceAddress is where workloads in the cluster reach the registry.
@@ -139,7 +166,9 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	// Retry here rather than return: the runtime ends the process on an error
 	// from Start, and plugin-controller cannot read the status of a pod in a
 	// crash loop. Staying up, each failure reaches the console.
-	publish(ctx, host, kube, pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing zot"})
+	// No console write here: it runs outside p.lock, so it could put back the
+	// console CRD while an Uninstall deletes it.
+	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing zot"})
 	for p.setUpOnce(ctx, host, kube) != nil {
 		select {
 		case <-ctx.Done():
@@ -174,11 +203,16 @@ func (p *Plugin) setUpOnce(ctx context.Context, host pluginruntime.Host, kube cl
 	return nil
 }
 
-// install installs or upgrades the release to chartVersion. When the release
-// is already deployed at chartVersion and the zot Deployment exists, it does
-// nothing, so a plugin restart does not re-run `helm upgrade --wait`. When the
-// Deployment was deleted, it re-runs the install to restore it: Helm keeps
-// saying deployed, so nothing else puts it back.
+// install installs or upgrades the release to chartVersion. It never
+// downgrades: a release at a newer chart version, from a newer plugin pod
+// during a rolling update or before a plugin rollback, stays at that version.
+// A downgrade would restart zot, and zot keeps its images in an emptyDir.
+//
+// When the release is deployed at that version and the zot Deployment exists
+// with the hash of chartValues, it does nothing, so a plugin restart does not
+// re-run `helm upgrade --wait`. When the Deployment was deleted or its values
+// differ, it runs the install again: Helm keeps saying deployed, so nothing
+// else puts it back.
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	current, err := p.helm.Status(ctx, release)
 	if err != nil {
@@ -187,16 +221,26 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	if current != nil && (current.Pending() || current.Status == "uninstalling") {
 		return p.pendingError(current)
 	}
-	if current != nil && current.Status == "deployed" && current.ChartVersion == chartVersion {
-		present, err := deploymentPresent(ctx, kube)
+	version := chartVersion
+	if current != nil && semver.Compare("v"+current.ChartVersion, "v"+chartVersion) > 0 {
+		version = current.ChartVersion
+	}
+	if current != nil && current.Status == "deployed" && current.ChartVersion == version {
+		intact, err := deploymentIntact(ctx, kube, version)
 		if err != nil {
 			return err
 		}
-		if present {
+		if intact {
 			return nil
 		}
 	}
-	if err := p.helm.InstallFromRepo(ctx, release, chart, repoURL, chartVersion, chartValues); err != nil {
+	if version != chartVersion {
+		// A newer plugin installed this release, with values this plugin does
+		// not know. Only that plugin can repair it.
+		return fmt.Errorf("release %s/%s is at chart %s, newer than %s of this plugin; it is left for the newer plugin to repair",
+			namespace, release, version, chartVersion)
+	}
+	if err := p.helm.InstallFromRepo(ctx, release, chart, repoURL, chartVersion, installValues()); err != nil {
 		if concurrentOperation(err) {
 			return fmt.Errorf("%w: another install of release %s/%s started first: %w", errInProgress, namespace, release, err)
 		}
@@ -257,9 +301,16 @@ func getDeployment(ctx context.Context, kube client.Client) (*appsv1.Deployment,
 	return &d, nil
 }
 
-func deploymentPresent(ctx context.Context, kube client.Client) (bool, error) {
+// deploymentIntact reports whether the zot Deployment exists, and, at this
+// plugin's chartVersion, carries the hash of this plugin's chartValues. A
+// release at a newer version is the newer plugin's, so only its presence
+// counts.
+func deploymentIntact(ctx context.Context, kube client.Client, version string) (bool, error) {
 	d, err := getDeployment(ctx, kube)
-	return d != nil, err
+	if err != nil || d == nil {
+		return false, err
+	}
+	return version != chartVersion || d.Annotations[valuesHashAnnotation] == valuesHash(), nil
 }
 
 func (p *Plugin) Shutdown(_ context.Context) error {
@@ -276,7 +327,7 @@ func (p *Plugin) Upgrade(_ context.Context, _ pluginruntime.Host) error {
 	return nil
 }
 
-// Uninstall removes the console CRD and the zot release, and with the release
+// Uninstall removes the zot release and the console CRD, and with the release
 // every image in the registry: the chart keeps them in an emptyDir. The
 // namespace stays.
 //
@@ -300,20 +351,18 @@ func (p *Plugin) Uninstall(ctx context.Context, _ pluginruntime.Host) error {
 			return err
 		}
 	}
-	if err := deleteConsoleCRD(ctx, kube); err != nil {
-		return err
-	}
+	// The release goes first: while helm uninstall can still fail, the console
+	// keeps showing zot.
 	current, err := p.helm.Status(ctx, release)
 	if err != nil {
 		return fmt.Errorf("read %s release: %w", release, err)
 	}
-	if current == nil {
-		return nil
+	if current != nil {
+		if err := p.helm.Uninstall(ctx, release); err != nil {
+			return fmt.Errorf("helm uninstall %s: %w", release, err)
+		}
 	}
-	if err := p.helm.Uninstall(ctx, release); err != nil {
-		return fmt.Errorf("helm uninstall %s: %w", release, err)
-	}
-	return nil
+	return deleteConsoleCRD(ctx, kube)
 }
 
 // Reconcile puts back a deleted zot Deployment and reports zot's health.

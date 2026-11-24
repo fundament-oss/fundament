@@ -32,10 +32,12 @@ The plugin follows the operator pattern of the other first-party plugins, though
 
 | Event | What the plugin does |
 |---|---|
-| Start | Applies the console CRD. Installs or upgrades the release to the pinned chart version. It skips the install when the release is deployed at that version and the Deployment exists. It retries every 30 seconds until the install succeeds. |
-| Reconcile | Installs again when the Deployment was deleted, because Helm still reports the release as deployed. Reports the status. |
-| Uninstall | Deletes the console CRD and the `Registry` object. Then runs `helm uninstall zot`. The namespace `zot` stays. |
+| Start | Installs or upgrades the release to the pinned chart version, then applies the console CRD. It skips the install when the release is deployed at that version and the Deployment has the hash of the values in the annotation `zot.fundament.io/values-hash`. It retries every 30 seconds until the install succeeds. |
+| Reconcile | Installs again when the Deployment was deleted or has another values hash, because Helm still reports the release as deployed. Reports the status. |
+| Uninstall | Runs `helm uninstall zot`. Then deletes the console CRD and the `Registry` object. The namespace `zot` stays. |
 | Install, Upgrade | Do nothing. Start installs and upgrades on each start of the pod. |
+
+The plugin does not downgrade the release. A newer plugin pod can upgrade the release during a rolling update, or before a plugin rollback. The older plugin then keeps the newer chart version, because a downgrade restarts zot and deletes the images. If the Deployment of a newer release is missing, the older plugin reports `degraded` and does not repair it.
 
 The plugin is `Running` when the zot Deployment has all replicas available, and `Degraded` when it has not.
 

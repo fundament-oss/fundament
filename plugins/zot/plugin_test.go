@@ -63,6 +63,9 @@ func (f *fakeHelm) InstallFromRepo(_ context.Context, _, _, _, version string, v
 	if values["service.type"] != "ClusterIP" {
 		return errors.New("the install must keep the Service inside the cluster")
 	}
+	if values[`deploymentAnnotations.zot\.fundament\.io/values-hash`] != valuesHash() {
+		return errors.New("the install must put the values hash on the Deployment")
+	}
 	f.installs = append(f.installs, version)
 	return f.installErr
 }
@@ -81,13 +84,23 @@ func deployed(version string) *helm.ReleaseStatus {
 func zotDeployment(available int32) *appsv1.Deployment {
 	replicas := int32(1)
 	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: release, Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        release,
+			Namespace:   namespace,
+			Annotations: map[string]string{valuesHashAnnotation: valuesHash()},
+		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "zot", Image: "ghcr.io/project-zot/zot:v2.1.23"}}}},
 		},
 		Status: appsv1.DeploymentStatus{AvailableReplicas: available},
 	}
+}
+
+func deploymentWithHash(hash string) *appsv1.Deployment {
+	d := zotDeployment(1)
+	d.Annotations[valuesHashAnnotation] = hash
+	return d
 }
 
 var testNow = time.Date(2026, 11, 23, 12, 0, 0, 0, time.UTC)
@@ -132,6 +145,24 @@ func TestInstall(t *testing.T) {
 			name:     "deployed, deployment deleted",
 			status:   deployed(chartVersion),
 			installs: []string{chartVersion},
+		},
+		{
+			// A plugin version that changed chartValues but kept chartVersion.
+			name:     "deployed with other values",
+			status:   deployed(chartVersion),
+			objs:     []client.Object{deploymentWithHash("0123456789abcdef")},
+			installs: []string{chartVersion},
+		},
+		{
+			// A newer plugin pod upgraded it; a downgrade would restart zot.
+			name:   "deployed at a newer version",
+			status: deployed("0.1.200"),
+			objs:   []client.Object{deploymentWithHash("0123456789abcdef")},
+		},
+		{
+			name:    "deployed at a newer version, deployment deleted",
+			status:  deployed("0.1.200"),
+			errText: "left for the newer plugin to repair",
 		},
 		{
 			name:     "deployed at an older version",
