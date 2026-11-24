@@ -39,7 +39,7 @@ install with `functl version`.
 
 Without a config file, `functl` talks to the `fundament-poc.nl` installation.
 An API key only works on the installation it was created on, so to use a key
-from the [sandbox console](https://console.fundament.projects.digilab.network/api-keys),
+from the sandbox console (`console.fundament.projects.digilab.network`),
 create `config.yaml` in the [config directory](#configuration) first
 (`~/.config/fundament/config.yaml`, or `%APPDATA%\fundament\config.yaml` on
 Windows):
