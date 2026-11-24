@@ -160,7 +160,6 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 		ID:              row.ID,
 		OrganizationIDs: organizationIDs,
 		Name:            row.Name,
-		Email:           row.Email.String,
 		ExternalRef:     row.ExternalRef.String,
 	}
 
@@ -216,7 +215,6 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 		ID:              invitedUser.ID,
 		OrganizationIDs: organizationIDs,
 		Name:            claims.Name,
-		Email:           invitedUser.Email.String,
 		ExternalRef:     claims.Sub,
 	}
 
@@ -251,7 +249,6 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 		ID:              row.ID,
 		OrganizationIDs: []uuid.UUID{},
 		Name:            row.Name,
-		Email:           row.Email.String,
 		ExternalRef:     row.ExternalRef.String,
 	}
 

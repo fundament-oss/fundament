@@ -55,8 +55,6 @@ type Claims struct {
 	OrganizationIDs []uuid.UUID `json:"organization_ids"`
 	Groups          []string    `json:"groups"`
 	Name            string      `json:"name"`
-	// Email is the address on the user's account, when it has one.
-	Email string `json:"email,omitempty"`
 	// AuthTime is when the user last authenticated; refresh carries it forward.
 	AuthTime *jwt.NumericDate `json:"auth_time,omitempty"`
 	// AMR names how the user authenticated (OIDC "amr").

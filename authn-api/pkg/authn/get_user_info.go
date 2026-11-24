@@ -5,12 +5,18 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
 
+	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // GetUserInfo is the RPC handler for getting user information from a valid JWT.
+//
+// The email address is read from the account, not the token: it stays out of
+// the JWT (which is readable by anyone holding it), and a changed address
+// shows at once instead of after the next refresh.
 func (s *AuthnServer) GetUserInfo(
 	ctx context.Context,
 	_ *authnv1.GetUserInfoRequest,
@@ -25,8 +31,23 @@ func (s *AuthnServer) GetUserInfo(
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
+	// A soft-deleted account no longer resolves: its token is refused, as on
+	// refresh. A database failure is Unavailable, not Unauthenticated, so the
+	// console does not read an outage as a sign-out.
+	row, err := s.queries.UserGetByID(ctx, db.UserGetByIDParams{ID: claims.UserID()})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("user not found"))
+		}
+		s.logger.Error("failed to resolve user for user info", "error", err)
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("temporarily unavailable"))
+	}
+
+	u := protoUserFromClaims(claims)
+	u.SetEmail(row.Email.String)
+
 	return authnv1.GetUserInfoResponse_builder{
-		User: protoUserFromClaims(claims),
+		User: u,
 	}.Build(), nil
 }
 
@@ -42,7 +63,6 @@ func protoUserFromClaims(claims *auth.Claims) *authnv1.User {
 		Id:              claims.Subject,
 		OrganizationIds: organizationIds,
 		Name:            claims.Name,
-		Email:           claims.Email,
 		Groups:          claims.Groups,
 	}.Build()
 }

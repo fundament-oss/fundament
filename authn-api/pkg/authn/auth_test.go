@@ -134,32 +134,10 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
 
-// TestGenerateJWT_CarriesEmail verifies that the account's email address
-// travels in the user token, which is where GetUserInfo reads it from.
-func TestGenerateJWT_CarriesEmail(t *testing.T) {
-	secret := []byte("test-secret")
-	server := &AuthnServer{
-		config: &Config{JWTSecret: secret, TokenExpiry: 15 * time.Minute, SessionMaxAge: time.Hour},
-	}
-
-	tokenStr, err := server.generateJWT(&user{ID: uuid.New(), Name: "alice", Email: "alice@example.org"}, nil, newSession(amrOIDC))
-	require.NoError(t, err)
-
-	claims := &auth.Claims{}
-	_, err = jwt.ParseWithClaims(tokenStr, claims, func(_ *jwt.Token) (any, error) { return secret, nil })
-	require.NoError(t, err)
-	assert.Equal(t, "alice@example.org", claims.Email)
-}
-
-// TestGetUserInfo_ReturnsEmail verifies that GetUserInfo hands the email
-// claim of a user token to the caller.
-func TestGetUserInfo_ReturnsEmail(t *testing.T) {
-	secret := []byte("test-secret")
-	server := &AuthnServer{
-		config:    &Config{JWTSecret: secret, TokenExpiry: time.Minute, SessionMaxAge: time.Hour},
-		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
-		validator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
-	}
+// callGetUserInfo calls GetUserInfo over the real Connect HTTP path with the
+// given token as Bearer.
+func callGetUserInfo(t *testing.T, server *AuthnServer, token string) (*authnv1.GetUserInfoResponse, error) {
+	t.Helper()
 
 	path, handler := authnv1connect.NewAuthnServiceHandler(server)
 	mux := http.NewServeMux()
@@ -167,17 +145,60 @@ func TestGetUserInfo_ReturnsEmail(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	t.Cleanup(ts.Close)
 
-	tokenStr, err := server.generateJWT(&user{ID: uuid.New(), Name: "alice", Email: "alice@example.org"}, nil, newSession(amrOIDC))
-	require.NoError(t, err)
-
 	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
 	ctx, callInfo := connect.NewClientContext(context.Background())
-	callInfo.RequestHeader().Set("Authorization", "Bearer "+tokenStr)
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	return client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+}
 
-	resp, err := client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+// The email address comes from the account, not the token, so a token minted
+// without one (as every token is) still shows the address, and a changed
+// address shows without waiting for a refresh.
+func TestGetUserInfo_ReturnsEmailFromAccount(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	_, err := env.superPool.Exec(context.Background(),
+		`UPDATE tenant.users SET email = $2 WHERE id = $1`, userID, "alice@example.org")
 	require.NoError(t, err)
-	assert.Equal(t, "alice", resp.GetUser().GetName())
+
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
 	assert.Equal(t, "alice@example.org", resp.GetUser().GetEmail())
+}
+
+// An account without an address answers with an empty email, which the
+// console shows as "Not set".
+func TestGetUserInfo_EmptyEmailWhenAccountHasNone(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Empty(t, resp.GetUser().GetEmail())
+}
+
+// A soft-deleted account no longer resolves, so its still-valid token is
+// refused, as on refresh.
+func TestGetUserInfo_SoftDeletedUserIsRefused(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", true)
+
+	_, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+// A database failure is Unavailable, not Unauthenticated: the console must not
+// read the outage as a sign-out.
+func TestGetUserInfo_DatabaseOutageIsUnavailable(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	env.servicePool.Close()
+
+	_, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
 }
 
 func TestNew_RejectsInvalidLifetimes(t *testing.T) {

@@ -76,7 +76,6 @@ func (s *AuthnServer) ExchangeToken(
 		ID:              dbUser.ID,
 		OrganizationIDs: organizationIDs,
 		Name:            dbUser.Name,
-		Email:           dbUser.Email.String,
 		ExternalRef:     dbUser.ExternalRef.String,
 	}
 
