@@ -12,6 +12,35 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clusterLockForProject = `-- name: ClusterLockForProject :one
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.deleted
+FROM tenant.clusters
+WHERE tenant.clusters.id = $1
+FOR SHARE
+`
+
+type ClusterLockForProjectParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterLockForProjectRow struct {
+	ID      uuid.UUID
+	Deleted pgtype.Timestamptz
+}
+
+// Locks the cluster a project is created on. FOR SHARE conflicts with the
+// update ClusterDelete makes, so a project and the cluster's deletion run one
+// after the other and neither misses the other. No row: the cluster does not
+// exist.
+func (q *Queries) ClusterLockForProject(ctx context.Context, arg ClusterLockForProjectParams) (ClusterLockForProjectRow, error) {
+	row := q.db.QueryRow(ctx, clusterLockForProject, arg.ClusterID)
+	var i ClusterLockForProjectRow
+	err := row.Scan(&i.ID, &i.Deleted)
+	return i, err
+}
+
 const projectCreate = `-- name: ProjectCreate :one
 INSERT INTO tenant.projects (cluster_id, name, alias)
 VALUES ($1, $2, $3)

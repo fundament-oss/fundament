@@ -309,7 +309,8 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 const nodePoolLockCluster = `-- name: NodePoolLockCluster :one
 SELECT
     tenant.clusters.id,
-    tenant.clusters.deleted
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status
 FROM tenant.clusters
 WHERE tenant.clusters.id = (
     SELECT tenant.node_pools.cluster_id
@@ -325,8 +326,9 @@ type NodePoolLockClusterParams struct {
 }
 
 type NodePoolLockClusterRow struct {
-	ID      uuid.UUID
-	Deleted pgtype.Timestamptz
+	ID          uuid.UUID
+	Deleted     pgtype.Timestamptz
+	ShootStatus pgtype.Text
 }
 
 // Locks the cluster of a live node pool, so two deletes of a cluster's pools
@@ -336,7 +338,7 @@ type NodePoolLockClusterRow struct {
 func (q *Queries) NodePoolLockCluster(ctx context.Context, arg NodePoolLockClusterParams) (NodePoolLockClusterRow, error) {
 	row := q.db.QueryRow(ctx, nodePoolLockCluster, arg.NodePoolID)
 	var i NodePoolLockClusterRow
-	err := row.Scan(&i.ID, &i.Deleted)
+	err := row.Scan(&i.ID, &i.Deleted, &i.ShootStatus)
 	return i, err
 }
 

@@ -82,7 +82,8 @@ WHERE id = $1 AND deleted IS NULL;
 -- foreign key takes. No row: the pool is gone.
 SELECT
     tenant.clusters.id,
-    tenant.clusters.deleted
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status
 FROM tenant.clusters
 WHERE tenant.clusters.id = (
     SELECT tenant.node_pools.cluster_id

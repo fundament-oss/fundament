@@ -27,6 +27,18 @@ SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL;
 
+-- name: ClusterLockForProject :one
+-- Locks the cluster a project is created on. FOR SHARE conflicts with the
+-- update ClusterDelete makes, so a project and the cluster's deletion run one
+-- after the other and neither misses the other. No row: the cluster does not
+-- exist.
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.deleted
+FROM tenant.clusters
+WHERE tenant.clusters.id = @cluster_id
+FOR SHARE;
+
 -- name: ProjectCreate :one
 INSERT INTO tenant.projects (cluster_id, name, alias)
 VALUES ($1, $2, $3)

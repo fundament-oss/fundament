@@ -58,6 +58,19 @@ func (s *Server) CreateProject(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock organization member: %w", err))
 	}
 
+	// The permission check passes on a cluster being deleted, which stays
+	// readable until Gardener confirms the deletion: refuse it here.
+	cluster, err := qtx.ClusterLockForProject(ctx, db.ClusterLockForProjectParams{ClusterID: clusterID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock cluster: %w", err))
+	}
+	if cluster.Deleted.Valid {
+		return nil, failedPrecondition(msgClusterDeleting)
+	}
+
 	alias := req.GetName()
 	if req.HasAlias() {
 		alias = req.GetAlias()

@@ -71,7 +71,9 @@ FROM tenant.clusters
 WHERE tenant.clusters.id = $1;
 
 -- name: ClusterGetByName :one
--- Sync state as in ClusterList.
+-- Includes a deleted cluster until Gardener confirms its deletion, as
+-- ClusterList does; ClusterCreate keeps its name taken until then, so at most
+-- one row matches. Sync state as in ClusterList.
 SELECT
     tenant.clusters.id,
     tenant.clusters.organization_id,
@@ -98,7 +100,8 @@ SELECT
     )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
-WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL;
+WHERE tenant.clusters.name = $1
+    AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted');
 
 -- name: ClusterCreate :one
 -- Create a cluster if no active or pending-delete cluster with the same name exists.
@@ -142,6 +145,28 @@ WHERE id = $1 AND deleted IS NULL
     -- in between leaves the row alone.
     AND (sqlc.narg('expected_kubernetes_version')::text IS NULL
         OR kubernetes_version = sqlc.narg('expected_kubernetes_version'));
+
+-- name: ClusterDeletionConfirmed :one
+-- Whether the cluster is deleted and Gardener confirmed its Shoot is gone: the
+-- point from which the authz-worker removes the cluster's tuple.
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = @cluster_id
+      AND tenant.clusters.deleted IS NOT NULL
+      AND tenant.clusters.shoot_status = 'deleted'
+)::boolean;
+
+-- name: NodePoolClusterDeletionConfirmed :one
+-- ClusterDeletionConfirmed for the cluster of a node pool.
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.node_pools
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
+    WHERE tenant.node_pools.id = @node_pool_id
+      AND tenant.clusters.deleted IS NOT NULL
+      AND tenant.clusters.shoot_status = 'deleted'
+)::boolean;
 
 -- name: ClusterDelete :execrows
 UPDATE tenant.clusters

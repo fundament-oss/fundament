@@ -23,7 +23,7 @@ func (s *Server) DeleteNodePool(
 	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.NodePool(nodePoolID)); err != nil {
-		return nil, err
+		return nil, s.nodePoolGoneOr(ctx, nodePoolID, err)
 	}
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -43,6 +43,11 @@ func (s *Server) DeleteNodePool(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock cluster: %w", err))
+	}
+
+	// The pools of a cluster Gardener confirmed gone go with it.
+	if clusterDeletionConfirmed(cluster.Deleted, cluster.ShootStatus) {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
 	}
 
 	if !cluster.Deleted.Valid {

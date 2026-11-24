@@ -43,7 +43,10 @@ func (s *Server) UpdateCluster(
 		}
 		// ClusterGetByID also returns deleted clusters.
 		if cluster.Deleted.Valid {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			if clusterDeletionConfirmed(cluster.Deleted, cluster.ShootStatus) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+			}
+			return nil, failedPrecondition(msgClusterDeleting)
 		}
 
 		// A cluster never moves back to a lower Kubernetes version: Gardener
@@ -84,7 +87,7 @@ func (s *Server) UpdateCluster(
 			return nil, connect.NewError(connect.CodeAborted,
 				fmt.Errorf("cluster was changed or deleted during the update; retry"))
 		}
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		return nil, s.clusterWriteMissed(ctx, clusterID)
 	}
 
 	s.logger.InfoContext(ctx, "cluster updated", "cluster_id", clusterID)
