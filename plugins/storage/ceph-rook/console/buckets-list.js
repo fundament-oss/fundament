@@ -17,10 +17,13 @@ const nextRead = latestRead();
 
 async function showList() {
   const isCurrent = nextRead();
+  // projectId limits the cluster-wide list to the project's namespaces;
+  // without it the list would widen to the whole cluster.
+  if (!ctx.projectId) {
+    list.innerHTML = '<nldd-banner variant="critical" text="Open this page from a project."></nldd-banner>';
+    return;
+  }
   try {
-    // projectId limits the cluster-wide list to the project's namespaces;
-    // without it the list would widen to the whole cluster.
-    if (!ctx.projectId) throw new Error('this page needs a project');
     // The classes only label the stores; failing to read them leaves the class names.
     const [{ items }, classes] = await Promise.all([
       fundament.k8s.list({ ...OBC, projectId: ctx.projectId }),

@@ -78,7 +78,7 @@ Ownership is tracked by `fundament.io/namespace-id`, not the name: renaming a
 namespace in fundament only updates the `fundament.io/namespace-name` label (the
 k8s resource name is immutable), so workloads are never destroyed by a rename.
 Deleting a namespace in fundament hard-deletes the cluster-side namespace and
-all workloads within it. See [cluster-worker](https://github.com/fundament-oss/fundament/blob/master/cluster-worker/README.md#namespace-sync)
+all workloads within it. See [cluster-worker](https://github.com/fundament-oss/fundament/blob/master/cluster-worker/README.md#handlers)
 for the sync mechanism.
 
 ## Example

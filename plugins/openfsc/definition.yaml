@@ -76,6 +76,7 @@ spec:
   menu:
     project:
       - crd: fscinstallations.openfsc.fundament.io
+        label: FSC Installations
         list: true
         detail: true
         icon: cloud

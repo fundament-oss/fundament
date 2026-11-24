@@ -1,8 +1,11 @@
 import {
+  addInfoButton,
   bootPage,
+  DISK_POOL_INFO,
   errorBox,
   fetchCephCapacity,
   escapeHtml,
+  freeSpace,
   hintHtml,
   humanizeQuantity,
   latestRead,
@@ -32,6 +35,13 @@ const RESOURCE_DISKS = {
 
 const name = ctx.resource?.name;
 
+// In the actions group, which shows once the pool has loaded.
+addInfoButton(document.getElementById('page-actions'), 'About disk pools', [
+  ...DISK_POOL_INFO,
+  'Raw size is what this pool\'s disks add to the cluster, before copies are made.',
+  'Ceph runs one storage daemon (OSD) per disk. Removing a disk from the pool does not stop its daemon: that is a manual step in Ceph, and data may move between disks in the meantime.',
+]);
+
 // Disk CRs keyed by name. Best-effort: without it the page falls back to raw CR
 // names, which is worse but still readable, so a failed list must not take the
 // whole detail page down.
@@ -51,46 +61,39 @@ async function diskIndex() {
 // behind it has no path to show and says so rather than rendering bare.
 function renderDiskList(entries, byName) {
   const names = (entries ?? []).map((d) => d.name);
-  if (names.length === 0) return hintHtml('No disks selected.');
+  if (names.length === 0) return hintHtml('No disks');
   const rows = names
     .map((diskName) => {
       const path = byName.get(diskName)?.status?.path;
       const primary = path ?? diskName;
-      const secondary = path ? diskName : 'no matching disk found';
+      const secondary = path ? diskName : 'Disk not found';
       return `
         <nldd-list-item>
           <nldd-text-cell text="${escapeHtml(primary)}" supporting-text="${escapeHtml(secondary)}"></nldd-text-cell>
         </nldd-list-item>`;
     })
     .join('');
-  return `<nldd-list appearance="simple" accessible-label="Contributed disks">${rows}</nldd-list>`;
+  return `<nldd-list appearance="simple" accessible-label="Disks">${rows}</nldd-list>`;
 }
 
-function renderReadOnly(item, byName) {
+function renderReadOnly(item, byName, cap) {
   const status = item.status ?? {};
   const spec = item.spec ?? {};
 
   // The phase is the badge beside the Console's title; the message says why.
   const pairs = [
-    // Labelled as contributions, not capacity: the obvious reading is wrong.
-    ['Disks contributed', String(selectedDiskCount(status) ?? '—')],
-    ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
+    ['Disks', String(selectedDiskCount(status) ?? '—')],
+    // Raw, not capacity: copies take their share once storage is built on it.
+    ['Raw size', humanizeQuantity(status.rawCapacity)],
   ];
+  const free = freeSpace(cap, null);
+  if (free) pairs.push(free);
   if (status.message) pairs.push(['Message', status.message]);
 
   return `
-    ${sectionHtml(
-      'Status',
-      `${renderKeyValueList(pairs, 'Status')}
-      <nldd-spacer size="12"></nldd-spacer>
-      ${hintHtml(`Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage
-        objects turn that capacity into StorageClasses. Volumes provisioned through those
-        StorageClasses are placed across all of the cluster's disks, so the raw size above is
-        this pool's contribution.`)}
-      <div data-role="capacity"></div>`,
-    )}
+    ${sectionHtml('Status', renderKeyValueList(pairs, 'Status'))}
     <nldd-spacer size="24"></nldd-spacer>
-    ${sectionHtml('Contributed disks', renderDiskList(spec.disks, byName))}
+    ${sectionHtml('Disks', renderDiskList(spec.disks, byName))}
   `;
 }
 
@@ -99,10 +102,15 @@ const nextRead = latestRead();
 async function showDetail() {
   const isCurrent = nextRead();
   try {
-    const item = await fundament.k8s.get({ ...RESOURCE, name });
-    const byName = await diskIndex();
+    // diskIndex and fetchCephCapacity never throw: without them the page
+    // shows raw disk names and leaves out the free space row.
+    const [item, byName, cap] = await Promise.all([
+      fundament.k8s.get({ ...RESOURCE, name }),
+      diskIndex(),
+      fetchCephCapacity(),
+    ]);
     if (!isCurrent()) return;
-    content.innerHTML = renderReadOnly(item, byName);
+    content.innerHTML = renderReadOnly(item, byName, cap);
     actions.hidden = false;
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
@@ -112,14 +120,6 @@ async function showDetail() {
     document.getElementById('edit-btn').onclick = () => {
       fundament.openSheet({ view: 'edit', resource: { name } });
     };
-    fetchCephCapacity().then((cap) => {
-      const el = content.querySelector('[data-role="capacity"]');
-      if (!cap || !el || !isCurrent()) return;
-      el.innerHTML = `<nldd-spacer size="8"></nldd-spacer>${hintHtml(escapeHtml(
-        `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
-        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`,
-      ))}`;
-    });
   } catch (err) {
     if (!isCurrent()) return;
     actions.hidden = true;

@@ -5,12 +5,14 @@
 // classic scripts, so they run in order before first paint.
 //
 // config.js is loaded here, in <head>, for every Starlight page: it carries the
-// cookie's domain, and EnvironmentBanner (in PageFrame, later) reads it too.
+// cookie's domain, the Console and marketplace URLs environment-links.js puts
+// in links, and EnvironmentBanner (in PageFrame, later) reads it too.
 import Default from '@astrojs/starlight/components/ThemeProvider.astro';
 ---
 
 <script is:inline src="/config/config.js"></script>
 <script is:inline src="/theme-cookie.js"></script>
+<script is:inline src="/environment-links.js"></script>
 <script is:inline>
   window.fundamentTheme.syncStarlight();
 </script>

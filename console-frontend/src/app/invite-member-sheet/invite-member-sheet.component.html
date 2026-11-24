@@ -48,13 +48,15 @@
           </p>
         </nldd-rich-text>
         <nldd-spacer size="16"></nldd-spacer>
-        <!-- An invitation grants an existing account standing here; it does
-             not make an account. Said before the form, so nobody fills it in
-             for someone who cannot sign in yet. -->
+        <!-- An address nobody has used yet is fine: the invitation makes the
+             user record, and authn-api's first sign-in claims it by verified
+             email address, case-insensitively. What has to exist is a way to
+             sign in, which the identity provider owns, not Fundament. Said
+             before the form, so the address is typed the way that provider
+             reports it. -->
         <nldd-banner
-          variant="warning"
-          text="This does not create a new account"
-          supporting-text="Inviting only works for people who already have a Fundament account. New users must be requested from the Fundament operators in the ~users-poc channel on Digilab Mattermost."
+          text="Someone new can be invited too"
+          supporting-text="The invitation waits for their first sign-in with this address. Use the address their identity provider reports for them; they need an account there to sign in."
         ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
         <nldd-form

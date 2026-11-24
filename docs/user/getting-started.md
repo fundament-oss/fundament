@@ -41,7 +41,7 @@ signed in with, then use **Check again** on that page.
 Every project runs on a cluster, so the cluster comes first. If your organization
 already has one you can use, skip to step 3.
 
-Go to **Clusters → Add cluster**. The wizard has three steps:
+Go to **Clusters → New cluster**. The wizard has three steps:
 
 1. **Cluster**: name, region and Kubernetes version.
 2. **Nodes**: one or more node pools, each with a machine type and a size.

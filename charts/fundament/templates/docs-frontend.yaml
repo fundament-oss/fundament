@@ -12,8 +12,10 @@ data:
   # so the page does not shift when it appears.
   config.js: |
     window.fundamentConfig = {
-      pocUrl: "{{ include "fundament.pocUrl" (dict "root" $ "site" "docs") }}",
-      cookieDomain: "{{ $.Values.externalUrls.cookieDomain }}"
+      pocUrl: {{ include "fundament.pocUrl" (dict "root" $ "site" "docs") | toJson }},
+      cookieDomain: {{ $.Values.externalUrls.cookieDomain | toJson }},
+      consoleUrl: {{ $.Values.externalUrls.console | toJson }},
+      marketplaceUrl: {{ $.Values.externalUrls.marketplace | toJson }}
     };
 
 ---
@@ -32,8 +34,8 @@ spec:
     metadata:
       annotations:
         # The config is mounted with subPath, which never sees a ConfigMap
-        # update, so a changed pocUrl or cookieDomain has to roll the pod instead.
-        checksum/config: {{ printf "%s|%s" $.Values.externalUrls.cookieDomain (include "fundament.pocUrl" (dict "root" $ "site" "docs")) | sha256sum }}
+        # update, so a change to any config.js value has to roll the pod instead.
+        checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.cookieDomain (include "fundament.pocUrl" (dict "root" $ "site" "docs")) $.Values.externalUrls.console $.Values.externalUrls.marketplace | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "docs-frontend" "component" "frontend") | nindent 8 }}
     spec:

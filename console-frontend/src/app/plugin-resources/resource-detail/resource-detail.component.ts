@@ -33,7 +33,11 @@ import {
   toSimpleValue,
   fieldNameToLabel,
   resourceListLabel,
+  printerColumnValue,
+  printedConditionBadge,
+  statusRows,
 } from '../crd-schema.utils';
+import type { StatusRow } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -541,9 +545,31 @@ export default class ResourceDetailComponent implements OnInit {
     this.statusFields().filter(([key, value]) => !checkIsConditionsField(key, value)),
   );
 
+  /** Those fields as rows: a list or an object is laid out under its name
+   *  rather than printed as JSON (a Gateway's addresses and listeners). */
+  statusRows = computed<StatusRow[]>(() =>
+    this.flatStatusFields().flatMap(([key, value]) => statusRows(key, value, this.statusLabel(key))),
+  );
+
+  /** How far a nested status row is indented: 16px a level, as the spec
+   *  section indents an object's keys, up to the spacer cell's 64. */
+  // eslint-disable-next-line class-methods-use-this
+  statusIndent(depth: number): number {
+    return Math.min(depth, 4) * 16;
+  }
+
   /** The one that says whether the thing works, beside the title where a cluster
-   *  carries its status too. Ready if there is one, otherwise the first. */
+   *  carries its status too. The printer column the list's card carries its badge
+   *  from, so both pages say the same (a Gateway's Programmed, not its Accepted);
+   *  without one Ready if there is one, otherwise the first. */
   primaryCondition = computed<{ text: string; color: string } | null>(() => {
+    const resource = this.resource();
+    const printed = resource
+      ? (this.crdDef()?.additionalPrinterColumns ?? [])
+          .map((col) => printedConditionBadge(col, printerColumnValue(resource, col)))
+          .find((badge) => badge !== null)
+      : undefined;
+    if (printed) return printed;
     const all = this.conditions();
     const ready = all.find((entry) => entry['type'] === 'Ready') ?? all[0];
     return ready ? this.conditionBadge(String(ready['type'] ?? ''), ready['status']) : null;

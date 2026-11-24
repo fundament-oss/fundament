@@ -22,14 +22,24 @@ describe('PluginMenuIconComponent', () => {
     expect(cell(create(undefined)).getAttribute('icon')).toBe('circle-dashed');
   });
 
-  it.each(['https://x/y.png', '/img/a.svg', 'icon.svg', 'sha256:abcd', 'data:text/html;base64,AA'])(
-    'falls back to circle-dashed for %s',
-    (value) => {
-      const el = create(value);
-      expect(cell(el).getAttribute('icon')).toBe('circle-dashed');
-      expect(el.querySelector('.bg-current')).toBeNull();
-    },
-  );
+  it('accepts an NLDD alias', () => {
+    expect(cell(create('server')).getAttribute('icon')).toBe('server');
+  });
+
+  it.each([
+    'zap',
+    'cable',
+    'gauge',
+    'https://x/y.png',
+    '/img/a.svg',
+    'icon.svg',
+    'sha256:abcd',
+    'data:text/html;base64,AA',
+  ])('falls back to circle-dashed for %s', (value) => {
+    const el = create(value);
+    expect(cell(el).getAttribute('icon')).toBe('circle-dashed');
+    expect(el.querySelector('.bg-current')).toBeNull();
+  });
 
   it('renders a 20px bg-current mask for a data: value', () => {
     const el = create('data:image/svg+xml;base64,AA');
