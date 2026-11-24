@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -132,6 +133,100 @@ func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
 	_, err = client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+// callGetUserInfo calls GetUserInfo over the real Connect HTTP path with the
+// given token as Bearer.
+func callGetUserInfo(t *testing.T, server *AuthnServer, token string) (*authnv1.GetUserInfoResponse, error) {
+	t.Helper()
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server)
+	mux := http.NewServeMux()
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	resp, err := client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("get user info: %w", err)
+	}
+	return resp, nil
+}
+
+// The email address comes from the account, not the token, so a token minted
+// without one (as every token is) still shows the address, and a changed
+// address shows without waiting for a refresh.
+func TestGetUserInfo_ReturnsEmailFromAccount(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	_, err := env.superPool.Exec(context.Background(),
+		`UPDATE tenant.users SET email = $2 WHERE id = $1`, userID, "alice@example.org")
+	require.NoError(t, err)
+
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
+	assert.Equal(t, "alice@example.org", resp.GetUser().GetEmail())
+}
+
+// An account without an address answers with an empty email, which the
+// console shows as "Not set".
+func TestGetUserInfo_EmptyEmailWhenAccountHasNone(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Empty(t, resp.GetUser().GetEmail())
+}
+
+// A soft-deleted account no longer resolves, so its still-valid token is
+// refused, as on refresh.
+func TestGetUserInfo_SoftDeletedUserIsRefused(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", true)
+
+	_, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+// A database failure still answers from the token, without the email address:
+// the console reads any error here as a sign-out.
+func TestGetUserInfo_DatabaseOutageAnswersFromToken(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+	env.servicePool.Close()
+
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
+	assert.Empty(t, resp.GetUser().GetEmail())
+}
+
+// A database that hangs instead of failing also answers from the token, once
+// the lookup's deadline passes, rather than holding up the console.
+func TestGetUserInfo_HangingDatabaseAnswersFromToken(t *testing.T) {
+	env := newRefreshEnv(t)
+	userID := seedUser(t, env, "Alice", false)
+
+	// An exclusive lock held by another connection blocks the account lookup
+	// until the lock's transaction ends.
+	tx, err := env.superPool.Begin(context.Background())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+	_, err = tx.Exec(context.Background(), `LOCK TABLE tenant.users IN ACCESS EXCLUSIVE MODE`)
+	require.NoError(t, err)
+
+	start := time.Now()
+	resp, err := callGetUserInfo(t, env.server, mintUserToken(t, userID))
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), userInfoLookupTimeout+2*time.Second)
+	assert.Equal(t, userID.String(), resp.GetUser().GetId())
+	assert.Empty(t, resp.GetUser().GetEmail())
 }
 
 func TestNew_RejectsInvalidLifetimes(t *testing.T) {
