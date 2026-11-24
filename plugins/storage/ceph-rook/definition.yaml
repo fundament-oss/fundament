@@ -137,22 +137,27 @@ spec:
   menu:
     organization:
       - crd: diskpools.ceph.fundament.io
+        label: Disk Pools
         list: true
         detail: true
         icon: file-box
       - crd: blockstorages.ceph.fundament.io
+        label: Block Storage
         list: true
         detail: true
         icon: rectangle-stack
       - crd: filestorages.ceph.fundament.io
+        label: File Storage
         list: true
         detail: true
         icon: folder-open
       - crd: objectstorages.ceph.fundament.io
+        label: Object Storage
         list: true
         detail: true
         icon: boxes-3
       - crd: disks.ceph.fundament.io
+        label: Disks
         list: true
         detail: true
         icon: ssd-hard-drive

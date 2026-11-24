@@ -146,13 +146,21 @@ export default class NewClusterSummaryComponent {
     // to the cluster by id, and the list comes back with the cluster in it
     // regardless. One after the other, a slow ListClusters would hold up the
     // pools for nothing.
-    const reloaded = this.organizationDataService.reloadClusters({
+    const fallback = {
       id: clusterId,
       name: formState.clusterName,
       status: ClusterStatus.PROVISIONING,
-    });
-    const notCreated = await this.setNodePools(clusterId, formState.nodePools ?? []);
+    };
+    const reloaded = this.organizationDataService.reloadClusters(fallback);
+    const pools = formState.nodePools ?? [];
+    const notCreated = await this.setNodePools(clusterId, pools);
     await reloaded;
+    // That list was read while the pools were still being made, so the
+    // clusters page said "0 node pools" until its next poll. Read once more for
+    // the count; nothing on the way to the cluster page waits for it.
+    if (pools.length > notCreated.length) {
+      this.organizationDataService.reloadClusters(fallback).catch(() => {});
+    }
 
     this.stateService.reset();
     this.isCreating.set(false);

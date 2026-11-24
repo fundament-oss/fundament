@@ -350,7 +350,7 @@
   appDialogSync
   [show]="showDeleteModal()"
   [attr.text]="'Delete API key ' + pendingKeyName() + '?'"
-  supporting-text="This removes the key and its usage history from this project. This cannot be undone."
+  supporting-text="This removes the key and its usage history. This cannot be undone."
   accessible-label="Confirm API key deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"

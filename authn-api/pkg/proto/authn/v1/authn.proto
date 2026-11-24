@@ -51,6 +51,8 @@ message User {
   string external_ref = 40;
   // Groups the user belongs to
   repeated string groups = 50;
+  // Email address on the user's account; empty when it has none
+  string email = 60;
 }
 
 // ExchangeToken request - empty, API key is in Authorization header

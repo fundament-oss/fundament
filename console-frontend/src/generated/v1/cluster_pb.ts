@@ -913,6 +913,9 @@ export const ListNodePoolsRequestSchema: GenMessage<ListNodePoolsRequest> = /*@_
  */
 export type ListNodePoolsResponse = Message<"organization.v1.ListNodePoolsResponse"> & {
   /**
+   * Oldest first. Pools created in one SetNodePools call keep the order of
+   * that request.
+   *
    * @generated from field: repeated organization.v1.NodePool node_pools = 10;
    */
   nodePools: NodePool[];

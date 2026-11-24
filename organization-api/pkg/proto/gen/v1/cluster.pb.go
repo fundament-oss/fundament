@@ -2784,6 +2784,8 @@ func (x *ListNodePoolsResponse) SetNodePools(v []*NodePool) {
 type ListNodePoolsResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Oldest first. Pools created in one SetNodePools call keep the order of
+	// that request.
 	NodePools []*NodePool
 }
 

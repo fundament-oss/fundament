@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { freeSpace, infoButtonHtml, latestRead, selectedDiskCount } from '../console/_shared.js';
-import { copiesOnSeparateNodes } from '../console/consumer-pages.js';
+import { BLOCKSTORAGE, copiesOnSeparateNodes, emptySupportingText } from '../console/consumer-pages.js';
 
 describe('selectedDiskCount', () => {
   test.each([
@@ -68,5 +68,23 @@ describe('infoButtonHtml', () => {
     expect(html).toContain('<nldd-popover slot="popup" role="region" accessible-label="About &lt;x&gt;">');
     expect(html).toContain('<p>First.</p>');
     expect(html).toContain('<p>A &amp; B.</p>');
+  });
+});
+
+describe('emptySupportingText', () => {
+  const needsPool = 'Create a disk pool with disks first.';
+  const create = 'Use New block storage… to create one.';
+  test.each([
+    ['no pools', [], needsPool],
+    ['a pool without disks', [{ status: { phase: 'Degraded' } }], needsPool],
+    // Not counted is not zero: the operator may still find disks for it.
+    ['a pool not counted yet', [{ status: {} }], create],
+    ['a pool not counted yet beside one without disks', [{ status: {} }, { status: { phase: 'Degraded' } }], create],
+    ['a pool with disks', [{ status: { phase: 'Ready', selectedDiskCount: 2 } }], create],
+    ['one of two pools with disks', [{ status: { phase: 'Degraded' } }, { status: { phase: 'Ready', selectedDiskCount: 1 } }], create],
+    // The pools could not be read: ask for the storage, not for a pool that may exist.
+    ['pools unknown', undefined, create],
+  ])('%s', (_name, pools, want) => {
+    expect(emptySupportingText(BLOCKSTORAGE, pools)).toBe(want);
   });
 });

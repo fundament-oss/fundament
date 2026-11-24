@@ -143,7 +143,7 @@
                 <nldd-title size="4">
                   <h2>{{ resource.metadata.name }}</h2>
                   @if (conditionColumn(); as col) {
-                    @if (conditionBadge(col.name, formatCell(resource, col)); as badge) {
+                    @if (conditionBadge(col, formatCell(resource, col)); as badge) {
                       <nldd-badge
                         slot="end"
                         [attr.color]="badge.color"
