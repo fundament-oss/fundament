@@ -400,8 +400,8 @@ export default class PluginRegistryService {
       // header with InvalidArgument, which reads as a failure for good: the
       // plugin would get no sidebar entry until a reload. A page opened by its
       // address loads the cluster before the organization's id is known, so
-      // wait for the id first.
-      const known = await this.waitForOrganizationId();
+      // wait for the id first. With nothing installed there is no call to wait for.
+      const known = installed.length === 0 || (await this.waitForOrganizationId());
       if (generation !== this.generation) return 'stale';
       if (!known) {
         // No id yet (the organization fetch failed, or the user is not a

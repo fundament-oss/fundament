@@ -93,12 +93,13 @@ export default class OrganizationContextService {
    */
   setOrganizationId(id: string | null) {
     this.organizationId.set(id);
+    // Settle the waiters before localStorage, which can throw.
     if (id) {
-      localStorage.setItem(STORAGE_KEY, id);
       [...this.idWaiters].forEach((waiter) => waiter.resolve(id));
+      localStorage.setItem(STORAGE_KEY, id);
     } else {
-      localStorage.removeItem(STORAGE_KEY);
       this.rejectIdWaiters();
+      localStorage.removeItem(STORAGE_KEY);
     }
   }
 
@@ -131,8 +132,8 @@ export default class OrganizationContextService {
   clearOrganizationId() {
     this.organizationId.set(null);
     this.organizationName.set(null);
+    this.rejectIdWaiters();
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(NAME_STORAGE_KEY);
-    this.rejectIdWaiters();
   }
 }
