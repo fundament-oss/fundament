@@ -78,8 +78,9 @@ export interface ImageAnalysisQuery {
 }
 
 // An analysis that is still on its way: the page polls while one side is.
+// 'none' counts too: the worker's sweep queues such a version within minutes.
 export function isInProgress(status: AnalysisStatus | undefined): boolean {
-  return status === 'pending' || status === 'running' || status === 'retrying';
+  return status === 'none' || status === 'pending' || status === 'running' || status === 'retrying';
 }
 
 export function fromProtoAnalysisStatus(status: ImageAnalysisStatus): AnalysisStatus {

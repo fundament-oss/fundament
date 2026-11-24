@@ -119,6 +119,23 @@ describe('AdminReviewService reviewer names', () => {
     expect(submission?.reviewedBy).toBe('r1');
   });
 
+  it('keeps the names it has when the refetch after a miss fails', async () => {
+    let calls = 0;
+    const service = serviceWith(() => {
+      calls += 1;
+      return calls === 1
+        ? of({ reviewers: [{ id: 'r1', name: 'Alice' }] })
+        : throwError(() => new Error('unavailable'));
+    });
+
+    // Bracket access reaches the private method, which the public calls
+    // only ever ask about one reviewer.
+    const names = await service['resolveReviewers'](['r1', 'r-new']);
+
+    expect(calls).toBe(2);
+    expect(names.get('r1')).toBe('Alice');
+  });
+
   it('refetches once when a reviewer decided after the list was loaded', async () => {
     let calls = 0;
     const service = serviceWith(() => {

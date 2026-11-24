@@ -380,7 +380,6 @@ marketplaceAnalysisWorker:
   enabled: true
   replicas: 1
   logLevel: debug
-  resources: {}
   registryRewrites:
     - localhost:5112=plugin-registry.localhost:5000
   insecureRegistries:

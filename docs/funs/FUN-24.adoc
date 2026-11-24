@@ -14,7 +14,7 @@ A reviewer who approves a plugin version in the review backoffice (link:/funs/fu
 This FUN adds two things to the submission page, both as a diff against the version approved before it:
 
 * The *dependencies* of the image: the packages in an SBOM (software bill of materials) Fundament makes of it.
-* The *image contents*: every file and link in the flattened filesystem, with its size, permissions and checksum.
+* The *image contents*: every file and link in the flattened filesystem, with its permissions, a file with its size and checksum, and a link with its target.
 
 The manifest itself is shown too, as a YAML diff. That needs no analysis: the stored `definition.yaml` is served verbatim (`admin.v1.PluginVersion.manifest`).
 

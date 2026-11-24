@@ -231,7 +231,11 @@ func TestAnalyzePicksPlatformFromIndex(t *testing.T) {
 	amdImage := imageOf(t, &amd64, layerOf(t, tarEntry{name: "amd", body: "x"}))
 	arm := v1.Platform{OS: "linux", Architecture: "arm64"}
 	armImage := imageOf(t, &arm, layerOf(t, tarEntry{name: "arm", body: "x"}))
-	ref := pushIndex(t, host, platformImage{arm, armImage}, platformImage{amd64, amdImage})
+	// buildx writes its attestation manifests with this platform.
+	attestation := v1.Platform{OS: "unknown", Architecture: "unknown"}
+	attestationImage := imageOf(t, &attestation, layerOf(t, tarEntry{name: "att", body: "x"}))
+	ref := pushIndex(t, host,
+		platformImage{arm, armImage}, platformImage{amd64, amdImage}, platformImage{attestation, attestationImage})
 
 	result, err := newTestAnalyzer(t, host, &Config{}).Analyze(context.Background(), ref)
 	require.NoError(t, err)
@@ -356,6 +360,8 @@ func TestIsRefused(t *testing.T) {
 		"::1":             true,
 		"fd00::1":         true,
 		"fe80::1":         true,
+		"fe80::1%eth0":    true,
+		"::1%lo":          true,
 		"::ffff:10.0.0.1": true,
 		"140.82.121.33":   false,
 		"2606:4700::6810": false,

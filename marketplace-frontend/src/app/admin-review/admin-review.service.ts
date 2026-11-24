@@ -312,20 +312,26 @@ export default class AdminReviewService {
   // Names for the given reviewer ids. A reviewer who decided after the list was
   // first loaded (often the person on the page) is missing from the memoized
   // list, so a miss refetches once. A failed lookup is no reason to fail the
-  // page: the caller falls back to the raw id.
+  // page: the caller falls back to the raw id. A failed refetch keeps the
+  // names the first list had.
   private async resolveReviewers(ids: string[]): Promise<Map<string, string>> {
     const wanted = ids.filter((id) => id);
     if (wanted.length === 0) return new Map();
+    let reviewers: Map<string, string>;
     try {
-      let reviewers = await this.loadReviewers();
-      if (wanted.some((id) => !reviewers.has(id))) {
-        this.reviewers = undefined;
-        reviewers = await this.loadReviewers();
-      }
-      return reviewers;
+      reviewers = await this.loadReviewers();
     } catch {
       return new Map();
     }
+    if (wanted.some((id) => !reviewers.has(id))) {
+      this.reviewers = undefined;
+      try {
+        reviewers = await this.loadReviewers();
+      } catch {
+        // The names already loaded are better than none.
+      }
+    }
+    return reviewers;
   }
 
   private loadReviewers(): Promise<Map<string, string>> {

@@ -150,7 +150,7 @@ db:
   # per enabled service (replicas + 1) × maxConns, twice for
   # marketplace-catalog-api, which has two pools, plus maxConns for
   # cluster-worker-inventory, (openfga.replicas + 1) × maxOpenConns, and 10 for
-  # superuser slots, jobs and psql. All services at one replica need 300.
+  # superuser slots, jobs and psql. All services at one replica need 320.
   # Changing max_connections restarts Postgres: CNPG rolls the instances.
   postgresql:
     parameters:

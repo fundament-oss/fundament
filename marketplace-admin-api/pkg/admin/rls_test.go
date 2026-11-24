@@ -98,7 +98,8 @@ func TestAdminRoleCannotReadUsers(t *testing.T) {
 }
 
 // Reviewers resolve to a name through dcim.users, but the role reads only the
-// id and name columns: contact details stay out of the backoffice.
+// id and name columns: contact details and the identity-provider link stay out
+// of the backoffice.
 func TestAdminRoleReadsReviewerNamesOnly(t *testing.T) {
 	env := newTestEnv(t)
 	reviewerID := uuid.New()
@@ -112,11 +113,13 @@ func TestAdminRoleReadsReviewerNamesOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Alice", name)
 
-	var email string
-	err = env.servicePool.QueryRow(context.Background(),
-		`SELECT email FROM dcim.users WHERE id = $1`, reviewerID).Scan(&email)
-	require.Error(t, err)
-	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got: %v", err)
+	for _, column := range []string{"email", "external_ref"} {
+		var value *string
+		err = env.servicePool.QueryRow(context.Background(),
+			`SELECT `+column+` FROM dcim.users WHERE id = $1`, reviewerID).Scan(&value)
+		require.Error(t, err, column)
+		assert.True(t, isGrantDenied(err), "%s: expected insufficient_privilege, got: %v", column, err)
+	}
 }
 
 // An organization with no listing is invisible even to the backoffice: the

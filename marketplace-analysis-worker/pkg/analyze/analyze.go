@@ -166,7 +166,9 @@ func (a *Analyzer) Analyze(ctx context.Context, image string) (*Result, error) {
 		return nil, err
 	}
 
-	sbom, err := a.sbom(ctx, tarPath, filepath.Join(a.cfg.WorkDir, "trivy-cache"))
+	// Trivy's cache lives in the job directory, removed with it: a shared one
+	// would grow with every image analyzed and fill the scratch volume.
+	sbom, err := a.sbom(ctx, tarPath, filepath.Join(jobDir, "trivy-cache"))
 	if err != nil {
 		return nil, err
 	}
@@ -246,8 +248,9 @@ func (a *Analyzer) pick(ref name.Digest, result *Result, opts []remote.Option) (
 	var chosen *v1.Descriptor
 	for i := range manifest.Manifests {
 		m := &manifest.Manifests[i]
-		if m.Platform == nil || !m.MediaType.IsImage() {
-			// Attestation manifests and the like carry no runnable platform.
+		if m.Platform == nil || m.Platform.OS == "unknown" || !m.MediaType.IsImage() {
+			// Attestation manifests and the like carry no runnable platform:
+			// none, or unknown/unknown as buildx writes them.
 			continue
 		}
 		result.Platforms = append(result.Platforms, platformString(m.Platform))

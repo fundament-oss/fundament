@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -84,19 +85,23 @@ func (env *testEnv) submit(t *testing.T, versionID uuid.UUID) {
 }
 
 type analysisRow struct {
-	status     string
-	statusInfo *string
-	retries    int32
-	packages   string
-	platforms  string
-	sbom       []byte
+	status         string
+	statusInfo     *string
+	retries        int32
+	imageDigest    string
+	packages       string
+	files          string
+	filesTruncated bool
+	platforms      string
+	sbom           []byte
 }
 
 func (env *testEnv) analyses(t *testing.T, versionID uuid.UUID) []analysisRow {
 	t.Helper()
 
 	rows, err := env.superPool.Query(context.Background(), `
-		SELECT status, status_info, retries, packages::text, platforms::text, sbom
+		SELECT status, status_info, retries, image_digest, packages::text, files::text,
+			files_truncated, platforms::text, sbom
 		FROM appstore.plugin_image_analyses WHERE plugin_definition_id = $1`, versionID)
 	require.NoError(t, err)
 	defer rows.Close()
@@ -104,7 +109,8 @@ func (env *testEnv) analyses(t *testing.T, versionID uuid.UUID) []analysisRow {
 	var result []analysisRow
 	for rows.Next() {
 		var row analysisRow
-		require.NoError(t, rows.Scan(&row.status, &row.statusInfo, &row.retries, &row.packages, &row.platforms, &row.sbom))
+		require.NoError(t, rows.Scan(&row.status, &row.statusInfo, &row.retries, &row.imageDigest, &row.packages,
+			&row.files, &row.filesTruncated, &row.platforms, &row.sbom))
 		result = append(result, row)
 	}
 	require.NoError(t, rows.Err())
@@ -176,12 +182,13 @@ func TestProcessNextRecordsResult(t *testing.T) {
 	versionID := env.seedVersion(t, "pending")
 	env.submit(t, versionID)
 	analyzer := &fakeAnalyzer{result: &analyze.Result{
-		ImageDigest: "sha256:def",
-		Platform:    "linux/amd64",
-		Platforms:   []string{"linux/amd64", "linux/arm64"},
-		Packages:    []analyze.Package{{Purl: "pkg:deb/debian/openssl@3.0.13", Name: "openssl", Version: "3.0.13", Type: "deb", Licenses: []string{}}},
-		Files:       []analyze.File{{Path: "/etc/config", Size: 3, Mode: 0o644, SHA256: "abc"}},
-		SBOM:        []byte(`{"bomFormat":"CycloneDX"}`),
+		ImageDigest:    "sha256:def",
+		Platform:       "linux/amd64",
+		Platforms:      []string{"linux/amd64", "linux/arm64"},
+		Packages:       []analyze.Package{{Purl: "pkg:deb/debian/openssl@3.0.13", Name: "openssl", Version: "3.0.13", Type: "deb", Licenses: []string{}}},
+		Files:          []analyze.File{{Path: "/etc/config", Size: 3, Mode: 0o644, SHA256: "abc"}},
+		FilesTruncated: true,
+		SBOM:           []byte(`{"bomFormat":"CycloneDX"}`),
 	}}
 
 	found, err := newWorker(env, analyzer).ProcessNext(context.Background())
@@ -194,6 +201,9 @@ func TestProcessNextRecordsResult(t *testing.T) {
 	assert.Equal(t, "completed", rows[0].status)
 	assert.JSONEq(t, `[{"purl":"pkg:deb/debian/openssl@3.0.13","name":"openssl","version":"3.0.13","type":"deb","licenses":[]}]`, rows[0].packages)
 	assert.JSONEq(t, `["linux/amd64","linux/arm64"]`, rows[0].platforms)
+	assert.Equal(t, "sha256:def", rows[0].imageDigest)
+	assert.JSONEq(t, `[{"path":"/etc/config","size":3,"mode":420,"sha256":"abc"}]`, rows[0].files)
+	assert.True(t, rows[0].filesTruncated)
 	assert.JSONEq(t, `{"bomFormat":"CycloneDX"}`, string(rows[0].sbom))
 
 	found, err = newWorker(env, analyzer).ProcessNext(context.Background())
@@ -345,4 +355,23 @@ func TestWorkerCannotMoveAnAnalysisToAnotherVersion(t *testing.T) {
 	_, err = env.workerPool.Exec(context.Background(),
 		`UPDATE appstore.plugin_image_analyses SET deleted = now()`)
 	require.ErrorContains(t, err, "permission denied")
+}
+
+func TestRetryBackoffSurvivesManyAttempts(t *testing.T) {
+	env := newTestEnv(t)
+	versionID := env.seedVersion(t, "pending")
+	env.submit(t, versionID)
+	// 1 << 31 overflows int4; the exponent is capped before it gets there.
+	env.exec(t, `UPDATE appstore.plugin_image_analyses SET status = 'retrying', retries = 31`)
+	w := worker.New(env.workerPool, &fakeAnalyzer{err: errors.New("still broken")}, slog.Default(),
+		worker.Config{MaxRetries: 100, MaxBackoff: time.Hour})
+
+	found, err := w.ProcessNext(context.Background())
+	require.NoError(t, err)
+	require.True(t, found)
+
+	var waiting bool
+	require.NoError(t, env.superPool.QueryRow(context.Background(),
+		`SELECT retry_after > now() + interval '59 minutes' FROM appstore.plugin_image_analyses`).Scan(&waiting))
+	assert.True(t, waiting, "the backoff is capped at max_backoff, not negative")
 }

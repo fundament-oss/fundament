@@ -309,6 +309,20 @@ describe('ImageAnalysisComponent', () => {
     );
   });
 
+  it('polls a version the worker has not queued yet', async () => {
+    let calls = 0;
+    const { fixture, root } = await renderPolling(async () => {
+      calls += 1;
+      return calls === 1 ? { ...comparedPage, analysis: info('none') } : comparedPage;
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    fixture.detectChanges();
+
+    expect(calls).toBe(2);
+    expect(rows(root, 'packages')).toHaveLength(1);
+  });
+
   it('says so when the history, and with it the base, could not be loaded', async () => {
     TestBed.configureTestingModule({
       providers: [

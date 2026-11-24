@@ -64,13 +64,13 @@ WHERE id = sqlc.arg('id')::uuid
 
 -- name: AnalysisRetry :exec
 -- Schedules another attempt with exponential backoff: base * 2^retries,
--- capped at max_backoff.
+-- capped at max_backoff. The exponent is capped too: 1 << 31 overflows int4.
 UPDATE appstore.plugin_image_analyses SET
 	status = 'retrying',
 	status_info = sqlc.arg('status_info')::text,
 	retries = retries + 1,
 	retry_after = now() + LEAST(
-		sqlc.arg('base_backoff')::interval * (1 << retries),
+		sqlc.arg('base_backoff')::interval * (1 << LEAST(retries, 20)),
 		sqlc.arg('max_backoff')::interval
 	)
 WHERE id = sqlc.arg('id')::uuid

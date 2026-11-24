@@ -213,7 +213,7 @@ UPDATE appstore.plugin_image_analyses SET
 	status_info = $1::text,
 	retries = retries + 1,
 	retry_after = now() + LEAST(
-		$2::interval * (1 << retries),
+		$2::interval * (1 << LEAST(retries, 20)),
 		$3::interval
 	)
 WHERE id = $4::uuid
@@ -230,7 +230,7 @@ type AnalysisRetryParams struct {
 }
 
 // Schedules another attempt with exponential backoff: base * 2^retries,
-// capped at max_backoff.
+// capped at max_backoff. The exponent is capped too: 1 << 31 overflows int4.
 func (q *Queries) AnalysisRetry(ctx context.Context, arg AnalysisRetryParams) error {
 	_, err := q.db.Exec(ctx, analysisRetry,
 		arg.StatusInfo,

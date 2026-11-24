@@ -45,7 +45,9 @@ var refusedPrefixes = []netip.Prefix{
 
 // isRefused reports whether ip is outside public unicast space.
 func isRefused(ip netip.Addr) bool {
-	ip = ip.Unmap()
+	// Prefix.Contains never matches an address with a zone, so fe80::1%eth0
+	// would pass fe80::/10: drop the zone first.
+	ip = ip.WithZone("").Unmap()
 	for _, prefix := range refusedPrefixes {
 		if prefix.Contains(ip) {
 			return true
