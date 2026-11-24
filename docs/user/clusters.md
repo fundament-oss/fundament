@@ -12,7 +12,7 @@ infrastructure provisioned with metal-stack; see
 
 ## Creating a cluster
 
-[**Clusters → Add cluster**](https://console.fundament.projects.digilab.network/clusters/add)
+[**Clusters → New cluster**](https://console.fundament.projects.digilab.network/clusters/new)
 starts a three-step wizard.
 
 How many clusters your organization may have is a [quota](#quotas) set by the
