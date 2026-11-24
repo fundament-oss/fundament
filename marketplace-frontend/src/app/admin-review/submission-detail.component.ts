@@ -137,10 +137,14 @@ export default class SubmissionDetailComponent implements OnInit {
         return 'No earlier version of this plugin was approved, so the full manifest is shown.';
       case 'unavailable':
         return base.reason;
-      case 'loaded':
+      case 'loaded': {
+        const version = base.version || 'the previous version';
+        // The card says so itself, in place of the manifest.
+        if (!this.submission()?.manifest) return '';
         return this.manifestDiff()
-          ? `Compared with ${base.version}, the most recent approved version before this one.`
-          : `Identical to the manifest of ${base.version}.`;
+          ? `Compared with ${version}, the most recent approved version before this one.`
+          : `Identical to the manifest of ${version}.`;
+      }
       default:
         throw new Error(`unhandled manifest base state: ${JSON.stringify(base satisfies never)}`);
     }

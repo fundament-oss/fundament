@@ -6864,7 +6864,72 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="appstore.plugin_image_analyses" type="table"/>
 	<roles names="fun_marketplace_analysis_worker"/>
-	<privileges select="true" insert="true" update="true"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="plugin_definition_id" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="status" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="status_info" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="retries" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="retry_after" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="image_digest" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="platform" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="platforms" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="packages" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="files" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="files_truncated" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="sbom" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="analyzed" parent="appstore.plugin_image_analyses" type="column"/>
+	<roles names="fun_marketplace_analysis_worker"/>
+	<privileges update="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_image_analyses" type="table"/>

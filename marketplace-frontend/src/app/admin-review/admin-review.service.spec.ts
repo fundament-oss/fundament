@@ -66,6 +66,13 @@ describe('AdminReviewService reviewer names', () => {
                   reviewerUserId: submissionId === 's-known' ? 'r1' : 'r-unknown',
                 },
               }),
+            listSubmissions: () =>
+              of({
+                submissions: [
+                  { id: 's-known', pluginId: 'p1', pluginVersionId: 'v1', reviewerUserId: 'r1' },
+                ],
+              }),
+            listPlugins: () => of({ plugins: [] }),
             getPlugin: () => of({ plugin: { displayName: 'Grafana' } }),
             getPluginVersion: () => of({ version: { version: '1.0.0' } }),
             listPublishers: () => of({ publishers: [] }),
@@ -85,6 +92,15 @@ describe('AdminReviewService reviewer names', () => {
 
     expect(submission?.reviewedBy).toBe('Alice');
     expect(submission?.reviewerUserId).toBe('r1');
+  });
+
+  it('leaves the name unset in the queue, which does not resolve it', async () => {
+    const service = serviceWith(() => of({ reviewers: [{ id: 'r1', name: 'Alice' }] }));
+
+    const [submission] = await service.listSubmissions();
+
+    expect(submission.reviewedBy).toBeUndefined();
+    expect(submission.reviewerUserId).toBe('r1');
   });
 
   it('falls back to the id when the lookup misses', async () => {

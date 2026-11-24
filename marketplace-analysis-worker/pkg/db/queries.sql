@@ -7,6 +7,14 @@
 -- is claimable again, and counts as a failed attempt. That keeps an image that
 -- crashes the worker every time from being retried forever. The claim commits
 -- at once; the analysis itself runs outside any transaction.
+--
+-- The lease's end doubles as the claim's token: every query that records the
+-- outcome matches on it, so a worker whose lease ran out cannot overwrite the
+-- attempt that claimed the row after it.
+--
+-- A deleted version is skipped, in the subquery so its row cannot hold up the
+-- rows behind it. A rejected or withdrawn version is still analyzed: its round
+-- stays in the history a reviewer opens.
 UPDATE appstore.plugin_image_analyses SET
 	status = 'running',
 	retries = appstore.plugin_image_analyses.retries
@@ -19,6 +27,12 @@ WHERE appstore.plugin_image_analyses.id = (
 	WHERE appstore.plugin_image_analyses.deleted IS NULL
 	  AND appstore.plugin_image_analyses.status IN ('pending', 'running', 'retrying')
 	  AND (appstore.plugin_image_analyses.retry_after IS NULL OR appstore.plugin_image_analyses.retry_after <= now())
+	  AND EXISTS (
+		SELECT 1
+		FROM appstore.plugin_definitions
+		WHERE appstore.plugin_definitions.id = appstore.plugin_image_analyses.plugin_definition_id
+		  AND appstore.plugin_definitions.deleted IS NULL
+	  )
 	ORDER BY appstore.plugin_image_analyses.created ASC
 	LIMIT 1
 	FOR NO KEY UPDATE SKIP LOCKED
@@ -28,6 +42,7 @@ RETURNING
 	appstore.plugin_image_analyses.id,
 	appstore.plugin_image_analyses.plugin_definition_id,
 	appstore.plugin_image_analyses.retries,
+	appstore.plugin_image_analyses.retry_after,
 	appstore.plugin_definitions.image;
 
 -- name: AnalysisComplete :exec
@@ -44,7 +59,8 @@ UPDATE appstore.plugin_image_analyses SET
 	sbom = sqlc.arg('sbom')::bytea,
 	analyzed = now()
 WHERE id = sqlc.arg('id')::uuid
-  AND status = 'running';
+  AND status = 'running'
+  AND retry_after = sqlc.arg('leased_until')::timestamptz;
 
 -- name: AnalysisRetry :exec
 -- Schedules another attempt with exponential backoff: base * 2^retries,
@@ -58,7 +74,8 @@ UPDATE appstore.plugin_image_analyses SET
 		sqlc.arg('max_backoff')::interval
 	)
 WHERE id = sqlc.arg('id')::uuid
-  AND status = 'running';
+  AND status = 'running'
+  AND retry_after = sqlc.arg('leased_until')::timestamptz;
 
 -- name: AnalysisFail :exec
 -- A failure retrying cannot fix. A new submission round resets the row to
@@ -69,7 +86,8 @@ UPDATE appstore.plugin_image_analyses SET
 	platforms = sqlc.arg('platforms')::jsonb,
 	retry_after = NULL
 WHERE id = sqlc.arg('id')::uuid
-  AND status = 'running';
+  AND status = 'running'
+  AND retry_after = sqlc.arg('leased_until')::timestamptz;
 
 -- name: AnalysisRelease :exec
 -- Hands a row back untouched when the worker shuts down mid-analysis, so the
@@ -78,7 +96,8 @@ UPDATE appstore.plugin_image_analyses SET
 	status = CASE WHEN retries > 0 THEN 'retrying' ELSE 'pending' END,
 	retry_after = NULL
 WHERE id = sqlc.arg('id')::uuid
-  AND status = 'running';
+  AND status = 'running'
+  AND retry_after = sqlc.arg('leased_until')::timestamptz;
 
 -- name: AnalysisEnqueueMissing :execrows
 -- The sweep: every version a reviewer may look at, or compare with, that has

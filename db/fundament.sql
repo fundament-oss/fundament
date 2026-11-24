@@ -6442,8 +6442,112 @@ GRANT SELECT(deleted)
 -- ddl-end --
 
 
--- object: grant_raw_4beefee2c7 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
+-- object: grant_r_4beefee2c7 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_a_96ff16af41 | type: PERMISSION --
+GRANT INSERT(plugin_definition_id)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_84de7c4138 | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_d56e8f7071 | type: PERMISSION --
+GRANT UPDATE(status_info)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_333144fbb6 | type: PERMISSION --
+GRANT UPDATE(retries)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_6252100160 | type: PERMISSION --
+GRANT UPDATE(retry_after)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_715c63d09d | type: PERMISSION --
+GRANT UPDATE(image_digest)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_c077b7f588 | type: PERMISSION --
+GRANT UPDATE(platform)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_e21cab0721 | type: PERMISSION --
+GRANT UPDATE(platforms)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_a80784ccf7 | type: PERMISSION --
+GRANT UPDATE(packages)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_5b98696977 | type: PERMISSION --
+GRANT UPDATE(files)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_f23748d37e | type: PERMISSION --
+GRANT UPDATE(files_truncated)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_54c84f5454 | type: PERMISSION --
+GRANT UPDATE(sbom)
+   ON TABLE appstore.plugin_image_analyses
+   TO fun_marketplace_analysis_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_572086c9f1 | type: PERMISSION --
+GRANT UPDATE(analyzed)
    ON TABLE appstore.plugin_image_analyses
    TO fun_marketplace_analysis_worker;
 

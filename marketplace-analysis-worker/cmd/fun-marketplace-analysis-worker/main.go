@@ -24,9 +24,12 @@ import (
 )
 
 type config struct {
-	Database        psqldb.Config
-	LogLevel        slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	HealthPort      int           `env:"HEALTH_PORT" envDefault:"8098"`
+	Database   psqldb.Config
+	LogLevel   slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	HealthPort int        `env:"HEALTH_PORT" envDefault:"8098"`
+	// ShutdownTimeout bounds stopping the health server. The analysis in
+	// flight stops on the cancelled context and hands its row back; the pod's
+	// terminationGracePeriodSeconds bounds the whole shutdown.
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
 	PollInterval  time.Duration `env:"POLL_INTERVAL" envDefault:"10s"`
@@ -54,6 +57,9 @@ func run() error {
 	var cfg config
 	if err := env.Parse(&cfg); err != nil {
 		return fmt.Errorf("env parse: %w", err)
+	}
+	if cfg.MaxRetries < 1 {
+		return fmt.Errorf("MAX_RETRIES must be at least 1, got %d", cfg.MaxRetries)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))

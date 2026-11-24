@@ -375,7 +375,7 @@ export default class AdminReviewService {
       submittedAt: toIsoDate(submission.submitted),
       status,
       reviewedAt: toIsoDate(submission.reviewed) || undefined,
-      reviewedBy: submission.reviewerUserId || undefined,
+      // Resolved to a name by getSubmission; the queue does not show it.
       reviewerUserId: submission.reviewerUserId || undefined,
       rejectionReason:
         status === 'rejected' ? fromProtoRejectionReason(submission.rejectionReason) : undefined,

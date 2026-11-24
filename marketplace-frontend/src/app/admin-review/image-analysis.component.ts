@@ -56,6 +56,10 @@ export default class ImageAnalysisComponent {
   // when no earlier version was approved.
   base = input<SubmissionHistoryEntry | null | undefined>(undefined);
 
+  // Set when the history could not be loaded: base is null then, but not
+  // because this is the first version.
+  baseUnavailable = input(false);
+
   page = signal<ImageAnalysisPage | null>(null);
 
   errorMessage = signal<string | null>(null);
@@ -110,6 +114,9 @@ export default class ImageAnalysisComponent {
   // What the lists are compared with, or why they are not.
   comparisonNote = computed(() => {
     const page = this.page();
+    if (this.baseUnavailable()) {
+      return 'The submission history could not be loaded, so the full lists are shown.';
+    }
     if (this.base() === null) {
       return 'No earlier version of this plugin was approved, so the full lists are shown.';
     }
@@ -155,11 +162,14 @@ export default class ImageAnalysisComponent {
   }
 
   // Loads the first page of files with the current filters, and keeps polling
-  // while an analysis is in progress.
-  private async load() {
+  // while an analysis is in progress. A poll leaves the files alone unless
+  // they changed: pages loaded with "Load more" stay, as long as the current
+  // version's list and what it is compared with are the same.
+  private async load(poll = false) {
     this.sequence += 1;
     const sequence = this.sequence;
     clearTimeout(this.pollTimer);
+    const previous = this.page();
 
     try {
       const page = await this.service.getImageAnalysis({
@@ -171,16 +181,27 @@ export default class ImageAnalysisComponent {
       if (sequence !== this.sequence) return;
       this.errorMessage.set(null);
       this.page.set(page);
-      this.files.set(page.files);
-      this.nextFilesPageToken.set(page.nextFilesPageToken);
+      const filesUnchanged =
+        poll &&
+        previous?.analysis.status === 'completed' &&
+        page.analysis.status === 'completed' &&
+        previous.compared === page.compared;
+      if (!filesUnchanged) {
+        this.files.set(page.files);
+        this.nextFilesPageToken.set(page.nextFilesPageToken);
+      }
     } catch (error) {
       if (sequence !== this.sequence) return;
-      this.errorMessage.set(connectErrorMessage(error));
-      return;
+      // A failed poll keeps what is on the page and tries again; only a
+      // first load without anything to show reports the error.
+      if (!poll || !previous) {
+        this.errorMessage.set(connectErrorMessage(error));
+        return;
+      }
     }
 
     if (this.inProgress()) {
-      this.pollTimer = setTimeout(() => this.load(), POLL_INTERVAL_MS);
+      this.pollTimer = setTimeout(() => this.load(true), POLL_INTERVAL_MS);
     }
   }
 

@@ -93,11 +93,24 @@ ALTER TABLE "appstore"."plugin_image_analyses" ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT ON "appstore"."plugin_image_analyses" TO "fun_marketplace_admin_api";
 
-GRANT INSERT ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
-
 GRANT SELECT ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
 
-GRANT UPDATE ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+-- Hand-added, column-scoped. The worker's sweep inserts a version's row, and
+-- each attempt writes only the state and the result: which version a row
+-- belongs to, and when it was created or deleted, are not the worker's to change.
+GRANT INSERT ("plugin_definition_id") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("status") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("status_info") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("retries") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("retry_after") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("image_digest") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("platform") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("platforms") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("packages") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("files") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("files_truncated") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("sbom") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
+GRANT UPDATE ("analyzed") ON "appstore"."plugin_image_analyses" TO "fun_marketplace_analysis_worker";
 
 ALTER TABLE "appstore"."plugin_image_analyses" ADD CONSTRAINT "plugin_image_analyses_fk_plugin_definition" FOREIGN KEY (plugin_definition_id) REFERENCES appstore.plugin_definitions(id) NOT VALID;
 

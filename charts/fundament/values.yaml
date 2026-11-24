@@ -654,13 +654,20 @@ marketplaceAnalysisWorker:
   allowedPrivateRegistries: []
   networkPolicy:
     enabled: true
+    # The IPv4 ranges the worker's own dialer refuses (refusedPrefixes in
+    # marketplace-analysis-worker/pkg/analyze/transport.go); keep them in step.
     refusedCidrs:
+      - 0.0.0.0/8
       - 10.0.0.0/8
       - 100.64.0.0/10
       - 127.0.0.0/8
       - 169.254.0.0/16
       - 172.16.0.0/12
+      - 192.0.0.0/24
       - 192.168.0.0/16
+      - 198.18.0.0/15
+      - 224.0.0.0/4
+      - 240.0.0.0/4
     # More egress rules, e.g. to a local registry.
     extraEgress: []
 

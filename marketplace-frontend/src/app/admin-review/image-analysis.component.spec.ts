@@ -182,9 +182,14 @@ describe('ImageAnalysisComponent', () => {
     const search = root.querySelector('nldd-search-field[accessible-label="Search files by path"]');
     Object.defineProperty(search, 'value', { value: 'etc', configurable: true });
     search?.dispatchEvent(new Event('input'));
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(299);
 
-    expect(queries.at(-1)).toMatchObject({ filesQuery: 'etc', filesChangesOnly: true });
+    expect(queries).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(queries).toHaveLength(2);
+    expect(queries[1]).toMatchObject({ filesQuery: 'etc', filesChangesOnly: true });
   });
 
   it('shows the full lists, without changes, when no earlier version was approved', async () => {
@@ -233,6 +238,98 @@ describe('ImageAnalysisComponent', () => {
 
     expect(calls).toBe(2);
     expect(rows(root, 'packages')).toHaveLength(1);
+  });
+
+  // Renders on fake timers, so a test can step through the polls.
+  async function renderPolling(
+    getImageAnalysis: (query: ImageAnalysisQuery) => Promise<ImageAnalysisPage>,
+  ) {
+    vi.useFakeTimers();
+    TestBed.configureTestingModule({
+      providers: [{ provide: AdminReviewService, useValue: { getImageAnalysis } }],
+    });
+    const fixture = TestBed.createComponent(AnalysisComponent);
+    fixture.componentRef.setInput('pluginVersionId', 'v2');
+    fixture.componentRef.setInput('base', base);
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    return { fixture, root: fixture.nativeElement as HTMLElement };
+  }
+
+  // This version is analyzed; the base is still on its way, so it polls.
+  const baseRunningPage: ImageAnalysisPage = {
+    ...comparedPage,
+    base: info('running', { pluginVersionId: 'v1' }),
+    compared: false,
+  };
+
+  it('keeps the files loaded with "Load more" when it polls', async () => {
+    const { fixture, root } = await renderPolling(async (query) =>
+      query.filesPageToken
+        ? {
+            ...baseRunningPage,
+            files: [{ path: '/etc/new', size: 1, mode: 0o644, link: '', change: 'unchanged' }],
+            nextFilesPageToken: '',
+          }
+        : baseRunningPage,
+    );
+    root.querySelector('nldd-button[text="Load more"]')?.dispatchEvent(new Event('click'));
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    expect(rows(root, 'files')).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    fixture.detectChanges();
+
+    expect(rows(root, 'files')).toHaveLength(2);
+  });
+
+  it('keeps the page and polls again when a poll fails', async () => {
+    let calls = 0;
+    const { fixture, root } = await renderPolling(async () => {
+      calls += 1;
+      if (calls === 2) throw new Error('unavailable');
+      return calls === 3 ? comparedPage : baseRunningPage;
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    fixture.detectChanges();
+
+    expect(calls).toBe(2);
+    expect(rows(root, 'packages')).toHaveLength(2);
+    expect(root.textContent).not.toContain('unavailable');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    fixture.detectChanges();
+
+    expect(calls).toBe(3);
+    expect(root.querySelector('[data-testid="comparison-note"]')?.textContent?.trim()).toBe(
+      'Compared with 1.0.0.',
+    );
+  });
+
+  it('says so when the history, and with it the base, could not be loaded', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: AdminReviewService,
+          useValue: { getImageAnalysis: async () => ({ ...comparedPage, compared: false }) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(AnalysisComponent);
+    fixture.componentRef.setInput('pluginVersionId', 'v2');
+    fixture.componentRef.setInput('base', null);
+    fixture.componentRef.setInput('baseUnavailable', true);
+    fixture.detectChanges();
+    await settle();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('[data-testid="comparison-note"]')?.textContent?.trim()).toBe(
+      'The submission history could not be loaded, so the full lists are shown.',
+    );
   });
 
   it('says why the image could not be analyzed', async () => {

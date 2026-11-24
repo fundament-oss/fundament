@@ -135,8 +135,13 @@ spec:
         - ipBlock:
             cidr: ::/0
             except:
+              # The IPv6 ranges of the worker's refusedPrefixes.
+              - ::/128
+              - ::1/128
+              - 64:ff9b::/96
               - fc00::/7
               - fe80::/10
+              - ff00::/8
       ports:
         - protocol: TCP
           port: 443

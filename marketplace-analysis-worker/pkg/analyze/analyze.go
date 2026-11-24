@@ -161,7 +161,7 @@ func (a *Analyzer) Analyze(ctx context.Context, image string) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening pulled image: %w", err)
 	}
-	result.Files, result.FilesTruncated, err = listFiles(local, a.cfg.MaxImageBytes, a.cfg.MaxFiles)
+	result.Files, result.FilesTruncated, err = listFiles(ctx, local, a.cfg.MaxImageBytes, a.cfg.MaxFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +216,20 @@ func (a *Analyzer) pick(ref name.Digest, result *Result, opts []remote.Option) (
 			return nil, fmt.Errorf("reading image: %w", err)
 		}
 		cfg, err := img.ConfigFile()
-		if err == nil {
-			result.Platform = platformString(cfg.Platform())
+		if err != nil {
+			return nil, fmt.Errorf("reading image config: %w", err)
+		}
+		// The same rule as for an index: a version runs on the configured
+		// platform. An image that declares none is given the benefit of the
+		// doubt.
+		platform := cfg.Platform()
+		result.Platform = platformString(platform)
+		if platform != nil && (platform.OS != a.cfg.Platform.OS || platform.Architecture != a.cfg.Platform.Architecture) {
+			return nil, &PermanentError{
+				Reason: fmt.Sprintf("The image is built for %s, not %s",
+					result.Platform, platformString(&a.cfg.Platform)),
+				Platforms: []string{result.Platform},
+			}
 		}
 		return img, nil
 	}

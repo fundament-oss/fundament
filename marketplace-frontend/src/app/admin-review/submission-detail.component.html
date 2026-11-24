@@ -319,9 +319,11 @@
           </nldd-segmented-control>
         }
       </div>
-      <p class="mb-4 text-gray-600 dark:text-gray-300" data-testid="manifest-note">
-        {{ manifestNote() }}
-      </p>
+      @if (manifestNote(); as note) {
+        <p class="mb-4 text-gray-600 dark:text-gray-300" data-testid="manifest-note">
+          {{ note }}
+        </p>
+      }
       <dl class="mb-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
         <div class="min-w-0">
           <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Image</dt>
@@ -354,6 +356,7 @@
     [pluginName]="submission.title"
     [version]="submission.version ?? ''"
     [base]="baseVersion()"
+    [baseUnavailable]="historyError() !== null"
   />
 
   <!-- Every review round of this plugin, each linking to its submission -->

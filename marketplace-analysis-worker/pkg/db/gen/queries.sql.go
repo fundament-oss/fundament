@@ -26,6 +26,12 @@ WHERE appstore.plugin_image_analyses.id = (
 	WHERE appstore.plugin_image_analyses.deleted IS NULL
 	  AND appstore.plugin_image_analyses.status IN ('pending', 'running', 'retrying')
 	  AND (appstore.plugin_image_analyses.retry_after IS NULL OR appstore.plugin_image_analyses.retry_after <= now())
+	  AND EXISTS (
+		SELECT 1
+		FROM appstore.plugin_definitions
+		WHERE appstore.plugin_definitions.id = appstore.plugin_image_analyses.plugin_definition_id
+		  AND appstore.plugin_definitions.deleted IS NULL
+	  )
 	ORDER BY appstore.plugin_image_analyses.created ASC
 	LIMIT 1
 	FOR NO KEY UPDATE SKIP LOCKED
@@ -35,6 +41,7 @@ RETURNING
 	appstore.plugin_image_analyses.id,
 	appstore.plugin_image_analyses.plugin_definition_id,
 	appstore.plugin_image_analyses.retries,
+	appstore.plugin_image_analyses.retry_after,
 	appstore.plugin_definitions.image
 `
 
@@ -46,6 +53,7 @@ type AnalysisClaimRow struct {
 	ID                 uuid.UUID
 	PluginDefinitionID uuid.UUID
 	Retries            int32
+	RetryAfter         pgtype.Timestamptz
 	Image              string
 }
 
@@ -56,6 +64,14 @@ type AnalysisClaimRow struct {
 // is claimable again, and counts as a failed attempt. That keeps an image that
 // crashes the worker every time from being retried forever. The claim commits
 // at once; the analysis itself runs outside any transaction.
+//
+// The lease's end doubles as the claim's token: every query that records the
+// outcome matches on it, so a worker whose lease ran out cannot overwrite the
+// attempt that claimed the row after it.
+//
+// A deleted version is skipped, in the subquery so its row cannot hold up the
+// rows behind it. A rejected or withdrawn version is still analyzed: its round
+// stays in the history a reviewer opens.
 func (q *Queries) AnalysisClaim(ctx context.Context, arg AnalysisClaimParams) (AnalysisClaimRow, error) {
 	row := q.db.QueryRow(ctx, analysisClaim, arg.Lease)
 	var i AnalysisClaimRow
@@ -63,6 +79,7 @@ func (q *Queries) AnalysisClaim(ctx context.Context, arg AnalysisClaimParams) (A
 		&i.ID,
 		&i.PluginDefinitionID,
 		&i.Retries,
+		&i.RetryAfter,
 		&i.Image,
 	)
 	return i, err
@@ -83,6 +100,7 @@ UPDATE appstore.plugin_image_analyses SET
 	analyzed = now()
 WHERE id = $8::uuid
   AND status = 'running'
+  AND retry_after = $9::timestamptz
 `
 
 type AnalysisCompleteParams struct {
@@ -94,6 +112,7 @@ type AnalysisCompleteParams struct {
 	FilesTruncated bool
 	Sbom           []byte
 	ID             uuid.UUID
+	LeasedUntil    pgtype.Timestamptz
 }
 
 func (q *Queries) AnalysisComplete(ctx context.Context, arg AnalysisCompleteParams) error {
@@ -106,6 +125,7 @@ func (q *Queries) AnalysisComplete(ctx context.Context, arg AnalysisCompletePara
 		arg.FilesTruncated,
 		arg.Sbom,
 		arg.ID,
+		arg.LeasedUntil,
 	)
 	return err
 }
@@ -144,18 +164,25 @@ UPDATE appstore.plugin_image_analyses SET
 	retry_after = NULL
 WHERE id = $3::uuid
   AND status = 'running'
+  AND retry_after = $4::timestamptz
 `
 
 type AnalysisFailParams struct {
-	StatusInfo string
-	Platforms  []byte
-	ID         uuid.UUID
+	StatusInfo  string
+	Platforms   []byte
+	ID          uuid.UUID
+	LeasedUntil pgtype.Timestamptz
 }
 
 // A failure retrying cannot fix. A new submission round resets the row to
 // pending (appstore.plugin_image_analysis_enqueue).
 func (q *Queries) AnalysisFail(ctx context.Context, arg AnalysisFailParams) error {
-	_, err := q.db.Exec(ctx, analysisFail, arg.StatusInfo, arg.Platforms, arg.ID)
+	_, err := q.db.Exec(ctx, analysisFail,
+		arg.StatusInfo,
+		arg.Platforms,
+		arg.ID,
+		arg.LeasedUntil,
+	)
 	return err
 }
 
@@ -165,16 +192,18 @@ UPDATE appstore.plugin_image_analyses SET
 	retry_after = NULL
 WHERE id = $1::uuid
   AND status = 'running'
+  AND retry_after = $2::timestamptz
 `
 
 type AnalysisReleaseParams struct {
-	ID uuid.UUID
+	ID          uuid.UUID
+	LeasedUntil pgtype.Timestamptz
 }
 
 // Hands a row back untouched when the worker shuts down mid-analysis, so the
 // next worker picks it up without waiting for the lease or counting an attempt.
 func (q *Queries) AnalysisRelease(ctx context.Context, arg AnalysisReleaseParams) error {
-	_, err := q.db.Exec(ctx, analysisRelease, arg.ID)
+	_, err := q.db.Exec(ctx, analysisRelease, arg.ID, arg.LeasedUntil)
 	return err
 }
 
@@ -189,6 +218,7 @@ UPDATE appstore.plugin_image_analyses SET
 	)
 WHERE id = $4::uuid
   AND status = 'running'
+  AND retry_after = $5::timestamptz
 `
 
 type AnalysisRetryParams struct {
@@ -196,6 +226,7 @@ type AnalysisRetryParams struct {
 	BaseBackoff pgtype.Interval
 	MaxBackoff  pgtype.Interval
 	ID          uuid.UUID
+	LeasedUntil pgtype.Timestamptz
 }
 
 // Schedules another attempt with exponential backoff: base * 2^retries,
@@ -206,6 +237,7 @@ func (q *Queries) AnalysisRetry(ctx context.Context, arg AnalysisRetryParams) er
 		arg.BaseBackoff,
 		arg.MaxBackoff,
 		arg.ID,
+		arg.LeasedUntil,
 	)
 	return err
 }

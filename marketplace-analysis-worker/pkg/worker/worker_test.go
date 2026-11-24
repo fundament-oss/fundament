@@ -272,3 +272,77 @@ func TestExpiredLeaseIsClaimedAsAnAttempt(t *testing.T) {
 	// One for the lost run, one for this failed attempt.
 	assert.Equal(t, int32(2), rows[0].retries)
 }
+
+// analyzerFunc lets a test act while an analysis is in flight.
+type analyzerFunc func(ctx context.Context, image string) (*analyze.Result, error)
+
+func (f analyzerFunc) Analyze(ctx context.Context, image string) (*analyze.Result, error) {
+	return f(ctx, image)
+}
+
+func resultWithPackage(name string) *analyze.Result {
+	return &analyze.Result{
+		ImageDigest: "sha256:def",
+		Packages:    []analyze.Package{{Purl: "pkg:generic/" + name, Name: name, Licenses: []string{}}},
+	}
+}
+
+func TestStaleAttemptCannotOverwriteTheNextClaim(t *testing.T) {
+	env := newTestEnv(t)
+	versionID := env.seedVersion(t, "pending")
+	env.submit(t, versionID)
+
+	// The first attempt outlives its lease: meanwhile a second worker claims
+	// the row and records its result. The first one finishes after that.
+	stale := analyzerFunc(func(ctx context.Context, _ string) (*analyze.Result, error) {
+		env.exec(t, `UPDATE appstore.plugin_image_analyses SET retry_after = now() - interval '1 second'`)
+		found, err := newWorker(env, &fakeAnalyzer{result: resultWithPackage("second")}).ProcessNext(ctx)
+		require.NoError(t, err)
+		require.True(t, found)
+		return resultWithPackage("first"), nil
+	})
+
+	found, err := newWorker(env, stale).ProcessNext(context.Background())
+	require.NoError(t, err)
+	require.True(t, found)
+
+	rows := env.analyses(t, versionID)
+	require.Len(t, rows, 1)
+	assert.Equal(t, "completed", rows[0].status)
+	assert.JSONEq(t, `[{"purl":"pkg:generic/second","name":"second","version":"","type":"","licenses":[]}]`, rows[0].packages)
+}
+
+func TestClaimSkipsDeletedVersions(t *testing.T) {
+	env := newTestEnv(t)
+	deleted := env.seedVersion(t, "pending")
+	env.submit(t, deleted)
+	live := env.seedVersion(t, "pending")
+	env.submit(t, live)
+	env.exec(t, `UPDATE appstore.plugin_definitions SET deleted = now() WHERE id = $1`, deleted)
+	w := newWorker(env, &fakeAnalyzer{result: resultWithPackage("live")})
+
+	found, err := w.ProcessNext(context.Background())
+	require.NoError(t, err)
+	require.True(t, found)
+	found, err = w.ProcessNext(context.Background())
+	require.NoError(t, err)
+	assert.False(t, found, "the deleted version is never claimed")
+
+	assert.Equal(t, "completed", env.analyses(t, live)[0].status)
+	assert.Equal(t, "pending", env.analyses(t, deleted)[0].status)
+}
+
+func TestWorkerCannotMoveAnAnalysisToAnotherVersion(t *testing.T) {
+	env := newTestEnv(t)
+	versionID := env.seedVersion(t, "pending")
+	env.submit(t, versionID)
+	other := env.seedVersion(t, "pending")
+
+	_, err := env.workerPool.Exec(context.Background(),
+		`UPDATE appstore.plugin_image_analyses SET plugin_definition_id = $1`, other)
+	require.ErrorContains(t, err, "permission denied")
+
+	_, err = env.workerPool.Exec(context.Background(),
+		`UPDATE appstore.plugin_image_analyses SET deleted = now()`)
+	require.ErrorContains(t, err, "permission denied")
+}

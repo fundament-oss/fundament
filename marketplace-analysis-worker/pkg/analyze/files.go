@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"archive/tar"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -39,16 +40,21 @@ func (l *limitedReader) Read(p []byte) (int, error) {
 // listFiles walks the flattened filesystem (whiteouts applied, later layers
 // winning) and records every regular file and symlink. The walk reads every
 // layer in full, decompressed, so it is also where the size limit on the
-// decompressed bytes is enforced.
-func listFiles(img v1.Image, maxBytes int64, maxFiles int) ([]File, bool, error) {
+// decompressed bytes is enforced. It stops once ctx is done, so the job's
+// timeout bounds it like the pull and Trivy.
+func listFiles(ctx context.Context, img v1.Image, maxBytes int64, maxFiles int) ([]File, bool, error) {
 	stream := mutate.Extract(img)
 	defer func() { _ = stream.Close() }()
 
-	reader := tar.NewReader(&limitedReader{r: stream, limit: maxBytes})
+	limited := &limitedReader{r: stream, limit: maxBytes}
+	reader := tar.NewReader(limited)
 	var files []File
 	truncated := false
 
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil, false, fmt.Errorf("listing files: %w", err)
+		}
 		header, err := reader.Next()
 		if errors.Is(err, io.EOF) {
 			break
@@ -85,6 +91,13 @@ func listFiles(img v1.Image, maxBytes int64, maxFiles int) ([]File, bool, error)
 		file.Path = cleanPath(header.Name)
 		file.Mode = header.Mode & 0o7777
 		files = append(files, file)
+	}
+
+	// mutate.Extract closes its tar stream, trailer included, before it hands
+	// over the error that ended it: a layer that failed halfway reads as a
+	// complete filesystem up to the trailer. The error arrives on the next read.
+	if _, err := io.Copy(io.Discard, limited); err != nil {
+		return nil, false, sizeOrErr(err, maxBytes, "reading image layers")
 	}
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })

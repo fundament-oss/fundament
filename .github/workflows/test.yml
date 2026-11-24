@@ -474,7 +474,19 @@ jobs:
         if: steps.cache-trek.outputs.cache-hit != 'true'
         run: go install github.com/printeers/trek@v0.12.6
 
-      # TestTrivyProducesSBOM skips here: this job has no trivy binary.
+      # The Trivy the worker image ships: the same digest as its Dockerfile and
+      # image-scan.yml (which verifies its signature), so TestTrivyProducesSBOM
+      # runs the real SBOM step instead of skipping.
+      - name: Install Trivy
+        env:
+          TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          id=$(docker create "$TRIVY_IMAGE")
+          docker cp "$id:/usr/local/bin/trivy" "$HOME/.local/bin/trivy"
+          docker rm "$id" >/dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run tests (marketplace-analysis-worker)
         working-directory: marketplace-analysis-worker
         run: go test ./... -count=1

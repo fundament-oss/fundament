@@ -389,10 +389,12 @@ marketplaceAnalysisWorker:
     - plugin-registry.localhost:5000
   networkPolicy:
     extraEgress:
-      # The k3d-fundament docker network (FUNDAMENT_K3D_SUBNET).
+      # The k3d-fundament docker network: FUNDAMENT_K3D_SUBNET, 172.19.0.0/16
+      # unless set. The whole 172.16.0.0/12 docker pool covers the subnets the
+      # getting-started guide suggests instead; one outside it needs adding here.
       - to:
           - ipBlock:
-              cidr: 172.19.0.0/16
+              cidr: 172.16.0.0/12
         ports:
           - protocol: TCP
             port: 5000

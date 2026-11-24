@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,9 +40,11 @@ type Config struct {
 	// SweepInterval is how often versions without an analysis are enqueued.
 	SweepInterval time.Duration
 	// JobTimeout bounds one analysis. The lease outlives it by a minute.
-	JobTimeout   time.Duration
-	BaseBackoff  time.Duration
-	MaxBackoff   time.Duration
+	JobTimeout  time.Duration
+	BaseBackoff time.Duration
+	MaxBackoff  time.Duration
+	// MaxRetries is how many failed attempts are retried. Like every field
+	// here, zero means the default (5); main refuses MAX_RETRIES below 1.
 	MaxRetries   int32
 	BackoffDelay time.Duration
 }
@@ -225,7 +226,7 @@ func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	if row.Retries > w.cfg.MaxRetries {
 		// Claimed back from expired leases this often: the image kills or
 		// stalls the worker every time.
-		return true, w.fail(row.ID, logger, &analyze.PermanentError{
+		return true, w.fail(&row, logger, &analyze.PermanentError{
 			Reason: fmt.Sprintf("The analysis did not finish after %d attempts", row.Retries),
 		})
 	}
@@ -239,12 +240,12 @@ func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	case err == nil:
 		logger.Info("analyzed image",
 			"duration", time.Since(started), "packages", len(result.Packages), "files", len(result.Files))
-		return true, w.complete(row.ID, result)
+		return true, w.complete(&row, result)
 	case ctx.Err() != nil:
 		// Shutting down: hand the row back rather than count an attempt.
 		finalizeCtx, finalizeCancel := context.WithTimeout(context.Background(), finalizeTimeout)
 		defer finalizeCancel()
-		if err := w.queries.AnalysisRelease(finalizeCtx, db.AnalysisReleaseParams{ID: row.ID}); err != nil {
+		if err := w.queries.AnalysisRelease(finalizeCtx, db.AnalysisReleaseParams{ID: row.ID, LeasedUntil: row.RetryAfter}); err != nil {
 			return true, fmt.Errorf("releasing analysis: %w", err)
 		}
 		return true, nil
@@ -252,7 +253,7 @@ func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
 
 	var permanent *analyze.PermanentError
 	if errors.As(err, &permanent) || row.Retries >= w.cfg.MaxRetries {
-		return true, w.fail(row.ID, logger, err)
+		return true, w.fail(&row, logger, err)
 	}
 
 	logger.Warn("analysis failed, retrying", "error", err, "retries", row.Retries)
@@ -260,6 +261,7 @@ func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	defer finalizeCancel()
 	if err := w.queries.AnalysisRetry(finalizeCtx, db.AnalysisRetryParams{
 		ID:          row.ID,
+		LeasedUntil: row.RetryAfter,
 		StatusInfo:  fmt.Sprintf("Attempt %d failed: %v", row.Retries+1, err),
 		BaseBackoff: interval(w.cfg.BaseBackoff),
 		MaxBackoff:  interval(w.cfg.MaxBackoff),
@@ -269,7 +271,9 @@ func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (w *Worker) complete(id uuid.UUID, result *analyze.Result) error {
+// complete records the result of the attempt that holds row's lease. When the
+// lease ran out and another attempt claimed the row, it changes nothing.
+func (w *Worker) complete(row *db.AnalysisClaimRow, result *analyze.Result) error {
 	platforms, err := json.Marshal(nonNil(result.Platforms))
 	if err != nil {
 		return fmt.Errorf("encoding platforms: %w", err)
@@ -286,7 +290,8 @@ func (w *Worker) complete(id uuid.UUID, result *analyze.Result) error {
 	ctx, cancel := context.WithTimeout(context.Background(), finalizeTimeout)
 	defer cancel()
 	if err := w.queries.AnalysisComplete(ctx, db.AnalysisCompleteParams{
-		ID:             id,
+		ID:             row.ID,
+		LeasedUntil:    row.RetryAfter,
 		ImageDigest:    result.ImageDigest,
 		Platform:       result.Platform,
 		Platforms:      platforms,
@@ -302,7 +307,7 @@ func (w *Worker) complete(id uuid.UUID, result *analyze.Result) error {
 
 // fail records a failure for good. The reviewer reads status_info, so a
 // permanent error contributes its reason, not its wrapped detail.
-func (w *Worker) fail(id uuid.UUID, logger *slog.Logger, err error) error {
+func (w *Worker) fail(row *db.AnalysisClaimRow, logger *slog.Logger, err error) error {
 	info := err.Error()
 	var platforms []string
 	if permanent, ok := errors.AsType[*analyze.PermanentError](err); ok {
@@ -318,7 +323,9 @@ func (w *Worker) fail(id uuid.UUID, logger *slog.Logger, err error) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), finalizeTimeout)
 	defer cancel()
-	if err := w.queries.AnalysisFail(ctx, db.AnalysisFailParams{ID: id, StatusInfo: info, Platforms: encoded}); err != nil {
+	if err := w.queries.AnalysisFail(ctx, db.AnalysisFailParams{
+		ID: row.ID, LeasedUntil: row.RetryAfter, StatusInfo: info, Platforms: encoded,
+	}); err != nil {
 		return fmt.Errorf("recording failure: %w", err)
 	}
 	return nil

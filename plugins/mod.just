@@ -169,7 +169,8 @@ sandbox-catalog:
 # pushed to the sandbox registry (FUN-24). The registry container, not a node, joins the
 # k3d-fundament network (see sandbox-catalog on multi-homing nodes), and a CoreDNS server
 # block (k3s's coredns-custom) resolves its name there. values-local.yaml rewrites
-# localhost:5112 to it and allowlists it. Re-run after recreating either cluster.
+# localhost:5112 to it and allowlists it. Re-run after recreating either cluster or
+# restarting docker.
 # Let marketplace-analysis-worker in k3d-fundament pull from the sandbox plugin registry
 registry-to-fundament:
     #!/usr/bin/env bash
@@ -184,8 +185,9 @@ registry-to-fundament:
         exit 1
     fi
     printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: coredns-custom\n  namespace: kube-system\ndata:\n  plugin-registry.server: |\n    {{ registry }}:53 {\n      hosts {\n        %s {{ registry }}\n      }\n    }\n' "$ip" \
-        | kubectl --context k3d-fundament apply -f - >/dev/null
+        | kubectl --context k3d-fundament apply --server-side --field-manager=plugins-registry-to-fundament -f - >/dev/null
     kubectl --context k3d-fundament -n kube-system rollout restart deployment coredns >/dev/null
+    kubectl --context k3d-fundament -n kube-system rollout status deployment coredns --timeout=120s >/dev/null
     echo "- {{ registry }}:5000 resolves to $ip in k3d-fundament"
 
 # Publishes the pushed digest to marketplace-registry-api via `functl plugin publish`
