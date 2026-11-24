@@ -86,13 +86,13 @@ To check the production images (the Dockerfiles CI builds), run `just dev` once 
 | `alice@acme-corp.com` | `password` | `acme-corp`, with cluster `acme-cluster` |
 | `platform-admin@fundament.io` | `password` | `system`, which owns the first-party plugins |
 
-The test data also has an API key for Alice in `acme-corp`, so `functl`, the OpenTofu provider and scripts work without creating one in the console:
+The test data also has an API key for Alice in `acme-corp`, so you don't have to create one in the console. `functl` can store it:
 
 ```shell
 functl auth login fun_LocalDevAliceAcmeCorpKey0000004KyU0e
 ```
 
-`auth login` stores the key in `~/.config/fundament/credentials`, replacing a key you stored for another installation. To leave that alone, set `FUNDAMENT_API_KEY=fun_LocalDevAliceAcmeCorpKey0000004KyU0e` for the command instead.
+`auth login` stores the key in `~/.config/fundament/credentials`, replacing a key you stored for another installation. The OpenTofu provider and scripts don't read that file: give them the key in `FUNDAMENT_API_KEY=fun_LocalDevAliceAcmeCorpKey0000004KyU0e`. Setting that variable for a `functl` command also works, and leaves the stored key alone.
 
 If a host does not answer, check that the gateway is `PROGRAMMED` and every route is `Accepted`:
 
