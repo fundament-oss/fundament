@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -137,18 +138,62 @@ func exprOf(t *testing.T, name string) string {
 	return ""
 }
 
+// byClause matches the label list of every `max by (...)`, `sum by (...)` and
+// so on in an expression.
+var byClause = regexp.MustCompile(`by \(([^)]*)\)`)
+
+// groupings is the label list of each by clause in the named query, in order.
+func groupings(t *testing.T, name string) [][]string {
+	t.Helper()
+	var out [][]string
+	for _, m := range byClause.FindAllStringSubmatch(exprOf(t, name), -1) {
+		var labels []string
+		for l := range strings.SplitSeq(m[1], ",") {
+			labels = append(labels, strings.TrimSpace(l))
+		}
+		out = append(out, labels)
+	}
+	return out
+}
+
 // Totals and counts over raw series would count a series twice while two
-// exporter pods report it; each one groups the scrape labels away first.
+// exporter pods report it; each one first groups the series by exactly the
+// labels the frontend joins or splits on, which leaves the scrape labels out.
 func TestAggregationsDropScrapeLabels(t *testing.T) {
-	for _, name := range []string{
-		queryCapacity, "machine_power", "network_usage", "switch_state",
-		"switch_bgp_total", "switch_bgp_established", "power",
-		"allocation_allocated", "allocation_total",
-	} {
-		assert.Contains(t, exprOf(t, name), "max by (", name)
+	tests := map[string][]string{
+		queryCapacity:            {"__name__", "partition", "size"},
+		"machine_power":          {"__name__", "machineid"},
+		"network_usage":          {"__name__", "networkId"},
+		"switch_state":           {"__name__", "switchname"},
+		"switch_bgp_total":       {"switchname", "device"},
+		"switch_bgp_established": {"switchname", "device"},
+		"power":                  {"machineid"},
+		"allocation_allocated":   {"partition", "size"},
+		"allocation_total":       {"partition", "size"},
+	}
+	for name, want := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Regexp(t, `^(\w+ by \([^)]*\) \(|sum\()?max by \(`, exprOf(t, name),
+				"the innermost aggregation is a max over the raw series")
+			g := groupings(t, name)
+			require.NotEmpty(t, g)
+			assert.ElementsMatch(t, want, g[len(g)-1], "the max groups by exactly these labels")
+		})
 	}
 	// Only interfaces with a BGP port state are sessions.
 	assert.NotContains(t, exprOf(t, "switch_bgp_total"), "metal_switch_interface_info")
+}
+
+// No query keeps a scrape label: two exporter pods would show up as two
+// machines, networks or switches.
+func TestNoQueryGroupsByScrapeLabels(t *testing.T) {
+	for _, q := range queries {
+		for _, labels := range groupings(t, q.name) {
+			for _, scrape := range []string{"job", "instance", "namespace", "pod", "container", "service", "endpoint"} {
+				assert.NotContains(t, labels, scrape, q.name)
+			}
+		}
+	}
 }
 
 func TestSnapshotIsCachedAndShared(t *testing.T) {
