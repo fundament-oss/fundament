@@ -46,6 +46,7 @@ func TestAccProjectMemberResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "user_id"),
 					resource.TestCheckResourceAttr(resourceName, "permission", "viewer"),
 					resource.TestCheckResourceAttrSet(resourceName, "user_name"),
+					resource.TestCheckResourceAttr(resourceName, "email", testMemberEmail),
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
 			},

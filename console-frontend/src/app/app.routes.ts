@@ -146,6 +146,15 @@ const routes: Routes = [
             loadComponent: () =>
               import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
           },
+          {
+            // After `invite` and `permissions`, or a member ID would have to
+            // be told apart from them. The ID is the membership's, Member.id.
+            path: ':memberId',
+            loadComponent: () =>
+              import('./organization-member-sheet/organization-member-sheet.component').then(
+                (m) => m.default,
+              ),
+          },
         ],
       },
       {

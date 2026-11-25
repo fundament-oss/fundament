@@ -21,6 +21,8 @@ import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
+import copyWithNotice from '../utils/copy-with-notice';
+import emailsByUserId from '../utils/emails-by-user-id';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/box';
@@ -28,9 +30,11 @@ import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/container';
 import '@nldd/design-system/icon-button';
+import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
+import '@nldd/design-system/list-item-segment';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
@@ -47,6 +51,8 @@ interface ProjectMemberView {
   member: ProjectMember;
   /** 'org' when the project role equals the organization role. */
   source: 'org' | 'project';
+  /** From the organization member list, which this sheet loads anyway. */
+  email?: string;
 }
 
 /** Locked: an organization admin is admin here too, and this page cannot change
@@ -137,6 +143,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
         found
           ? {
               member: found,
+              email: emailsByUserId(orgMembers).get(found.userId),
               source:
                 // The organization permission is a bare string ("admin" /
                 // "viewer"), so this compares values, not the labels the tags
@@ -194,6 +201,15 @@ export default class ProjectMemberSheetComponent implements OnInit {
         err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed',
       );
     }
+  }
+
+  copyUserId(view: ProjectMemberView): Promise<void> {
+    return copyWithNotice(this.notificationService, view.member.userId, 'User ID');
+  }
+
+  copyEmail(view: ProjectMemberView): Promise<void> {
+    if (!view.email) return Promise.resolve();
+    return copyWithNotice(this.notificationService, view.email, 'Email address');
   }
 
   openOrganizationMembers(event: Event): void {

@@ -28,6 +28,7 @@ import { organizationPermissionLabel } from '../utils/role-label';
 import InvitationEmailComponent from '../invitation-email/invitation-email.component';
 import '@nldd/design-system/search-field';
 import opensElsewhere from '../opens-elsewhere';
+import copyWithNotice from '../utils/copy-with-notice';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/avatar';
@@ -36,10 +37,11 @@ import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/container';
-import '@nldd/design-system/icon-button';
+import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
+import '@nldd/design-system/list-item-segment';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
@@ -54,7 +56,10 @@ import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
 
 interface OrganizationMember {
+  /** The membership's ID (Member.id), which the actions and the sheet take. */
   id: string;
+  /** The user's ID (users.id), which functl, Terraform and the API take. */
+  userId: string;
   name: string;
   email?: string;
   externalRef?: string;
@@ -225,6 +230,7 @@ export default class OrganizationMembersComponent implements OnInit {
     const currentUserId = this.currentUser()?.id;
     return this.organizationDataService.members().map((member) => ({
       id: member.id,
+      userId: member.userId,
       name: member.name,
       email: member.email,
       externalRef: member.externalRef,
@@ -426,6 +432,23 @@ export default class OrganizationMembersComponent implements OnInit {
       return;
     }
     if (next) this.actionError.set({ ...next, attempts: failed.attempts + 1 });
+  }
+
+  /** Routes client-side while leaving the row a real link, so middle-click and
+   *  "open in new tab" keep working. */
+  openMember(event: Event, memberId: string): void {
+    if (opensElsewhere(event)) return;
+    event.preventDefault();
+    this.pageNav.goTo(`/members/${memberId}`);
+  }
+
+  copyUserId(member: OrganizationMember): Promise<void> {
+    return copyWithNotice(this.notificationService, member.userId, 'User ID');
+  }
+
+  copyEmail(member: OrganizationMember): Promise<void> {
+    if (!member.email) return Promise.resolve();
+    return copyWithNotice(this.notificationService, member.email, 'Email address');
   }
 
   /** Routes client-side while leaving the control a real link, so middle-click

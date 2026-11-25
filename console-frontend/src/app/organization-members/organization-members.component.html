@@ -277,166 +277,182 @@
           accessible-label="Members"
         >
           @for (member of visibleMembers(); track member.id) {
+            <!-- Two segments: the row is a link to the member's sheet, and the
+                 ellipsis beside it opens their menu. A row that is itself a
+                 link cannot hold a button, a control inside a control. No
+                 chevron: the ellipsis already says there is more here. -->
             <nldd-list-item>
-              <nldd-cell width="fit-content">
-                <nldd-avatar
-                  decorative
-                  type="person"
-                  size="40"
-                  [attr.name]="member.name || member.email"
-                ></nldd-avatar>
-              </nldd-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <!-- The tags sit in the cell's own text line, so they read as part
-                   of the name rather than as a column of their own. -->
-              <!-- Plain inline flow, no wrapping container: a container's gap
-                   applies to both axes, so a wrapped row would grow a gap
-                   between its lines too. &ngsp; is Angular's own keep-this-space
-                   entity — a plain space between elements gets stripped. -->
-              <nldd-text-cell
+              <nldd-list-item-segment
                 width="full"
-                [attr.supporting-text]="
-                  (member.status === 'pending' ? 'Invited ' : 'Joined ') +
-                  formatTimeAgo(member.created)
-                "
+                [attr.href]="pageNav.path('/members/' + member.id)"
+                (click)="openMember($event, member.id)"
               >
-                {{ member.name || member.email }}&ngsp;
-                <nldd-tag
-                  size="sm"
-                  [attr.color]="member.permission === 'admin' ? 'paars' : 'accent'"
-                  [attr.text]="permissionLabel(member.permission)"
-                ></nldd-tag>
-              </nldd-text-cell>
-              <!-- The right-hand column says what this person is to you: "You" for
-                   yourself, "Invited" for someone who has not accepted yet. An
-                   invitation has no access to change yet, so the menu holds the
-                   role it carries and the way to withdraw it. -->
-              @if (member.status === 'pending') {
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <!-- The dot is decorative: the word beside it already says
-                     "Invited", and a badge that names itself would say it twice
-                     to anyone listening. -->
                 <nldd-cell width="fit-content">
-                  <nldd-badge
-                    color="warning"
+                  <nldd-avatar
                     decorative
-                  ></nldd-badge>
+                    type="person"
+                    size="40"
+                    [attr.name]="member.name || member.email"
+                  ></nldd-avatar>
                 </nldd-cell>
-                <nldd-spacer-cell size="6"></nldd-spacer-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  color="secondary"
-                  text="Invited"
-                ></nldd-text-cell>
-                <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <nldd-icon-button
-                    icon="more"
-                    size="sm"
-                    appearance="secondary"
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- The role is part of the invitation, so it can still be
-                           corrected: without this a wrong one costs a cancel, a
-                           second invite and a second mail to the same person. -->
-                      <!-- The organization viewer role is temporarily
-                           disabled: an admin cannot be made viewer, so the
-                           item stays visible but switched off. Remove the
-                           disabled and details bindings to bring it back. -->
-                      <nldd-menu-item
-                        icon="user-admin"
-                        [attr.text]="
-                          member.permission === 'admin'
-                            ? 'Switch to organization viewer'
-                            : 'Switch to organization admin'
-                        "
-                        [attr.disabled]="member.permission === 'admin' ? '' : null"
-                        [attr.details]="
-                          member.permission === 'admin' ? 'Temporarily unavailable' : null
-                        "
-                        (select)="setPermission(member)"
-                      ></nldd-menu-item>
-                      <!-- Nothing was ever sent, so this is not a resend: it is
-                           the message the admin still has to deliver by hand,
-                           for an invitation made last week or made by functl.
-                           Guarded on the address: the proto says email is set
-                           for invited members, and without one the message
-                           would name nobody to send it to. -->
-                      @if (member.email) {
-                        <nldd-menu-item
-                          text="Send invitation email…"
-                          icon="envelope"
-                          (select)="openInvitationEmail(member)"
-                        ></nldd-menu-item>
-                      }
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Cancel invitation"
-                        icon="delete"
-                        destructive
-                        (select)="cancelInvitation(member.id)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
-              } @else if (member.isCurrentUser) {
-                <!-- Where the actions would be, saying why there are none. -->
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <!-- The tags sit in the cell's own text line, so they read as
+                     part of the name rather than as a column of their own. -->
+                <!-- Plain inline flow, no wrapping container: a container's gap
+                     applies to both axes, so a wrapped row would grow a gap
+                     between its lines too. &ngsp; is Angular's own
+                     keep-this-space entity — a plain space between elements
+                     gets stripped. -->
                 <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  color="secondary"
-                  text="You"
-                ></nldd-text-cell>
-                <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              } @else {
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <!-- No chevron: the ellipsis already says a menu opens. -->
-                  <nldd-icon-button
-                    icon="more"
+                  width="full"
+                  [attr.supporting-text]="
+                    (member.status === 'pending' ? 'Invited ' : 'Joined ') +
+                    formatTimeAgo(member.created)
+                  "
+                >
+                  {{ member.name || member.email }}&ngsp;
+                  <nldd-tag
                     size="sm"
-                    appearance="secondary"
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + member.name"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- Names the result, not the form: one click instead of
-                           a sheet holding a single radio group. -->
-                      <!-- The organization viewer role is temporarily
-                           disabled: an admin cannot be made viewer, so the
-                           item stays visible but switched off. Remove the
-                           disabled and details bindings to bring it back. -->
-                      <nldd-menu-item
-                        icon="user-admin"
-                        [attr.text]="
-                          member.permission === 'admin'
-                            ? 'Make organization viewer'
-                            : 'Make organization admin'
-                        "
-                        [attr.disabled]="member.permission === 'admin' ? '' : null"
-                        [attr.details]="
-                          member.permission === 'admin' ? 'Temporarily unavailable' : null
-                        "
-                        (select)="setPermission(member)"
-                      ></nldd-menu-item>
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Remove"
-                        icon="delete"
-                        destructive
-                        (select)="openDeleteModal(member)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
-              }
+                    [attr.color]="member.permission === 'admin' ? 'paars' : 'accent'"
+                    [attr.text]="permissionLabel(member.permission)"
+                  ></nldd-tag>
+                </nldd-text-cell>
+                <!-- The right-hand column says what this person is to you:
+                     "You" for yourself, "Invited" for someone who has not
+                     accepted yet. -->
+                @if (member.status === 'pending') {
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <!-- The dot is decorative: the word beside it already says
+                       "Invited", and a badge that names itself would say it
+                       twice to anyone listening. -->
+                  <nldd-cell width="fit-content">
+                    <nldd-badge
+                      color="warning"
+                      decorative
+                    ></nldd-badge>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="6"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    color="secondary"
+                    text="Invited"
+                  ></nldd-text-cell>
+                } @else if (member.isCurrentUser) {
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    color="secondary"
+                    text="You"
+                  ></nldd-text-cell>
+                }
+              </nldd-list-item-segment>
+              <!-- The menu hangs off this segment by its id; it lives after the
+                   list, since a row takes only cells and segments. -->
+              <nldd-list-item-segment
+                button
+                [attr.id]="'member-actions-' + member.id"
+                [attr.accessible-label]="'Actions for ' + (member.name || member.email)"
+              >
+                <nldd-icon-cell
+                  icon="more"
+                  size="20"
+                ></nldd-icon-cell>
+              </nldd-list-item-segment>
             </nldd-list-item>
           }
         </nldd-list>
+        <!-- One menu per row, anchored to that row's ellipsis segment: the
+             pattern the design system gives for a menu off a list row. -->
+        @for (member of visibleMembers(); track member.id) {
+          <nldd-menu [attr.anchor]="'member-actions-' + member.id">
+            <nldd-menu-item
+              text="View details"
+              icon="info"
+              (select)="pageNav.goTo('/members/' + member.id)"
+            ></nldd-menu-item>
+            <nldd-menu-item
+              text="Copy user ID"
+              icon="copy"
+              (select)="copyUserId(member)"
+            ></nldd-menu-item>
+            <!-- The identity provider does not have to send an address. -->
+            @if (member.email) {
+              <nldd-menu-item
+                text="Copy email address"
+                icon="copy"
+                (select)="copyEmail(member)"
+              ></nldd-menu-item>
+            }
+            @if (member.status === 'pending') {
+              <nldd-menu-divider></nldd-menu-divider>
+              <!-- The role is part of the invitation, so it can still be
+                   corrected: without this a wrong one costs a cancel, a second
+                   invite and a second mail to the same person. -->
+              <!-- The organization viewer role is temporarily disabled: an
+                   admin cannot be made viewer, so the item stays visible but
+                   switched off. Remove the disabled and details bindings to
+                   bring it back. -->
+              <nldd-menu-item
+                icon="user-admin"
+                [attr.text]="
+                  member.permission === 'admin'
+                    ? 'Switch to organization viewer'
+                    : 'Switch to organization admin'
+                "
+                [attr.disabled]="member.permission === 'admin' ? '' : null"
+                [attr.details]="member.permission === 'admin' ? 'Temporarily unavailable' : null"
+                (select)="setPermission(member)"
+              ></nldd-menu-item>
+              <!-- Nothing was ever sent, so this is not a resend: it is the
+                   message the admin still has to deliver by hand, for an
+                   invitation made last week or made by functl. Guarded on the
+                   address, because without one the message would name nobody
+                   to send it to. -->
+              @if (member.email) {
+                <nldd-menu-item
+                  text="Send invitation email…"
+                  icon="envelope"
+                  (select)="openInvitationEmail(member)"
+                ></nldd-menu-item>
+              }
+              <nldd-menu-divider></nldd-menu-divider>
+              <nldd-menu-item
+                text="Cancel invitation"
+                icon="delete"
+                destructive
+                (select)="cancelInvitation(member.id)"
+              ></nldd-menu-item>
+            } @else if (!member.isCurrentUser) {
+              <nldd-menu-divider></nldd-menu-divider>
+              <!-- Names the result, not the form: one click instead of a sheet
+                   holding a single radio group. -->
+              <!-- The organization viewer role is temporarily disabled: an
+                   admin cannot be made viewer, so the item stays visible but
+                   switched off. Remove the disabled and details bindings to
+                   bring it back. -->
+              <nldd-menu-item
+                icon="user-admin"
+                [attr.text]="
+                  member.permission === 'admin'
+                    ? 'Make organization viewer'
+                    : 'Make organization admin'
+                "
+                [attr.disabled]="member.permission === 'admin' ? '' : null"
+                [attr.details]="member.permission === 'admin' ? 'Temporarily unavailable' : null"
+                (select)="setPermission(member)"
+              ></nldd-menu-item>
+              <nldd-menu-divider></nldd-menu-divider>
+              <nldd-menu-item
+                text="Remove"
+                icon="delete"
+                destructive
+                (select)="openDeleteModal(member)"
+              ></nldd-menu-item>
+            }
+          </nldd-menu>
+        }
       }
     }
   </nldd-simple-section>

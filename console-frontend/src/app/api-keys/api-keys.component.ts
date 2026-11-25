@@ -31,6 +31,7 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
+import copyToClipboard from '../utils/clipboard';
 import AuthnApiService from '../authn-api.service';
 import OrganizationContextService from '../organization-context.service';
 import {
@@ -618,20 +619,7 @@ export default class ApiKeysComponent {
     if (!token) return;
 
     try {
-      // Check if clipboard API is available (requires HTTPS or localhost)
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(token);
-      } else {
-        // Fallback: create a temporary textarea element
-        const textarea = document.createElement('textarea');
-        textarea.value = token;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+      await copyToClipboard(token);
       this.notificationService.success('Token copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');

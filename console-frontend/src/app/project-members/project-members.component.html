@@ -110,43 +110,80 @@
           accessible-label="Project members"
         >
           @for (view of visibleMembers(); track view.member.id) {
-            <!-- The whole row goes to the member: a real link, so it can be
-                 shared and opened in a new tab, and the chevron says so. The
-                 actions live in the sheet, because a control inside a row that
-                 is itself a control is a control inside a control. -->
-            <nldd-list-item
-              [attr.href]="pageNav.path('/projects/' + projectId() + '/members/' + view.member.id)"
-              (click)="openMember($event, view.member.id)"
-            >
-              <nldd-cell width="fit-content">
-                <nldd-avatar
-                  decorative
-                  type="person"
-                  size="40"
-                  [attr.name]="view.member.userName"
-                ></nldd-avatar>
-              </nldd-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <nldd-text-cell
+            <!-- Two segments: the row is a link to the member's sheet, so it can
+                 be shared and opened in a new tab, and the ellipsis beside it
+                 opens a menu of things to copy. A row that is itself a link
+                 cannot hold a button, a control inside a control. Changing the
+                 role and removing stay in the sheet. No chevron: the ellipsis
+                 already says there is more here. -->
+            <nldd-list-item>
+              <nldd-list-item-segment
                 width="full"
-                [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
+                [attr.href]="
+                  pageNav.path('/projects/' + projectId() + '/members/' + view.member.id)
+                "
+                (click)="openMember($event, view.member.id)"
               >
-                {{ view.member.userName }}&ngsp;
-                <nldd-tag
-                  size="sm"
-                  [attr.color]="view.member.role === ProjectMemberRole.ADMIN ? 'paars' : 'accent'"
-                  [attr.text]="roleLabel(view.member.role)"
-                ></nldd-tag>
-              </nldd-text-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-icon-cell
-                icon="chevron-right"
-                size="20"
-                color="secondary"
-              ></nldd-icon-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-avatar
+                    decorative
+                    type="person"
+                    size="40"
+                    [attr.name]="view.member.userName"
+                  ></nldd-avatar>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
+                >
+                  {{ view.member.userName }}&ngsp;
+                  <nldd-tag
+                    size="sm"
+                    [attr.color]="view.member.role === ProjectMemberRole.ADMIN ? 'paars' : 'accent'"
+                    [attr.text]="roleLabel(view.member.role)"
+                  ></nldd-tag>
+                </nldd-text-cell>
+              </nldd-list-item-segment>
+              <!-- The menu hangs off this segment by its id; it lives after the
+                   list, since a row takes only cells and segments. -->
+              <nldd-list-item-segment
+                button
+                [attr.id]="'project-member-actions-' + view.member.id"
+                [attr.accessible-label]="'Actions for ' + view.member.userName"
+              >
+                <nldd-icon-cell
+                  icon="more"
+                  size="20"
+                ></nldd-icon-cell>
+              </nldd-list-item-segment>
             </nldd-list-item>
           }
         </nldd-list>
+        <!-- One menu per row, anchored to that row's ellipsis segment: the
+             pattern the design system gives for a menu off a list row. -->
+        @for (view of visibleMembers(); track view.member.id) {
+          <nldd-menu [attr.anchor]="'project-member-actions-' + view.member.id">
+            <nldd-menu-item
+              text="View details"
+              icon="info"
+              (select)="pageNav.goTo('/projects/' + projectId() + '/members/' + view.member.id)"
+            ></nldd-menu-item>
+            <nldd-menu-item
+              text="Copy user ID"
+              icon="copy"
+              (select)="copyUserId(view)"
+            ></nldd-menu-item>
+            <!-- The identity provider does not have to send an address. -->
+            @if (view.email) {
+              <nldd-menu-item
+                text="Copy email address"
+                icon="copy"
+                (select)="copyEmail(view)"
+              ></nldd-menu-item>
+            }
+          </nldd-menu>
+        }
       }
     }
   </nldd-simple-section>

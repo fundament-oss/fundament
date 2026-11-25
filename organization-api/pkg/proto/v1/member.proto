@@ -74,7 +74,8 @@ message Member {
   string name = 20;
   // external_ref is empty for pending invitations
   string external_ref = 30 [features.field_presence = EXPLICIT];
-  // email is set for invited members
+  // email is the user's email address, for members and invitations alike. It
+  // is absent when the identity provider sent no email claim.
   string email = 50 [features.field_presence = EXPLICIT];
   // permission is "viewer" or "admin"
   string permission = 60;

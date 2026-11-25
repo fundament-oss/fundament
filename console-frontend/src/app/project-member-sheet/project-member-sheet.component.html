@@ -57,6 +57,50 @@
               [attr.text]="projectName()"
             ></nldd-text-cell>
           </nldd-list-item>
+          <!-- The ID functl, Terraform and the API take. -->
+          <nldd-list-item>
+            <nldd-text-cell text="User ID"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+            >
+              <span class="font-mono">{{ view.member.userId }}</span>
+            </nldd-text-cell>
+            <nldd-list-item-segment
+              button
+              accessible-label="Copy user ID"
+              (click)="copyUserId(view)"
+            >
+              <nldd-icon-cell
+                icon="copy"
+                size="20"
+              ></nldd-icon-cell>
+            </nldd-list-item-segment>
+          </nldd-list-item>
+          <!-- No row without an address: the identity provider does not have
+               to send one. -->
+          @if (view.email) {
+            <nldd-list-item>
+              <nldd-text-cell text="Email address"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="view.email"
+              ></nldd-text-cell>
+              <nldd-list-item-segment
+                button
+                accessible-label="Copy email address"
+                (click)="copyEmail(view)"
+              >
+                <nldd-icon-cell
+                  icon="copy"
+                  size="20"
+                ></nldd-icon-cell>
+              </nldd-list-item-segment>
+            </nldd-list-item>
+          }
           <nldd-list-item>
             <!-- The project role, because the same person also carries one at
                  organization level and the two are not the same thing. -->

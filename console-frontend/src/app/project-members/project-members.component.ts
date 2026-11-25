@@ -25,6 +25,8 @@ import { projectRoleLabel } from '../utils/role-label';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import opensElsewhere from '../opens-elsewhere';
+import copyWithNotice from '../utils/copy-with-notice';
+import emailsByUserId from '../utils/emails-by-user-id';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/avatar';
@@ -36,6 +38,7 @@ import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
+import '@nldd/design-system/list-item-segment';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
@@ -53,6 +56,9 @@ interface ProjectMemberView {
   member: ProjectMember;
   source: 'org' | 'project';
   orgPermission: ProjectMemberRole | null;
+  /** From the organization member list this page loads anyway, not from
+   *  ProjectMember: every project member is an organization member. */
+  email?: string;
 }
 
 const roleToString = (role: ProjectMemberRole): string => {
@@ -210,10 +216,12 @@ export default class ProjectMembersComponent implements OnInit {
       orgMembers
         .filter((m) => m.externalRef)
         .forEach((m) => orgRoleByUserId.set(m.userId, m.permission));
+      const emailByUserId = emailsByUserId(orgMembers);
 
       // Enrich project members with source info
       const views: ProjectMemberView[] = projectResponse.members.map((member) => {
         const orgRole = orgRoleByUserId.get(member.userId);
+        const email = emailByUserId.get(member.userId);
         if (orgRole !== undefined) {
           const orgRoleEnum = stringToRole(orgRole);
           const sameRole = member.role === orgRoleEnum;
@@ -221,9 +229,10 @@ export default class ProjectMembersComponent implements OnInit {
             member,
             source: sameRole ? 'org' : 'project',
             orgPermission: orgRoleEnum,
+            email,
           };
         }
-        return { member, source: 'project', orgPermission: null };
+        return { member, source: 'project', orgPermission: null, email };
       });
       this.memberViews.set(views);
 
@@ -277,6 +286,15 @@ export default class ProjectMembersComponent implements OnInit {
     if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo(`/projects/${this.projectId()}/members/${memberId}`);
+  }
+
+  copyUserId(view: ProjectMemberView): Promise<void> {
+    return copyWithNotice(this.notificationService, view.member.userId, 'User ID');
+  }
+
+  copyEmail(view: ProjectMemberView): Promise<void> {
+    if (!view.email) return Promise.resolve();
+    return copyWithNotice(this.notificationService, view.email, 'Email address');
   }
 
   /** Routes client-side while leaving the control a real link. */

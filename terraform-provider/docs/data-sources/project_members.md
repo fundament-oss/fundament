@@ -40,6 +40,7 @@ data "fundament_project_members" "all" {
 Read-Only:
 
 - `created` (String) The timestamp when the member was added.
+- `email` (String) The email address of the user.
 - `id` (String) The unique identifier of the project member.
 - `permission` (String) The permission of the project member.
 - `project_id` (String) The ID of the project.

@@ -44,6 +44,7 @@ func Test_ProjectMember_Get(t *testing.T) {
 		WithUser(&UserArgs{
 			ID:     projectMemberUserID,
 			Name:   "project-member-name",
+			Email:  "project-member@example.com",
 			OrgIDs: []uuid.UUID{orgID},
 		}),
 	)
@@ -111,6 +112,7 @@ func Test_ProjectMember_Get(t *testing.T) {
 					ProjectId: createProjectRes.GetProjectId(),
 					UserId:    projectMemberUserID.String(),
 					UserName:  "project-member-name",
+					Email:     new("project-member@example.com"),
 					Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
 				}.Build(),
 			}.Build(),
@@ -139,6 +141,8 @@ func Test_ProjectMember_Get(t *testing.T) {
 				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserId(), res.GetMember().GetUserId())
 				assert.Equal(t, tc.ExpectedResponse.GetMember().GetRole().String(), res.GetMember().GetRole().String())
 				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserName(), res.GetMember().GetUserName())
+				assert.True(t, res.GetMember().HasEmail())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetEmail(), res.GetMember().GetEmail())
 			}
 		})
 	}
