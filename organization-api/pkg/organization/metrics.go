@@ -28,57 +28,36 @@ const (
 	bytesPerMB  = 1_000_000.0
 )
 
-// notControlPlane excludes the shoot's own control plane from cluster-wide
-// queries. Gardener's per-shoot Prometheus federates the control-plane pods
-// (kube-apiserver, etcd, ...) from the seed, relabelled to
-// namespace="shoot-control-plane" and carrying the seed's node names. Those
-// pods run on provider infrastructure, not on the tenant's nodes, so counting
-// them would show the seed's nodes to organization admins and inflate the
-// totals. Project queries need no such filter: their namespace=~ selector only
-// matches the project's own namespaces.
-const notControlPlane = `namespace!="shoot-control-plane"`
-
-// Cluster-wide queries shared by the cluster and organization RPCs.
+// Usage queries for the organization and cluster views. Gardener's per-shoot
+// Prometheus also holds the shoot's control plane, federated from the seed as
+// type="seed" (namespace "shoot-control-plane"); everything scraped from the
+// shoot itself carries type="shoot". Usage is read from the shoot's nodes
+// (node-exporter, kubelet), as Gardener's own node dashboards do: container
+// metrics only cover kube-system, node metrics include tenant workloads.
 const (
-	queryCPUUsed   = `sum(rate(container_cpu_usage_seconds_total{container!="",` + notControlPlane + `}[5m]))`
-	queryCPUTotal  = `sum(kube_node_status_capacity{resource="cpu"})`
-	queryMemUsed   = `sum(container_memory_working_set_bytes{container!="",` + notControlPlane + `})`
-	queryMemTotal  = `sum(kube_node_status_capacity{resource="memory"})`
-	queryPodsUsed  = `count(kube_pod_info{` + notControlPlane + `})`
-	queryPodsTotal = `sum(kube_node_status_capacity{resource="pods"})`
-	queryNetRx     = `sum(rate(container_network_receive_bytes_total{` + notControlPlane + `}[5m]))`
-	queryNetTx     = `sum(rate(container_network_transmit_bytes_total{` + notControlPlane + `}[5m]))`
-)
+	queryCPUUsed       = `sum(rate(node_cpu_seconds_total{type="shoot",mode!~"idle|iowait|steal"}[5m]))`
+	queryCPUUsedByNode = `sum(rate(node_cpu_seconds_total{type="shoot",mode!~"idle|iowait|steal"}[5m])) by (node)`
+	queryMemUsed       = `sum(node_memory_MemTotal_bytes{type="shoot"} - node_memory_MemAvailable_bytes{type="shoot"})`
+	queryMemUsedByNode = `sum(node_memory_MemTotal_bytes{type="shoot"} - node_memory_MemAvailable_bytes{type="shoot"}) by (node)`
+	// Running pods, as the kubelet counts them: Pending pods still count toward
+	// the node's max-pods capacity but not here. The kubelet job names a node by
+	// its internal IP (instance) only: max per IP keeps a relabelled series from
+	// counting twice, and the per-node query maps the IP to the node name, one
+	// kube_node_info series per IP (it splits when a node's versions change).
+	queryPods       = `sum(max by (instance) (kubelet_running_pods{type="shoot"}))`
+	queryPodsByNode = `max by (node) (label_replace(kubelet_running_pods{type="shoot"}, "internal_ip", "$1", "instance", "(.+)") * on (internal_ip) group_left (node) topk by (internal_ip) (1, kube_node_info{type="shoot"}))`
+	// Traffic on the nodes' own interfaces; tunl0 carries pod traffic that eth0
+	// carries again, encapsulated.
+	queryNetRx = `sum(rate(container_network_receive_bytes_total{type="shoot",host_network="true",interface!="tunl0"}[5m]))`
+	queryNetTx = `sum(rate(container_network_transmit_bytes_total{type="shoot",host_network="true",interface!="tunl0"}[5m]))`
 
-// Per-node queries. The capacity queries key on the Node name in node.
-var (
-	queryNodeCPUUsed = sumByNode(func(nodeSel string) string {
-		return `rate(container_cpu_usage_seconds_total{container!="",` + notControlPlane + `,` + nodeSel + `}[5m])`
-	})
-	queryNodeMemUsed = sumByNode(func(nodeSel string) string {
-		return `container_memory_working_set_bytes{container!="",` + notControlPlane + `,` + nodeSel + `}`
-	})
+	queryCPUTotal        = `sum(kube_node_status_capacity{type="shoot",resource="cpu"})`
+	queryCPUTotalByNode  = `sum(kube_node_status_capacity{type="shoot",resource="cpu"}) by (node)`
+	queryMemTotal        = `sum(kube_node_status_capacity{type="shoot",resource="memory"})`
+	queryMemTotalByNode  = `sum(kube_node_status_capacity{type="shoot",resource="memory"}) by (node)`
+	queryPodsTotal       = `sum(kube_node_status_capacity{type="shoot",resource="pods"})`
+	queryPodsTotalByNode = `sum(kube_node_status_capacity{type="shoot",resource="pods"}) by (node)`
 )
-
-const (
-	queryNodeCPUTotal  = `sum(kube_node_status_capacity{resource="cpu"}) by (node)`
-	queryNodeMemTotal  = `sum(kube_node_status_capacity{resource="memory"}) by (node)`
-	queryNodePodsUsed  = `count(kube_pod_info{` + notControlPlane + `}) by (node)`
-	queryNodePodsTotal = `sum(kube_node_status_capacity{resource="pods"}) by (node)`
-)
-
-// sumByNode sums cAdvisor usage per node. expr builds the series selector
-// around a matcher on node. Series that carry node (kube-prometheus-stack)
-// keep it: that is the Node name the capacity queries use. Gardener's shoot
-// cAdvisor series have no node label; their node name is in
-// kubernetes_io_hostname, copied from the node's labels, so only those get
-// node from it. kubelet sets that label to the Node name unless a cloud
-// provider renames the node; a mismatch would split the node into a usage row
-// and a capacity row.
-func sumByNode(expr func(nodeSel string) string) string {
-	return `sum by (node) (` + expr(`node!=""`) + ` or label_replace(` + expr(`node=""`) +
-		`, "node", "$1", "kubernetes_io_hostname", "(.+)"))`
-}
 
 // promClientFor selects the Prometheus backend for one cluster:
 //   - "per-shoot" → the cluster's per-shoot Prometheus at the monitoring
@@ -206,15 +185,15 @@ func (s *Server) GetClusterWorkloadMetrics(
 	qi(&cpuTotal, "query cpu total", queryCPUTotal)
 	qi(&memUsed, "query mem used", queryMemUsed)
 	qi(&memTotal, "query mem total", queryMemTotal)
-	qi(&podsUsed, "query pods used", queryPodsUsed)
+	qi(&podsUsed, "query pods used", queryPods)
 	qi(&podsTotal, "query pods total", queryPodsTotal)
 
-	qs(&nodeCPUUsed, "query per-node cpu used", queryNodeCPUUsed)
-	qs(&nodeCPUTotal, "query per-node cpu total", queryNodeCPUTotal)
-	qs(&nodeMemUsed, "query per-node mem used", queryNodeMemUsed)
-	qs(&nodeMemTotal, "query per-node mem total", queryNodeMemTotal)
-	qs(&nodePodsUsed, "query per-node pods used", queryNodePodsUsed)
-	qs(&nodePodsTotal, "query per-node pods total", queryNodePodsTotal)
+	qs(&nodeCPUUsed, "query per-node cpu used", queryCPUUsedByNode)
+	qs(&nodeCPUTotal, "query per-node cpu total", queryCPUTotalByNode)
+	qs(&nodeMemUsed, "query per-node mem used", queryMemUsedByNode)
+	qs(&nodeMemTotal, "query per-node mem total", queryMemTotalByNode)
+	qs(&nodePodsUsed, "query per-node pods used", queryPodsByNode)
+	qs(&nodePodsTotal, "query per-node pods total", queryPodsTotalByNode)
 
 	err = g.Wait()
 	if err != nil {
@@ -289,7 +268,7 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 
 	qr(&cpuSeries, "query cpu time-series", queryCPUUsed)
 	qr(&memSeries, "query mem time-series", queryMemUsed)
-	qr(&podSeries, "query pod time-series", queryPodsUsed)
+	qr(&podSeries, "query pod time-series", queryPods)
 	qr(&netRxSeries, "query net rx time-series", queryNetRx)
 	qr(&netTxSeries, "query net tx time-series", queryNetTx)
 
@@ -375,7 +354,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 			qi(&r.cpuTotal, "query cpu total", queryCPUTotal)
 			qi(&r.memUsed, "query mem used", queryMemUsed)
 			qi(&r.memTotal, "query mem total", queryMemTotal)
-			qi(&r.podsUsed, "query pods used", queryPodsUsed)
+			qi(&r.podsUsed, "query pods used", queryPods)
 			qi(&r.podsTotal, "query pods total", queryPodsTotal)
 
 			if err := sub.Wait(); err != nil {
@@ -477,7 +456,7 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 
 			qr(&r.cpu, "query cpu time-series", queryCPUUsed)
 			qr(&r.mem, "query mem time-series", queryMemUsed)
-			qr(&r.pods, "query pod time-series", queryPodsUsed)
+			qr(&r.pods, "query pod time-series", queryPods)
 			qr(&r.netRx, "query net rx time-series", queryNetRx)
 			qr(&r.netTx, "query net tx time-series", queryNetTx)
 
@@ -601,22 +580,22 @@ func (s *Server) GetProjectWorkloadMetrics(
 		})
 	}
 
-	qi(&cpuUsed, "query cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter))
-	qi(&cpuTotal, "query cpu total", `sum(kube_node_status_capacity{resource="cpu"})`)
-	qi(&memUsed, "query mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter))
-	qi(&memTotal, "query mem total", `sum(kube_node_status_capacity{resource="memory"})`)
-	qi(&podsUsed, "query pods used", fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter))
-	qi(&podsTotal, "query pods total", `sum(kube_node_status_capacity{resource="pods"})`)
+	qi(&cpuUsed, "query cpu used", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{type="shoot",container!="",%s}[5m]))`, nsFilter))
+	qi(&cpuTotal, "query cpu total", queryCPUTotal)
+	qi(&memUsed, "query mem used", fmt.Sprintf(`sum(container_memory_working_set_bytes{type="shoot",container!="",%s})`, nsFilter))
+	qi(&memTotal, "query mem total", queryMemTotal)
+	qi(&podsUsed, "query pods used", fmt.Sprintf(`count(kube_pod_info{type="shoot",%s})`, nsFilter))
+	qi(&podsTotal, "query pods total", queryPodsTotal)
 
-	qs(&nsCPU, "query per-namespace cpu", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m])) by (namespace)`, nsFilter))
-	qs(&nsMem, "query per-namespace mem", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s}) by (namespace)`, nsFilter))
-	qs(&nsPods, "query per-namespace pods", fmt.Sprintf(`count(kube_pod_info{%s}) by (namespace)`, nsFilter))
-	qs(&nsCPUReq, "query per-namespace cpu requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="cpu",%s}) by (namespace)`, nsFilter))
-	qs(&nsCPULim, "query per-namespace cpu limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="cpu",%s}) by (namespace)`, nsFilter))
-	qs(&nsMemReq, "query per-namespace mem requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{resource="memory",%s}) by (namespace)`, nsFilter))
-	qs(&nsMemLim, "query per-namespace mem limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{resource="memory",%s}) by (namespace)`, nsFilter))
-	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
-	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
+	qs(&nsCPU, "query per-namespace cpu", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{type="shoot",container!="",%s}[5m])) by (namespace)`, nsFilter))
+	qs(&nsMem, "query per-namespace mem", fmt.Sprintf(`sum(container_memory_working_set_bytes{type="shoot",container!="",%s}) by (namespace)`, nsFilter))
+	qs(&nsPods, "query per-namespace pods", fmt.Sprintf(`count(kube_pod_info{type="shoot",%s}) by (namespace)`, nsFilter))
+	qs(&nsCPUReq, "query per-namespace cpu requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{type="shoot",resource="cpu",%s}) by (namespace)`, nsFilter))
+	qs(&nsCPULim, "query per-namespace cpu limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{type="shoot",resource="cpu",%s}) by (namespace)`, nsFilter))
+	qs(&nsMemReq, "query per-namespace mem requests", fmt.Sprintf(`sum(kube_pod_container_resource_requests{type="shoot",resource="memory",%s}) by (namespace)`, nsFilter))
+	qs(&nsMemLim, "query per-namespace mem limits", fmt.Sprintf(`sum(kube_pod_container_resource_limits{type="shoot",resource="memory",%s}) by (namespace)`, nsFilter))
+	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{type="shoot",%s}[5m])) by (namespace)`, nsFilter))
+	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{type="shoot",%s}[5m])) by (namespace)`, nsFilter))
 
 	err = g.Wait()
 	if err != nil {
@@ -701,11 +680,11 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		})
 	}
 
-	qr(&cpuSeries, "query cpu time-series", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{container!="",%s}[5m]))`, nsFilter))
-	qr(&memSeries, "query mem time-series", fmt.Sprintf(`sum(container_memory_working_set_bytes{container!="",%s})`, nsFilter))
-	qr(&podSeries, "query pod time-series", fmt.Sprintf(`count(kube_pod_info{%s})`, nsFilter))
-	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, nsFilter))
-	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, nsFilter))
+	qr(&cpuSeries, "query cpu time-series", fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{type="shoot",container!="",%s}[5m]))`, nsFilter))
+	qr(&memSeries, "query mem time-series", fmt.Sprintf(`sum(container_memory_working_set_bytes{type="shoot",container!="",%s})`, nsFilter))
+	qr(&podSeries, "query pod time-series", fmt.Sprintf(`count(kube_pod_info{type="shoot",%s})`, nsFilter))
+	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{type="shoot",%s}[5m]))`, nsFilter))
+	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{type="shoot",%s}[5m]))`, nsFilter))
 
 	err = g.Wait()
 	if err != nil {
@@ -765,10 +744,8 @@ func emptyResourceTotals() *organizationv1.ResourceUsageInfo {
 // buildNodeMetrics combines six per-node sample slices into NodeWorkloadMetrics
 // messages. Node names are unioned across all slices so that nodes appearing
 // in only some results are still included (with zeros for missing values).
-// Samples without a node name are dropped: kube_pod_info reports unscheduled
-// pods with node="", which is not a node to show. The same goes for usage on a
-// backend whose cAdvisor series carry neither node nor kubernetes_io_hostname:
-// it still counts in the cluster totals, just not under any node.
+// Samples without a node name are dropped: they are not a node to show, and
+// they still count in the cluster totals.
 func buildNodeMetrics(
 	cpuUsed, cpuTotal, memUsed, memTotal, podsUsed, podsTotal []prom.Sample,
 ) []*organizationv1.NodeWorkloadMetrics {

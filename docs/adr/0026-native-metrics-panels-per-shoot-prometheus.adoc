@@ -69,3 +69,12 @@ Org-api therefore resolves the CA per shoot, from the `<shoot>.ca-cluster` Confi
 
 The shoot CA, like the monitoring URL and credentials, is trusted because only Fundament's own Gardener credential is a member of the Gardener projects: project members can write `<shoot>.ca-cluster`. Granting tenants Gardener project membership would break that assumption.
 ====
+
+[NOTE]
+====
+Amended 2026-11-17. Option 1 stated that the per-shoot Prometheus "only contains its own shoot's data, so the existing unfiltered PromQL queries become correct". It also holds the shoot's control plane: Gardener federates the control-plane pods from the seed into it (job `kube-kubelet-seed`, `namespace="shoot-control-plane"`, `type="seed"`, gardener/gardener v1.147.5 `pkg/component/observability/monitoring/prometheus/shoot/scrapeconfigs.go`). Unfiltered queries therefore added control-plane usage to a cluster's usage and divided it by the capacity of the shoot's nodes; on a small cluster about three quarters of the shown CPU and memory was control plane.
+
+Every query now selects `type="shoot"`, the label Gardener puts on what it scrapes from the shoot itself. Usage in the organization and cluster views is read from the shoot's nodes (`node_cpu_seconds_total`, `node_memory_MemAvailable_bytes`, `kubelet_running_pods`), as Gardener's own node dashboards do: Gardener collects container metrics for `kube-system` only, so node metrics are the ones that include tenant workloads. Pods are running pods (`kubelet_running_pods`): Pending pods count toward a node's max-pods capacity but not toward the shown usage.
+
+The organization and cluster views have no per-namespace breakdown for now: Gardener collects container metrics for `kube-system` only and has no setting to widen that.
+====
