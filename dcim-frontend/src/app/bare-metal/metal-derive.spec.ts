@@ -142,6 +142,10 @@ describe('machineCounts', () => {
     });
   });
 
+  it('counts a machine whose BMC reported no power state as unknown', () => {
+    expect(machineCounts([machine({ powerState: null, powerWatts: null })]).poweredUnknown).toBe(1);
+  });
+
   it('only counts allocated machines as allocated', () => {
     expect(machineCounts([machine({ clusterTag: '' })]).allocated).toBe(0);
   });

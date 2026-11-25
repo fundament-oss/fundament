@@ -87,7 +87,7 @@ const ISSUE_BY_SEQ: Record<number, string[]> = {
   12: ['liveliness-dead'],
   19: ['last-event-error'],
   22: ['bmc-info-outdated'],
-  36: ['failed-machine-reclaim'],
+  26: ['failed-machine-reclaim'],
   43: ['last-event-error'],
 };
 
@@ -258,7 +258,7 @@ function classify(plan: SizePlan, index: number): Classification {
 function stateOf(classification: Classification, seq: number): MachineState {
   if (classification === 'faulty') return 'locked';
   if (classification === 'unavailable' || classification === 'other') return 'other';
-  if (classification === 'allocated' && seq === 20) return 'tainted';
+  if (classification === 'allocated' && seq === 13) return 'tainted';
   if (classification === 'allocated' && seq === 28) return 'locked';
   return 'available';
 }

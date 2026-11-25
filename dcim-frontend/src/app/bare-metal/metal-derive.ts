@@ -115,7 +115,11 @@ export function machineCounts(machines: Machine[]): MachineCounts {
     allocated: machines.filter((machine) => machine.clusterTag !== '').length,
     poweredOn: machines.filter((machine) => machine.powerState === 'on').length,
     poweredOff: machines.filter((machine) => machine.powerState === 'off').length,
-    poweredUnknown: machines.filter((machine) => machine.powerState === 'unknown').length,
+    // Unknown is a state the BMC reported as neither on nor off, or no state
+    // reported at all: either way nobody can tell from here.
+    poweredUnknown: machines.filter(
+      (machine) => machine.powerState !== 'on' && machine.powerState !== 'off',
+    ).length,
     degradedPsu: machines.filter(
       (machine) => machine.psuTotal > 0 && machine.psuHealthy < machine.psuTotal,
     ).length,

@@ -7,23 +7,38 @@
     [attr.text]="title()"
     back-text="Bare metal"
     collapse-anchor="bare-metal-title"
-    (back)="goToCapacity()"
+    (back)="goToMenu()"
   ></nldd-top-title-bar>
   <nldd-simple-section>
     @if (!metrics()) {
       <!-- No snapshot: say why rather than draw an empty estate. The section
            stays in the sidebar, as Platform does while its API is
            unconfigured. -->
-      @if (status() === 'not-configured') {
-        <nldd-inline-dialog
-          text="Not available"
-          supporting-text="This environment has no metal-stack metrics configured."
-        ></nldd-inline-dialog>
-      } @else if (status() === 'unavailable') {
-        <nldd-inline-dialog
-          text="Unreachable"
-          supporting-text="metal-stack metrics are unreachable right now. Try again in a few minutes."
-        ></nldd-inline-dialog>
+      @switch (status()) {
+        @case ('not-configured') {
+          <nldd-inline-dialog
+            text="Not available"
+            supporting-text="This environment has no metal-stack metrics configured."
+          ></nldd-inline-dialog>
+        }
+        @case ('no-data') {
+          <nldd-inline-dialog
+            text="No metal-stack data"
+            supporting-text="The metrics store holds no metal-stack series. Check that the metal-metrics-exporter is deployed and scraped."
+          ></nldd-inline-dialog>
+        }
+        @case ('unavailable') {
+          <nldd-inline-dialog
+            text="Unreachable"
+            supporting-text="metal-stack metrics are unreachable right now. The page tries again every minute."
+          ></nldd-inline-dialog>
+        }
+        @default {
+          <nldd-activity-indicator
+            show-text
+            text="Loading metal-stack metrics..."
+          ></nldd-activity-indicator>
+        }
       }
     } @else {
       <nldd-title id="bare-metal-title" size="2">
@@ -34,6 +49,15 @@
         <p>Collected {{ collectedAt() }}.</p>
       </nldd-rich-text>
       <nldd-spacer size="16"></nldd-spacer>
+
+      @if (staleReason(); as reason) {
+        <nldd-banner
+          variant="warning"
+          text="Not refreshed"
+          [attr.supporting-text]="reason + ' This is the snapshot collected ' + collectedAt() + '.'"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
 
       @switch (view().kind) {
         @case ('capacity') {
@@ -238,17 +262,13 @@
           @for (machine of machines.machines; track machine.id) {
             <nldd-table-row>
               <nldd-text-cell [attr.text]="machineName(machine)"></nldd-text-cell>
-              <nldd-text-cell hide-below="md">
-                @if (machine.clusterTag) {
-                  <nldd-link
-                    [attr.href]="clusterPath(machine.clusterTag)"
-                    [attr.text]="machine.clusterTag"
-                    (click)="go($event, clusterPath(machine.clusterTag))"
-                  ></nldd-link>
-                } @else {
-                  None
-                }
-              </nldd-text-cell>
+              <!-- Text, not a link: the tag is the id metal-stack allocated
+                   the machine under (Gardener's shoot), not fundament's
+                   cluster id, so /platform/clusters/<tag> would not exist. -->
+              <nldd-text-cell
+                hide-below="md"
+                [attr.text]="machine.clusterTag || 'None'"
+              ></nldd-text-cell>
               <nldd-text-cell hide-below="lg" [attr.text]="machine.partition"></nldd-text-cell>
               <nldd-text-cell hide-below="lg" [attr.text]="machine.size"></nldd-text-cell>
               <nldd-cell>
@@ -294,13 +314,13 @@
         <nldd-spacer size="12"></nldd-spacer>
         <nldd-table
           accessible-label="Networks"
-          columns="minmax(160px, 1fr) 100px minmax(180px, 240px) minmax(180px, 240px)"
-          md-columns="minmax(160px, 1fr) minmax(180px, 240px) minmax(180px, 240px)"
+          columns="minmax(160px, 1fr) minmax(180px, 240px) minmax(180px, 240px)"
           sm-columns="minmax(140px, 1fr) minmax(160px, 220px)"
         >
           <nldd-table-row slot="header">
+            <!-- The partition is the network's supporting text at every
+                 width, so it has no column of its own. -->
             <nldd-text-cell text="Network"></nldd-text-cell>
-            <nldd-text-cell text="Partition" hide-below="lg"></nldd-text-cell>
             <nldd-text-cell text="IPs"></nldd-text-cell>
             <nldd-text-cell text="Prefixes" hide-below="md"></nldd-text-cell>
           </nldd-table-row>
@@ -310,7 +330,6 @@
                 [attr.text]="item.name"
                 [attr.supporting-text]="item.partition"
               ></nldd-text-cell>
-              <nldd-text-cell hide-below="lg" [attr.text]="item.partition"></nldd-text-cell>
               <nldd-cell>
                 <nldd-progress-bar
                   size="sm"

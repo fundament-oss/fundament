@@ -40,9 +40,11 @@ const (
 
 // MetalServiceClient is a client for the dcim.v1.MetalService service.
 type MetalServiceClient interface {
-	// GetMetalSnapshot runs every query once and answers them by name. It fails
-	// with FailedPrecondition when no store is configured and with Unavailable
-	// when the store cannot be read or holds no metal-stack series.
+	// GetMetalSnapshot runs every query and answers them by name. dcim-api may
+	// answer a snapshot of up to 30 seconds old. It fails with
+	// FailedPrecondition when no store is configured, with NotFound when the
+	// store holds no metal-stack series and with Unavailable when the store
+	// cannot be read.
 	GetMetalSnapshot(context.Context, *v1.GetMetalSnapshotRequest) (*v1.GetMetalSnapshotResponse, error)
 }
 
@@ -82,9 +84,11 @@ func (c *metalServiceClient) GetMetalSnapshot(ctx context.Context, req *v1.GetMe
 
 // MetalServiceHandler is an implementation of the dcim.v1.MetalService service.
 type MetalServiceHandler interface {
-	// GetMetalSnapshot runs every query once and answers them by name. It fails
-	// with FailedPrecondition when no store is configured and with Unavailable
-	// when the store cannot be read or holds no metal-stack series.
+	// GetMetalSnapshot runs every query and answers them by name. dcim-api may
+	// answer a snapshot of up to 30 seconds old. It fails with
+	// FailedPrecondition when no store is configured, with NotFound when the
+	// store holds no metal-stack series and with Unavailable when the store
+	// cannot be read.
 	GetMetalSnapshot(context.Context, *v1.GetMetalSnapshotRequest) (*v1.GetMetalSnapshotResponse, error)
 }
 

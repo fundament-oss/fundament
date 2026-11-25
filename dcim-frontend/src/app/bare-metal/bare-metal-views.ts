@@ -10,16 +10,23 @@ export type BareMetalView =
   { kind: 'capacity' } | { kind: 'machines' } | { kind: 'network' } | { kind: 'api' };
 
 /**
- * /bare-metal, /bare-metal/machines, /bare-metal/network and /bare-metal/api:
- * one route config for all four, as the Platform section does, so moving
- * between them is a parameter change on the same page.
+ * /bare-metal/capacity, /bare-metal/machines, /bare-metal/network and
+ * /bare-metal/api: one route config for all four, as the Platform section
+ * does, so moving between them is a parameter change on the same page.
+ *
+ * /bare-metal itself shows capacity too, as /inventory shows all assets, but
+ * the menu links to /bare-metal/capacity. The shell reads the section's own
+ * address as depth 1, the menu: once the columns collapse to one, a link to
+ * /bare-metal would leave you on the menu rather than open the view.
  */
 export function bareMetalMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length === 0 || segments[0].path !== 'bare-metal') return null;
   if (segments.length === 1) return { consumed: segments, posParams: {} };
   if (segments.length !== 2) return null;
   const view = segments[1].path;
-  if (view !== 'machines' && view !== 'network' && view !== 'api') return null;
+  if (view !== 'capacity' && view !== 'machines' && view !== 'network' && view !== 'api') {
+    return null;
+  }
   return { consumed: segments, posParams: { view: segments[1] } };
 }
 
@@ -36,7 +43,7 @@ export function bareMetalViewOf(params: ParamMap): BareMetalView {
 export function bareMetalPath(view: BareMetalView): string {
   switch (view.kind) {
     case 'capacity':
-      return BARE_METAL_PATH;
+      return `${BARE_METAL_PATH}/capacity`;
     case 'machines':
       return `${BARE_METAL_PATH}/machines`;
     case 'network':

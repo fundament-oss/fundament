@@ -156,9 +156,11 @@ export const GetMetalSnapshotResponseSchema: GenMessage<GetMetalSnapshotResponse
  */
 export const MetalService: GenService<{
   /**
-   * GetMetalSnapshot runs every query once and answers them by name. It fails
-   * with FailedPrecondition when no store is configured and with Unavailable
-   * when the store cannot be read or holds no metal-stack series.
+   * GetMetalSnapshot runs every query and answers them by name. dcim-api may
+   * answer a snapshot of up to 30 seconds old. It fails with
+   * FailedPrecondition when no store is configured, with NotFound when the
+   * store holds no metal-stack series and with Unavailable when the store
+   * cannot be read.
    *
    * @generated from rpc dcim.v1.MetalService.GetMetalSnapshot
    */

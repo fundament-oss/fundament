@@ -6,9 +6,17 @@ import connectErrorMessage from '../../connect/error';
 import type { MetalMetrics } from './metal-metrics';
 import metalFromProto from './metal-from-proto';
 
-/** Where the read stands. `not-configured`: this environment has no
- *  metal-stack metrics. `unavailable`: it has, but they cannot be read now. */
-export type MetalStatus = 'loading' | 'ok' | 'not-configured' | 'unavailable';
+/** Where the last read stands. `not-configured`: this environment has no
+ *  metal-stack metrics. `no-data`: it has a store, but nothing scrapes the
+ *  exporter into it (yet). `unavailable`: the store cannot be read now. */
+export type MetalStatus = 'loading' | 'ok' | 'not-configured' | 'no-data' | 'unavailable';
+
+/** The status a failed read leaves, by the code dcim-api answered with. */
+export function failedStatus(code: Code): MetalStatus {
+  if (code === Code.FailedPrecondition) return 'not-configured';
+  if (code === Code.NotFound) return 'no-data';
+  return 'unavailable';
+}
 
 /**
  * What metal-stack says about the estate, read through dcim-api, which queries
@@ -45,9 +53,9 @@ export default class MetalMetricsService {
         this.state.set('ok');
       })
       .catch((err: unknown) => {
-        const code = ConnectError.from(err).code;
-        this.state.set(code === Code.FailedPrecondition ? 'not-configured' : 'unavailable');
-        if (code !== Code.FailedPrecondition) {
+        const status = failedStatus(ConnectError.from(err).code);
+        this.state.set(status);
+        if (status === 'unavailable') {
           // eslint-disable-next-line no-console
           console.error(connectErrorMessage(err));
         }

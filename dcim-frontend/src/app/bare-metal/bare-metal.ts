@@ -14,9 +14,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import opensElsewhere from '../shared/opens-elsewhere';
-import { clusterPath } from '../platform/platform-views';
 import MetalMetricsService from './metal-metrics.service';
-import { bareMetalPath, bareMetalViewOf } from './bare-metal-views';
+import { BARE_METAL_PATH, bareMetalPath, bareMetalViewOf } from './bare-metal-views';
 import {
   bucketCounts,
   bucketLabels,
@@ -110,6 +109,11 @@ interface ApiView {
   components: ComponentStatus[];
 }
 
+/** How often the page reads the snapshot again while it is open. dcim-api
+ *  answers from a snapshot of up to 30 s old, and the series change every
+ *  minute or two. */
+const REFRESH_INTERVAL_MS = 60_000;
+
 /** The quantiles a latency histogram is read for. */
 function percentileTiles(histogram: Histogram): Tile[] {
   return [
@@ -137,6 +141,30 @@ export default class BareMetalComponent implements OnDestroy {
   protected readonly metrics = this.metalMetrics.snapshot;
 
   protected readonly status = this.metalMetrics.status;
+
+  /** Why the snapshot on screen is not the latest, or null while it is. A
+   *  failed read keeps the last snapshot, so the page still has something to
+   *  show; this says it may be out of date. */
+  protected readonly staleReason = computed(() => {
+    const status = this.status();
+    switch (status) {
+      case 'loading':
+      case 'ok':
+        return null;
+      case 'not-configured':
+        return 'This environment no longer has metal-stack metrics configured.';
+      case 'no-data':
+        return 'The store no longer holds metal-stack series.';
+      case 'unavailable':
+        return 'metal-stack metrics are unreachable right now.';
+      default: {
+        const unhandled: never = status;
+        throw new Error(`unhandled metal status ${JSON.stringify(unhandled)}`);
+      }
+    }
+  });
+
+  private refreshTimer?: ReturnType<typeof setInterval>;
 
   private readonly secondaryNav = inject(SecondaryNavService);
 
@@ -290,8 +318,6 @@ export default class BareMetalComponent implements OnDestroy {
 
   protected readonly tokenTag = tokenTag;
 
-  protected readonly clusterPath = clusterPath;
-
   protected readonly machineName = machineName;
 
   protected readonly machineRole = machineRole;
@@ -312,8 +338,9 @@ export default class BareMetalComponent implements OnDestroy {
 
   constructor() {
     // The shell reads once at start; entering the section reads again, so the
-    // page is not as old as the session.
+    // page is not as old as the session, and so does every minute after.
     this.metalMetrics.refresh();
+    this.refreshTimer = setInterval(() => this.metalMetrics.refresh(), REFRESH_INTERVAL_MS);
     effect(() => {
       const template = this.navTemplate();
       if (template) this.secondaryNav.set(template);
@@ -321,6 +348,7 @@ export default class BareMetalComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearInterval(this.refreshTimer);
     const template = this.navTemplate();
     if (template) this.secondaryNav.clear(template);
   }
@@ -336,7 +364,8 @@ export default class BareMetalComponent implements OnDestroy {
     this.router.navigateByUrl(path);
   }
 
-  protected goToCapacity(): void {
-    this.router.navigateByUrl(this.paths.capacity);
+  /** Back from a view is back to the menu, so the address says so too. */
+  protected goToMenu(): void {
+    this.router.navigateByUrl(BARE_METAL_PATH);
   }
 }

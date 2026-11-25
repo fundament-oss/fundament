@@ -18,9 +18,10 @@ import (
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
-// fakeMetalStore answers the capacity query with one partition, every other
-// instant query with nothing and every range query with two points.
-func fakeMetalStore(t *testing.T, status int) string {
+// fakeMetalStore answers the capacity query with one partition (none when
+// empty is set), every other instant query with nothing and every range query
+// with two points.
+func fakeMetalStore(t *testing.T, status int, empty bool) string {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if status != 0 {
@@ -31,7 +32,7 @@ func fakeMetalStore(t *testing.T, status int) string {
 		switch {
 		case r.URL.Path == "/api/v1/query_range":
 			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[1764000000,"4200"],[1764000300,"4300"]]}]}}`))
-		case strings.HasPrefix(query, `{__name__=~"metal_partition_capacity_`):
+		case strings.Contains(query, `{__name__=~"metal_partition_capacity_`) && !empty:
 			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{"__name__":"metal_partition_capacity_total","partition":"fire","size":"c1-large-x86"},"value":[1764000000,"12"]}]}}`))
 		default:
 			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[]}}`))
@@ -49,7 +50,12 @@ func metalClient(t *testing.T, opts ...dcim.Option) dcimv1connect.MetalServiceCl
 
 func withFakeStore(t *testing.T, status int) dcim.Option {
 	t.Helper()
-	return dcim.WithMetal(metal.NewReader(prom.NewHTTPClient(fakeMetalStore(t, status))))
+	return dcim.WithMetal(metal.NewReader(prom.NewHTTPClient(fakeMetalStore(t, status, false))))
+}
+
+func withEmptyStore(t *testing.T) dcim.Option {
+	t.Helper()
+	return dcim.WithMetal(metal.NewReader(prom.NewHTTPClient(fakeMetalStore(t, 0, true))))
 }
 
 func TestGetMetalSnapshot(t *testing.T) {
@@ -76,6 +82,7 @@ func TestGetMetalSnapshotErrors(t *testing.T) {
 		code connect.Code
 	}{
 		{name: "not configured", code: connect.CodeFailedPrecondition},
+		{name: "no metal-stack series", opts: []dcim.Option{withEmptyStore(t)}, code: connect.CodeNotFound},
 		{name: "store down", opts: []dcim.Option{withFakeStore(t, http.StatusBadGateway)}, code: connect.CodeUnavailable},
 		{name: "query rejected", opts: []dcim.Option{withFakeStore(t, http.StatusBadRequest)}, code: connect.CodeInternal},
 	}

@@ -92,11 +92,16 @@ export function issueSeverityTag(severity: IssueSeverity): Tag {
   }
 }
 
-/** How many issues a machine has, in the colour of its worst one. */
+/** How many issues a machine has, in the colour of its worst one, as
+ *  issueSeverityTag colours each. */
 export function machineIssueTag(machine: Machine): Tag | null {
   if (machine.issues.length === 0) return null;
-  const critical = machine.issues.some((issue) => issue.severity === 'critical');
-  return { text: String(machine.issues.length), color: critical ? 'critical' : 'warning' };
+  const has = (severity: IssueSeverity) =>
+    machine.issues.some((issue) => issue.severity === severity);
+  let worst: IssueSeverity = 'minor';
+  if (has('critical')) worst = 'critical';
+  else if (has('major')) worst = 'major';
+  return { text: String(machine.issues.length), color: issueSeverityTag(worst).color };
 }
 
 export function componentTag(component: ComponentStatus): Tag {
@@ -109,9 +114,11 @@ export function syncTag(syncFailing: boolean): Tag {
     : { text: 'In sync', color: 'success' };
 }
 
-/** A token that expires within a week is worth a warning before it does. */
+/** A token that expires within a week is worth a warning before it does.
+ *  Past its expiry the exporter reports a negative lifetime. */
 export function tokenTag(seconds: number | null): Tag | null {
   if (seconds === null || seconds >= 7 * 86400) return null;
+  if (seconds <= 0) return { text: 'Expired', color: 'critical' };
   return { text: 'Expires soon', color: 'warning' };
 }
 
@@ -148,9 +155,9 @@ export function bgpText(item: Switch): string {
 }
 
 export function tokenText(component: ComponentStatus): string {
-  return component.tokenLifetimeSeconds === null
-    ? ''
-    : formatDuration(component.tokenLifetimeSeconds);
+  const seconds = component.tokenLifetimeSeconds;
+  if (seconds === null) return '';
+  return seconds <= 0 ? 'Expired' : formatDuration(seconds);
 }
 
 export function componentType(component: ComponentStatus): string {

@@ -23,11 +23,25 @@ func (s *Server) GetMetalSnapshot(
 
 	snapshot, err := s.metal.Snapshot(ctx)
 	if err != nil {
-		if metal.IsBadQuery(err) {
+		switch {
+		case ctx.Err() != nil:
+			// The caller went away or ran out of time; the store is fine.
+			code := connect.CodeCanceled
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				code = connect.CodeDeadlineExceeded
+			}
+			return nil, connect.NewError(code, ctx.Err())
+		case errors.Is(err, metal.ErrNoData):
+			// The store answers but nothing scrapes the exporter (yet): a
+			// deployment matter, so retrying does not help and it is no outage.
+			s.logger.InfoContext(ctx, "no metal-stack series in the store")
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("the store holds no metal-stack series"))
+		case metal.IsBadQuery(err):
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("metal-stack query rejected: %w", err))
+		default:
+			s.logger.WarnContext(ctx, "metal-stack metrics unavailable", "error", err)
+			return nil, connect.NewError(connect.CodeUnavailable, errors.New("metal-stack metrics are unavailable"))
 		}
-		s.logger.WarnContext(ctx, "metal-stack metrics unavailable", "error", err)
-		return nil, connect.NewError(connect.CodeUnavailable, errors.New("metal-stack metrics are unavailable"))
 	}
 
 	results := make(map[string]*dcimv1.MetalQueryResult, len(snapshot.Results))

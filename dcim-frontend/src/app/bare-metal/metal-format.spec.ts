@@ -4,6 +4,7 @@ import {
   componentType,
   formatDuration,
   formatKilowatts,
+  formatMilliseconds,
   formatRate,
   formatSeconds,
   formatTimestamp,
@@ -53,6 +54,7 @@ describe('formatters', () => {
   it('writes watts, kilowatts and milliseconds', () => {
     expect(formatWatts(1234.6)).toBe('1235 W');
     expect(formatKilowatts(12345)).toBe('12.3 kW');
+    expect(formatMilliseconds(1234.6)).toBe('1235 ms');
   });
 
   it('writes a latency in the unit that keeps it readable', () => {
@@ -116,6 +118,13 @@ describe('machineIssueTag', () => {
       ),
     ).toEqual({ text: '1', color: 'critical' });
   });
+
+  it('keeps a machine with only minor issues neutral, as the issue itself is', () => {
+    const issues = [
+      { id: 'last-event-error', severity: 'minor' as const, description: '', refUrl: '' },
+    ];
+    expect(machineIssueTag(machine({ issues }))).toEqual({ text: '1', color: 'neutral' });
+  });
 });
 
 describe('component and switch tags', () => {
@@ -131,6 +140,8 @@ describe('component and switch tags', () => {
     expect(tokenTag(7 * 86400)).toBeNull();
     expect(tokenTag(2 * 86400)).toEqual({ text: 'Expires soon', color: 'warning' });
     expect(tokenTag(null)).toBeNull();
+    expect(tokenTag(0)).toEqual({ text: 'Expired', color: 'critical' });
+    expect(tokenTag(-3 * 86400)).toEqual({ text: 'Expired', color: 'critical' });
   });
 });
 
@@ -191,5 +202,6 @@ describe('table cells', () => {
     expect(componentType(component({ type: '' }))).toBe('metal-api');
     expect(tokenText(component())).toBe('30 d');
     expect(tokenText(component({ tokenLifetimeSeconds: null }))).toBe('');
+    expect(tokenText(component({ tokenLifetimeSeconds: -3 * 86400 }))).toBe('Expired');
   });
 });

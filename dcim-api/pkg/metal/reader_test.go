@@ -56,7 +56,7 @@ func (f *fakeStore) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/api/v1/query_range":
 		_, _ = w.Write([]byte(powerMatrix))
-	case strings.HasPrefix(q.Get("query"), `{__name__=~"metal_partition_capacity_`):
+	case strings.Contains(q.Get("query"), `{__name__=~"metal_partition_capacity_`):
 		_, _ = w.Write([]byte(f.capacity))
 	default:
 		_, _ = w.Write([]byte(emptyVector))
@@ -107,22 +107,86 @@ func TestSnapshotRangeQueriesUseFixedSteps(t *testing.T) {
 		byQuery[req.query] = req
 	}
 
-	power := byQuery[`sum(metal_machine_power_usage)`]
+	power := byQuery[exprOf(t, "power")]
 	assert.Equal(t, "/api/v1/query_range", power.path)
 	assert.Equal(t, "300", power.step)
-	// Ends on the 5 min boundary before now, starts 24 h earlier.
+	// Ends on the 5 min boundary before now and starts one step after 24 h
+	// earlier: 288 points, so no two share a clock label.
 	powerEnd := time.Date(2026, 11, 25, 10, 5, 0, 0, time.UTC)
 	assert.Equal(t, strconv.FormatInt(powerEnd.Unix(), 10), power.end)
-	assert.Equal(t, strconv.FormatInt(powerEnd.Add(-24*time.Hour).Unix(), 10), power.start)
+	assert.Equal(t, strconv.FormatInt(powerEnd.Add(-24*time.Hour+5*time.Minute).Unix(), 10), power.start)
 
-	allocation := byQuery[`sum(metal_partition_capacity_allocated)`]
+	allocation := byQuery[exprOf(t, "allocation_allocated")]
 	assert.Equal(t, "3600", allocation.step)
 	allocationEnd := time.Date(2026, 11, 25, 10, 0, 0, 0, time.UTC)
 	assert.Equal(t, strconv.FormatInt(allocationEnd.Unix(), 10), allocation.end)
-	assert.Equal(t, strconv.FormatInt(allocationEnd.Add(-7*24*time.Hour).Unix(), 10), allocation.start)
+	assert.Equal(t, strconv.FormatInt(allocationEnd.Add(-7*24*time.Hour+time.Hour).Unix(), 10), allocation.start)
 
 	capacity := byQuery[queries[0].expr]
 	assert.Equal(t, "/api/v1/query", capacity.path)
+}
+
+func exprOf(t *testing.T, name string) string {
+	t.Helper()
+	for _, q := range queries {
+		if q.name == name {
+			return q.expr
+		}
+	}
+	require.Failf(t, "no such query", "%s", name)
+	return ""
+}
+
+// Totals and counts over raw series would count a series twice while two
+// exporter pods report it; each one groups the scrape labels away first.
+func TestAggregationsDropScrapeLabels(t *testing.T) {
+	for _, name := range []string{
+		queryCapacity, "machine_power", "network_usage", "switch_state",
+		"switch_bgp_total", "switch_bgp_established", "power",
+		"allocation_allocated", "allocation_total",
+	} {
+		assert.Contains(t, exprOf(t, name), "max by (", name)
+	}
+	// Only interfaces with a BGP port state are sessions.
+	assert.NotContains(t, exprOf(t, "switch_bgp_total"), "metal_switch_interface_info")
+}
+
+func TestSnapshotIsCachedAndShared(t *testing.T) {
+	now := time.Date(2026, 11, 25, 10, 7, 31, 0, time.UTC)
+	store := &fakeStore{capacity: capacityBody}
+	r := newFakeReader(t, store, now)
+
+	first, err := r.Snapshot(context.Background())
+	require.NoError(t, err)
+	second, err := r.Snapshot(context.Background())
+	require.NoError(t, err)
+	assert.Same(t, first, second)
+	assert.Len(t, store.requests, len(queries), "the second call reads nothing")
+
+	now = now.Add(cacheFor)
+	r.now = func() time.Time { return now }
+	third, err := r.Snapshot(context.Background())
+	require.NoError(t, err)
+	assert.NotSame(t, first, third)
+	assert.Len(t, store.requests, 2*len(queries))
+}
+
+func TestSnapshotErrorsAreNotCached(t *testing.T) {
+	store := &fakeStore{capacity: emptyVector}
+	r := newFakeReader(t, store, time.Now())
+	_, err := r.Snapshot(context.Background())
+	require.ErrorIs(t, err, ErrNoData)
+
+	store.capacity = capacityBody
+	_, err = r.Snapshot(context.Background())
+	require.NoError(t, err)
+}
+
+func TestSnapshotHonoursCallerContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := newFakeReader(t, &fakeStore{capacity: capacityBody}, time.Now()).Snapshot(ctx)
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 func TestSnapshotWithoutCapacityIsNoData(t *testing.T) {
