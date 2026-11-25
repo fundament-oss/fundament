@@ -44,17 +44,20 @@ k3d_registry_image := "docker.io/library/registry:2"
 # The local registries serve plain HTTP, which Docker allows for localhost and Podman only
 # for registries listed as insecure. Podman also caps each container at 2048 processes,
 # which a k3s node with all of Fundament's pods exceeds (Docker sets no cap). Restart the
-# machine afterwards; the process cap applies to containers created after that.
-# Configure the Podman machine (or a Linux host) for the local clusters
+# machine afterwards; the process cap applies to containers created after that, so the
+# recipe fails when it changes anything, before cluster-create creates a container.
+# The machine is the one behind the default connection, which k3d and the stand-in use.
+# Configure the Podman machine for the local clusters
 podman-machine-setup:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ podman }} || { echo "docker is not Podman; nothing to set up." >&2; exit 0; }
-    if docker machine inspect > /dev/null 2>&1; then
-        run() { docker machine ssh "$*"; }
-    else
-        run() { sh -c "$*"; }
-    fi
+    # Connections are named after their machine; a rootful one gets a -root suffix.
+    machine=$(docker system connection list --format '{{{{ if .Default }}{{{{ .Name }}{{{{ end }}' | grep . | head -1 || true)
+    machine=${machine%-root}
+    docker machine inspect "$machine" > /dev/null 2>&1 \
+        || { echo "No Podman machine behind the default connection; only Podman machines (macOS, Windows) are supported." >&2; exit 1; }
+    run() { docker machine ssh "$machine" "$*"; }
     # write FILE CONTENT: write CONTENT to FILE when it differs.
     write() {
         if [ "$(run "cat $1 2>/dev/null" || true)" != "$2" ]; then
@@ -69,7 +72,8 @@ podman-machine-setup:
     write /etc/containers/containers.conf.d/50-fundament-local.conf \
         "$(printf '[containers]\npids_limit = 0')"
     if [ "$changed" = 1 ]; then
-        echo "Restart Podman (podman machine stop && podman machine start) to apply this."
+        echo "Restart Podman (podman machine stop $machine && podman machine start $machine) to apply this, then run the recipe again." >&2
+        exit 1
     fi
 
 # Create a local k3d cluster for development with local registry
@@ -83,9 +87,11 @@ cluster-create:
     mkdir -p "$(dirname "${KUBECONFIG:-.}")"
     if {{ podman }}; then
         just podman-machine-setup
+        # Podman does not restart unless-stopped containers after a machine restart.
         docker container exists registry.localhost \
             || docker run -d --name registry.localhost --network k3d-fundament \
                 -p 127.0.0.1:5111:5000 --restart unless-stopped {{ k3d_registry_image }} > /dev/null
+        docker start registry.localhost > /dev/null
         config=$(mktemp "${TMPDIR:-/tmp}/k3d-fundament.XXXXXX")
         trap 'rm -f "$config"' EXIT
         yq 'del(.registries.create)' deploy/k3d/config.yaml > "$config"

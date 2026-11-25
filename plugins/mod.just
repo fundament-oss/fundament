@@ -36,13 +36,17 @@ _k3d-create *flags:
     mkdir -p "$(dirname "${KUBECONFIG:-.}")"
     if {{ podman }}; then
         just podman-machine-setup
-        config=$(mktemp "${TMPDIR:-/tmp}/k3d-{{ cluster }}.XXXXXX")
-        trap 'rm -f "$config"' EXIT
-        yq 'del(.registries.create)' sandbox/k3d-config.yaml > "$config"
-        k3d cluster create --config="$config" {{ flags }}
+        # The network and registry come first, as in the root Justfile, so a failed
+        # create leaves a registry for cluster-start; k3d then joins the existing network.
+        docker network exists k3d-{{ cluster }} || docker network create k3d-{{ cluster }} > /dev/null
         docker container exists {{ registry }} \
             || docker run -d --name {{ registry }} --network k3d-{{ cluster }} \
                 -p 127.0.0.1:{{ registry_port }}:5000 --restart unless-stopped docker.io/library/registry:2 > /dev/null
+        docker start {{ registry }} > /dev/null
+        config=$(mktemp "${TMPDIR:-/tmp}/k3d-{{ cluster }}.XXXXXX")
+        trap 'rm -f "$config"' EXIT
+        yq 'del(.registries.create) | .network = "k3d-{{ cluster }}"' sandbox/k3d-config.yaml > "$config"
+        k3d cluster create --config="$config" {{ flags }}
     else
         k3d cluster create --config=sandbox/k3d-config.yaml {{ flags }}
     fi

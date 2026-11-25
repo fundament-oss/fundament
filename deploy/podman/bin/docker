@@ -4,24 +4,30 @@
 # The recipes, Skaffold and functl then run Podman through it. Podman takes Docker's
 # arguments, with two differences handled here:
 # - Podman adds no build attestations, has no --provenance and reads --sbom as a preset
-#   name, so Docker's attestation flags are dropped.
+#   name, so Docker's attestation flags are dropped from build commands.
 # - `podman push` does not print the pushed manifest digest; it is printed in Docker's
 #   `<tag>: digest: sha256:... ` form, which the recipes parse.
+# Global flags before the subcommand are not recognised; the recipes pass none.
 tool=${PODMAN:-podman}
 
-skip=
-for arg in "$@"; do
-    shift
-    if [ -n "$skip" ]; then
-        skip=
-        continue
-    fi
-    case $arg in
-    --provenance=* | --sbom=*) continue ;;
-    --provenance | --sbom) skip=1; continue ;;
-    esac
-    set -- "$@" "$arg"
-done
+case "${1:-} ${2:-}" in
+build\ * | "buildx build" | "image build")
+    skip=
+    for arg in "$@"; do
+        shift
+        if [ -n "$skip" ]; then
+            skip=
+            continue
+        fi
+        case $arg in
+        --provenance=* | --sbom=*) continue ;;
+        --provenance | --sbom) skip=1; continue ;;
+        esac
+        set -- "$@" "$arg"
+    done
+    ;;
+"image push") shift ;;
+esac
 
 if [ "${1:-}" = push ]; then
     shift
