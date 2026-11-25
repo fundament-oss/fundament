@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	// Release is not the chart's usual `cnpg`, which openfsc installs: helm's
-	// ownership check then refuses either install over the other.
+	// Release is not the chart's usual `cnpg`, so helm's ownership check refuses
+	// either install over the other.
 	Release   = "fundament-cloudnativepg"
 	Namespace = "cnpg-system"
 	Repo      = "https://cloudnative-pg.github.io/charts"

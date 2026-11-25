@@ -555,41 +555,6 @@ jobs:
       - name: Run tests
         run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authn-api|authz-worker|cluster-worker|common|funops|dcim-api|dcim-authn-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api|marketplace-analysis-worker|platform-api)/')
 
-  openfsc-console-ui:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.3
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-openfsc-${{ hashFiles('plugins/openfsc/console-ui/bun.lock') }}
-
-      - name: Install dependencies
-        working-directory: plugins/openfsc/console-ui
-        run: bun install --frozen-lockfile
-
-      - name: Typecheck
-        working-directory: plugins/openfsc/console-ui
-        run: bun run typecheck
-
-      - name: Run tests
-        working-directory: plugins/openfsc/console-ui
-        run: bun run test
-
-      # Catches a broken or missing HTML entry point here rather than at image build.
-      # Note this does not verify the emitted names against definition.yaml's
-      # customComponents — a renamed entry builds clean and only fails in the iframe.
-      - name: Build
-        working-directory: plugins/openfsc/console-ui
-        run: bun run build
-
   gateway-api-console-ui:
     runs-on: ubuntu-24.04
     steps:

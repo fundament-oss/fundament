@@ -1,0 +1,2 @@
+COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "cert-manager"). Used as the PluginInstallation resource name in the cluster — not for display.';
+COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "Cert Manager").';

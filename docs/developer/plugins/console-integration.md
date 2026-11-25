@@ -271,7 +271,7 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 
 `KUBE_API_PROXY_MODE=mock` (default) answers from fixtures:
 
-- **Resources**: cert-manager (Certificates, CertificateRequests, Issuers, ClusterIssuers), CloudNativePG (Databases, Backups, Subscriptions), `demo.fundament.io` DemoItems and OpenFSC FSCInstallations (including create).
+- **Resources**: cert-manager (Certificates, CertificateRequests, Issuers, ClusterIssuers), CloudNativePG (Databases, Backups, Subscriptions) and `demo.fundament.io` DemoItems.
 - **PluginInstallations**: `GET`, `POST` and `DELETE`, held in memory per cluster. A restart loses them.
 - **PluginToken path**: the user SubjectAccessReview allows all, and the plugin ServiceAccount token is a placeholder.
 - **Plugin pages**: without a sandbox cluster, plugin-proxy answers every page request with a bare `mock asset` page, which sends no protocol messages.
@@ -295,7 +295,6 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 
 - **Console work without a cluster**: mock mode; the fixtures cover the resources above.
 - **Plugin runtime and plugin pages**: sandbox mode. The plugin's own container runs, its pages load from plugin-proxy, and the metadata API is answered by the plugin.
-- **Plugin page iteration**: the plugin's own preview loop, not the console. For OpenFSC, `just openfsc console-dev` runs the Vite dev server with HMR against a live cluster, and `just openfsc console-preview` serves the built pages.
 - **Shoot clusters and per-user ServiceAccounts**: real mode only.
 
 ### Local dev shortcuts

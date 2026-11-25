@@ -86,15 +86,15 @@ import '@nldd/design-system/top-title-bar';
 const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
   plugin.categories.map((category) => category.name).join(', ') || '—';
 
-// The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install identifier
-// (e.g. "openfsc") — it names the PluginInstallation resource in the cluster — so it
+// The name to show a user (e.g. "Cert Manager"). `plugin.name` is the install identifier
+// (e.g. "cert-manager") — it names the PluginInstallation resource in the cluster — so it
 // is never shown. Falls back to it when no display name is set.
 const displayNameOf = (plugin: { name: string; displayName: string }): string =>
   plugin.displayName || plugin.name;
 
 // Extended plugin type with presets array (computed from backend data).
-// `name` is the stable identifier (e.g. "openfsc") used as the PluginInstallation
-// resource name in the cluster; `displayName` (e.g. "OpenFSC") is what a user sees.
+// `name` is the stable identifier (e.g. "cert-manager") used as the PluginInstallation
+// resource name in the cluster; `displayName` (e.g. "Cert Manager") is what a user sees.
 interface PluginWithPresets extends Pick<
   PluginSummary,
   'id' | 'name' | 'displayName' | 'descriptionShort' | 'image' | 'logo' | 'logoDark'

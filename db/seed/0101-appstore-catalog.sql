@@ -272,22 +272,6 @@ Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing
 - Request flow visualization
 - Performance optimization
 - Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo', 'docker.io/grafana/tempo:2.7.2'),
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-0000-7000-8000-000000000000', 'openfsc', 'OpenFSC', 'Federated Service Connectivity', '## Overview
-
-OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.
-
-## Key Features
-
-- **Federated Connectivity**: Join an existing FSC group or act as your own group Directory
-- **Per-Namespace Peers**: Each team runs its own OpenFSC peer via a namespaced FSCInstallation
-- **Operator-Managed**: The openfsc-operator reconciles peers, gateways, and certificates
-- **Common Ground**: Built on the FSC standard for trusted data exchange between organizations
-
-## Use Cases
-
-- Inter-organization service connectivity
-- Common Ground / data exchange between government bodies
-- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', ''),
     ('019b4000-3000-7000-8000-000000000010', '019b4000-0000-7000-8000-000000000000', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
 
 The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
@@ -381,8 +365,6 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     ('019b4000-3000-7000-8000-00000000000c', '019b4000-4000-7000-8000-000000000002'),
     -- Grafana Tempo -> Observability
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001'),
-    -- OpenFSC -> Networking
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003'),
     -- Gateway API (Envoy Gateway) -> Networking
     ('019b4000-3000-7000-8000-000000000010', '019b4000-4000-7000-8000-000000000003'),
     -- Ceph Storage (Rook) -> Storage
@@ -425,9 +407,7 @@ INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
     ('019b4000-3000-7000-8000-00000000000c', '019b4000-5000-7000-8000-000000000009'),
     -- Grafana Tempo: Tracing, Grafana stack
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-000000000003'),
-    ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-00000000000a'),
-    -- OpenFSC: Service mesh
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-5000-7000-8000-000000000005')
+    ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-00000000000a')
 ON CONFLICT (plugin_id, tag_id) DO NOTHING;
 
 -- Test data for presets

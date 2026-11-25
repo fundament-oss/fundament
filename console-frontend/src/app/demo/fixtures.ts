@@ -515,7 +515,7 @@ export const nodeUsage = [
 
 // The catalog the walkthrough shows. Logos come from ./plugin-logos; a name
 // without one shows the generic plugin icon.
-// cert-manager and openfsc mirror the real definitions in plugins/*/definition.yaml.
+// cert-manager mirrors the real definition in plugins/*/definition.yaml.
 
 export interface DemoLabel {
   id: string;
@@ -566,7 +566,6 @@ const CATEGORIES = {
 // and cannot be installed at all.
 const VERSIONS: Record<string, string[]> = {
   'cert-manager': ['v1.17.2', 'v1.17.1', 'v1.16.3'],
-  openfsc: ['v4.0.0', 'v3.2.1'],
   'istio-gateway': ['v0.1.0'],
   'sealed-secrets': ['v0.27.1', 'v0.26.3'],
   grafana: ['v11.4.0', 'v11.3.1'],
@@ -611,17 +610,6 @@ export const plugins: DemoPluginSummary[] = [
     tags: [OFFICIAL, tag('tag-tls', 'tls')],
     categories: [CATEGORIES.security],
     ...published('cert-manager'),
-  },
-  {
-    id: 'pl-openfsc',
-    name: 'openfsc',
-    displayName: 'OpenFSC',
-    descriptionShort: 'Federated Service Connectivity voor teams.',
-    description:
-      'Federated Service Connectivity (FSC) voor teams. Installeert de openfsc-operator; elk team declareert een FSCInstallation in zijn eigen namespace om daar een OpenFSC-peer te draaien.',
-    tags: [OFFICIAL, tag('tag-fsc', 'fsc')],
-    categories: [CATEGORIES.networking],
-    ...published('openfsc'),
   },
   {
     id: 'pl-istio-gateway',
@@ -776,8 +764,8 @@ export const pluginDefinitionVersions = (pluginId: string): { version: string; h
 
 /** Plugins already running when the walkthrough starts, per cluster. */
 export const seededInstalls: Record<string, string[]> = {
-  'cl-production': ['openfsc', 'grafana'],
-  'cl-staging': ['openfsc'],
+  'cl-production': ['cloudnativepg', 'grafana'],
+  'cl-staging': ['cloudnativepg'],
 };
 
 // --- Plugin UI ------------------------------------------------------------

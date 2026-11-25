@@ -25,7 +25,7 @@ Each plugin's UI is already an npm project with its own `package.json`, so it co
 
 [cols="2,1,1"]
 |===
-| | Whole design system | Only the 5 components the OpenFSC views use
+| | Whole design system | Only the 5 components a typical create form uses
 
 | NLDD Design System JS
 | 1.0 MB raw / 215 KB gzip
@@ -82,13 +82,13 @@ A plugin depends on `@nldd/design-system` as a *devDependency*, and imports from
 import type { NLDDCheckboxField } from '@nldd/design-system/checkbox-field';
 ----
 
-Type-only imports are erased at build time, so this adds **zero bytes** to the plugin bundle (verified: the OpenFSC bundle is byte-for-byte identical with and without the dependency) while giving real, checked types — including the package's `HTMLElementTagNameMap` declarations, so `querySelector('nldd-checkbox-field')` is typed automatically.
+Type-only imports are erased at build time, so this adds **zero bytes** to the plugin bundle (verified: a plugin bundle is byte-for-byte identical with and without the dependency) while giving real, checked types — including the package's `HTMLElementTagNameMap` declarations, so `querySelector('nldd-checkbox-field')` is typed automatically.
 
 Do *not* hand-roll structural types for the components. An approximation that drifts from the real component does not fail at build time; it fails silently in the iframe. The devDependency must be pinned to exactly the version `console-frontend` serves, because the types describe the bundle the host actually ships — a unit test asserts the two pins match (`src/nldd-design-system-version.test.ts`).
 
 === Component quirks to plan for
 
-NLDD Design System components are form-associated custom elements, so most of what you know from a plain HTML form holds: they carry a `name`, they contribute to `FormData`, and the form validates them. What differs is that the control you would query for lives in a shadow root. The OpenFSC create form (`plugins/openfsc/console-ui/src/form.ts`) is the reference implementation; the recurring rules are:
+NLDD Design System components are form-associated custom elements, so most of what you know from a plain HTML form holds: they carry a `name`, they contribute to `FormData`, and the form validates them. What differs is that the control you would query for lives in a shadow root. The Envoy Gateway create forms (`plugins/gateway-api/envoy-gateway/console-ui/src/*-form.ts`) are the reference implementation; the recurring rules are:
 
 * `nldd-dropdown` wraps a *slotted native `<select>`* — keep the `<select>` and its options; the value lives on the `<select>`.
 * The native control sits in shadow DOM, so a light-DOM query like `input[name]:checked` finds nothing. Read the state off the component (`.checked`, `.value`), or off the form: `new FormData(form)` lists these components under their own `name`.
@@ -112,7 +112,7 @@ Under link:/funs/fun-17[FUN-17] the plugin iframe, its own assets, and the share
 | `plugin-proxy`, under `/plugins/sdk/v1/` — the version-pinned bundle `console-frontend` builds
 |===
 
-The plugin's own app is a Vite app (vanilla TS) in `plugins/<name>/console-ui/`, built to `plugins/<name>/console/` and compiled into the plugin binary by `go:embed console/*`. It is *multi-page*: one HTML entry point per view, whose filenames must match `definition.yaml`'s `customComponents`. OpenFSC is the reference implementation.
+The plugin's own app is a Vite app (vanilla TS) in `plugins/<name>/console-ui/`, built to `plugins/<name>/console/` and compiled into the plugin binary by `go:embed console/*`. It is *multi-page*: one HTML entry point per view, whose filenames must match `definition.yaml`'s `customComponents`. Envoy Gateway (`plugins/gateway-api/envoy-gateway/console-ui/`) is the reference implementation.
 
 Because everything is same-origin on the plugin-proxy origin, there is no cross-origin `@font-face` or console-asset CORS to arrange: the opaque-origin workaround FUN-16 needed — kube-api-proxy stamping `Access-Control-Allow-Origin: *` on plugin console-asset responses — is superseded by link:/funs/fun-17[FUN-17] and has been removed.
 
@@ -134,8 +134,8 @@ They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks 
 
 === Local development
 
-* `just openfsc console-preview` — builds the shared `/plugin-ui/` bundle and the Vite app, then serves the built `console/` against the live cluster via a kubectl-backed stand-in SDK.
-* `just openfsc console-dev` — the same stand-in backend behind the Vite dev server (which proxies `/api/*` and `/plugin-ui/*` to it), giving HMR against the live cluster.
+* `just plugins envoy-gateway typecheck` and `just plugins envoy-gateway ui-test` — typecheck and unit-test the Vite app, no cluster needed.
+* Plugin pages themselves run in the plugin sandbox cluster, served by plugin-proxy like in production (`docs/developer/plugins/console-integration.md`).
 
 == Consequences
 
@@ -143,7 +143,7 @@ They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks 
 * *One version for everyone — which is both the point and the risk.* All plugins share exactly one NLDD Design System version, so none can drift from the host. The flip side is a hard coupling: bumping the Console's version is a simultaneous, unstageable change for every plugin, including third-party ones the platform does not control, and the version is effectively a public API. Note also that the guarantee is a *convention, not a constraint* — nothing prevents a plugin from bundling its own copy anyway. The shared channel is already version-segmented (`/plugins/sdk/v1/`), so if a third-party plugin ever needs a different major it can be served alongside at `/plugins/sdk/v2/` and the two coexist.
 * *Bundling remains a legitimate alternative, and the door is left open.* Should the coupling above start to hurt, the sharper split is: let plugins bundle the tree-shaken *components* (independently versioned, properly typed) and keep a shared channel for only the *tokens + fonts* CSS — the 512 KB that actually duplicates. Under link:/funs/fun-17[FUN-17] both halves still load same-origin from the plugin-proxy origin, so this needs no cross-origin `@font-face` handling.
 * *Dogfooding.* First-party plugins use the same `loadNlddDesignSystem()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
-* *The console-ui build stage is per-plugin.* Each plugin with a Vite UI runs it in its own Dockerfile (OpenFSC and envoy-gateway today). The three `kube-api-proxy` Dockerfiles used to repeat it so mock mode could serve the assets from disk; that copy went away with the mock asset server, since plugin-proxy now serves console assets in every mode. Adding a plugin no longer touches a central Dockerfile.
+* *The console-ui build stage is per-plugin.* Each plugin with a Vite UI runs it in its own Dockerfile (envoy-gateway today). The three `kube-api-proxy` Dockerfiles used to repeat it so mock mode could serve the assets from disk; that copy went away with the mock asset server, since plugin-proxy now serves console assets in every mode. Adding a plugin no longer touches a central Dockerfile.
 
 == References
 
@@ -151,4 +151,4 @@ They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks 
 * link:/funs/fun-11[FUN-11 Plugins and the Marketplace] — the plugin model these UIs plug into.
 * link:/funs/fun-17[FUN-17 Plugin authorization] — the dedicated plugin-proxy origin and the same-origin `/plugins/sdk/v1/` channel this builds on (supersedes FUN-16's opaque-origin sandbox).
 * link:/funs/fun-16[FUN-16 Plugin isolation] — the original iframe-sandbox model, partially superseded by FUN-17.
-* `plugins/openfsc/README.md` — the reference implementation, with the day-to-day build and preview commands.
+* `plugins/gateway-api/envoy-gateway/README.md` — the reference implementation, with the day-to-day build and test commands.

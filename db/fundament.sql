@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1476,9 +1476,9 @@ CREATE TABLE appstore.plugins (
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.organization_id IS E'Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.';
 -- ddl-end --
-COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.';
+COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "cert-manager"). Used as the PluginInstallation resource name in the cluster — not for display.';
 -- ddl-end --
-COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
+COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "Cert Manager").';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Written by the registry API''s UpdatePlugin.';
 -- ddl-end --

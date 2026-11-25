@@ -119,12 +119,12 @@ func TestDetectMissingDefinitionBeforeGoMod(t *testing.T) {
 }
 
 func TestSourceDirs(t *testing.T) {
-	got := sourceDirs("plugins/openfsc", []string{
-		"plugins/openfsc", "plugins/openfsc/internal/ui",
+	got := sourceDirs("plugins/example", []string{
+		"plugins/example", "plugins/example/internal/ui",
 		"plugin-sdk/pluginruntime", "plugin-sdk/pluginruntime/console",
-		"openfsc-operator/api/v1",
+		"example-operator/api/v1",
 	})
-	assert.Equal(t, []string{"openfsc-operator", "plugin-sdk", "plugins/openfsc"}, got)
+	assert.Equal(t, []string{"example-operator", "plugin-sdk", "plugins/example"}, got)
 
 	// A dep elsewhere under plugins/ widens to plugins/, which covers the plugin dir.
 	assert.Equal(t, []string{"plugin-sdk", "plugins"},
@@ -135,12 +135,11 @@ func TestResolveSourceDirsRepo(t *testing.T) {
 	if testing.Short() {
 		t.Skip("runs go list on the repository")
 	}
-	l, err := Detect(filepath.Join("..", "..", "..", "plugins", "openfsc"))
+	l, err := Detect(filepath.Join("..", "..", "..", "plugins", "cert-manager"))
 	require.NoError(t, err)
 	require.NoError(t, l.ResolveSourceDirs(t.Context()))
-	assert.Contains(t, l.SourceDirs, "openfsc-operator")
 	assert.Contains(t, l.SourceDirs, "plugin-sdk")
-	assert.Contains(t, l.SourceDirs, "plugins/openfsc")
+	assert.Contains(t, l.SourceDirs, "plugins/cert-manager")
 }
 
 func TestResolveSourceDirsStandaloneNoop(t *testing.T) {

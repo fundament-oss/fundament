@@ -1,6 +1,5 @@
-// Shared helpers for the Envoy Gateway console views. The plugin ships only a
-// Gateway create form, so this trims the openfsc shared.ts to loading, escaping
-// and host navigation.
+// Shared helpers for the Envoy Gateway console views: loading, escaping and
+// host navigation.
 
 import type { FundamentSdk } from './sdk.ts';
 

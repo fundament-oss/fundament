@@ -38,7 +38,7 @@ describe('demo plugin sidebar', () => {
   it('shows no plugin menu for the seeded installs', async () => {
     await TestBed.inject(PluginRegistryService).loadPlugins('cl-production');
 
-    // openfsc and grafana are installed but carry no definition, so they have no
+    // cloudnativepg and grafana are installed but carry no definition, so they have no
     // console UI — as in production, where the menu comes from the definition.
     expect(TestBed.inject(PluginNavService).projectNav()).toEqual([]);
   });

@@ -107,7 +107,7 @@ function showsInstalledVersion(cluster: Cluster): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class InstallPluginModalComponent {
-  /** Human-readable plugin name (e.g. "OpenFSC"), shown to the user. Never the
+  /** Human-readable plugin name (e.g. "Cert Manager"), shown to the user. Never the
    * install identifier — the caller keeps that to itself. */
   pluginDisplayName = input('');
 
