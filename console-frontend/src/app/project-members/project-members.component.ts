@@ -192,7 +192,9 @@ export default class ProjectMembersComponent implements OnInit {
   private seenMembersChanged = this.organizationData.membersChanged();
 
   /** The sheet that adds one lives in the shell and may well be standing over
-   *  this very list, so the list hears about a new member from there. */
+   *  this very list, and the member sheet is a child route that leaves it
+   *  mounted, so the list hears about an added, changed or removed member from
+   *  there. */
   private readonly reloadOnAdd = effect(() => {
     const changed = this.organizationData.membersChanged();
     if (changed === this.seenMembersChanged) return;

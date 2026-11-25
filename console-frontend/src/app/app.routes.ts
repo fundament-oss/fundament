@@ -355,6 +355,8 @@ const routes: Routes = [
               import('./project-member-sheet/project-member-sheet.component').then(
                 (m) => m.default,
               ),
+            // The sheet reads the project and member IDs once, as it opens.
+            data: { remountOnParamChange: true },
           },
         ],
       },

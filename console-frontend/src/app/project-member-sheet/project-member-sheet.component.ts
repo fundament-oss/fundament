@@ -102,6 +102,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   isLoading = signal(true);
 
+  /** Why the member could not be fetched. Shown only when there is no member
+   *  to show, so a failed load never reads as "not found". */
+  loadError = signal<string | null>(null);
+
   saving = signal(false);
 
   showRemoveModal = signal(false);
@@ -128,6 +132,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   async load() {
     this.isLoading.set(true);
+    this.loadError.set(null);
     try {
       const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
@@ -155,8 +160,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
             }
           : null,
       );
-    } catch {
-      this.member.set(null);
+    } catch (err) {
+      // Keeps the member it had, say after a role change, rather than calling
+      // them gone.
+      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.isLoading.set(false);
     }
@@ -176,6 +183,9 @@ export default class ProjectMemberSheetComponent implements OnInit {
       this.notificationService.success(
         `${view.member.userName} is now ${projectRoleLabel(role).toLowerCase()}`,
       );
+      // The list stays mounted behind this sheet, so it hears about the change
+      // from here.
+      this.organizationData.membersChanged.update((count) => count + 1);
       await this.load();
     } catch (err) {
       this.notificationService.error(
@@ -194,6 +204,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await firstValueFrom(this.projectClient.removeProjectMember({ memberId: view.member.id }));
       this.notificationService.success(`${view.member.userName} removed from the project`);
       this.showRemoveModal.set(false);
+      this.organizationData.membersChanged.update((count) => count + 1);
       this.onClose();
     } catch (err) {
       this.showRemoveModal.set(false);
@@ -218,7 +229,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
     this.pageNav.goTo('/members');
   }
 
-  /** Back to the list, which reloads and picks up whatever changed here. */
+  /** Back to the list, which has already heard about a change made here
+   *  through membersChanged: it stays mounted, so it does not reload on its own. */
   onClose(): void {
     this.router.navigate(['..'], { relativeTo: this.route });
   }

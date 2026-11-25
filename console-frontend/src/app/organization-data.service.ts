@@ -62,7 +62,8 @@ export class OrganizationDataService {
   readonly namespacesChanged = signal(0);
 
   /** The same, for members: inviting someone and adding someone to a project
-   *  both happen in a sheet the shell owns. */
+   *  both happen in a sheet the shell owns, and the project member sheet, which
+   *  changes a role or removes someone, is a child route over the list. */
   readonly membersChanged = signal(0);
 
   /** And for node pools, which are edited in a sheet over the cluster page that

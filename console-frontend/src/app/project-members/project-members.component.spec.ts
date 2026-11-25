@@ -53,6 +53,12 @@ const PROJECT_MEMBERS = [
 
 async function build() {
   const notifications = { success: vi.fn(), error: vi.fn() };
+  const listProjectMembers = vi.fn(() => of({ members: PROJECT_MEMBERS }));
+  const organizationData = {
+    membersChanged: signal(0),
+    reloadMembers: vi.fn(async () => ORG_MEMBERS),
+    getProjectById: () => undefined,
+  };
 
   TestBed.configureTestingModule({
     imports: [ProjectMembersComponent],
@@ -61,7 +67,7 @@ async function build() {
       { provide: ActivatedRoute, useValue: { snapshot: { params: { id: 'project-1' } } } },
       {
         provide: PROJECT,
-        useValue: { listProjectMembers: () => of({ members: PROJECT_MEMBERS }) },
+        useValue: { listProjectMembers },
       },
       { provide: NotificationService, useValue: notifications },
       {
@@ -69,14 +75,7 @@ async function build() {
         useValue: { path: (p: string) => p, goTo: vi.fn(), backText: () => null },
       },
       { provide: TitleService, useValue: { setTitle: vi.fn() } },
-      {
-        provide: OrganizationDataService,
-        useValue: {
-          membersChanged: signal(0),
-          reloadMembers: vi.fn(async () => ORG_MEMBERS),
-          getProjectById: () => undefined,
-        },
-      },
+      { provide: OrganizationDataService, useValue: organizationData },
     ],
   });
 
@@ -85,7 +84,13 @@ async function build() {
   // Both lists are fetched together, and the rows render once both are in.
   await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
   fixture.detectChanges();
-  return { fixture, notifications, root: fixture.nativeElement as HTMLElement };
+  return {
+    fixture,
+    notifications,
+    listProjectMembers,
+    organizationData,
+    root: fixture.nativeElement as HTMLElement,
+  };
 }
 
 const menuFor = (root: HTMLElement, projectMemberId: string): HTMLElement | null =>
@@ -142,5 +147,18 @@ describe('ProjectMembersComponent rows', () => {
         delete (navigator as { clipboard?: Clipboard }).clipboard;
       }
     }
+  });
+
+  // The member sheet is a child route, so this list stays mounted behind it
+  // and only learns about a change through membersChanged.
+  it('reloads when a sheet reports a changed or removed member', async () => {
+    const { fixture, listProjectMembers, organizationData } = await build();
+    expect(listProjectMembers).toHaveBeenCalledTimes(1);
+
+    organizationData.membersChanged.update((count) => count + 1);
+    TestBed.tick();
+    await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+
+    expect(listProjectMembers).toHaveBeenCalledTimes(2);
   });
 });
