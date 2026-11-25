@@ -17,6 +17,7 @@ import type {
 import { INSTALL } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
+import OrganizationContextService from '../organization-context.service';
 import {
   hasInvalidConfig,
   healthOf,
@@ -254,6 +255,8 @@ export default class PluginRegistryService {
 
   private installClient = inject(INSTALL);
 
+  private organizationContext = inject(OrganizationContextService);
+
   /** Loads the cluster's plugins, or waits on the load under way for it.
    *  `fresh` reads again now instead of at the next poll, for a project just
    *  opened; a read already under way is fresh enough and is joined. */
@@ -393,6 +396,20 @@ export default class PluginRegistryService {
     const retryDue = this.definitionRetryAt !== null && Date.now() >= this.definitionRetryAt;
 
     if (!unchanged || retryDue) {
+      // The catalog answers a definition call without the Fun-Organization
+      // header with InvalidArgument, which reads as a failure for good: the
+      // plugin would get no sidebar entry until a reload. A page opened by its
+      // address loads the cluster before the organization's id is known, so
+      // wait for the id first. With nothing installed there is no call to wait for.
+      const known = installed.length === 0 || (await this.waitForOrganizationId());
+      if (generation !== this.generation) return 'stale';
+      if (!known) {
+        // No id yet (the organization fetch failed, or the user is not a
+        // member): leave the menu unbuilt and try again on the next sync, which
+        // also keeps the installation list polled.
+        this.definitionRetryAt = Date.now();
+        return 'incomplete';
+      }
       const fetched = await this.fetchDefinitions(installed);
       if (generation !== this.generation) return 'stale';
       this.plugins.set(fetched.definitions);
@@ -435,6 +452,22 @@ export default class PluginRegistryService {
       return 'unhealthy';
     }
     return this.definitionRetryAt === null ? 'idle' : 'incomplete';
+  }
+
+  /** Waits for the organization's id, but no longer than one poll: an id
+   *  that never comes must not stall this load, and with it every caller that
+   *  joins it. False when the wait ended without an id. */
+  private async waitForOrganizationId(): Promise<boolean> {
+    const timeout = new AbortController();
+    const timer = setTimeout(() => timeout.abort(), PluginRegistryService.POLL_MS);
+    try {
+      await this.organizationContext.organizationIdSet(timeout.signal);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async fetchDefinitions(

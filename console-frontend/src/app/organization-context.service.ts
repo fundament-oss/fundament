@@ -40,14 +40,65 @@ export default class OrganizationContextService {
    */
   readonly hasOrganization = computed(() => this.organizationId() !== null);
 
+  /** Callers of organizationIdSet() waiting for an id. */
+  private readonly idWaiters = new Set<{
+    resolve: (id: string) => void;
+    reject: (reason: unknown) => void;
+  }>();
+
+  /**
+   * Resolves with the organization's id: at once when one is set, otherwise
+   * when the next one is. A page opened by its address knows the organization's
+   * name straight away but its id only once the organization has been fetched,
+   * and a call sent before that goes without the Fun-Organization header.
+   *
+   * Rejects when `abort` aborts, and when the id is cleared while it waits:
+   * a wait started in one session must not be answered with the id of the
+   * next one.
+   */
+  organizationIdSet(abort?: AbortSignal): Promise<string> {
+    const id = this.organizationId();
+    if (id) return Promise.resolve(id);
+    if (abort?.aborted) return Promise.reject(abort.reason);
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        resolve: (value: string) => {
+          waiter.done();
+          resolve(value);
+        },
+        reject: (reason: unknown) => {
+          waiter.done();
+          reject(reason);
+        },
+        onAbort: () => waiter.reject(abort?.reason),
+        done: () => {
+          this.idWaiters.delete(waiter);
+          abort?.removeEventListener('abort', waiter.onAbort);
+        },
+      };
+      this.idWaiters.add(waiter);
+      abort?.addEventListener('abort', waiter.onAbort, { once: true });
+    });
+  }
+
+  /** Rejects every pending organizationIdSet() call: the id they wait for is
+   *  gone. */
+  private rejectIdWaiters() {
+    const reason = new Error('organization cleared');
+    [...this.idWaiters].forEach((waiter) => waiter.reject(reason));
+  }
+
   /**
    * Set the current organization ID and persist to localStorage.
    */
   setOrganizationId(id: string | null) {
     this.organizationId.set(id);
+    // Settle the waiters before localStorage, which can throw.
     if (id) {
+      [...this.idWaiters].forEach((waiter) => waiter.resolve(id));
       localStorage.setItem(STORAGE_KEY, id);
     } else {
+      this.rejectIdWaiters();
       localStorage.removeItem(STORAGE_KEY);
     }
   }
@@ -81,6 +132,7 @@ export default class OrganizationContextService {
   clearOrganizationId() {
     this.organizationId.set(null);
     this.organizationName.set(null);
+    this.rejectIdWaiters();
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(NAME_STORAGE_KEY);
   }
