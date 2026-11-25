@@ -163,7 +163,7 @@ export default class ShellComponent implements OnInit {
   });
 
   /** Machines metal-stack flags with a critical issue, for the badge on Bare
-   *  metal. The demo snapshot is the only one that has them today. */
+   *  metal. */
   protected readonly metalAttention = computed(() => {
     const snapshot = this.metalMetrics.snapshot();
     return snapshot ? machineCounts(snapshot.machines).criticalIssues : 0;

@@ -136,8 +136,10 @@ export default class MetricChartComponent {
     });
   }
 
-  /** A table cell, through the same formatter the chart's axis uses. */
+  /** A table cell, through the same formatter the chart's axis uses. A point
+   *  the store has no sample for is NaN: a gap in the line, an empty cell. */
   protected valueText(value: number | undefined): string {
+    if (value !== undefined && Number.isNaN(value)) return '';
     return this.format()(value ?? 0);
   }
 

@@ -15,6 +15,8 @@ import (
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/dcim"
+	"github.com/fundament-oss/fundament/dcim-api/pkg/metal"
+	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
 type config struct {
@@ -23,6 +25,9 @@ type config struct {
 	ListenAddr         string   `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           string   `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS"`
+	// MetalPrometheusURL is the Prometheus-compatible store holding
+	// metal-stack's series (VictoriaMetrics on fire-cp). Empty: not configured.
+	MetalPrometheusURL string `env:"METAL_PROMETHEUS_URL"`
 }
 
 func main() {
@@ -51,7 +56,12 @@ func run() error {
 	}
 	defer database.Close()
 
-	server := dcim.New(logger, database, []byte(cfg.JWTSecret))
+	var opts []dcim.Option
+	if cfg.MetalPrometheusURL != "" {
+		opts = append(opts, dcim.WithMetal(metal.NewReader(prom.NewHTTPClient(cfg.MetalPrometheusURL))))
+	}
+
+	server := dcim.New(logger, database, []byte(cfg.JWTSecret), opts...)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {

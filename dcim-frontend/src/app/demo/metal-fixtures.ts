@@ -21,6 +21,7 @@ import type {
   Switch,
 } from '../bare-metal/metal-metrics';
 import { NOW, id } from './fixtures';
+import { formatAxisTime } from '../bare-metal/metal-format';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -38,19 +39,12 @@ function seeded(seed: number): () => number {
 
 const random = seeded(0x5eed);
 
-/** Axis labels for a series, formatted here because the charts use a category
- *  scale rather than Chart.js's time adapter. */
+/** Axis labels for a series, the way the real read formats them. */
 function timeLabels(step: number, count: number): string[] {
   const first = NOW.getTime() - (count - 1) * step;
-  return Array.from({ length: count }, (unused, index) => {
-    const at = new Date(first + index * step);
-    const hours = String(at.getUTCHours()).padStart(2, '0');
-    const minutes = String(at.getUTCMinutes()).padStart(2, '0');
-    if (step < HOUR) return `${hours}:${minutes}`;
-    const month = String(at.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(at.getUTCDate()).padStart(2, '0');
-    return `${month}-${day} ${hours}:00`;
-  });
+  return Array.from({ length: count }, (unused, index) =>
+    formatAxisTime(new Date(first + index * step), step),
+  );
 }
 
 /** The cluster ids the fleet demo knows, so a machine's cluster tag links to a
@@ -264,7 +258,7 @@ function classify(plan: SizePlan, index: number): Classification {
 function stateOf(classification: Classification, seq: number): MachineState {
   if (classification === 'faulty') return 'locked';
   if (classification === 'unavailable' || classification === 'other') return 'other';
-  if (classification === 'allocated' && seq === 20) return 'reserved';
+  if (classification === 'allocated' && seq === 20) return 'tainted';
   if (classification === 'allocated' && seq === 28) return 'locked';
   return 'available';
 }

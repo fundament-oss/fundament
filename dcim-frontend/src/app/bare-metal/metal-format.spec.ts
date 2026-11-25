@@ -81,7 +81,7 @@ describe('formatters', () => {
 describe('machineStateTag', () => {
   it('names every state', () => {
     expect(machineStateTag('available')).toEqual({ text: 'Available', color: 'success' });
-    expect(machineStateTag('reserved')).toEqual({ text: 'Reserved', color: 'warning' });
+    expect(machineStateTag('tainted')).toEqual({ text: 'Tainted', color: 'warning' });
     expect(machineStateTag('locked')).toEqual({ text: 'Locked', color: 'neutral' });
     expect(machineStateTag('other')).toEqual({ text: 'Other', color: 'neutral' });
   });

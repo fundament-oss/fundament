@@ -40,6 +40,11 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
             {{- end }}
+            {{- with $.Values.dcimApi.metalPrometheusURL }}
+            # The store with metal-stack's series, for the Bare metal section.
+            - name: METAL_PROMETHEUS_URL
+              value: {{ . | quote }}
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.resources" (dict "resources" $.Values.dcimApi.resources "indent" 10) }}

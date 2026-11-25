@@ -39,6 +39,18 @@ export function formatDuration(seconds: number): string {
   return `${Math.round(seconds / 86400)} d`;
 }
 
+/** A point on a chart's time axis, in UTC. The charts use a category scale
+ *  rather than Chart.js's time adapter, so the label is the axis: the clock
+ *  for steps under an hour, the date and hour for longer ones. */
+export function formatAxisTime(at: Date, stepMs: number): string {
+  const hours = String(at.getUTCHours()).padStart(2, '0');
+  const minutes = String(at.getUTCMinutes()).padStart(2, '0');
+  if (stepMs < 3_600_000) return `${hours}:${minutes}`;
+  const month = String(at.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(at.getUTCDate()).padStart(2, '0');
+  return `${month}-${day} ${hours}:00`;
+}
+
 /** The snapshot's clock, in UTC, without the seconds. */
 export function formatTimestamp(at: Date): string {
   return `${at.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
@@ -52,8 +64,8 @@ export function machineStateTag(state: MachineState): Tag {
   switch (state) {
     case 'available':
       return { text: 'Available', color: 'success' };
-    case 'reserved':
-      return { text: 'Reserved', color: 'warning' };
+    case 'tainted':
+      return { text: 'Tainted', color: 'warning' };
     case 'locked':
       return { text: 'Locked', color: 'neutral' };
     case 'other':

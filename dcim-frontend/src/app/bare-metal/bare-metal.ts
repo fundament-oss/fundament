@@ -94,8 +94,8 @@ interface NetworkView {
   switches: Switch[];
   syncLabels: string[];
   syncSeries: ChartSeries[];
-  errorLabels: string[];
-  errorSeries: ChartSeries[];
+  /** Null while nothing collects metal-core errors. */
+  errors: { labels: string[]; series: ChartSeries[] } | null;
 }
 
 interface ApiView {
@@ -121,8 +121,8 @@ function percentileTiles(histogram: Histogram): Tile[] {
 
 /**
  * The Bare metal section: what metal-stack says about the estate. Four views of
- * one snapshot, read through the MetalMetricsService seam. The real app has no
- * Prometheus read yet and says so; the demo fills the snapshot.
+ * one snapshot, read through MetalMetricsService. An environment without
+ * metal-stack metrics says so; the demo fills the snapshot from fixtures.
  */
 @Component({
   selector: 'app-bare-metal',
@@ -132,7 +132,11 @@ function percentileTiles(histogram: Histogram): Tile[] {
   templateUrl: './bare-metal.html',
 })
 export default class BareMetalComponent implements OnDestroy {
-  protected readonly metrics = inject(MetalMetricsService).snapshot;
+  private readonly metalMetrics = inject(MetalMetricsService);
+
+  protected readonly metrics = this.metalMetrics.snapshot;
+
+  protected readonly status = this.metalMetrics.status;
 
   private readonly secondaryNav = inject(SecondaryNavService);
 
@@ -239,8 +243,12 @@ export default class BareMetalComponent implements OnDestroy {
       switches: snapshot.switches,
       syncLabels: snapshot.syncDurations.labels,
       syncSeries: snapshot.syncDurations.switches,
-      errorLabels: snapshot.coreErrors.labels,
-      errorSeries: [{ label: 'Errors', values: snapshot.coreErrors.values }],
+      errors: snapshot.coreErrors
+        ? {
+            labels: snapshot.coreErrors.labels,
+            series: [{ label: 'Errors', values: snapshot.coreErrors.values }],
+          }
+        : null,
     };
   });
 
@@ -303,6 +311,9 @@ export default class BareMetalComponent implements OnDestroy {
   protected readonly componentType = componentType;
 
   constructor() {
+    // The shell reads once at start; entering the section reads again, so the
+    // page is not as old as the session.
+    this.metalMetrics.refresh();
     effect(() => {
       const template = this.navTemplate();
       if (template) this.secondaryNav.set(template);

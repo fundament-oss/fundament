@@ -535,6 +535,9 @@ dcimApi:
   replicas: 1
   resources: {}
   logLevel: info
+  # Prometheus-compatible store holding metal-stack's series (the Bare metal
+  # section). Empty: the section says metal-stack is not configured.
+  metalPrometheusURL: ""
   httproute:
     enabled: false
     parentRefs: []

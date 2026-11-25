@@ -2,8 +2,8 @@
 // them. Field names follow the labels of the exporters, so the Prometheus read
 // that replaces the mock maps onto these types without a second vocabulary.
 //
-// Nothing here is generated: there is no metal-stack API in the DCIM frontend
-// yet. The seam that will fill it is metal-metrics.service.ts.
+// Nothing here is generated: dcim-api hands back the raw query results, and
+// metal-from-proto.ts joins them into these shapes.
 
 /** One series over time. Labels are preformatted for the axis, because the
  *  charts use a category scale rather than Chart.js's time adapter. */
@@ -48,7 +48,7 @@ export interface PartitionCapacity {
 }
 
 /** The machine states metal-stack's condition reports, normalized. */
-export type MachineState = 'available' | 'reserved' | 'locked' | 'other';
+export type MachineState = 'available' | 'tainted' | 'locked' | 'other';
 
 export type MachineRole = 'machine' | 'firewall' | 'none';
 
@@ -146,8 +146,9 @@ export interface MetalMetrics {
   power: TimeSeries;
   allocation: AllocationHistory;
   syncDurations: SyncHistory;
-  /** Total metal-core errors over the window, by operation. */
-  coreErrors: { labels: string[]; values: number[] };
+  /** Total metal-core errors over the window, by operation. Absent while
+   *  nothing collects them, which is not the same as no errors. */
+  coreErrors?: { labels: string[]; values: number[] };
   /** 24 h of request rate per status class, in requests per minute. */
   requestRate: { labels: string[]; series: ChartSeries[] };
   restLatency: Histogram;

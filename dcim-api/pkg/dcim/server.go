@@ -15,6 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/dcim-api/pkg/metal"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 )
 
@@ -23,15 +24,31 @@ type Server struct {
 	db            *psqldb.DB
 	queries       *db.Queries
 	authValidator *auth.Validator
-	handler       http.Handler
+	// metal reads metal-stack's series; nil while no store is configured.
+	metal   *metal.Reader
+	handler http.Handler
 }
 
-func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
+// Option configures a Server.
+type Option func(*Server)
+
+// WithMetal sets the reader behind MetalService. Without it the service
+// answers FailedPrecondition: this environment has no metal-stack metrics.
+func WithMetal(reader *metal.Reader) Option {
+	return func(s *Server) {
+		s.metal = reader
+	}
+}
+
+func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte, opts ...Option) *Server {
 	s := &Server{
 		logger:        logger,
 		db:            database,
 		queries:       db.New(database.Pool),
 		authValidator: auth.NewValidatorForAudience(jwtSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger),
+	}
+	for _, opt := range opts {
+		opt(s)
 	}
 
 	mux := http.NewServeMux()
@@ -69,6 +86,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 	mux.Handle(dcimv1connect.NewTaskServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 	mux.Handle(dcimv1connect.NewTaskStepServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 	mux.Handle(dcimv1connect.NewUserServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
+	mux.Handle(dcimv1connect.NewMetalServiceHandler(s, interceptors, connectlimit.ReadMaxBytes()))
 
 	reflector := grpcreflect.NewStaticReflector(
 		"dcim.v1.SiteService",
@@ -87,6 +105,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		"dcim.v1.TaskService",
 		"dcim.v1.TaskStepService",
 		"dcim.v1.UserService",
+		"dcim.v1.MetalService",
 	)
 	mux.Handle(grpcreflect.NewHandlerV1(reflector, connectlimit.ReadMaxBytes()))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector, connectlimit.ReadMaxBytes()))

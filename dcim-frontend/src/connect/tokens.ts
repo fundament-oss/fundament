@@ -20,6 +20,7 @@ import { NoteService } from '../generated/v1/note_pb';
 import { PlacementService } from '../generated/v1/placement_pb';
 import { TaskService, TaskStepService } from '../generated/v1/task_pb';
 import { UserService } from '../generated/v1/user_pb';
+import { MetalService } from '../generated/v1/metal_pb';
 import { FleetService } from '../generated/fleet/v1/fleet_pb';
 
 export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
@@ -68,6 +69,7 @@ export const PLACEMENT_CLIENT = createClientToken(PlacementService);
 export const TASK_CLIENT = createClientToken(TaskService);
 export const TASK_STEP_CLIENT = createClientToken(TaskStepService);
 export const USER_CLIENT = createClientToken(UserService);
+export const METAL_CLIENT = createClientToken(MetalService);
 
 // The staff fleet view (FUN-23) lives in platform-api, not in dcim-api: another
 // host, so another transport. It accepts the same dcim_auth cookie.

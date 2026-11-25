@@ -11,13 +11,20 @@
   ></nldd-top-title-bar>
   <nldd-simple-section>
     @if (!metrics()) {
-      <!-- No metal-stack in this environment: say so rather than draw an empty
-           estate. The section stays in the sidebar, as Platform does while its
-           API is unconfigured. -->
-      <nldd-inline-dialog
-        text="Not available"
-        supporting-text="This environment has no metal-stack metrics configured."
-      ></nldd-inline-dialog>
+      <!-- No snapshot: say why rather than draw an empty estate. The section
+           stays in the sidebar, as Platform does while its API is
+           unconfigured. -->
+      @if (status() === 'not-configured') {
+        <nldd-inline-dialog
+          text="Not available"
+          supporting-text="This environment has no metal-stack metrics configured."
+        ></nldd-inline-dialog>
+      } @else if (status() === 'unavailable') {
+        <nldd-inline-dialog
+          text="Unreachable"
+          supporting-text="metal-stack metrics are unreachable right now. Try again in a few minutes."
+        ></nldd-inline-dialog>
+      }
     } @else {
       <nldd-title id="bare-metal-title" size="2">
         <h1>{{ title() }}</h1>
@@ -396,14 +403,23 @@
           <h2>Metal-core errors over 24 hours</h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
-        <app-metric-chart
-          kind="bar"
-          [labels]="network.errorLabels"
-          [series]="network.errorSeries"
-          accessibleLabel="Metal-core errors over the last 24 hours, by operation"
-          xLabel="Operation"
-          [format]="formatCount"
-        />
+        @if (network.errors; as errors) {
+          <app-metric-chart
+            kind="bar"
+            [labels]="errors.labels"
+            [series]="errors.series"
+            accessibleLabel="Metal-core errors over the last 24 hours, by operation"
+            xLabel="Operation"
+            [format]="formatCount"
+          />
+        } @else {
+          <nldd-rich-text spacing="flat">
+            <p>
+              Not collected yet. metal-core reports its errors from the switches once the partitions
+              send their metrics.
+            </p>
+          </nldd-rich-text>
+        }
       </nldd-container>
     </nldd-container>
   }

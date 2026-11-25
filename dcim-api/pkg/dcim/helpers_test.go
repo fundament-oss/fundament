@@ -73,7 +73,7 @@ func signTestToken(t *testing.T, subject string) string {
 	return s
 }
 
-func newTestAPI(t *testing.T) *testEnv {
+func newTestAPI(t *testing.T, opts ...dcim.Option) *testEnv {
 	t.Helper()
 
 	testLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -82,7 +82,7 @@ func newTestAPI(t *testing.T) *testEnv {
 
 	testDB, adminPool := createTestDB(t, testLogger)
 
-	srv := dcim.New(testLogger, testDB, []byte(testJWTSecret))
+	srv := dcim.New(testLogger, testDB, []byte(testJWTSecret), opts...)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
