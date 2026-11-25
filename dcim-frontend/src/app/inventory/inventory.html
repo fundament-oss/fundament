@@ -119,10 +119,7 @@
            the row opens: they act on one asset, and that is where you can see
            which one you are about to change. -->
           @for (asset of orderedAssets(); track asset.id) {
-            <nldd-list-item
-              [attr.href]="assetPath(asset.id)"
-              (click)="openAsset($event, asset.id)"
-            >
+            <nldd-list-item [attr.href]="assetPath(asset.id)" (click)="openAsset($event, asset.id)">
               <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <!-- The category right behind the name, and the asset tag under

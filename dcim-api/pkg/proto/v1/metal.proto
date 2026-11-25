@@ -1,0 +1,58 @@
+edition = "2023";
+
+package dcim.v1;
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+// MetalSample is one label set and value of an instant query.
+message MetalSample {
+  map<string, string> labels = 10;
+  double              value  = 20;
+}
+
+// MetalPoint is one (time, value) pair of a range query.
+message MetalPoint {
+  google.protobuf.Timestamp time  = 10;
+  double                    value = 20;
+}
+
+// MetalSeries is one label set of a range query, over time.
+message MetalSeries {
+  map<string, string> labels = 10;
+  repeated MetalPoint points = 20;
+}
+
+// MetalQueryResult is the answer to one named query: samples for an instant
+// query, series for a range query.
+message MetalQueryResult {
+  repeated MetalSample samples = 10;
+  repeated MetalSeries series  = 20;
+}
+
+// ── MetalService ──────────────────────────────────────────────────────────────
+
+// MetalService reads what metal-stack's exporters publish, from the
+// Prometheus-compatible store dcim-api is pointed at. The queries are fixed in
+// dcim-api; the caller cannot send PromQL.
+service MetalService {
+  // GetMetalSnapshot runs every query and answers them by name. dcim-api may
+  // answer a snapshot of up to 30 seconds old. It fails with
+  // FailedPrecondition when no store is configured, with NotFound when the
+  // store holds no metal-stack series and with Unavailable when the store
+  // cannot be read.
+  rpc GetMetalSnapshot(GetMetalSnapshotRequest) returns (GetMetalSnapshotResponse);
+}
+
+message GetMetalSnapshotRequest {}
+
+message GetMetalSnapshotResponse {
+  google.protobuf.Timestamp     collected_at = 10;
+  map<string, MetalQueryResult> results      = 20;
+}

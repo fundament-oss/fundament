@@ -1,0 +1,634 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="title()"
+    back-text="Bare metal"
+    collapse-anchor="bare-metal-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    @if (!metrics()) {
+      <!-- No snapshot: say why rather than draw an empty estate. The section
+           stays in the sidebar, as Platform does while its API is
+           unconfigured. -->
+      @switch (status()) {
+        @case ('not-configured') {
+          <nldd-inline-dialog
+            text="Not available"
+            supporting-text="This environment has no metal-stack metrics configured."
+          ></nldd-inline-dialog>
+        }
+        @case ('no-data') {
+          <nldd-inline-dialog
+            text="No metal-stack data"
+            supporting-text="The metrics store holds no metal-stack series. Check that the metal-metrics-exporter is deployed and scraped."
+          ></nldd-inline-dialog>
+        }
+        @case ('unavailable') {
+          <nldd-inline-dialog
+            text="Unreachable"
+            supporting-text="metal-stack metrics are unreachable right now. The page tries again every minute."
+          ></nldd-inline-dialog>
+        }
+        @default {
+          <nldd-activity-indicator
+            show-text
+            text="Loading metal-stack metrics..."
+          ></nldd-activity-indicator>
+        }
+      }
+    } @else {
+      <nldd-title id="bare-metal-title" size="2">
+        <h1>{{ title() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-rich-text spacing="flat">
+        <p>Collected {{ collectedAt() }}.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="16"></nldd-spacer>
+
+      @if (staleReason(); as reason) {
+        <nldd-banner
+          variant="warning"
+          text="Not refreshed"
+          [attr.supporting-text]="reason + ' This is the snapshot collected ' + collectedAt() + '.'"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      @switch (view().kind) {
+        @case ('capacity') {
+          <ng-container *ngTemplateOutlet="capacity"></ng-container>
+        }
+        @case ('machines') {
+          <ng-container *ngTemplateOutlet="machines"></ng-container>
+        }
+        @case ('network') {
+          <ng-container *ngTemplateOutlet="network"></ng-container>
+        }
+        @case ('api') {
+          <ng-container *ngTemplateOutlet="api"></ng-container>
+        }
+      }
+    }
+  </nldd-simple-section>
+</nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CAPACITY
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #capacity>
+  @if (capacityView(); as capacity) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-collection layout="grid" item-min-width="180px" gap="16">
+        @for (tile of capacity.tiles; track tile.label) {
+          <nldd-card background="base">
+            <nldd-container padding="16">
+              <nldd-title size="5">
+                <h2>{{ tile.label }}</h2>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-title size="3">
+                <p>{{ tile.value }}</p>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+        }
+      </nldd-collection>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Capacity per partition and size</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          kind="bar"
+          [horizontal]="true"
+          [stacked]="true"
+          [labels]="capacity.chartLabels"
+          [series]="capacity.chartSeries"
+          accessibleLabel="Machine capacity per partition and size, split by allocation state"
+          xLabel="Partition and size"
+          [format]="formatCount"
+        />
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Reservations</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-container layout="stack" gap="12">
+          @for (size of capacity.reservations; track size.size) {
+            <nldd-progress-bar
+              [attr.text]="size.size"
+              [attr.value]="size.used"
+              [attr.max]="size.total || 1"
+              [attr.value-text]="size.used + ' / ' + size.total"
+            ></nldd-progress-bar>
+          }
+        </nldd-container>
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Allocated machines over 7 days</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          [labels]="capacity.allocationLabels"
+          [series]="capacity.allocationSeries"
+          accessibleLabel="Allocated and total machines over the last 7 days"
+          xLabel="Time"
+          [format]="formatCount"
+        />
+      </nldd-container>
+    </nldd-container>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MACHINES
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #machines>
+  @if (machinesView(); as machines) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-collection layout="grid" item-min-width="180px" gap="16">
+        @for (tile of machines.tiles; track tile.label) {
+          <nldd-card background="base">
+            <nldd-container padding="16">
+              <nldd-title size="5">
+                <h2>{{ tile.label }}</h2>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-title size="3">
+                <p>{{ tile.value }}</p>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+        }
+      </nldd-collection>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Total power over 24 hours</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          [labels]="machines.powerLabels"
+          [series]="machines.powerSeries"
+          accessibleLabel="Total machine power over the last 24 hours, in watts"
+          xLabel="Time"
+          [format]="formatWatts"
+        />
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Machines by power draw</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          kind="bar"
+          [labels]="machines.powerHistogramLabels"
+          [series]="machines.powerHistogramSeries"
+          accessibleLabel="Number of machines in each power draw bucket"
+          xLabel="Power draw"
+          [format]="formatCount"
+        />
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Issues</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-table
+          accessible-label="Issues"
+          columns="minmax(260px, 1fr) 110px 100px"
+          md-columns="minmax(220px, 1fr) 100px 90px"
+          sm-columns="minmax(160px, 1fr) 90px 80px"
+        >
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="Issue"></nldd-text-cell>
+            <nldd-text-cell text="Severity"></nldd-text-cell>
+            <nldd-text-cell text="Machines"></nldd-text-cell>
+          </nldd-table-row>
+          @for (issue of machines.issues; track issue.id) {
+            <nldd-table-row>
+              <nldd-text-cell
+                [attr.text]="issue.id"
+                [attr.supporting-text]="issue.description"
+              ></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="issueSeverityTag(issue.severity).color"
+                  [attr.text]="issueSeverityTag(issue.severity).text"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-text-cell [attr.text]="issue.count"></nldd-text-cell>
+            </nldd-table-row>
+          }
+          <nldd-inline-dialog slot="empty" text="No issues"></nldd-inline-dialog>
+        </nldd-table>
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Machines</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-table
+          accessible-label="Machines"
+          columns="minmax(150px, 1fr) 150px 100px 140px 100px 90px 90px 80px 80px"
+          md-columns="minmax(150px, 1fr) 140px 100px 90px 80px"
+          sm-columns="minmax(140px, 1fr) 100px 90px 80px"
+        >
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="Name"></nldd-text-cell>
+            <nldd-text-cell text="Cluster" hide-below="md"></nldd-text-cell>
+            <nldd-text-cell text="Partition" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Size" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="State"></nldd-text-cell>
+            <nldd-text-cell text="Role" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Power"></nldd-text-cell>
+            <nldd-text-cell text="PSU" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Issues"></nldd-text-cell>
+          </nldd-table-row>
+          @for (machine of machines.machines; track machine.id) {
+            <nldd-table-row>
+              <nldd-text-cell [attr.text]="machineName(machine)"></nldd-text-cell>
+              <!-- Text, not a link: the tag is the id metal-stack allocated
+                   the machine under (Gardener's shoot), not fundament's
+                   cluster id, so /platform/clusters/<tag> would not exist. -->
+              <nldd-text-cell
+                hide-below="md"
+                [attr.text]="machine.clusterTag || 'None'"
+              ></nldd-text-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="machine.partition"></nldd-text-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="machine.size"></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="machineStateTag(machine.state).color"
+                  [attr.text]="machineStateTag(machine.state).text"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="machineRole(machine)"></nldd-text-cell>
+              <nldd-text-cell [attr.text]="powerText(machine)"></nldd-text-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="psuText(machine)"></nldd-text-cell>
+              <nldd-cell>
+                @if (machineIssueTag(machine); as issues) {
+                  <nldd-tag
+                    size="sm"
+                    [attr.color]="issues.color"
+                    [attr.text]="issues.text"
+                  ></nldd-tag>
+                } @else {
+                  <nldd-text color="secondary">None</nldd-text>
+                }
+              </nldd-cell>
+            </nldd-table-row>
+          }
+          <nldd-inline-dialog slot="empty" text="No machines"></nldd-inline-dialog>
+        </nldd-table>
+      </nldd-container>
+    </nldd-container>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     NETWORK
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #network>
+  @if (networkView(); as network) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>IP address space</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-table
+          accessible-label="Networks"
+          columns="minmax(160px, 1fr) minmax(180px, 240px) minmax(180px, 240px)"
+          sm-columns="minmax(140px, 1fr) minmax(160px, 220px)"
+        >
+          <nldd-table-row slot="header">
+            <!-- The partition is the network's supporting text at every
+                 width, so it has no column of its own. -->
+            <nldd-text-cell text="Network"></nldd-text-cell>
+            <nldd-text-cell text="IPs"></nldd-text-cell>
+            <nldd-text-cell text="Prefixes" hide-below="md"></nldd-text-cell>
+          </nldd-table-row>
+          @for (item of network.networks; track item.id) {
+            <nldd-table-row>
+              <nldd-text-cell
+                [attr.text]="item.name"
+                [attr.supporting-text]="item.partition"
+              ></nldd-text-cell>
+              <nldd-cell>
+                <nldd-progress-bar
+                  size="sm"
+                  [attr.accessible-label]="'IP addresses on ' + item.name"
+                  [attr.value]="item.ipsUsed"
+                  [attr.max]="item.ipsUsed + item.ipsAvailable || 1"
+                  [attr.value-text]="ipText(item)"
+                ></nldd-progress-bar>
+              </nldd-cell>
+              <nldd-cell hide-below="md">
+                <nldd-progress-bar
+                  size="sm"
+                  [attr.accessible-label]="'Prefixes on ' + item.name"
+                  [attr.value]="item.prefixesUsed"
+                  [attr.max]="item.prefixesUsed + item.prefixesAvailable || 1"
+                  [attr.value-text]="prefixText(item)"
+                ></nldd-progress-bar>
+              </nldd-cell>
+            </nldd-table-row>
+          }
+          <nldd-inline-dialog slot="empty" text="No networks"></nldd-inline-dialog>
+        </nldd-table>
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Switches</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-table
+          accessible-label="Switches"
+          columns="minmax(150px, 1fr) 90px 100px 110px 100px 140px 110px 80px"
+          md-columns="minmax(140px, 1fr) 90px 110px 100px 80px"
+          sm-columns="minmax(130px, 1fr) 110px 100px 80px"
+        >
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="Name"></nldd-text-cell>
+            <nldd-text-cell text="Rack" hide-below="md"></nldd-text-cell>
+            <nldd-text-cell text="Partition" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Metal-core"></nldd-text-cell>
+            <nldd-text-cell text="Sync"></nldd-text-cell>
+            <nldd-text-cell text="OS" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Version" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="BGP"></nldd-text-cell>
+          </nldd-table-row>
+          @for (item of network.switches; track item.name) {
+            <nldd-table-row>
+              <nldd-text-cell [attr.text]="item.name"></nldd-text-cell>
+              <nldd-text-cell hide-below="md" [attr.text]="item.rack"></nldd-text-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="item.partition"></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="item.metalCoreUp ? 'success' : 'critical'"
+                  [attr.text]="item.metalCoreUp ? 'Up' : 'Down'"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-cell>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="syncTag(item.syncFailing).color"
+                  [attr.text]="syncTag(item.syncFailing).text"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="item.os"></nldd-text-cell>
+              <nldd-text-cell hide-below="lg" [attr.text]="item.metalCoreVersion"></nldd-text-cell>
+              <nldd-text-cell [attr.text]="bgpText(item)"></nldd-text-cell>
+            </nldd-table-row>
+          }
+          <nldd-inline-dialog slot="empty" text="No switches"></nldd-inline-dialog>
+        </nldd-table>
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Sync duration over 24 hours</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          [labels]="network.syncLabels"
+          [series]="network.syncSeries"
+          accessibleLabel="Switch sync duration over the last 24 hours, in milliseconds"
+          xLabel="Time"
+          [format]="formatMilliseconds"
+        />
+      </nldd-container>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Metal-core errors over 24 hours</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        @if (network.errors; as errors) {
+          <app-metric-chart
+            kind="bar"
+            [labels]="errors.labels"
+            [series]="errors.series"
+            accessibleLabel="Metal-core errors over the last 24 hours, by operation"
+            xLabel="Operation"
+            [format]="formatCount"
+          />
+        } @else {
+          <nldd-rich-text spacing="flat">
+            <p>
+              Not collected yet. metal-core reports its errors from the switches once the partitions
+              send their metrics.
+            </p>
+          </nldd-rich-text>
+        }
+      </nldd-container>
+    </nldd-container>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     API
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #api>
+  @if (apiView(); as api) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Requests over 24 hours</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <app-metric-chart
+          [stacked]="true"
+          [labels]="api.requestLabels"
+          [series]="api.requestSeries"
+          accessibleLabel="Requests per minute over the last 24 hours, split by status class"
+          xLabel="Time"
+          [format]="formatRate"
+        />
+      </nldd-container>
+
+      <div class="grid gap-6 lg:grid-cols-2">
+        <nldd-container>
+          <nldd-title size="4">
+            <h2>REST latency</h2>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-collection layout="grid" item-min-width="100px" gap="16">
+            @for (tile of api.restPercentiles; track tile.label) {
+              <nldd-card background="base">
+                <nldd-container padding="16">
+                  <nldd-text color="secondary">{{ tile.label }}</nldd-text>
+                  <nldd-spacer size="4"></nldd-spacer>
+                  <nldd-title size="4">
+                    <p>{{ tile.value }}</p>
+                  </nldd-title>
+                </nldd-container>
+              </nldd-card>
+            }
+          </nldd-collection>
+          <nldd-spacer size="16"></nldd-spacer>
+          <app-metric-chart
+            kind="bar"
+            [labels]="api.restBucketLabels"
+            [series]="api.restBucketSeries"
+            accessibleLabel="REST request latency histogram per bucket"
+            xLabel="Latency"
+            [format]="formatCount"
+          />
+        </nldd-container>
+
+        <nldd-container>
+          <nldd-title size="4">
+            <h2>gRPC latency</h2>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-collection layout="grid" item-min-width="100px" gap="16">
+            @for (tile of api.grpcPercentiles; track tile.label) {
+              <nldd-card background="base">
+                <nldd-container padding="16">
+                  <nldd-text color="secondary">{{ tile.label }}</nldd-text>
+                  <nldd-spacer size="4"></nldd-spacer>
+                  <nldd-title size="4">
+                    <p>{{ tile.value }}</p>
+                  </nldd-title>
+                </nldd-container>
+              </nldd-card>
+            }
+          </nldd-collection>
+          <nldd-spacer size="16"></nldd-spacer>
+          <app-metric-chart
+            kind="bar"
+            [labels]="api.grpcBucketLabels"
+            [series]="api.grpcBucketSeries"
+            accessibleLabel="gRPC request latency histogram per bucket"
+            xLabel="Latency"
+            [format]="formatCount"
+          />
+        </nldd-container>
+      </div>
+
+      <nldd-container>
+        <nldd-title size="4">
+          <h2>Components</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-table
+          accessible-label="Components"
+          columns="minmax(160px, 1fr) 130px 90px 150px"
+          md-columns="minmax(160px, 1fr) 90px 150px"
+          sm-columns="minmax(140px, 1fr) 90px 150px"
+        >
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="Component"></nldd-text-cell>
+            <nldd-text-cell text="Type" hide-below="lg"></nldd-text-cell>
+            <nldd-text-cell text="Up"></nldd-text-cell>
+            <nldd-text-cell text="Token lifetime"></nldd-text-cell>
+          </nldd-table-row>
+          @for (component of api.components; track component.id) {
+            <nldd-table-row>
+              <nldd-text-cell
+                [attr.text]="component.identifier"
+                [attr.supporting-text]="component.id"
+              ></nldd-text-cell>
+              <nldd-text-cell
+                hide-below="lg"
+                [attr.text]="componentType(component)"
+              ></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="componentTag(component).color"
+                  [attr.text]="componentTag(component).text"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-cell>
+                <span class="flex items-center gap-2">
+                  <nldd-text>{{ tokenText(component) }}</nldd-text>
+                  @if (tokenTag(component.tokenLifetimeSeconds); as token) {
+                    <nldd-tag
+                      size="sm"
+                      [attr.color]="token.color"
+                      [attr.text]="token.text"
+                    ></nldd-tag>
+                  }
+                </span>
+              </nldd-cell>
+            </nldd-table-row>
+          }
+          <nldd-inline-dialog slot="empty" text="No components"></nldd-inline-dialog>
+        </nldd-table>
+      </nldd-container>
+    </nldd-container>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECONDARY NAV
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Bare metal</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Bare metal">
+        <nldd-list-item
+          [attr.href]="paths.capacity"
+          [attr.current]="isCurrent(paths.capacity) ? '' : null"
+          (click)="go($event, paths.capacity)"
+        >
+          <nldd-icon-cell icon="chart-x-y-axis-line" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Capacity"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="paths.machines"
+          [attr.current]="isCurrent(paths.machines) ? '' : null"
+          (click)="go($event, paths.machines)"
+        >
+          <nldd-icon-cell icon="servers" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Machines"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="paths.network"
+          [attr.current]="isCurrent(paths.network) ? '' : null"
+          (click)="go($event, paths.network)"
+        >
+          <nldd-icon-cell icon="network" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Network"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="paths.api"
+          [attr.current]="isCurrent(paths.api) ? '' : null"
+          (click)="go($event, paths.api)"
+        >
+          <nldd-icon-cell icon="line-chart" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="API"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>

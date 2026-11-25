@@ -7,6 +7,7 @@ import { inventoryMatcher } from './inventory/inventory-views';
 import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
 import { dataCentersMatcher } from './datacenters/datacenter-views';
 import { racksMatcher } from './racks/rack-views';
+import { bareMetalMatcher } from './bare-metal/bare-metal-views';
 import { platformMatcher } from './platform/platform-views';
 
 const routes: Routes = [
@@ -95,6 +96,13 @@ const routes: Routes = [
         matcher: roundsMatcher,
         title: 'Rounds',
         loadComponent: () => import('./rounds/rounds').then((m) => m.default),
+      },
+      {
+        // What metal-stack says about the estate. One route config for
+        // capacity, machines, network and the API: see bare-metal-views.ts.
+        matcher: bareMetalMatcher,
+        title: 'Bare metal',
+        loadComponent: () => import('./bare-metal/bare-metal').then((m) => m.default),
       },
       {
         // Every organization's clusters as staff see them (FUN-23). One route

@@ -14,6 +14,8 @@ import DemoConfigService from './demo-config.service';
 import DemoAuthService from './demo-auth.service';
 import RackHistoryService from '../racks/rack-history.service';
 import DemoRackHistoryService from './demo-rack-history.service';
+import MetalMetricsService from '../bare-metal/metal-metrics.service';
+import DemoMetalMetricsService from './demo-metal-metrics.service';
 
 const demoAppConfig: ApplicationConfig = {
   providers: [
@@ -26,6 +28,7 @@ const demoAppConfig: ApplicationConfig = {
     { provide: ConfigService, useClass: DemoConfigService },
     { provide: AuthService, useClass: DemoAuthService },
     { provide: RackHistoryService, useClass: DemoRackHistoryService },
+    { provide: MetalMetricsService, useClass: DemoMetalMetricsService },
     { provide: DCIM_TRANSPORT, useFactory: createDemoTransport },
     { provide: PLATFORM_TRANSPORT, useFactory: createFleetDemoTransport },
   ],

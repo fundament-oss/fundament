@@ -4,6 +4,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY dcim-api/ ./dcim-api/
 COPY common/ ./common/
+# The metal reader queries the store through organization-api's Prometheus client.
+COPY organization-api/pkg/prometheus/ ./organization-api/pkg/prometheus/
 RUN CGO_ENABLED=0 go build -o /build/bin/dcim-api ./dcim-api/cmd/dcim-api
 
 FROM scratch
