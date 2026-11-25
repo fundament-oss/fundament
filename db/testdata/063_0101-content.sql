@@ -1,0 +1,19 @@
+-- A known API key for Alice in acme-corp (TREK_INSERT_TEST_DATA only), so a
+-- fresh local environment can be driven by functl, the OpenTofu provider and
+-- scripts without creating a key in the console first:
+--
+--   functl auth login fun_LocalDevAliceAcmeCorpKey0000004KyU0e
+--
+-- Only the SHA-256 hash is stored, as for a key created through the API. The
+-- token is a valid fun_ token (its last six characters are the CRC32 checksum
+-- apitoken.ValidateFormat checks), so changing it means recomputing that
+-- checksum. The api_keys_outbox trigger queues the key for the authz-worker,
+-- which writes its OpenFGA tuples like for any other key. It expires a year
+-- after the database was reset, the most the organization-api allows for a key
+-- (organizationApi.apiKeyMaxExpiresIn: 8760h). A redeploy that keeps the
+-- database (the keep-db profile, `just test-env redeploy`) keeps the key and
+-- its expiry.
+
+INSERT INTO authn.api_keys (id, organization_id, user_id, name, token_hash, token_prefix, expires) VALUES
+    ('019b4000-b000-7000-8000-000000000001', '019b4000-0000-7000-8000-000000000001', '019b4000-1000-7000-8000-000000000001',
+     'local-dev', sha256(convert_to('fun_LocalDevAliceAcmeCorpKey0000004KyU0e', 'UTF8')), 'fun_Loca', now() + interval '8760 hours');

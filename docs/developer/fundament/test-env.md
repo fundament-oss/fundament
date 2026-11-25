@@ -50,6 +50,7 @@ just test-env up
 - It builds the VM image the first time, boots a fresh VM, copies your working tree into it, and starts the platform, Gardener and a baseline cluster `e2e-base` there. It also publishes the cert-manager plugin, which the scenarios install on `e2e-base`. It stops at the first failure and leaves the VM for you to inspect.
 - It takes about 25 minutes, most of it Gardener starting. The first time takes a few minutes longer: Go builds, tools and images land on a cache disk that outlives the VM (`~/.cache/fundament/test-env/cache/`; delete it to start cold, or set `TEST_ENV_CACHE=0`).
 - At the end it opens a tunnel: <https://console.fundament.localhost:8443>, logged in as `alice@acme-corp.com` with password `password`. The tunnel needs port 8443, which a local `just dev` cluster also uses; stop that first (`just cluster-stop`).
+- The test data's API key for Alice works here too: `functl auth login fun_LocalDevAliceAcmeCorpKey0000004KyU0e`. See [Open the console](./getting-started.md#open-the-console).
 - Running `up` again needs `just test-env down` first. Every `up` is a clean start.
 
 ## Run the e2e scenarios
