@@ -3,7 +3,9 @@ package analyze
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -38,6 +40,52 @@ func TestListFilesStopsWhenCancelled(t *testing.T) {
 	cancel()
 
 	_, _, err := listFiles(ctx, img, 1<<20, 100)
+
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+// cancellingLayer cancels the walk once its contents are first read.
+type cancellingLayer struct {
+	v1.Layer
+	cancel context.CancelFunc
+}
+
+func (l cancellingLayer) Uncompressed() (io.ReadCloser, error) {
+	rc, err := l.Layer.Uncompressed()
+	if err != nil {
+		return nil, fmt.Errorf("reading layer: %w", err)
+	}
+	l.cancel()
+	return rc, nil
+}
+
+func TestListFilesCountsEntriesExtractSkips(t *testing.T) {
+	big := tarEntry{name: "big", body: strings.Repeat("\x00", 4<<20)}
+	for name, top := range map[string]tarEntry{
+		"whited out": {name: ".wh.big"},
+		"replaced":   {name: "big", body: "small"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			img := imageOf(t, &amd64, layerOf(t, big), layerOf(t, top))
+
+			_, _, err := listFiles(context.Background(), img, 1<<20, 100)
+
+			var permanent *PermanentError
+			require.ErrorAs(t, err, &permanent)
+			assert.Equal(t, "The image is over the 1.0 MiB analysis limit once decompressed", permanent.Reason)
+		})
+	}
+}
+
+func TestListFilesStopsWhenCancelledInSkippedEntries(t *testing.T) {
+	// Nothing of the lower layer reaches the walk: the top layer whites it out.
+	ctx, cancel := context.WithCancel(context.Background())
+	img := imageOf(t, &amd64,
+		cancellingLayer{Layer: layerOf(t, tarEntry{name: "big", body: strings.Repeat("\x00", 4<<20)}), cancel: cancel},
+		layerOf(t, tarEntry{name: ".wh.big"}),
+	)
+
+	_, _, err := listFiles(ctx, img, 1<<30, 100)
 
 	require.ErrorIs(t, err, context.Canceled)
 }

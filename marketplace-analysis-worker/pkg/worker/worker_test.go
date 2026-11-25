@@ -159,21 +159,28 @@ func TestResubmissionRetriesFailedAnalysis(t *testing.T) {
 	assert.Equal(t, int32(0), rows[0].retries)
 }
 
-func TestSweepEnqueuesReviewableVersionsOnce(t *testing.T) {
+func TestSweepEnqueuesSubmittedVersionsOnce(t *testing.T) {
 	env := newTestEnv(t)
-	approved := env.seedVersion(t, "approved")
+	// Every round in the submission history can be opened, whatever its outcome.
+	submitted := []string{"pending", "changes_requested", "approved", "rejected", "withdrawn"}
+	versions := make(map[string]uuid.UUID, len(submitted))
+	for _, status := range submitted {
+		versions[status] = env.seedVersion(t, status)
+	}
 	draft := env.seedVersion(t, "draft")
 	w := newWorker(env, &fakeAnalyzer{})
 
 	enqueued, err := w.Sweep(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, int64(1), enqueued)
+	assert.Equal(t, int64(len(submitted)), enqueued)
 
 	enqueued, err = w.Sweep(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), enqueued)
 
-	assert.Len(t, env.analyses(t, approved), 1)
+	for status, versionID := range versions {
+		assert.Len(t, env.analyses(t, versionID), 1, status)
+	}
 	assert.Empty(t, env.analyses(t, draft))
 }
 

@@ -19,19 +19,62 @@ import (
 // errTooLarge marks the decompressed stream passing the limit.
 var errTooLarge = errors.New("decompressed image exceeds the size limit")
 
-// limitedReader fails once more than limit bytes were read, rather than
-// returning EOF the way io.LimitReader does: a truncated stream must not pass
-// for a complete one.
-type limitedReader struct {
-	r     io.Reader
+// budget bounds what the walk decompresses, counted where the layers are read
+// rather than where mutate.Extract writes: Extract drops the entries an upper
+// layer shadows or whites out, but still decompresses them. It also stops the
+// reading once ctx is done, since nothing else on the way from the local
+// tarball watches ctx. Only Extract's goroutine reads through it.
+type budget struct {
+	ctx   context.Context
 	limit int64
 	read  int64
 }
 
-func (l *limitedReader) Read(p []byte) (int, error) {
-	n, err := l.r.Read(p)
-	l.read += int64(n)
-	if l.read > l.limit {
+// budgetedImage hands out its layers wrapped in budgetedLayer.
+type budgetedImage struct {
+	v1.Image
+	budget *budget
+}
+
+func (i budgetedImage) Layers() ([]v1.Layer, error) {
+	layers, err := i.Image.Layers()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // Extract adds the context
+	}
+	wrapped := make([]v1.Layer, len(layers))
+	for n, layer := range layers {
+		wrapped[n] = budgetedLayer{Layer: layer, budget: i.budget}
+	}
+	return wrapped, nil
+}
+
+type budgetedLayer struct {
+	v1.Layer
+	budget *budget
+}
+
+func (l budgetedLayer) Uncompressed() (io.ReadCloser, error) {
+	rc, err := l.Layer.Uncompressed()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // Extract adds the context
+	}
+	return &budgetedReader{ReadCloser: rc, budget: l.budget}, nil
+}
+
+// budgetedReader fails once the budget is spent, rather than returning EOF the
+// way io.LimitReader does: a truncated layer must not pass for a complete one.
+type budgetedReader struct {
+	io.ReadCloser
+	budget *budget
+}
+
+func (r *budgetedReader) Read(p []byte) (int, error) {
+	if err := r.budget.ctx.Err(); err != nil {
+		return 0, err //nolint:wrapcheck // Extract adds the context
+	}
+	n, err := r.ReadCloser.Read(p)
+	r.budget.read += int64(n)
+	if r.budget.read > r.budget.limit {
 		return n, errTooLarge
 	}
 	return n, err //nolint:wrapcheck // io.EOF must reach tar.Reader unwrapped
@@ -43,11 +86,15 @@ func (l *limitedReader) Read(p []byte) (int, error) {
 // decompressed bytes is enforced. It stops once ctx is done, so the job's
 // timeout bounds it like the pull and Trivy.
 func listFiles(ctx context.Context, img v1.Image, maxBytes int64, maxFiles int) ([]File, bool, error) {
-	stream := mutate.Extract(img)
+	// Cancelled on return too, so Extract's goroutine stops reading layers
+	// when the walk ends early.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	stream := mutate.Extract(budgetedImage{Image: img, budget: &budget{ctx: ctx, limit: maxBytes}})
 	defer func() { _ = stream.Close() }()
 
-	limited := &limitedReader{r: stream, limit: maxBytes}
-	reader := tar.NewReader(limited)
+	reader := tar.NewReader(stream)
 	var files []File
 	truncated := false
 
@@ -70,8 +117,8 @@ func listFiles(ctx context.Context, img v1.Image, maxBytes int64, maxFiles int) 
 			continue
 		}
 		if len(files) >= maxFiles {
-			// The rest is still read, by tar.Reader skipping it, so the size
-			// limit keeps applying.
+			// The rest is still read, by tar.Reader skipping it, which keeps
+			// Extract going to the end and the budget applying.
 			truncated = true
 			continue
 		}
@@ -79,7 +126,8 @@ func listFiles(ctx context.Context, img v1.Image, maxBytes int64, maxFiles int) 
 		var file File
 		if header.Typeflag == tar.TypeReg {
 			sum := sha256.New()
-			// Bounded: reader sits on limitedReader, which fails past maxBytes.
+			// Bounded: the layers are read through the budget, which fails
+			// past maxBytes.
 			size, err := io.Copy(sum, reader) //nolint:gosec // G110: see limitedReader
 			if err != nil {
 				return nil, false, sizeOrErr(err, maxBytes, "reading "+header.Name)
@@ -96,8 +144,11 @@ func listFiles(ctx context.Context, img v1.Image, maxBytes int64, maxFiles int) 
 	// mutate.Extract closes its tar stream, trailer included, before it hands
 	// over the error that ended it: a layer that failed halfway reads as a
 	// complete filesystem up to the trailer. The error arrives on the next read.
-	if _, err := io.Copy(io.Discard, limited); err != nil {
+	if _, err := io.Copy(io.Discard, stream); err != nil {
 		return nil, false, sizeOrErr(err, maxBytes, "reading image layers")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, false, fmt.Errorf("listing files: %w", err)
 	}
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })

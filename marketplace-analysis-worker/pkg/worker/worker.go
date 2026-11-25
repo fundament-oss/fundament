@@ -162,7 +162,7 @@ func (w *Worker) sweep(ctx context.Context) {
 	}
 }
 
-// Sweep enqueues every pending or approved version that has no analysis yet,
+// Sweep enqueues every submitted version that has no analysis yet,
 // and reports how many it enqueued.
 func (w *Worker) Sweep(ctx context.Context) (int64, error) {
 	enqueued, err := w.queries.AnalysisEnqueueMissing(ctx)

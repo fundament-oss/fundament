@@ -100,13 +100,14 @@ WHERE id = sqlc.arg('id')::uuid
   AND retry_after = sqlc.arg('leased_until')::timestamptz;
 
 -- name: AnalysisEnqueueMissing :execrows
--- The sweep: every version a reviewer may look at, or compare with, that has
--- no analysis yet. Backfills the versions that predate the analysis, and any
--- submission whose trigger insert was lost.
+-- The sweep: every submitted version that has no analysis yet, since a
+-- reviewer may open any round in the history or compare with it. Backfills
+-- the versions that predate the analysis, and any submission whose trigger
+-- insert was lost. A draft has no round to look at.
 INSERT INTO appstore.plugin_image_analyses (plugin_definition_id)
 SELECT appstore.plugin_definitions.id
 FROM appstore.plugin_definitions
-WHERE appstore.plugin_definitions.status IN ('pending', 'approved')
+WHERE appstore.plugin_definitions.status IN ('pending', 'changes_requested', 'approved', 'rejected', 'withdrawn')
   AND appstore.plugin_definitions.deleted IS NULL
   AND NOT EXISTS (
 	SELECT 1

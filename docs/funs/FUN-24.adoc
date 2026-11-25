@@ -29,7 +29,7 @@ Trivy makes the SBOM. Fundament already runs it, digest-pinned and signature-che
 `appstore.plugin_image_analyses` holds one row per plugin version. It is the worker's queue (`status`, `retries`, `retry_after`) and the result (`packages`, `files`, `sbom`) at once:
 
 * A version is queued when it is submitted. An `AFTER INSERT` trigger on `appstore.submissions` inserts a `pending` row. The trigger is `SECURITY DEFINER`: the registry role inserts submissions and has no grant on the analysis table. A new submission round also resets a `failed` row to `pending`, so a publisher who makes a private image public just resubmits.
-* A sweep in the worker queues every `pending` or `approved` version without a row, on startup and every ten minutes. It backfills the versions that predate this feature, which are the bases the first diffs are made against.
+* A sweep in the worker queues every submitted version without a row, on startup and every ten minutes: every status but `draft`, since a reviewer can open any round in the submission history. It backfills the versions that predate this feature, which include the bases the first diffs are made against.
 * A worker claims the oldest claimable row with `FOR NO KEY UPDATE SKIP LOCKED` and leases it: `status = 'running'` and `retry_after` set to the job timeout plus a minute. The claim commits at once and the analysis runs outside any transaction, since it takes minutes. A worker that dies leaves a lease that expires, and the row is claimed again, counting the lost run as an attempt. An image that kills the worker every time is therefore marked failed after the retries run out, rather than retried forever.
 
 Definitions are immutable (a republish soft-deletes the old row and inserts a new one, link:/funs/fun-19[FUN-19]), so a version's analysis never goes stale.
@@ -55,10 +55,10 @@ The worker pulls anonymously. A registry that answers 401, 403 or 404 makes the 
 
 The image reference is the publisher's choice, and the worker fetches it from inside the cluster. Without guards, a reference such as `10.0.0.5/x@sha256:...` or one on the cloud metadata address would make the worker probe internal endpoints, and the failure message would report back what it found. So:
 
-* The worker's dialer refuses loopback, private, link-local (which holds the metadata endpoint), carrier-grade NAT and reserved addresses. It checks the address being dialed, after DNS resolution, so a name that resolves or rebinds to an internal address is refused too. Proxy settings are ignored, since a proxy would move the check onto the proxy's address.
+* The worker's dialer refuses loopback, private, link-local (which holds the metadata endpoint), carrier-grade NAT and reserved addresses, and the IPv6 ranges that embed an IPv4 address (NAT64, 6to4, Teredo). It checks the address being dialed, after DNS resolution, so a name that resolves or rebinds to an internal address is refused too. Proxy settings are ignored, since a proxy would move the check onto the proxy's address.
 * Registries are reached over https only.
 * A NetworkPolicy limits the pod's egress to DNS, the database, and public addresses on port 443. This is the second fence, and the one that holds if the first has a bug.
-* The image size is capped twice: the compressed layers the manifest declares, before anything is downloaded, and the bytes actually decompressed while the filesystem is walked, which is what catches a small gzip bomb. The scratch volume has a size limit, and the pod has a memory limit, because Trivy parses untrusted archives.
+* The image size is capped twice: the compressed layers the manifest declares, before anything is downloaded, and the bytes actually decompressed while the filesystem is walked, which is what catches a small gzip bomb. The walk counts what it reads from each layer, so entries a later layer hides or whites out count too, and it stops when the job's timeout passes. The scratch volume has a size limit, and the pod has a memory limit, because Trivy parses untrusted archives.
 * A job has a timeout.
 
 Local development is the exception, and is configured as one: `values-local.yaml` lists the sandbox registry as insecure and allowed to be private, rewrites `localhost:5112` (which only containerd's k3d mirror understands) to it, and `just plugins registry-to-fundament` joins the registry container to the management cluster's network.
@@ -69,3 +69,4 @@ Local development is the exception, and is configured as one: `values-local.yaml
 * Vulnerability scanning of the SBOM, with a vulnerability database Fundament mirrors.
 * Analyzing platforms other than `linux/amd64`.
 * Rerunning an analysis on demand from the backoffice. Today a new submission round is the way to retry a failed one.
+* A retention policy for analysis results. Every analyzed version keeps its row, with the full file list (up to `MAX_FILES` entries), the packages and the SBOM, also once the version is rejected, withdrawn or soft-deleted. A large image costs tens of MB per version before TOAST compression, and that grows the database volume and its backups. A policy could clear `files` and `sbom` of versions that are neither approved nor the latest of their plugin, while keeping enough to diff against.

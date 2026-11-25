@@ -363,9 +363,14 @@ func TestIsRefused(t *testing.T) {
 		"fe80::1%eth0":    true,
 		"::1%lo":          true,
 		"::ffff:10.0.0.1": true,
-		"140.82.121.33":   false,
-		"2606:4700::6810": false,
-		"::ffff:8.8.8.8":  false,
+		// NAT64 (well-known and local-use), 6to4 and Teredo embed IPv4.
+		"64:ff9b::a00:1":   true,
+		"64:ff9b:1::a00:1": true,
+		"2002:a00:1::1":    true,
+		"2001:0:a00:1::1":  true,
+		"140.82.121.33":    false,
+		"2606:4700::6810":  false,
+		"::ffff:8.8.8.8":   false,
 	} {
 		assert.Equal(t, refused, isRefused(netip.MustParseAddr(addr)), addr)
 	}

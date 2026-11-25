@@ -22,7 +22,9 @@ var ErrInsecureScheme = errors.New("refused a plain-http registry request")
 
 // refusedPrefixes are the ranges a publisher-chosen registry must not resolve
 // into: loopback, private, link-local (which holds the cloud metadata
-// endpoint), carrier-grade NAT, benchmarking, multicast and reserved space.
+// endpoint), carrier-grade NAT, benchmarking, multicast and reserved space,
+// and the IPv6 ranges that carry an IPv4 address on to it (NAT64, 6to4,
+// Teredo), which Unmap does not catch.
 var refusedPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/8"),
 	netip.MustParsePrefix("10.0.0.0/8"),
@@ -38,6 +40,9 @@ var refusedPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("::/128"),
 	netip.MustParsePrefix("::1/128"),
 	netip.MustParsePrefix("64:ff9b::/96"),
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+	netip.MustParsePrefix("2001::/32"),
+	netip.MustParsePrefix("2002::/16"),
 	netip.MustParsePrefix("fc00::/7"),
 	netip.MustParsePrefix("fe80::/10"),
 	netip.MustParsePrefix("ff00::/8"),

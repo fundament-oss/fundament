@@ -285,6 +285,57 @@ describe('ImageAnalysisComponent', () => {
     expect(rows(root, 'files')).toHaveLength(2);
   });
 
+  // A "Load more" whose response the test hands over once a poll has run.
+  function deferredNextPage() {
+    let resolve: (page: ImageAnalysisPage) => void = () => {};
+    const nextPage = new Promise<ImageAnalysisPage>((done) => {
+      resolve = done;
+    });
+    return { nextPage, resolve };
+  }
+
+  it('appends the next page when a poll runs while "Load more" is loading', async () => {
+    const { nextPage, resolve } = deferredNextPage();
+    const { fixture, root } = await renderPolling(async (query) =>
+      query.filesPageToken ? nextPage : baseRunningPage,
+    );
+    root.querySelector('nldd-button[text="Load more"]')?.dispatchEvent(new Event('click'));
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    resolve({
+      ...baseRunningPage,
+      files: [{ path: '/etc/new', size: 1, mode: 0o644, link: '', change: 'none' }],
+      nextFilesPageToken: '',
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(rows(root, 'files')).toHaveLength(2);
+  });
+
+  it('drops a "Load more" page of the list a poll replaced', async () => {
+    const { nextPage, resolve } = deferredNextPage();
+    let polls = 0;
+    const { fixture, root } = await renderPolling(async (query) => {
+      if (query.filesPageToken) return nextPage;
+      polls += 1;
+      // The base finishes, so the files are compared from now on.
+      return polls === 1 ? baseRunningPage : comparedPage;
+    });
+    root.querySelector('nldd-button[text="Load more"]')?.dispatchEvent(new Event('click'));
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    resolve({
+      ...baseRunningPage,
+      files: [{ path: '/etc/uncompared', size: 1, mode: 0o644, link: '', change: 'none' }],
+      nextFilesPageToken: '',
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(rows(root, 'files')).toEqual(['/etc/config | 2.0 KiB | 0644']);
+  });
+
   it('keeps the page and polls again when a poll fails', async () => {
     let calls = 0;
     const { fixture, root } = await renderPolling(async () => {

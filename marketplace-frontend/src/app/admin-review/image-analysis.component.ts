@@ -131,8 +131,17 @@ export default class ImageAnalysisComponent {
   });
 
   // Moving to another submission reuses this component: a response for the
-  // version you left must not land on the next one.
+  // version you left must not land on the next one. Bumped when the version
+  // or the file filters change, not by a poll.
   private sequence = 0;
+
+  // Bumped by every load, polls included: only the latest one's response is
+  // used.
+  private loadSequence = 0;
+
+  // Bumped whenever the file list is replaced: a "Load more" started on the
+  // list it replaced would append a page of a different listing.
+  private filesGeneration = 0;
 
   private pollTimer?: ReturnType<typeof setTimeout>;
 
@@ -166,8 +175,10 @@ export default class ImageAnalysisComponent {
   // they changed: pages loaded with "Load more" stay, as long as the current
   // version's list and what it is compared with are the same.
   private async load(poll = false) {
-    this.sequence += 1;
-    const sequence = this.sequence;
+    if (!poll) this.sequence += 1;
+    this.loadSequence += 1;
+    const { sequence, loadSequence } = this;
+    const current = () => sequence === this.sequence && loadSequence === this.loadSequence;
     clearTimeout(this.pollTimer);
     const previous = this.page();
 
@@ -178,7 +189,7 @@ export default class ImageAnalysisComponent {
         filesChangesOnly: this.filesChangesOnly(),
         filesQuery: this.filesQuery(),
       });
-      if (sequence !== this.sequence) return;
+      if (!current()) return;
       this.errorMessage.set(null);
       this.page.set(page);
       const filesUnchanged =
@@ -187,11 +198,12 @@ export default class ImageAnalysisComponent {
         page.analysis.status === 'completed' &&
         previous.compared === page.compared;
       if (!filesUnchanged) {
+        this.filesGeneration += 1;
         this.files.set(page.files);
         this.nextFilesPageToken.set(page.nextFilesPageToken);
       }
     } catch (error) {
-      if (sequence !== this.sequence) return;
+      if (!current()) return;
       // A failed poll keeps what is on the page and tries again; only a
       // first load without anything to show reports the error.
       if (!poll || !previous) {
@@ -208,7 +220,10 @@ export default class ImageAnalysisComponent {
   async loadMoreFiles() {
     const token = this.nextFilesPageToken();
     if (!token || this.loadingMore()) return;
-    const { sequence } = this;
+    // A poll that leaves the files alone does not drop the next page; one that
+    // replaces them, or a change of version or filters, does.
+    const { sequence, filesGeneration } = this;
+    const current = () => sequence === this.sequence && filesGeneration === this.filesGeneration;
     this.loadingMore.set(true);
     try {
       const page = await this.service.getImageAnalysis({
@@ -218,11 +233,11 @@ export default class ImageAnalysisComponent {
         filesQuery: this.filesQuery(),
         filesPageToken: token,
       });
-      if (sequence !== this.sequence) return;
+      if (!current()) return;
       this.files.update((files) => [...files, ...page.files]);
       this.nextFilesPageToken.set(page.nextFilesPageToken);
     } catch (error) {
-      if (sequence === this.sequence) this.toastService.error(connectErrorMessage(error));
+      if (current()) this.toastService.error(connectErrorMessage(error));
     } finally {
       this.loadingMore.set(false);
     }
