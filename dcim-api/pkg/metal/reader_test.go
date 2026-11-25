@@ -145,8 +145,9 @@ var byClause = regexp.MustCompile(`by \(([^)]*)\)`)
 // groupings is the label list of each by clause in the named query, in order.
 func groupings(t *testing.T, name string) [][]string {
 	t.Helper()
-	var out [][]string
-	for _, m := range byClause.FindAllStringSubmatch(exprOf(t, name), -1) {
+	matches := byClause.FindAllStringSubmatch(exprOf(t, name), -1)
+	out := make([][]string, 0, len(matches))
+	for _, m := range matches {
 		var labels []string
 		for l := range strings.SplitSeq(m[1], ",") {
 			labels = append(labels, strings.TrimSpace(l))
