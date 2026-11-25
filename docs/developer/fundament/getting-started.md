@@ -92,7 +92,7 @@ The test data also has an API key for Alice in `acme-corp`, so you don't have to
 functl auth login fun_LocalDevAliceAcmeCorpKey0000004KyU0e
 ```
 
-`auth login` stores the key in `~/.config/fundament/credentials`, replacing a key you stored for another installation. The OpenTofu provider and scripts don't read that file: give them the key in `FUNDAMENT_API_KEY=fun_LocalDevAliceAcmeCorpKey0000004KyU0e`. Setting that variable for a `functl` command also works, and leaves the stored key alone.
+`auth login` stores the key in functl's credentials file (`~/.config/fundament/credentials` by default; see [the config directory order](https://github.com/fundament-oss/fundament/blob/master/functl/README.md#configuration)), replacing a key you stored for another installation. The OpenTofu provider and scripts don't read that file: give them the key in the `FUNDAMENT_API_KEY` environment variable, `export FUNDAMENT_API_KEY=fun_LocalDevAliceAcmeCorpKey0000004KyU0e` or in PowerShell `$env:FUNDAMENT_API_KEY = "fun_LocalDevAliceAcmeCorpKey0000004KyU0e"`. Setting that variable for a `functl` command also works, and leaves the stored key alone.
 
 If a host does not answer, check that the gateway is `PROGRAMMED` and every route is `Accepted`:
 
