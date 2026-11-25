@@ -81,6 +81,117 @@ func (x RejectionReason) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+type ImageAnalysisStatus int32
+
+const (
+	// No analysis exists for the version (yet).
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_UNSPECIFIED ImageAnalysisStatus = 0
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_PENDING     ImageAnalysisStatus = 1
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_RUNNING     ImageAnalysisStatus = 2
+	// An attempt failed and another is scheduled; status_info says why.
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_RETRYING  ImageAnalysisStatus = 3
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_COMPLETED ImageAnalysisStatus = 4
+	// Retrying will not help; status_info says why. A new submission round
+	// queues the analysis again.
+	ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_FAILED ImageAnalysisStatus = 5
+)
+
+// Enum value maps for ImageAnalysisStatus.
+var (
+	ImageAnalysisStatus_name = map[int32]string{
+		0: "IMAGE_ANALYSIS_STATUS_UNSPECIFIED",
+		1: "IMAGE_ANALYSIS_STATUS_PENDING",
+		2: "IMAGE_ANALYSIS_STATUS_RUNNING",
+		3: "IMAGE_ANALYSIS_STATUS_RETRYING",
+		4: "IMAGE_ANALYSIS_STATUS_COMPLETED",
+		5: "IMAGE_ANALYSIS_STATUS_FAILED",
+	}
+	ImageAnalysisStatus_value = map[string]int32{
+		"IMAGE_ANALYSIS_STATUS_UNSPECIFIED": 0,
+		"IMAGE_ANALYSIS_STATUS_PENDING":     1,
+		"IMAGE_ANALYSIS_STATUS_RUNNING":     2,
+		"IMAGE_ANALYSIS_STATUS_RETRYING":    3,
+		"IMAGE_ANALYSIS_STATUS_COMPLETED":   4,
+		"IMAGE_ANALYSIS_STATUS_FAILED":      5,
+	}
+)
+
+func (x ImageAnalysisStatus) Enum() *ImageAnalysisStatus {
+	p := new(ImageAnalysisStatus)
+	*p = x
+	return p
+}
+
+func (x ImageAnalysisStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ImageAnalysisStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_admin_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (ImageAnalysisStatus) Type() protoreflect.EnumType {
+	return &file_admin_v1_common_proto_enumTypes[1]
+}
+
+func (x ImageAnalysisStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// How an entry differs from the base version.
+type Change int32
+
+const (
+	// Not compared: there is no base, or one of the two analyses is not done.
+	Change_CHANGE_UNSPECIFIED Change = 0
+	Change_CHANGE_UNCHANGED   Change = 1
+	Change_CHANGE_ADDED       Change = 2
+	Change_CHANGE_REMOVED     Change = 3
+	// A package at another version, or a file with other contents, mode or
+	// link target.
+	Change_CHANGE_CHANGED Change = 4
+)
+
+// Enum value maps for Change.
+var (
+	Change_name = map[int32]string{
+		0: "CHANGE_UNSPECIFIED",
+		1: "CHANGE_UNCHANGED",
+		2: "CHANGE_ADDED",
+		3: "CHANGE_REMOVED",
+		4: "CHANGE_CHANGED",
+	}
+	Change_value = map[string]int32{
+		"CHANGE_UNSPECIFIED": 0,
+		"CHANGE_UNCHANGED":   1,
+		"CHANGE_ADDED":       2,
+		"CHANGE_REMOVED":     3,
+		"CHANGE_CHANGED":     4,
+	}
+)
+
+func (x Change) Enum() *Change {
+	p := new(Change)
+	*p = x
+	return p
+}
+
+func (x Change) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Change) Descriptor() protoreflect.EnumDescriptor {
+	return file_admin_v1_common_proto_enumTypes[2].Descriptor()
+}
+
+func (Change) Type() protoreflect.EnumType {
+	return &file_admin_v1_common_proto_enumTypes[2]
+}
+
+func (x Change) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
 // A plugin version awaiting or having gone through review. Identity, decision
 // and the version's logos: everything else is resolved through this service's
 // read RPCs. The logos are inlined so a review list can show them, which adds
@@ -313,9 +424,9 @@ type Submission_builder struct {
 	Submitted       *timestamppb.Timestamp
 	// Set once a decision is made.
 	Reviewed *timestamppb.Timestamp
-	// The deciding Fundament staff member. Which store they come from is
-	// undecided — tenant.users or dcim.users — so do not assume this shares a
-	// namespace with submitter_user_id.
+	// The deciding Fundament staff member (dcim.users), resolved through this
+	// service's ListReviewers. Not the same namespace as submitter_user_id,
+	// which is a tenant.users id.
 	ReviewerUserId  string
 	RejectionReason RejectionReason
 	Feedback        string
@@ -603,6 +714,7 @@ type PluginVersion struct {
 	xxx_hidden_Published      *timestamppb.Timestamp  `protobuf:"bytes,120,opt,name=published"`
 	xxx_hidden_ManifestError  string                  `protobuf:"bytes,130,opt,name=manifest_error,json=manifestError"`
 	xxx_hidden_MenuIcons      []string                `protobuf:"bytes,140,rep,name=menu_icons,json=menuIcons"`
+	xxx_hidden_Manifest       []byte                  `protobuf:"bytes,150,opt,name=manifest"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -732,6 +844,13 @@ func (x *PluginVersion) GetMenuIcons() []string {
 	return nil
 }
 
+func (x *PluginVersion) GetManifest() []byte {
+	if x != nil {
+		return x.xxx_hidden_Manifest
+	}
+	return nil
+}
+
 func (x *PluginVersion) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -786,6 +905,13 @@ func (x *PluginVersion) SetManifestError(v string) {
 
 func (x *PluginVersion) SetMenuIcons(v []string) {
 	x.xxx_hidden_MenuIcons = v
+}
+
+func (x *PluginVersion) SetManifest(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Manifest = v
 }
 
 func (x *PluginVersion) HasCreated() bool {
@@ -846,6 +972,10 @@ type PluginVersion_builder struct {
 	ManifestError string
 	// Menu icon data: URIs, sorted by digest.
 	MenuIcons []string
+	// The definition.yaml as stored, not a re-serialization: definition_hash is
+	// the sha256 of exactly these bytes. Carried so the reviewer can read, and
+	// diff, what the version declares.
+	Manifest []byte
 }
 
 func (b0 PluginVersion_builder) Build() *PluginVersion {
@@ -866,6 +996,609 @@ func (b0 PluginVersion_builder) Build() *PluginVersion {
 	x.xxx_hidden_Published = b.Published
 	x.xxx_hidden_ManifestError = b.ManifestError
 	x.xxx_hidden_MenuIcons = b.MenuIcons
+	x.xxx_hidden_Manifest = b.Manifest
+	return m0
+}
+
+// A Fundament staff member who decided a submission (dcim.users). Name only:
+// the backoffice shows who decided, and has no use for contact details.
+type Reviewer struct {
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id   string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name string                 `protobuf:"bytes,20,opt,name=name"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Reviewer) Reset() {
+	*x = Reviewer{}
+	mi := &file_admin_v1_common_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Reviewer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Reviewer) ProtoMessage() {}
+
+func (x *Reviewer) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_common_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *Reviewer) GetId() string {
+	if x != nil {
+		return x.xxx_hidden_Id
+	}
+	return ""
+}
+
+func (x *Reviewer) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *Reviewer) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Reviewer) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+type Reviewer_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id   string
+	Name string
+}
+
+func (b0 Reviewer_builder) Build() *Reviewer {
+	m0 := &Reviewer{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	return m0
+}
+
+// One version's image analysis, without its lists.
+type ImageAnalysis struct {
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginVersionId string                 `protobuf:"bytes,10,opt,name=plugin_version_id,json=pluginVersionId"`
+	xxx_hidden_Status          ImageAnalysisStatus    `protobuf:"varint,20,opt,name=status,enum=admin.v1.ImageAnalysisStatus"`
+	xxx_hidden_StatusInfo      string                 `protobuf:"bytes,30,opt,name=status_info,json=statusInfo"`
+	xxx_hidden_Analyzed        *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=analyzed"`
+	xxx_hidden_ImageDigest     string                 `protobuf:"bytes,50,opt,name=image_digest,json=imageDigest"`
+	xxx_hidden_Platform        string                 `protobuf:"bytes,60,opt,name=platform"`
+	xxx_hidden_Platforms       []string               `protobuf:"bytes,70,rep,name=platforms"`
+	xxx_hidden_FilesTruncated  bool                   `protobuf:"varint,80,opt,name=files_truncated,json=filesTruncated"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *ImageAnalysis) Reset() {
+	*x = ImageAnalysis{}
+	mi := &file_admin_v1_common_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImageAnalysis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImageAnalysis) ProtoMessage() {}
+
+func (x *ImageAnalysis) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_common_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ImageAnalysis) GetPluginVersionId() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersionId
+	}
+	return ""
+}
+
+func (x *ImageAnalysis) GetStatus() ImageAnalysisStatus {
+	if x != nil {
+		return x.xxx_hidden_Status
+	}
+	return ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_UNSPECIFIED
+}
+
+func (x *ImageAnalysis) GetStatusInfo() string {
+	if x != nil {
+		return x.xxx_hidden_StatusInfo
+	}
+	return ""
+}
+
+func (x *ImageAnalysis) GetAnalyzed() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Analyzed
+	}
+	return nil
+}
+
+func (x *ImageAnalysis) GetImageDigest() string {
+	if x != nil {
+		return x.xxx_hidden_ImageDigest
+	}
+	return ""
+}
+
+func (x *ImageAnalysis) GetPlatform() string {
+	if x != nil {
+		return x.xxx_hidden_Platform
+	}
+	return ""
+}
+
+func (x *ImageAnalysis) GetPlatforms() []string {
+	if x != nil {
+		return x.xxx_hidden_Platforms
+	}
+	return nil
+}
+
+func (x *ImageAnalysis) GetFilesTruncated() bool {
+	if x != nil {
+		return x.xxx_hidden_FilesTruncated
+	}
+	return false
+}
+
+func (x *ImageAnalysis) SetPluginVersionId(v string) {
+	x.xxx_hidden_PluginVersionId = v
+}
+
+func (x *ImageAnalysis) SetStatus(v ImageAnalysisStatus) {
+	x.xxx_hidden_Status = v
+}
+
+func (x *ImageAnalysis) SetStatusInfo(v string) {
+	x.xxx_hidden_StatusInfo = v
+}
+
+func (x *ImageAnalysis) SetAnalyzed(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Analyzed = v
+}
+
+func (x *ImageAnalysis) SetImageDigest(v string) {
+	x.xxx_hidden_ImageDigest = v
+}
+
+func (x *ImageAnalysis) SetPlatform(v string) {
+	x.xxx_hidden_Platform = v
+}
+
+func (x *ImageAnalysis) SetPlatforms(v []string) {
+	x.xxx_hidden_Platforms = v
+}
+
+func (x *ImageAnalysis) SetFilesTruncated(v bool) {
+	x.xxx_hidden_FilesTruncated = v
+}
+
+func (x *ImageAnalysis) HasAnalyzed() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Analyzed != nil
+}
+
+func (x *ImageAnalysis) ClearAnalyzed() {
+	x.xxx_hidden_Analyzed = nil
+}
+
+type ImageAnalysis_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginVersionId string
+	Status          ImageAnalysisStatus
+	StatusInfo      string
+	Analyzed        *timestamppb.Timestamp
+	// The platform manifest that was analyzed.
+	ImageDigest string
+	Platform    string
+	// Every platform the image index offers; empty for a single-platform image.
+	Platforms []string
+	// The file list stopped at its cap, so a file diff may report files as
+	// added or removed that only fell past the cap.
+	FilesTruncated bool
+}
+
+func (b0 ImageAnalysis_builder) Build() *ImageAnalysis {
+	m0 := &ImageAnalysis{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginVersionId = b.PluginVersionId
+	x.xxx_hidden_Status = b.Status
+	x.xxx_hidden_StatusInfo = b.StatusInfo
+	x.xxx_hidden_Analyzed = b.Analyzed
+	x.xxx_hidden_ImageDigest = b.ImageDigest
+	x.xxx_hidden_Platform = b.Platform
+	x.xxx_hidden_Platforms = b.Platforms
+	x.xxx_hidden_FilesTruncated = b.FilesTruncated
+	return m0
+}
+
+type ChangeSummary struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Unchanged int32                  `protobuf:"varint,10,opt,name=unchanged"`
+	xxx_hidden_Added     int32                  `protobuf:"varint,20,opt,name=added"`
+	xxx_hidden_Removed   int32                  `protobuf:"varint,30,opt,name=removed"`
+	xxx_hidden_Changed   int32                  `protobuf:"varint,40,opt,name=changed"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ChangeSummary) Reset() {
+	*x = ChangeSummary{}
+	mi := &file_admin_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeSummary) ProtoMessage() {}
+
+func (x *ChangeSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ChangeSummary) GetUnchanged() int32 {
+	if x != nil {
+		return x.xxx_hidden_Unchanged
+	}
+	return 0
+}
+
+func (x *ChangeSummary) GetAdded() int32 {
+	if x != nil {
+		return x.xxx_hidden_Added
+	}
+	return 0
+}
+
+func (x *ChangeSummary) GetRemoved() int32 {
+	if x != nil {
+		return x.xxx_hidden_Removed
+	}
+	return 0
+}
+
+func (x *ChangeSummary) GetChanged() int32 {
+	if x != nil {
+		return x.xxx_hidden_Changed
+	}
+	return 0
+}
+
+func (x *ChangeSummary) SetUnchanged(v int32) {
+	x.xxx_hidden_Unchanged = v
+}
+
+func (x *ChangeSummary) SetAdded(v int32) {
+	x.xxx_hidden_Added = v
+}
+
+func (x *ChangeSummary) SetRemoved(v int32) {
+	x.xxx_hidden_Removed = v
+}
+
+func (x *ChangeSummary) SetChanged(v int32) {
+	x.xxx_hidden_Changed = v
+}
+
+type ChangeSummary_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Unchanged int32
+	Added     int32
+	Removed   int32
+	Changed   int32
+}
+
+func (b0 ChangeSummary_builder) Build() *ChangeSummary {
+	m0 := &ChangeSummary{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Unchanged = b.Unchanged
+	x.xxx_hidden_Added = b.Added
+	x.xxx_hidden_Removed = b.Removed
+	x.xxx_hidden_Changed = b.Changed
+	return m0
+}
+
+type ImagePackage struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Version     string                 `protobuf:"bytes,20,opt,name=version"`
+	xxx_hidden_Type        string                 `protobuf:"bytes,30,opt,name=type"`
+	xxx_hidden_Purl        string                 `protobuf:"bytes,40,opt,name=purl"`
+	xxx_hidden_Licenses    []string               `protobuf:"bytes,50,rep,name=licenses"`
+	xxx_hidden_Change      Change                 `protobuf:"varint,60,opt,name=change,enum=admin.v1.Change"`
+	xxx_hidden_BaseVersion string                 `protobuf:"bytes,70,opt,name=base_version,json=baseVersion"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ImagePackage) Reset() {
+	*x = ImagePackage{}
+	mi := &file_admin_v1_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImagePackage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImagePackage) ProtoMessage() {}
+
+func (x *ImagePackage) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ImagePackage) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *ImagePackage) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *ImagePackage) GetType() string {
+	if x != nil {
+		return x.xxx_hidden_Type
+	}
+	return ""
+}
+
+func (x *ImagePackage) GetPurl() string {
+	if x != nil {
+		return x.xxx_hidden_Purl
+	}
+	return ""
+}
+
+func (x *ImagePackage) GetLicenses() []string {
+	if x != nil {
+		return x.xxx_hidden_Licenses
+	}
+	return nil
+}
+
+func (x *ImagePackage) GetChange() Change {
+	if x != nil {
+		return x.xxx_hidden_Change
+	}
+	return Change_CHANGE_UNSPECIFIED
+}
+
+func (x *ImagePackage) GetBaseVersion() string {
+	if x != nil {
+		return x.xxx_hidden_BaseVersion
+	}
+	return ""
+}
+
+func (x *ImagePackage) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *ImagePackage) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *ImagePackage) SetType(v string) {
+	x.xxx_hidden_Type = v
+}
+
+func (x *ImagePackage) SetPurl(v string) {
+	x.xxx_hidden_Purl = v
+}
+
+func (x *ImagePackage) SetLicenses(v []string) {
+	x.xxx_hidden_Licenses = v
+}
+
+func (x *ImagePackage) SetChange(v Change) {
+	x.xxx_hidden_Change = v
+}
+
+func (x *ImagePackage) SetBaseVersion(v string) {
+	x.xxx_hidden_BaseVersion = v
+}
+
+type ImagePackage_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name string
+	// Empty for a REMOVED package, which carries base_version instead.
+	Version string
+	// The ecosystem, from the purl: deb, apk, golang, npm, ...
+	Type     string
+	Purl     string
+	Licenses []string
+	Change   Change
+	// Set for CHANGED and REMOVED.
+	BaseVersion string
+}
+
+func (b0 ImagePackage_builder) Build() *ImagePackage {
+	m0 := &ImagePackage{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_Type = b.Type
+	x.xxx_hidden_Purl = b.Purl
+	x.xxx_hidden_Licenses = b.Licenses
+	x.xxx_hidden_Change = b.Change
+	x.xxx_hidden_BaseVersion = b.BaseVersion
+	return m0
+}
+
+type ImageFile struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Path   string                 `protobuf:"bytes,10,opt,name=path"`
+	xxx_hidden_Size   int64                  `protobuf:"varint,20,opt,name=size"`
+	xxx_hidden_Mode   uint32                 `protobuf:"varint,30,opt,name=mode"`
+	xxx_hidden_Link   string                 `protobuf:"bytes,40,opt,name=link"`
+	xxx_hidden_Change Change                 `protobuf:"varint,50,opt,name=change,enum=admin.v1.Change"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ImageFile) Reset() {
+	*x = ImageFile{}
+	mi := &file_admin_v1_common_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImageFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImageFile) ProtoMessage() {}
+
+func (x *ImageFile) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_common_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ImageFile) GetPath() string {
+	if x != nil {
+		return x.xxx_hidden_Path
+	}
+	return ""
+}
+
+func (x *ImageFile) GetSize() int64 {
+	if x != nil {
+		return x.xxx_hidden_Size
+	}
+	return 0
+}
+
+func (x *ImageFile) GetMode() uint32 {
+	if x != nil {
+		return x.xxx_hidden_Mode
+	}
+	return 0
+}
+
+func (x *ImageFile) GetLink() string {
+	if x != nil {
+		return x.xxx_hidden_Link
+	}
+	return ""
+}
+
+func (x *ImageFile) GetChange() Change {
+	if x != nil {
+		return x.xxx_hidden_Change
+	}
+	return Change_CHANGE_UNSPECIFIED
+}
+
+func (x *ImageFile) SetPath(v string) {
+	x.xxx_hidden_Path = v
+}
+
+func (x *ImageFile) SetSize(v int64) {
+	x.xxx_hidden_Size = v
+}
+
+func (x *ImageFile) SetMode(v uint32) {
+	x.xxx_hidden_Mode = v
+}
+
+func (x *ImageFile) SetLink(v string) {
+	x.xxx_hidden_Link = v
+}
+
+func (x *ImageFile) SetChange(v Change) {
+	x.xxx_hidden_Change = v
+}
+
+type ImageFile_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Path string
+	Size int64
+	// Permission bits, e.g. 0755.
+	Mode uint32
+	// Symlink or hard link target; empty for a regular file.
+	Link   string
+	Change Change
+}
+
+func (b0 ImageFile_builder) Build() *ImageFile {
+	m0 := &ImageFile{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Path = b.Path
+	x.xxx_hidden_Size = b.Size
+	x.xxx_hidden_Mode = b.Mode
+	x.xxx_hidden_Link = b.Link
+	x.xxx_hidden_Change = b.Change
 	return m0
 }
 
@@ -903,7 +1636,7 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\x04tags\x18Z \x03(\tR\x04tags\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
 	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x123\n" +
-	"\x06labels\x18x \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xce\x04\n" +
+	"\x06labels\x18x \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xeb\x04\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -920,7 +1653,45 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12&\n" +
 	"\x0emanifest_error\x18\x82\x01 \x01(\tR\rmanifestError\x12\x1e\n" +
 	"\n" +
-	"menu_icons\x18\x8c\x01 \x03(\tR\tmenuIcons*\x8c\x02\n" +
+	"menu_icons\x18\x8c\x01 \x03(\tR\tmenuIcons\x12\x1b\n" +
+	"\bmanifest\x18\x96\x01 \x01(\fR\bmanifest\".\n" +
+	"\bReviewer\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xd1\x02\n" +
+	"\rImageAnalysis\x12*\n" +
+	"\x11plugin_version_id\x18\n" +
+	" \x01(\tR\x0fpluginVersionId\x125\n" +
+	"\x06status\x18\x14 \x01(\x0e2\x1d.admin.v1.ImageAnalysisStatusR\x06status\x12\x1f\n" +
+	"\vstatus_info\x18\x1e \x01(\tR\n" +
+	"statusInfo\x126\n" +
+	"\banalyzed\x18( \x01(\v2\x1a.google.protobuf.TimestampR\banalyzed\x12!\n" +
+	"\fimage_digest\x182 \x01(\tR\vimageDigest\x12\x1a\n" +
+	"\bplatform\x18< \x01(\tR\bplatform\x12\x1c\n" +
+	"\tplatforms\x18F \x03(\tR\tplatforms\x12'\n" +
+	"\x0ffiles_truncated\x18P \x01(\bR\x0efilesTruncated\"w\n" +
+	"\rChangeSummary\x12\x1c\n" +
+	"\tunchanged\x18\n" +
+	" \x01(\x05R\tunchanged\x12\x14\n" +
+	"\x05added\x18\x14 \x01(\x05R\x05added\x12\x18\n" +
+	"\aremoved\x18\x1e \x01(\x05R\aremoved\x12\x18\n" +
+	"\achanged\x18( \x01(\x05R\achanged\"\xcd\x01\n" +
+	"\fImagePackage\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12\x18\n" +
+	"\aversion\x18\x14 \x01(\tR\aversion\x12\x12\n" +
+	"\x04type\x18\x1e \x01(\tR\x04type\x12\x12\n" +
+	"\x04purl\x18( \x01(\tR\x04purl\x12\x1a\n" +
+	"\blicenses\x182 \x03(\tR\blicenses\x12(\n" +
+	"\x06change\x18< \x01(\x0e2\x10.admin.v1.ChangeR\x06change\x12!\n" +
+	"\fbase_version\x18F \x01(\tR\vbaseVersion\"\x85\x01\n" +
+	"\tImageFile\x12\x12\n" +
+	"\x04path\x18\n" +
+	" \x01(\tR\x04path\x12\x12\n" +
+	"\x04size\x18\x14 \x01(\x03R\x04size\x12\x12\n" +
+	"\x04mode\x18\x1e \x01(\rR\x04mode\x12\x12\n" +
+	"\x04link\x18( \x01(\tR\x04link\x12(\n" +
+	"\x06change\x182 \x01(\x0e2\x10.admin.v1.ChangeR\x06change*\x8c\x02\n" +
 	"\x0fRejectionReason\x12 \n" +
 	"\x1cREJECTION_REASON_UNSPECIFIED\x10\x00\x12(\n" +
 	"$REJECTION_REASON_INCOMPLETE_METADATA\x10\x01\x12\x1e\n" +
@@ -928,38 +1699,62 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\"REJECTION_REASON_SECURITY_CONCERNS\x10\x03\x12&\n" +
 	"\"REJECTION_REASON_NAMING_GUIDELINES\x10\x04\x12!\n" +
 	"\x1dREJECTION_REASON_OUT_OF_SCOPE\x10\x05\x12\x1a\n" +
-	"\x16REJECTION_REASON_OTHER\x10\x06BcZWgithub.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1;adminv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x16REJECTION_REASON_OTHER\x10\x06*\xed\x01\n" +
+	"\x13ImageAnalysisStatus\x12%\n" +
+	"!IMAGE_ANALYSIS_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dIMAGE_ANALYSIS_STATUS_PENDING\x10\x01\x12!\n" +
+	"\x1dIMAGE_ANALYSIS_STATUS_RUNNING\x10\x02\x12\"\n" +
+	"\x1eIMAGE_ANALYSIS_STATUS_RETRYING\x10\x03\x12#\n" +
+	"\x1fIMAGE_ANALYSIS_STATUS_COMPLETED\x10\x04\x12 \n" +
+	"\x1cIMAGE_ANALYSIS_STATUS_FAILED\x10\x05*p\n" +
+	"\x06Change\x12\x16\n" +
+	"\x12CHANGE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10CHANGE_UNCHANGED\x10\x01\x12\x10\n" +
+	"\fCHANGE_ADDED\x10\x02\x12\x12\n" +
+	"\x0eCHANGE_REMOVED\x10\x03\x12\x12\n" +
+	"\x0eCHANGE_CHANGED\x10\x04BcZWgithub.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1;adminv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_admin_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_admin_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_admin_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_admin_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_admin_v1_common_proto_goTypes = []any{
 	(RejectionReason)(0),          // 0: admin.v1.RejectionReason
-	(*Submission)(nil),            // 1: admin.v1.Submission
-	(*Plugin)(nil),                // 2: admin.v1.Plugin
-	(*PluginVersion)(nil),         // 3: admin.v1.PluginVersion
-	(v1.SubmissionStatus)(0),      // 4: marketplace.v1.SubmissionStatus
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(v1.PluginLabel)(0),           // 6: marketplace.v1.PluginLabel
-	(*v1.PluginPermission)(nil),   // 7: marketplace.v1.PluginPermission
+	(ImageAnalysisStatus)(0),      // 1: admin.v1.ImageAnalysisStatus
+	(Change)(0),                   // 2: admin.v1.Change
+	(*Submission)(nil),            // 3: admin.v1.Submission
+	(*Plugin)(nil),                // 4: admin.v1.Plugin
+	(*PluginVersion)(nil),         // 5: admin.v1.PluginVersion
+	(*Reviewer)(nil),              // 6: admin.v1.Reviewer
+	(*ImageAnalysis)(nil),         // 7: admin.v1.ImageAnalysis
+	(*ChangeSummary)(nil),         // 8: admin.v1.ChangeSummary
+	(*ImagePackage)(nil),          // 9: admin.v1.ImagePackage
+	(*ImageFile)(nil),             // 10: admin.v1.ImageFile
+	(v1.SubmissionStatus)(0),      // 11: marketplace.v1.SubmissionStatus
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(v1.PluginLabel)(0),           // 13: marketplace.v1.PluginLabel
+	(*v1.PluginPermission)(nil),   // 14: marketplace.v1.PluginPermission
 }
 var file_admin_v1_common_proto_depIdxs = []int32{
-	4,  // 0: admin.v1.Submission.status:type_name -> marketplace.v1.SubmissionStatus
-	5,  // 1: admin.v1.Submission.submitted:type_name -> google.protobuf.Timestamp
-	5,  // 2: admin.v1.Submission.reviewed:type_name -> google.protobuf.Timestamp
+	11, // 0: admin.v1.Submission.status:type_name -> marketplace.v1.SubmissionStatus
+	12, // 1: admin.v1.Submission.submitted:type_name -> google.protobuf.Timestamp
+	12, // 2: admin.v1.Submission.reviewed:type_name -> google.protobuf.Timestamp
 	0,  // 3: admin.v1.Submission.rejection_reason:type_name -> admin.v1.RejectionReason
-	5,  // 4: admin.v1.Plugin.created:type_name -> google.protobuf.Timestamp
-	5,  // 5: admin.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
-	6,  // 6: admin.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
-	4,  // 7: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
-	7,  // 8: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
-	5,  // 9: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
-	5,  // 10: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
-	5,  // 11: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	12, // 4: admin.v1.Plugin.created:type_name -> google.protobuf.Timestamp
+	12, // 5: admin.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
+	13, // 6: admin.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
+	11, // 7: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
+	14, // 8: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
+	12, // 9: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
+	12, // 10: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
+	12, // 11: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
+	1,  // 12: admin.v1.ImageAnalysis.status:type_name -> admin.v1.ImageAnalysisStatus
+	12, // 13: admin.v1.ImageAnalysis.analyzed:type_name -> google.protobuf.Timestamp
+	2,  // 14: admin.v1.ImagePackage.change:type_name -> admin.v1.Change
+	2,  // 15: admin.v1.ImageFile.change:type_name -> admin.v1.Change
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_admin_v1_common_proto_init() }
@@ -972,8 +1767,8 @@ func file_admin_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_admin_v1_common_proto_rawDesc), len(file_admin_v1_common_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   3,
+			NumEnums:      3,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -165,6 +165,31 @@ sandbox-catalog:
     relay fun-authn-relay 30081 fundament-authn-relay
     echo "  (pluginController.catalogApiUrl and authnApiUrl in plugins/sandbox/values.yaml)"
 
+# Local dev only: marketplace-analysis-worker in k3d-fundament pulls what `plugins publish`
+# pushed to the sandbox registry (FUN-24). The registry container, not a node, joins the
+# k3d-fundament network (see sandbox-catalog on multi-homing nodes), and a CoreDNS server
+# block (k3s's coredns-custom) resolves its name there. values-local.yaml rewrites
+# localhost:5112 to it and allowlists it. Re-run after recreating either cluster or
+# restarting docker.
+# Let marketplace-analysis-worker in k3d-fundament pull from the sandbox plugin registry
+registry-to-fundament:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! docker network inspect k3d-fundament --format '{{{{ range .Containers }}{{{{ .Name }} {{{{ end }}' \
+        | tr ' ' '\n' | grep -qx '{{ registry }}'; then
+        docker network connect k3d-fundament {{ registry }}
+    fi
+    ip=$(docker inspect {{ registry }} --format '{{{{ (index .NetworkSettings.Networks "k3d-fundament").IPAddress }}')
+    if [ -z "$ip" ]; then
+        echo "Error: could not resolve {{ registry }}'s IP on the k3d-fundament network" >&2
+        exit 1
+    fi
+    printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: coredns-custom\n  namespace: kube-system\ndata:\n  plugin-registry.server: |\n    {{ registry }}:53 {\n      hosts {\n        %s {{ registry }}\n      }\n    }\n' "$ip" \
+        | kubectl --context k3d-fundament apply --server-side --field-manager=plugins-registry-to-fundament -f - >/dev/null
+    kubectl --context k3d-fundament -n kube-system rollout restart deployment coredns >/dev/null
+    kubectl --context k3d-fundament -n kube-system rollout status deployment coredns --timeout=120s >/dev/null
+    echo "- {{ registry }}:5000 resolves to $ip in k3d-fundament"
+
 # Publishes the pushed digest to marketplace-registry-api via `functl plugin publish`
 # (FUN-20). Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:
 # `functl auth login` once, `functl org set <org-id>` for the publishing

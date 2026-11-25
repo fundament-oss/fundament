@@ -43,6 +43,17 @@ service ReviewService {
   // GetOrganization is RLS-scoped to members, and a reviewer is not a member
   // of the organization under review.
   rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+  // Fundament staff who decided a submission, so a Submission's
+  // reviewer_user_id resolves to a name. Includes staff who have since left:
+  // they still made the decision.
+  rpc ListReviewers(ListReviewersRequest) returns (ListReviewersResponse);
+
+  // What the version's container image contains, packages and files, as a
+  // diff against a base version (FUN-24). The diff, its filtering and the
+  // paging of the file list happen here: a file list runs to 200k entries.
+  rpc GetImageAnalysis(GetImageAnalysisRequest) returns (GetImageAnalysisResponse);
+  // The CycloneDX SBOM the analysis produced, verbatim, for download.
+  rpc GetSbom(GetSbomRequest) returns (GetSbomResponse);
 }
 
 message ListSubmissionsRequest {
@@ -137,4 +148,58 @@ message ListPublishersRequest {}
 
 message ListPublishersResponse {
   repeated marketplace.v1.Publisher publishers = 10;
+}
+
+message ListReviewersRequest {}
+
+message ListReviewersResponse {
+  repeated Reviewer reviewers = 10;
+}
+
+message GetImageAnalysisRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // The version to compare with. Empty lists the version on its own, with
+  // every entry's change UNSPECIFIED.
+  string base_plugin_version_id = 20 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uuid: true}
+  ];
+  // Leave out UNCHANGED files. Packages are always served whole: they run to
+  // a few thousand at most, and the backoffice filters them itself.
+  bool files_changes_only = 30;
+  // Case-insensitive substring of a file path.
+  string files_query = 40 [(buf.validate.field).string = {max_len: 200}];
+  // Files per page; 0 means 500.
+  int32 files_page_size = 50 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 2000
+  }];
+  string files_page_token = 60 [(buf.validate.field).string = {max_len: 20}];
+}
+
+message GetImageAnalysisResponse {
+  ImageAnalysis analysis = 10;
+  // The base version's analysis. Absent when no base was asked for.
+  ImageAnalysis base = 20;
+  // Whether entries carry a change: both analyses completed.
+  bool compared = 30;
+  // Every package, sorted by name.
+  repeated ImagePackage packages = 40;
+  // One page, after files_changes_only and files_query, sorted by path.
+  repeated ImageFile files = 50;
+  string next_files_page_token = 60;
+  // Over the whole lists, before any filtering.
+  ChangeSummary package_summary = 70;
+  ChangeSummary file_summary = 80;
+  // How many files pass files_changes_only and files_query, over all pages.
+  int32 files_matching = 90;
+}
+
+message GetSbomRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetSbomResponse {
+  // CycloneDX JSON.
+  bytes sbom = 10;
 }

@@ -117,6 +117,7 @@ func (s *Server) GetPluginVersion(
 			Published:      timestamptzOrNil(row.Published),
 			ManifestError:  manifestError,
 			MenuIcons:      menuIconURIs(row.MenuIcons),
+			Manifest:       row.Manifest,
 		}.Build(),
 	}.Build(), nil
 }
@@ -163,6 +164,29 @@ func (s *Server) ListPublishers(
 	}
 
 	return adminv1.ListPublishersResponse_builder{Publishers: publishers}.Build(), nil
+}
+
+// ListReviewers resolves the reviewer_user_id a Submission carries to a name.
+// Reviewers are DCIM staff (dcim.users), the store authenticate checks the
+// token against.
+func (s *Server) ListReviewers(
+	ctx context.Context,
+	_ *adminv1.ListReviewersRequest,
+) (*adminv1.ListReviewersResponse, error) {
+	rows, err := s.queries.ReviewerList(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing reviewers: %w", err))
+	}
+
+	reviewers := make([]*adminv1.Reviewer, 0, len(rows))
+	for _, row := range rows {
+		reviewers = append(reviewers, adminv1.Reviewer_builder{
+			Id:   row.ID.String(),
+			Name: row.Name,
+		}.Build())
+	}
+
+	return adminv1.ListReviewersResponse_builder{Reviewers: reviewers}.Build(), nil
 }
 
 // adminPluginRow is the shape the list and get rows share.

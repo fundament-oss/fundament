@@ -1255,6 +1255,582 @@ func (b0 ListPublishersResponse_builder) Build() *ListPublishersResponse {
 	return m0
 }
 
+type ListReviewersRequest struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReviewersRequest) Reset() {
+	*x = ListReviewersRequest{}
+	mi := &file_admin_v1_review_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewersRequest) ProtoMessage() {}
+
+func (x *ListReviewersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type ListReviewersRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 ListReviewersRequest_builder) Build() *ListReviewersRequest {
+	m0 := &ListReviewersRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
+type ListReviewersResponse struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Reviewers *[]*Reviewer           `protobuf:"bytes,10,rep,name=reviewers"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ListReviewersResponse) Reset() {
+	*x = ListReviewersResponse{}
+	mi := &file_admin_v1_review_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewersResponse) ProtoMessage() {}
+
+func (x *ListReviewersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListReviewersResponse) GetReviewers() []*Reviewer {
+	if x != nil {
+		if x.xxx_hidden_Reviewers != nil {
+			return *x.xxx_hidden_Reviewers
+		}
+	}
+	return nil
+}
+
+func (x *ListReviewersResponse) SetReviewers(v []*Reviewer) {
+	x.xxx_hidden_Reviewers = &v
+}
+
+type ListReviewersResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Reviewers []*Reviewer
+}
+
+func (b0 ListReviewersResponse_builder) Build() *ListReviewersResponse {
+	m0 := &ListReviewersResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Reviewers = &b.Reviewers
+	return m0
+}
+
+type GetImageAnalysisRequest struct {
+	state                          protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginVersionId     string                 `protobuf:"bytes,10,opt,name=plugin_version_id,json=pluginVersionId"`
+	xxx_hidden_BasePluginVersionId string                 `protobuf:"bytes,20,opt,name=base_plugin_version_id,json=basePluginVersionId"`
+	xxx_hidden_FilesChangesOnly    bool                   `protobuf:"varint,30,opt,name=files_changes_only,json=filesChangesOnly"`
+	xxx_hidden_FilesQuery          string                 `protobuf:"bytes,40,opt,name=files_query,json=filesQuery"`
+	xxx_hidden_FilesPageSize       int32                  `protobuf:"varint,50,opt,name=files_page_size,json=filesPageSize"`
+	xxx_hidden_FilesPageToken      string                 `protobuf:"bytes,60,opt,name=files_page_token,json=filesPageToken"`
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
+}
+
+func (x *GetImageAnalysisRequest) Reset() {
+	*x = GetImageAnalysisRequest{}
+	mi := &file_admin_v1_review_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImageAnalysisRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImageAnalysisRequest) ProtoMessage() {}
+
+func (x *GetImageAnalysisRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetImageAnalysisRequest) GetPluginVersionId() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersionId
+	}
+	return ""
+}
+
+func (x *GetImageAnalysisRequest) GetBasePluginVersionId() string {
+	if x != nil {
+		return x.xxx_hidden_BasePluginVersionId
+	}
+	return ""
+}
+
+func (x *GetImageAnalysisRequest) GetFilesChangesOnly() bool {
+	if x != nil {
+		return x.xxx_hidden_FilesChangesOnly
+	}
+	return false
+}
+
+func (x *GetImageAnalysisRequest) GetFilesQuery() string {
+	if x != nil {
+		return x.xxx_hidden_FilesQuery
+	}
+	return ""
+}
+
+func (x *GetImageAnalysisRequest) GetFilesPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_FilesPageSize
+	}
+	return 0
+}
+
+func (x *GetImageAnalysisRequest) GetFilesPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_FilesPageToken
+	}
+	return ""
+}
+
+func (x *GetImageAnalysisRequest) SetPluginVersionId(v string) {
+	x.xxx_hidden_PluginVersionId = v
+}
+
+func (x *GetImageAnalysisRequest) SetBasePluginVersionId(v string) {
+	x.xxx_hidden_BasePluginVersionId = v
+}
+
+func (x *GetImageAnalysisRequest) SetFilesChangesOnly(v bool) {
+	x.xxx_hidden_FilesChangesOnly = v
+}
+
+func (x *GetImageAnalysisRequest) SetFilesQuery(v string) {
+	x.xxx_hidden_FilesQuery = v
+}
+
+func (x *GetImageAnalysisRequest) SetFilesPageSize(v int32) {
+	x.xxx_hidden_FilesPageSize = v
+}
+
+func (x *GetImageAnalysisRequest) SetFilesPageToken(v string) {
+	x.xxx_hidden_FilesPageToken = v
+}
+
+type GetImageAnalysisRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginVersionId string
+	// The version to compare with. Empty lists the version on its own, with
+	// every entry's change UNSPECIFIED.
+	BasePluginVersionId string
+	// Leave out UNCHANGED files. Packages are always served whole: they run to
+	// a few thousand at most, and the backoffice filters them itself.
+	FilesChangesOnly bool
+	// Case-insensitive substring of a file path.
+	FilesQuery string
+	// Files per page; 0 means 500.
+	FilesPageSize  int32
+	FilesPageToken string
+}
+
+func (b0 GetImageAnalysisRequest_builder) Build() *GetImageAnalysisRequest {
+	m0 := &GetImageAnalysisRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginVersionId = b.PluginVersionId
+	x.xxx_hidden_BasePluginVersionId = b.BasePluginVersionId
+	x.xxx_hidden_FilesChangesOnly = b.FilesChangesOnly
+	x.xxx_hidden_FilesQuery = b.FilesQuery
+	x.xxx_hidden_FilesPageSize = b.FilesPageSize
+	x.xxx_hidden_FilesPageToken = b.FilesPageToken
+	return m0
+}
+
+type GetImageAnalysisResponse struct {
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Analysis           *ImageAnalysis         `protobuf:"bytes,10,opt,name=analysis"`
+	xxx_hidden_Base               *ImageAnalysis         `protobuf:"bytes,20,opt,name=base"`
+	xxx_hidden_Compared           bool                   `protobuf:"varint,30,opt,name=compared"`
+	xxx_hidden_Packages           *[]*ImagePackage       `protobuf:"bytes,40,rep,name=packages"`
+	xxx_hidden_Files              *[]*ImageFile          `protobuf:"bytes,50,rep,name=files"`
+	xxx_hidden_NextFilesPageToken string                 `protobuf:"bytes,60,opt,name=next_files_page_token,json=nextFilesPageToken"`
+	xxx_hidden_PackageSummary     *ChangeSummary         `protobuf:"bytes,70,opt,name=package_summary,json=packageSummary"`
+	xxx_hidden_FileSummary        *ChangeSummary         `protobuf:"bytes,80,opt,name=file_summary,json=fileSummary"`
+	xxx_hidden_FilesMatching      int32                  `protobuf:"varint,90,opt,name=files_matching,json=filesMatching"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
+}
+
+func (x *GetImageAnalysisResponse) Reset() {
+	*x = GetImageAnalysisResponse{}
+	mi := &file_admin_v1_review_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImageAnalysisResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImageAnalysisResponse) ProtoMessage() {}
+
+func (x *GetImageAnalysisResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetImageAnalysisResponse) GetAnalysis() *ImageAnalysis {
+	if x != nil {
+		return x.xxx_hidden_Analysis
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetBase() *ImageAnalysis {
+	if x != nil {
+		return x.xxx_hidden_Base
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetCompared() bool {
+	if x != nil {
+		return x.xxx_hidden_Compared
+	}
+	return false
+}
+
+func (x *GetImageAnalysisResponse) GetPackages() []*ImagePackage {
+	if x != nil {
+		if x.xxx_hidden_Packages != nil {
+			return *x.xxx_hidden_Packages
+		}
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetFiles() []*ImageFile {
+	if x != nil {
+		if x.xxx_hidden_Files != nil {
+			return *x.xxx_hidden_Files
+		}
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetNextFilesPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_NextFilesPageToken
+	}
+	return ""
+}
+
+func (x *GetImageAnalysisResponse) GetPackageSummary() *ChangeSummary {
+	if x != nil {
+		return x.xxx_hidden_PackageSummary
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetFileSummary() *ChangeSummary {
+	if x != nil {
+		return x.xxx_hidden_FileSummary
+	}
+	return nil
+}
+
+func (x *GetImageAnalysisResponse) GetFilesMatching() int32 {
+	if x != nil {
+		return x.xxx_hidden_FilesMatching
+	}
+	return 0
+}
+
+func (x *GetImageAnalysisResponse) SetAnalysis(v *ImageAnalysis) {
+	x.xxx_hidden_Analysis = v
+}
+
+func (x *GetImageAnalysisResponse) SetBase(v *ImageAnalysis) {
+	x.xxx_hidden_Base = v
+}
+
+func (x *GetImageAnalysisResponse) SetCompared(v bool) {
+	x.xxx_hidden_Compared = v
+}
+
+func (x *GetImageAnalysisResponse) SetPackages(v []*ImagePackage) {
+	x.xxx_hidden_Packages = &v
+}
+
+func (x *GetImageAnalysisResponse) SetFiles(v []*ImageFile) {
+	x.xxx_hidden_Files = &v
+}
+
+func (x *GetImageAnalysisResponse) SetNextFilesPageToken(v string) {
+	x.xxx_hidden_NextFilesPageToken = v
+}
+
+func (x *GetImageAnalysisResponse) SetPackageSummary(v *ChangeSummary) {
+	x.xxx_hidden_PackageSummary = v
+}
+
+func (x *GetImageAnalysisResponse) SetFileSummary(v *ChangeSummary) {
+	x.xxx_hidden_FileSummary = v
+}
+
+func (x *GetImageAnalysisResponse) SetFilesMatching(v int32) {
+	x.xxx_hidden_FilesMatching = v
+}
+
+func (x *GetImageAnalysisResponse) HasAnalysis() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Analysis != nil
+}
+
+func (x *GetImageAnalysisResponse) HasBase() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Base != nil
+}
+
+func (x *GetImageAnalysisResponse) HasPackageSummary() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_PackageSummary != nil
+}
+
+func (x *GetImageAnalysisResponse) HasFileSummary() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_FileSummary != nil
+}
+
+func (x *GetImageAnalysisResponse) ClearAnalysis() {
+	x.xxx_hidden_Analysis = nil
+}
+
+func (x *GetImageAnalysisResponse) ClearBase() {
+	x.xxx_hidden_Base = nil
+}
+
+func (x *GetImageAnalysisResponse) ClearPackageSummary() {
+	x.xxx_hidden_PackageSummary = nil
+}
+
+func (x *GetImageAnalysisResponse) ClearFileSummary() {
+	x.xxx_hidden_FileSummary = nil
+}
+
+type GetImageAnalysisResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Analysis *ImageAnalysis
+	// The base version's analysis. Absent when no base was asked for.
+	Base *ImageAnalysis
+	// Whether entries carry a change: both analyses completed.
+	Compared bool
+	// Every package, sorted by name.
+	Packages []*ImagePackage
+	// One page, after files_changes_only and files_query, sorted by path.
+	Files              []*ImageFile
+	NextFilesPageToken string
+	// Over the whole lists, before any filtering.
+	PackageSummary *ChangeSummary
+	FileSummary    *ChangeSummary
+	// How many files pass files_changes_only and files_query, over all pages.
+	FilesMatching int32
+}
+
+func (b0 GetImageAnalysisResponse_builder) Build() *GetImageAnalysisResponse {
+	m0 := &GetImageAnalysisResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Analysis = b.Analysis
+	x.xxx_hidden_Base = b.Base
+	x.xxx_hidden_Compared = b.Compared
+	x.xxx_hidden_Packages = &b.Packages
+	x.xxx_hidden_Files = &b.Files
+	x.xxx_hidden_NextFilesPageToken = b.NextFilesPageToken
+	x.xxx_hidden_PackageSummary = b.PackageSummary
+	x.xxx_hidden_FileSummary = b.FileSummary
+	x.xxx_hidden_FilesMatching = b.FilesMatching
+	return m0
+}
+
+type GetSbomRequest struct {
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginVersionId string                 `protobuf:"bytes,10,opt,name=plugin_version_id,json=pluginVersionId"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *GetSbomRequest) Reset() {
+	*x = GetSbomRequest{}
+	mi := &file_admin_v1_review_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSbomRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSbomRequest) ProtoMessage() {}
+
+func (x *GetSbomRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetSbomRequest) GetPluginVersionId() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersionId
+	}
+	return ""
+}
+
+func (x *GetSbomRequest) SetPluginVersionId(v string) {
+	x.xxx_hidden_PluginVersionId = v
+}
+
+type GetSbomRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginVersionId string
+}
+
+func (b0 GetSbomRequest_builder) Build() *GetSbomRequest {
+	m0 := &GetSbomRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginVersionId = b.PluginVersionId
+	return m0
+}
+
+type GetSbomResponse struct {
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Sbom []byte                 `protobuf:"bytes,10,opt,name=sbom"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetSbomResponse) Reset() {
+	*x = GetSbomResponse{}
+	mi := &file_admin_v1_review_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSbomResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSbomResponse) ProtoMessage() {}
+
+func (x *GetSbomResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_admin_v1_review_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetSbomResponse) GetSbom() []byte {
+	if x != nil {
+		return x.xxx_hidden_Sbom
+	}
+	return nil
+}
+
+func (x *GetSbomResponse) SetSbom(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Sbom = v
+}
+
+type GetSbomResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// CycloneDX JSON.
+	Sbom []byte
+}
+
+func (b0 GetSbomResponse_builder) Build() *GetSbomResponse {
+	m0 := &GetSbomResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Sbom = b.Sbom
+	return m0
+}
+
 var File_admin_v1_review_proto protoreflect.FileDescriptor
 
 const file_admin_v1_review_proto_rawDesc = "" +
@@ -1331,7 +1907,38 @@ const file_admin_v1_review_proto_rawDesc = "" +
 	"\n" +
 	"publishers\x18\n" +
 	" \x03(\v2\x19.marketplace.v1.PublisherR\n" +
-	"publishers2\xde\x06\n" +
+	"publishers\"\x16\n" +
+	"\x14ListReviewersRequest\"I\n" +
+	"\x15ListReviewersResponse\x120\n" +
+	"\treviewers\x18\n" +
+	" \x03(\v2\x12.admin.v1.ReviewerR\treviewers\"\xd1\x02\n" +
+	"\x17GetImageAnalysisRequest\x124\n" +
+	"\x11plugin_version_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fpluginVersionId\x12@\n" +
+	"\x16base_plugin_version_id\x18\x14 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x13basePluginVersionId\x12,\n" +
+	"\x12files_changes_only\x18\x1e \x01(\bR\x10filesChangesOnly\x12)\n" +
+	"\vfiles_query\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\n" +
+	"filesQuery\x122\n" +
+	"\x0ffiles_page_size\x182 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xd0\x0f(\x00R\rfilesPageSize\x121\n" +
+	"\x10files_page_token\x18< \x01(\tB\a\xbaH\x04r\x02\x18\x14R\x0efilesPageToken\"\xcf\x03\n" +
+	"\x18GetImageAnalysisResponse\x123\n" +
+	"\banalysis\x18\n" +
+	" \x01(\v2\x17.admin.v1.ImageAnalysisR\banalysis\x12+\n" +
+	"\x04base\x18\x14 \x01(\v2\x17.admin.v1.ImageAnalysisR\x04base\x12\x1a\n" +
+	"\bcompared\x18\x1e \x01(\bR\bcompared\x122\n" +
+	"\bpackages\x18( \x03(\v2\x16.admin.v1.ImagePackageR\bpackages\x12)\n" +
+	"\x05files\x182 \x03(\v2\x13.admin.v1.ImageFileR\x05files\x121\n" +
+	"\x15next_files_page_token\x18< \x01(\tR\x12nextFilesPageToken\x12@\n" +
+	"\x0fpackage_summary\x18F \x01(\v2\x17.admin.v1.ChangeSummaryR\x0epackageSummary\x12:\n" +
+	"\ffile_summary\x18P \x01(\v2\x17.admin.v1.ChangeSummaryR\vfileSummary\x12%\n" +
+	"\x0efiles_matching\x18Z \x01(\x05R\rfilesMatching\"F\n" +
+	"\x0eGetSbomRequest\x124\n" +
+	"\x11plugin_version_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fpluginVersionId\"%\n" +
+	"\x0fGetSbomResponse\x12\x12\n" +
+	"\x04sbom\x18\n" +
+	" \x01(\fR\x04sbom2\xcb\b\n" +
 	"\rReviewService\x12V\n" +
 	"\x0fListSubmissions\x12 .admin.v1.ListSubmissionsRequest\x1a!.admin.v1.ListSubmissionsResponse\x12P\n" +
 	"\rGetSubmission\x12\x1e.admin.v1.GetSubmissionRequest\x1a\x1f.admin.v1.GetSubmissionResponse\x12\\\n" +
@@ -1342,9 +1949,12 @@ const file_admin_v1_review_proto_rawDesc = "" +
 	"\tGetPlugin\x12\x1a.admin.v1.GetPluginRequest\x1a\x1b.admin.v1.GetPluginResponse\x12Y\n" +
 	"\x10GetPluginVersion\x12!.admin.v1.GetPluginVersionRequest\x1a\".admin.v1.GetPluginVersionResponse\x12S\n" +
 	"\x0eListCategories\x12\x1f.admin.v1.ListCategoriesRequest\x1a .admin.v1.ListCategoriesResponse\x12S\n" +
-	"\x0eListPublishers\x12\x1f.admin.v1.ListPublishersRequest\x1a .admin.v1.ListPublishersResponseBcZWgithub.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1;adminv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0eListPublishers\x12\x1f.admin.v1.ListPublishersRequest\x1a .admin.v1.ListPublishersResponse\x12P\n" +
+	"\rListReviewers\x12\x1e.admin.v1.ListReviewersRequest\x1a\x1f.admin.v1.ListReviewersResponse\x12Y\n" +
+	"\x10GetImageAnalysis\x12!.admin.v1.GetImageAnalysisRequest\x1a\".admin.v1.GetImageAnalysisResponse\x12>\n" +
+	"\aGetSbom\x12\x18.admin.v1.GetSbomRequest\x1a\x19.admin.v1.GetSbomResponseBcZWgithub.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1;adminv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_admin_v1_review_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_admin_v1_review_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_admin_v1_review_proto_goTypes = []any{
 	(*ListSubmissionsRequest)(nil),    // 0: admin.v1.ListSubmissionsRequest
 	(*ListSubmissionsResponse)(nil),   // 1: admin.v1.ListSubmissionsResponse
@@ -1366,52 +1976,76 @@ var file_admin_v1_review_proto_goTypes = []any{
 	(*ListCategoriesResponse)(nil),    // 17: admin.v1.ListCategoriesResponse
 	(*ListPublishersRequest)(nil),     // 18: admin.v1.ListPublishersRequest
 	(*ListPublishersResponse)(nil),    // 19: admin.v1.ListPublishersResponse
-	(v1.SubmissionStatus)(0),          // 20: marketplace.v1.SubmissionStatus
-	(*Submission)(nil),                // 21: admin.v1.Submission
-	(RejectionReason)(0),              // 22: admin.v1.RejectionReason
-	(*Plugin)(nil),                    // 23: admin.v1.Plugin
-	(*PluginVersion)(nil),             // 24: admin.v1.PluginVersion
-	(*v1.Category)(nil),               // 25: marketplace.v1.Category
-	(*v1.Publisher)(nil),              // 26: marketplace.v1.Publisher
+	(*ListReviewersRequest)(nil),      // 20: admin.v1.ListReviewersRequest
+	(*ListReviewersResponse)(nil),     // 21: admin.v1.ListReviewersResponse
+	(*GetImageAnalysisRequest)(nil),   // 22: admin.v1.GetImageAnalysisRequest
+	(*GetImageAnalysisResponse)(nil),  // 23: admin.v1.GetImageAnalysisResponse
+	(*GetSbomRequest)(nil),            // 24: admin.v1.GetSbomRequest
+	(*GetSbomResponse)(nil),           // 25: admin.v1.GetSbomResponse
+	(v1.SubmissionStatus)(0),          // 26: marketplace.v1.SubmissionStatus
+	(*Submission)(nil),                // 27: admin.v1.Submission
+	(RejectionReason)(0),              // 28: admin.v1.RejectionReason
+	(*Plugin)(nil),                    // 29: admin.v1.Plugin
+	(*PluginVersion)(nil),             // 30: admin.v1.PluginVersion
+	(*v1.Category)(nil),               // 31: marketplace.v1.Category
+	(*v1.Publisher)(nil),              // 32: marketplace.v1.Publisher
+	(*Reviewer)(nil),                  // 33: admin.v1.Reviewer
+	(*ImageAnalysis)(nil),             // 34: admin.v1.ImageAnalysis
+	(*ImagePackage)(nil),              // 35: admin.v1.ImagePackage
+	(*ImageFile)(nil),                 // 36: admin.v1.ImageFile
+	(*ChangeSummary)(nil),             // 37: admin.v1.ChangeSummary
 }
 var file_admin_v1_review_proto_depIdxs = []int32{
-	20, // 0: admin.v1.ListSubmissionsRequest.status:type_name -> marketplace.v1.SubmissionStatus
-	21, // 1: admin.v1.ListSubmissionsResponse.submissions:type_name -> admin.v1.Submission
-	21, // 2: admin.v1.GetSubmissionResponse.submission:type_name -> admin.v1.Submission
-	21, // 3: admin.v1.ApproveSubmissionResponse.submission:type_name -> admin.v1.Submission
-	21, // 4: admin.v1.RequestChangesResponse.submission:type_name -> admin.v1.Submission
-	22, // 5: admin.v1.RejectSubmissionRequest.reason:type_name -> admin.v1.RejectionReason
-	21, // 6: admin.v1.RejectSubmissionResponse.submission:type_name -> admin.v1.Submission
-	23, // 7: admin.v1.ListPluginsResponse.plugins:type_name -> admin.v1.Plugin
-	23, // 8: admin.v1.GetPluginResponse.plugin:type_name -> admin.v1.Plugin
-	24, // 9: admin.v1.GetPluginVersionResponse.version:type_name -> admin.v1.PluginVersion
-	25, // 10: admin.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
-	26, // 11: admin.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
-	0,  // 12: admin.v1.ReviewService.ListSubmissions:input_type -> admin.v1.ListSubmissionsRequest
-	2,  // 13: admin.v1.ReviewService.GetSubmission:input_type -> admin.v1.GetSubmissionRequest
-	4,  // 14: admin.v1.ReviewService.ApproveSubmission:input_type -> admin.v1.ApproveSubmissionRequest
-	6,  // 15: admin.v1.ReviewService.RequestChanges:input_type -> admin.v1.RequestChangesRequest
-	8,  // 16: admin.v1.ReviewService.RejectSubmission:input_type -> admin.v1.RejectSubmissionRequest
-	10, // 17: admin.v1.ReviewService.ListPlugins:input_type -> admin.v1.ListPluginsRequest
-	12, // 18: admin.v1.ReviewService.GetPlugin:input_type -> admin.v1.GetPluginRequest
-	14, // 19: admin.v1.ReviewService.GetPluginVersion:input_type -> admin.v1.GetPluginVersionRequest
-	16, // 20: admin.v1.ReviewService.ListCategories:input_type -> admin.v1.ListCategoriesRequest
-	18, // 21: admin.v1.ReviewService.ListPublishers:input_type -> admin.v1.ListPublishersRequest
-	1,  // 22: admin.v1.ReviewService.ListSubmissions:output_type -> admin.v1.ListSubmissionsResponse
-	3,  // 23: admin.v1.ReviewService.GetSubmission:output_type -> admin.v1.GetSubmissionResponse
-	5,  // 24: admin.v1.ReviewService.ApproveSubmission:output_type -> admin.v1.ApproveSubmissionResponse
-	7,  // 25: admin.v1.ReviewService.RequestChanges:output_type -> admin.v1.RequestChangesResponse
-	9,  // 26: admin.v1.ReviewService.RejectSubmission:output_type -> admin.v1.RejectSubmissionResponse
-	11, // 27: admin.v1.ReviewService.ListPlugins:output_type -> admin.v1.ListPluginsResponse
-	13, // 28: admin.v1.ReviewService.GetPlugin:output_type -> admin.v1.GetPluginResponse
-	15, // 29: admin.v1.ReviewService.GetPluginVersion:output_type -> admin.v1.GetPluginVersionResponse
-	17, // 30: admin.v1.ReviewService.ListCategories:output_type -> admin.v1.ListCategoriesResponse
-	19, // 31: admin.v1.ReviewService.ListPublishers:output_type -> admin.v1.ListPublishersResponse
-	22, // [22:32] is the sub-list for method output_type
-	12, // [12:22] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	26, // 0: admin.v1.ListSubmissionsRequest.status:type_name -> marketplace.v1.SubmissionStatus
+	27, // 1: admin.v1.ListSubmissionsResponse.submissions:type_name -> admin.v1.Submission
+	27, // 2: admin.v1.GetSubmissionResponse.submission:type_name -> admin.v1.Submission
+	27, // 3: admin.v1.ApproveSubmissionResponse.submission:type_name -> admin.v1.Submission
+	27, // 4: admin.v1.RequestChangesResponse.submission:type_name -> admin.v1.Submission
+	28, // 5: admin.v1.RejectSubmissionRequest.reason:type_name -> admin.v1.RejectionReason
+	27, // 6: admin.v1.RejectSubmissionResponse.submission:type_name -> admin.v1.Submission
+	29, // 7: admin.v1.ListPluginsResponse.plugins:type_name -> admin.v1.Plugin
+	29, // 8: admin.v1.GetPluginResponse.plugin:type_name -> admin.v1.Plugin
+	30, // 9: admin.v1.GetPluginVersionResponse.version:type_name -> admin.v1.PluginVersion
+	31, // 10: admin.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
+	32, // 11: admin.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
+	33, // 12: admin.v1.ListReviewersResponse.reviewers:type_name -> admin.v1.Reviewer
+	34, // 13: admin.v1.GetImageAnalysisResponse.analysis:type_name -> admin.v1.ImageAnalysis
+	34, // 14: admin.v1.GetImageAnalysisResponse.base:type_name -> admin.v1.ImageAnalysis
+	35, // 15: admin.v1.GetImageAnalysisResponse.packages:type_name -> admin.v1.ImagePackage
+	36, // 16: admin.v1.GetImageAnalysisResponse.files:type_name -> admin.v1.ImageFile
+	37, // 17: admin.v1.GetImageAnalysisResponse.package_summary:type_name -> admin.v1.ChangeSummary
+	37, // 18: admin.v1.GetImageAnalysisResponse.file_summary:type_name -> admin.v1.ChangeSummary
+	0,  // 19: admin.v1.ReviewService.ListSubmissions:input_type -> admin.v1.ListSubmissionsRequest
+	2,  // 20: admin.v1.ReviewService.GetSubmission:input_type -> admin.v1.GetSubmissionRequest
+	4,  // 21: admin.v1.ReviewService.ApproveSubmission:input_type -> admin.v1.ApproveSubmissionRequest
+	6,  // 22: admin.v1.ReviewService.RequestChanges:input_type -> admin.v1.RequestChangesRequest
+	8,  // 23: admin.v1.ReviewService.RejectSubmission:input_type -> admin.v1.RejectSubmissionRequest
+	10, // 24: admin.v1.ReviewService.ListPlugins:input_type -> admin.v1.ListPluginsRequest
+	12, // 25: admin.v1.ReviewService.GetPlugin:input_type -> admin.v1.GetPluginRequest
+	14, // 26: admin.v1.ReviewService.GetPluginVersion:input_type -> admin.v1.GetPluginVersionRequest
+	16, // 27: admin.v1.ReviewService.ListCategories:input_type -> admin.v1.ListCategoriesRequest
+	18, // 28: admin.v1.ReviewService.ListPublishers:input_type -> admin.v1.ListPublishersRequest
+	20, // 29: admin.v1.ReviewService.ListReviewers:input_type -> admin.v1.ListReviewersRequest
+	22, // 30: admin.v1.ReviewService.GetImageAnalysis:input_type -> admin.v1.GetImageAnalysisRequest
+	24, // 31: admin.v1.ReviewService.GetSbom:input_type -> admin.v1.GetSbomRequest
+	1,  // 32: admin.v1.ReviewService.ListSubmissions:output_type -> admin.v1.ListSubmissionsResponse
+	3,  // 33: admin.v1.ReviewService.GetSubmission:output_type -> admin.v1.GetSubmissionResponse
+	5,  // 34: admin.v1.ReviewService.ApproveSubmission:output_type -> admin.v1.ApproveSubmissionResponse
+	7,  // 35: admin.v1.ReviewService.RequestChanges:output_type -> admin.v1.RequestChangesResponse
+	9,  // 36: admin.v1.ReviewService.RejectSubmission:output_type -> admin.v1.RejectSubmissionResponse
+	11, // 37: admin.v1.ReviewService.ListPlugins:output_type -> admin.v1.ListPluginsResponse
+	13, // 38: admin.v1.ReviewService.GetPlugin:output_type -> admin.v1.GetPluginResponse
+	15, // 39: admin.v1.ReviewService.GetPluginVersion:output_type -> admin.v1.GetPluginVersionResponse
+	17, // 40: admin.v1.ReviewService.ListCategories:output_type -> admin.v1.ListCategoriesResponse
+	19, // 41: admin.v1.ReviewService.ListPublishers:output_type -> admin.v1.ListPublishersResponse
+	21, // 42: admin.v1.ReviewService.ListReviewers:output_type -> admin.v1.ListReviewersResponse
+	23, // 43: admin.v1.ReviewService.GetImageAnalysis:output_type -> admin.v1.GetImageAnalysisResponse
+	25, // 44: admin.v1.ReviewService.GetSbom:output_type -> admin.v1.GetSbomResponse
+	32, // [32:45] is the sub-list for method output_type
+	19, // [19:32] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_admin_v1_review_proto_init() }
@@ -1426,7 +2060,7 @@ func file_admin_v1_review_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_admin_v1_review_proto_rawDesc), len(file_admin_v1_review_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

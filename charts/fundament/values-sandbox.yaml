@@ -248,6 +248,10 @@ marketplaceAdminApi:
   enabled: true
   replicas: 2
 
+# Analyzes the images of submitted plugin versions for the backoffice (FUN-24).
+marketplaceAnalysisWorker:
+  enabled: true
+
 # Anonymous platform overview: the console's /platform page reads it (FUN-23).
 platformPublicApi:
   enabled: true

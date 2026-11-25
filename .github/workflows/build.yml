@@ -228,6 +228,9 @@ jobs:
           - image-name: marketplace-admin-api
             dockerfile: marketplace-admin-api/Dockerfile
             context: "."
+          - image-name: marketplace-analysis-worker
+            dockerfile: marketplace-analysis-worker/Dockerfile
+            context: "."
           # Same image source as marketplace-frontend, built for the developer
           # and reviewer audiences (FUN-20), like console-demo-frontend.
           - image-name: marketplace-registry-frontend

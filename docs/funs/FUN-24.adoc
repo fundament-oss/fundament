@@ -1,0 +1,72 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 24
+:state: prediscussion
+
+= FUN-24 Plugin image analysis
+
+== Introduction
+
+A reviewer who approves a plugin version in the review backoffice (link:/funs/fun-20[FUN-20]) approves what that version will run. Until now the backoffice showed the listing texts, the logos and the permissions the manifest asks for, but not the container image those permissions are granted to.
+
+This FUN adds two things to the submission page, both as a diff against the version approved before it:
+
+* The *dependencies* of the image: the packages in an SBOM (software bill of materials) Fundament makes of it.
+* The *image contents*: every file and link in the flattened filesystem, with its permissions, a file with its size and checksum, and a link with its target.
+
+The manifest itself is shown too, as a YAML diff. That needs no analysis: the stored `definition.yaml` is served verbatim (`admin.v1.PluginVersion.manifest`).
+
+== Why Fundament analyzes the image itself
+
+A publisher can attach an SBOM to an image as an attestation, but Fundament cannot rely on it. Publishers are not required to, our own build recipe turns attestations off (`--sbom=false` in `plugins/mod.just`, see link:/funs/fun-19[FUN-19]), and an attached SBOM is what the publisher says the image holds. One Fundament makes is derived from the bytes the version pins by digest, the same bytes the cluster will run.
+
+Trivy makes the SBOM. Fundament already runs it, digest-pinned and signature-checked, in `.github/workflows/image-scan.yml`, and a later step that scans plugin images for vulnerabilities can reuse the same binary and the same SBOM.
+
+== The queue and the result are one table
+
+`appstore.plugin_image_analyses` holds one row per plugin version. It is the worker's queue (`status`, `retries`, `retry_after`) and the result (`packages`, `files`, `sbom`) at once:
+
+* A version is queued when it is submitted. An `AFTER INSERT` trigger on `appstore.submissions` inserts a `pending` row. The trigger is `SECURITY DEFINER`: the registry role inserts submissions and has no grant on the analysis table. A new submission round also resets a `failed` row to `pending`, so a publisher who makes a private image public just resubmits.
+* A sweep in the worker queues every submitted version without a row, on startup and every ten minutes: every status but `draft`, since a reviewer can open any round in the submission history. It backfills the versions that predate this feature, which include the bases the first diffs are made against.
+* A worker claims the oldest claimable row with `FOR NO KEY UPDATE SKIP LOCKED` and leases it: `status = 'running'` and `retry_after` set to the job timeout plus a minute. The claim commits at once and the analysis runs outside any transaction, since it takes minutes. A worker that dies leaves a lease that expires, and the row is claimed again, counting the lost run as an attempt. An image that kills the worker every time is therefore marked failed after the retries run out, rather than retried forever.
+
+Definitions are immutable (a republish soft-deletes the old row and inserts a new one, link:/funs/fun-19[FUN-19]), so a version's analysis never goes stale.
+
+== marketplace-analysis-worker
+
+A new deployable, `marketplace-analysis-worker`, with its own database role, `fun_marketplace_analysis_worker`. The role reads only `id`, `image`, `status` and `deleted` of `appstore.plugin_definitions`, and reads and writes the analysis table. The review backoffice's role only reads the analysis table.
+
+For each claimed version the worker:
+
+. pulls the image anonymously by digest with go-containerregistry, picking `linux/amd64` from an index and recording which platforms the index offers;
+. writes it to a tarball in its scratch volume, so the image is downloaded once;
+. walks the flattened filesystem (whiteouts applied) and records each regular file and link, with a SHA-256 of every file;
+. runs Trivy on the tarball with `--format cyclonedx --offline-scan --skip-db-update --skip-java-db-update`. CycloneDX output turns vulnerability scanning off, and the other flags keep Trivy from downloading a database or querying a package index, so the scan makes no network calls of its own.
+
+The diff is computed in `marketplace-admin-api`, not in the browser, because a file list runs to 200,000 entries. The API returns every package (a few thousand at most), and one filtered page of files. Packages are matched on their purl without version and qualifiers, as a multiset, because one module can be vendored into several binaries.
+
+== Public images only
+
+The worker pulls anonymously. A registry that answers 401, 403 or 404 makes the analysis fail for good, with the message "Image is private or does not exist. Only public images can be analyzed." Pull credentials for private registries are deferred (see <<Deferred>>).
+
+== Untrusted input
+
+The image reference is the publisher's choice, and the worker fetches it from inside the cluster. Without guards, a reference such as `10.0.0.5/x@sha256:...` or one on the cloud metadata address would make the worker probe internal endpoints, and the failure message would report back what it found. So:
+
+* The worker's dialer refuses loopback, private, link-local (which holds the metadata endpoint), carrier-grade NAT and reserved addresses, and the IPv6 ranges that embed an IPv4 address (NAT64, 6to4, Teredo). It checks the address being dialed, after DNS resolution, so a name that resolves or rebinds to an internal address is refused too. Proxy settings are ignored, since a proxy would move the check onto the proxy's address.
+* Registries are reached over https only.
+* A NetworkPolicy limits the pod's egress to DNS, the database, and public addresses on port 443. This is the second fence, and the one that holds if the first has a bug.
+* The image size is capped twice: the compressed layers the manifest declares, before anything is downloaded, and the bytes actually decompressed while the filesystem is walked, which is what catches a small gzip bomb. The walk counts what it reads from each layer, so entries a later layer hides or whites out count too, and it stops when the job's timeout passes. The scratch volume has a size limit, and the pod has a memory limit, because Trivy parses untrusted archives.
+* A job has a timeout.
+
+Local development is the exception, and is configured as one: `values-local.yaml` lists the sandbox registry as insecure and allowed to be private, rewrites `localhost:5112` (which only containerd's k3d mirror understands) to it, and `just plugins registry-to-fundament` joins the registry container to the management cluster's network.
+
+== Deferred
+
+* Pull credentials, so private images can be analyzed.
+* Vulnerability scanning of the SBOM, with a vulnerability database Fundament mirrors.
+* Analyzing platforms other than `linux/amd64`.
+* Rerunning an analysis on demand from the backoffice. Today a new submission round is the way to retry a failed one.
+* A retention policy for analysis results. Every analyzed version keeps its row, with the full file list (up to `MAX_FILES` entries), the packages and the SBOM, also once the version is rejected, withdrawn or soft-deleted. A large image costs tens of MB per version before TOAST compression, and that grows the database volume and its backups. A policy could clear `files` and `sbom` of versions that are neither approved nor the latest of their plugin, while keeping enough to diff against.

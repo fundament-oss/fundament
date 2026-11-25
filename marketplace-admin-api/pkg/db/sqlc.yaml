@@ -28,3 +28,7 @@ sql:
             go_type:
               import: "github.com/fundament-oss/fundament/common/dbconst"
               type: "PluginLabelName"
+          - column: "appstore.plugin_image_analyses.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "PluginImageAnalyseStatus"

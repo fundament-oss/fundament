@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file admin/v1/common.proto.
  */
 export const file_admin_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChVhZG1pbi92MS9jb21tb24ucHJvdG8SCGFkbWluLnYxIowDCgpTdWJtaXNzaW9uEgoKAmlkGAogASgJEhEKCXBsdWdpbl9pZBgUIAEoCRIZChFwbHVnaW5fdmVyc2lvbl9pZBgeIAEoCRIXCg9vcmdhbml6YXRpb25faWQYKCABKAkSGQoRc3VibWl0dGVyX3VzZXJfaWQYMiABKAkSMAoGc3RhdHVzGDwgASgOMiAubWFya2V0cGxhY2UudjEuU3VibWlzc2lvblN0YXR1cxItCglzdWJtaXR0ZWQYRiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiwKCHJldmlld2VkGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIYChByZXZpZXdlcl91c2VyX2lkGFogASgJEjMKEHJlamVjdGlvbl9yZWFzb24YZCABKA4yGS5hZG1pbi52MS5SZWplY3Rpb25SZWFzb24SEAoIZmVlZGJhY2sYbiABKAkSDAoEbG9nbxh4IAEoCRISCglsb2dvX2RhcmsYggEgASgJIrsCCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSEwoLZGVzY3JpcHRpb24YMiABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDwgASgJEg0KBWltYWdlGEYgASgJEhQKDGNhdGVnb3J5X2lkcxhQIAMoCRIMCgR0YWdzGFogAygJEisKB2NyZWF0ZWQYZCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKB3VwZGF0ZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKBmxhYmVscxh4IAMoDjIbLm1hcmtldHBsYWNlLnYxLlBsdWdpbkxhYmVsIrYDCg1QbHVnaW5WZXJzaW9uEgoKAmlkGAogASgJEhEKCXBsdWdpbl9pZBgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEg0KBWltYWdlGCggASgJEhcKD2RlZmluaXRpb25faGFzaBgyIAEoCRIVCg1yZWxlYXNlX25vdGVzGDwgASgJEjAKBnN0YXR1cxhGIAEoDjIgLm1hcmtldHBsYWNlLnYxLlN1Ym1pc3Npb25TdGF0dXMSFAoMY2FwYWJpbGl0aWVzGFAgAygJEjUKC3Blcm1pc3Npb25zGFogAygLMiAubWFya2V0cGxhY2UudjEuUGx1Z2luUGVybWlzc2lvbhIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglzdWJtaXR0ZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCXB1Ymxpc2hlZBh4IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoObWFuaWZlc3RfZXJyb3IYggEgASgJEhMKCm1lbnVfaWNvbnMYjAEgAygJKowCCg9SZWplY3Rpb25SZWFzb24SIAocUkVKRUNUSU9OX1JFQVNPTl9VTlNQRUNJRklFRBAAEigKJFJFSkVDVElPTl9SRUFTT05fSU5DT01QTEVURV9NRVRBREFUQRABEh4KGlJFSkVDVElPTl9SRUFTT05fRFVQTElDQVRFEAISJgoiUkVKRUNUSU9OX1JFQVNPTl9TRUNVUklUWV9DT05DRVJOUxADEiYKIlJFSkVDVElPTl9SRUFTT05fTkFNSU5HX0dVSURFTElORVMQBBIhCh1SRUpFQ1RJT05fUkVBU09OX09VVF9PRl9TQ09QRRAFEhoKFlJFSkVDVElPTl9SRUFTT05fT1RIRVIQBkJjWldnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFkbWluLWFwaS9wa2cvcHJvdG8vZ2VuL2FkbWluL3YxO2FkbWludjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
+  fileDesc("ChVhZG1pbi92MS9jb21tb24ucHJvdG8SCGFkbWluLnYxIowDCgpTdWJtaXNzaW9uEgoKAmlkGAogASgJEhEKCXBsdWdpbl9pZBgUIAEoCRIZChFwbHVnaW5fdmVyc2lvbl9pZBgeIAEoCRIXCg9vcmdhbml6YXRpb25faWQYKCABKAkSGQoRc3VibWl0dGVyX3VzZXJfaWQYMiABKAkSMAoGc3RhdHVzGDwgASgOMiAubWFya2V0cGxhY2UudjEuU3VibWlzc2lvblN0YXR1cxItCglzdWJtaXR0ZWQYRiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiwKCHJldmlld2VkGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIYChByZXZpZXdlcl91c2VyX2lkGFogASgJEjMKEHJlamVjdGlvbl9yZWFzb24YZCABKA4yGS5hZG1pbi52MS5SZWplY3Rpb25SZWFzb24SEAoIZmVlZGJhY2sYbiABKAkSDAoEbG9nbxh4IAEoCRISCglsb2dvX2RhcmsYggEgASgJIrsCCgZQbHVnaW4SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSEwoLZGVzY3JpcHRpb24YMiABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDwgASgJEg0KBWltYWdlGEYgASgJEhQKDGNhdGVnb3J5X2lkcxhQIAMoCRIMCgR0YWdzGFogAygJEisKB2NyZWF0ZWQYZCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKB3VwZGF0ZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKBmxhYmVscxh4IAMoDjIbLm1hcmtldHBsYWNlLnYxLlBsdWdpbkxhYmVsIskDCg1QbHVnaW5WZXJzaW9uEgoKAmlkGAogASgJEhEKCXBsdWdpbl9pZBgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEg0KBWltYWdlGCggASgJEhcKD2RlZmluaXRpb25faGFzaBgyIAEoCRIVCg1yZWxlYXNlX25vdGVzGDwgASgJEjAKBnN0YXR1cxhGIAEoDjIgLm1hcmtldHBsYWNlLnYxLlN1Ym1pc3Npb25TdGF0dXMSFAoMY2FwYWJpbGl0aWVzGFAgAygJEjUKC3Blcm1pc3Npb25zGFogAygLMiAubWFya2V0cGxhY2UudjEuUGx1Z2luUGVybWlzc2lvbhIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglzdWJtaXR0ZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCXB1Ymxpc2hlZBh4IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoObWFuaWZlc3RfZXJyb3IYggEgASgJEhMKCm1lbnVfaWNvbnMYjAEgAygJEhEKCG1hbmlmZXN0GJYBIAEoDCIkCghSZXZpZXdlchIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIvABCg1JbWFnZUFuYWx5c2lzEhkKEXBsdWdpbl92ZXJzaW9uX2lkGAogASgJEi0KBnN0YXR1cxgUIAEoDjIdLmFkbWluLnYxLkltYWdlQW5hbHlzaXNTdGF0dXMSEwoLc3RhdHVzX2luZm8YHiABKAkSLAoIYW5hbHl6ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGltYWdlX2RpZ2VzdBgyIAEoCRIQCghwbGF0Zm9ybRg8IAEoCRIRCglwbGF0Zm9ybXMYRiADKAkSFwoPZmlsZXNfdHJ1bmNhdGVkGFAgASgIIlMKDUNoYW5nZVN1bW1hcnkSEQoJdW5jaGFuZ2VkGAogASgFEg0KBWFkZGVkGBQgASgFEg8KB3JlbW92ZWQYHiABKAUSDwoHY2hhbmdlZBgoIAEoBSKTAQoMSW1hZ2VQYWNrYWdlEgwKBG5hbWUYCiABKAkSDwoHdmVyc2lvbhgUIAEoCRIMCgR0eXBlGB4gASgJEgwKBHB1cmwYKCABKAkSEAoIbGljZW5zZXMYMiADKAkSIAoGY2hhbmdlGDwgASgOMhAuYWRtaW4udjEuQ2hhbmdlEhQKDGJhc2VfdmVyc2lvbhhGIAEoCSJlCglJbWFnZUZpbGUSDAoEcGF0aBgKIAEoCRIMCgRzaXplGBQgASgDEgwKBG1vZGUYHiABKA0SDAoEbGluaxgoIAEoCRIgCgZjaGFuZ2UYMiABKA4yEC5hZG1pbi52MS5DaGFuZ2UqjAIKD1JlamVjdGlvblJlYXNvbhIgChxSRUpFQ1RJT05fUkVBU09OX1VOU1BFQ0lGSUVEEAASKAokUkVKRUNUSU9OX1JFQVNPTl9JTkNPTVBMRVRFX01FVEFEQVRBEAESHgoaUkVKRUNUSU9OX1JFQVNPTl9EVVBMSUNBVEUQAhImCiJSRUpFQ1RJT05fUkVBU09OX1NFQ1VSSVRZX0NPTkNFUk5TEAMSJgoiUkVKRUNUSU9OX1JFQVNPTl9OQU1JTkdfR1VJREVMSU5FUxAEEiEKHVJFSkVDVElPTl9SRUFTT05fT1VUX09GX1NDT1BFEAUSGgoWUkVKRUNUSU9OX1JFQVNPTl9PVEhFUhAGKu0BChNJbWFnZUFuYWx5c2lzU3RhdHVzEiUKIUlNQUdFX0FOQUxZU0lTX1NUQVRVU19VTlNQRUNJRklFRBAAEiEKHUlNQUdFX0FOQUxZU0lTX1NUQVRVU19QRU5ESU5HEAESIQodSU1BR0VfQU5BTFlTSVNfU1RBVFVTX1JVTk5JTkcQAhIiCh5JTUFHRV9BTkFMWVNJU19TVEFUVVNfUkVUUllJTkcQAxIjCh9JTUFHRV9BTkFMWVNJU19TVEFUVVNfQ09NUExFVEVEEAQSIAocSU1BR0VfQU5BTFlTSVNfU1RBVFVTX0ZBSUxFRBAFKnAKBkNoYW5nZRIWChJDSEFOR0VfVU5TUEVDSUZJRUQQABIUChBDSEFOR0VfVU5DSEFOR0VEEAESEAoMQ0hBTkdFX0FEREVEEAISEgoOQ0hBTkdFX1JFTU9WRUQQAxISCg5DSEFOR0VfQ0hBTkdFRBAEQmNaV2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvbWFya2V0cGxhY2UtYWRtaW4tYXBpL3BrZy9wcm90by9nZW4vYWRtaW4vdjE7YWRtaW52MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
 
 /**
  * A plugin version awaiting or having gone through review. Identity, decision
@@ -78,9 +78,9 @@ export type Submission = Message<"admin.v1.Submission"> & {
   reviewed?: Timestamp | undefined;
 
   /**
-   * The deciding Fundament staff member. Which store they come from is
-   * undecided — tenant.users or dcim.users — so do not assume this shares a
-   * namespace with submitter_user_id.
+   * The deciding Fundament staff member (dcim.users), resolved through this
+   * service's ListReviewers. Not the same namespace as submitter_user_id,
+   * which is a tenant.users id.
    *
    * @generated from field: string reviewer_user_id = 90;
    */
@@ -289,6 +289,15 @@ export type PluginVersion = Message<"admin.v1.PluginVersion"> & {
    * @generated from field: repeated string menu_icons = 140;
    */
   menuIcons: string[];
+
+  /**
+   * The definition.yaml as stored, not a re-serialization: definition_hash is
+   * the sha256 of exactly these bytes. Carried so the reviewer can read, and
+   * diff, what the version declares.
+   *
+   * @generated from field: bytes manifest = 150;
+   */
+  manifest: Uint8Array;
 };
 
 /**
@@ -297,6 +306,218 @@ export type PluginVersion = Message<"admin.v1.PluginVersion"> & {
  */
 export const PluginVersionSchema: GenMessage<PluginVersion> = /*@__PURE__*/
   messageDesc(file_admin_v1_common, 2);
+
+/**
+ * A Fundament staff member who decided a submission (dcim.users). Name only:
+ * the backoffice shows who decided, and has no use for contact details.
+ *
+ * @generated from message admin.v1.Reviewer
+ */
+export type Reviewer = Message<"admin.v1.Reviewer"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message admin.v1.Reviewer.
+ * Use `create(ReviewerSchema)` to create a new message.
+ */
+export const ReviewerSchema: GenMessage<Reviewer> = /*@__PURE__*/
+  messageDesc(file_admin_v1_common, 3);
+
+/**
+ * One version's image analysis, without its lists.
+ *
+ * @generated from message admin.v1.ImageAnalysis
+ */
+export type ImageAnalysis = Message<"admin.v1.ImageAnalysis"> & {
+  /**
+   * @generated from field: string plugin_version_id = 10;
+   */
+  pluginVersionId: string;
+
+  /**
+   * @generated from field: admin.v1.ImageAnalysisStatus status = 20;
+   */
+  status: ImageAnalysisStatus;
+
+  /**
+   * @generated from field: string status_info = 30;
+   */
+  statusInfo: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp analyzed = 40;
+   */
+  analyzed?: Timestamp | undefined;
+
+  /**
+   * The platform manifest that was analyzed.
+   *
+   * @generated from field: string image_digest = 50;
+   */
+  imageDigest: string;
+
+  /**
+   * @generated from field: string platform = 60;
+   */
+  platform: string;
+
+  /**
+   * Every platform the image index offers; empty for a single-platform image.
+   *
+   * @generated from field: repeated string platforms = 70;
+   */
+  platforms: string[];
+
+  /**
+   * The file list stopped at its cap, so a file diff may report files as
+   * added or removed that only fell past the cap.
+   *
+   * @generated from field: bool files_truncated = 80;
+   */
+  filesTruncated: boolean;
+};
+
+/**
+ * Describes the message admin.v1.ImageAnalysis.
+ * Use `create(ImageAnalysisSchema)` to create a new message.
+ */
+export const ImageAnalysisSchema: GenMessage<ImageAnalysis> = /*@__PURE__*/
+  messageDesc(file_admin_v1_common, 4);
+
+/**
+ * @generated from message admin.v1.ChangeSummary
+ */
+export type ChangeSummary = Message<"admin.v1.ChangeSummary"> & {
+  /**
+   * @generated from field: int32 unchanged = 10;
+   */
+  unchanged: number;
+
+  /**
+   * @generated from field: int32 added = 20;
+   */
+  added: number;
+
+  /**
+   * @generated from field: int32 removed = 30;
+   */
+  removed: number;
+
+  /**
+   * @generated from field: int32 changed = 40;
+   */
+  changed: number;
+};
+
+/**
+ * Describes the message admin.v1.ChangeSummary.
+ * Use `create(ChangeSummarySchema)` to create a new message.
+ */
+export const ChangeSummarySchema: GenMessage<ChangeSummary> = /*@__PURE__*/
+  messageDesc(file_admin_v1_common, 5);
+
+/**
+ * @generated from message admin.v1.ImagePackage
+ */
+export type ImagePackage = Message<"admin.v1.ImagePackage"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * Empty for a REMOVED package, which carries base_version instead.
+   *
+   * @generated from field: string version = 20;
+   */
+  version: string;
+
+  /**
+   * The ecosystem, from the purl: deb, apk, golang, npm, ...
+   *
+   * @generated from field: string type = 30;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string purl = 40;
+   */
+  purl: string;
+
+  /**
+   * @generated from field: repeated string licenses = 50;
+   */
+  licenses: string[];
+
+  /**
+   * @generated from field: admin.v1.Change change = 60;
+   */
+  change: Change;
+
+  /**
+   * Set for CHANGED and REMOVED.
+   *
+   * @generated from field: string base_version = 70;
+   */
+  baseVersion: string;
+};
+
+/**
+ * Describes the message admin.v1.ImagePackage.
+ * Use `create(ImagePackageSchema)` to create a new message.
+ */
+export const ImagePackageSchema: GenMessage<ImagePackage> = /*@__PURE__*/
+  messageDesc(file_admin_v1_common, 6);
+
+/**
+ * @generated from message admin.v1.ImageFile
+ */
+export type ImageFile = Message<"admin.v1.ImageFile"> & {
+  /**
+   * @generated from field: string path = 10;
+   */
+  path: string;
+
+  /**
+   * @generated from field: int64 size = 20;
+   */
+  size: bigint;
+
+  /**
+   * Permission bits, e.g. 0755.
+   *
+   * @generated from field: uint32 mode = 30;
+   */
+  mode: number;
+
+  /**
+   * Symlink or hard link target; empty for a regular file.
+   *
+   * @generated from field: string link = 40;
+   */
+  link: string;
+
+  /**
+   * @generated from field: admin.v1.Change change = 50;
+   */
+  change: Change;
+};
+
+/**
+ * Describes the message admin.v1.ImageFile.
+ * Use `create(ImageFileSchema)` to create a new message.
+ */
+export const ImageFileSchema: GenMessage<ImageFile> = /*@__PURE__*/
+  messageDesc(file_admin_v1_common, 7);
 
 /**
  * Fixed set offered in the reject dialog. Backoffice reporting only: the
@@ -346,4 +567,95 @@ export enum RejectionReason {
  */
 export const RejectionReasonSchema: GenEnum<RejectionReason> = /*@__PURE__*/
   enumDesc(file_admin_v1_common, 0);
+
+/**
+ * @generated from enum admin.v1.ImageAnalysisStatus
+ */
+export enum ImageAnalysisStatus {
+  /**
+   * No analysis exists for the version (yet).
+   *
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_RUNNING = 2;
+   */
+  RUNNING = 2,
+
+  /**
+   * An attempt failed and another is scheduled; status_info says why.
+   *
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_RETRYING = 3;
+   */
+  RETRYING = 3,
+
+  /**
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_COMPLETED = 4;
+   */
+  COMPLETED = 4,
+
+  /**
+   * Retrying will not help; status_info says why. A new submission round
+   * queues the analysis again.
+   *
+   * @generated from enum value: IMAGE_ANALYSIS_STATUS_FAILED = 5;
+   */
+  FAILED = 5,
+}
+
+/**
+ * Describes the enum admin.v1.ImageAnalysisStatus.
+ */
+export const ImageAnalysisStatusSchema: GenEnum<ImageAnalysisStatus> = /*@__PURE__*/
+  enumDesc(file_admin_v1_common, 1);
+
+/**
+ * How an entry differs from the base version.
+ *
+ * @generated from enum admin.v1.Change
+ */
+export enum Change {
+  /**
+   * Not compared: there is no base, or one of the two analyses is not done.
+   *
+   * @generated from enum value: CHANGE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CHANGE_UNCHANGED = 1;
+   */
+  UNCHANGED = 1,
+
+  /**
+   * @generated from enum value: CHANGE_ADDED = 2;
+   */
+  ADDED = 2,
+
+  /**
+   * @generated from enum value: CHANGE_REMOVED = 3;
+   */
+  REMOVED = 3,
+
+  /**
+   * A package at another version, or a file with other contents, mode or
+   * link target.
+   *
+   * @generated from enum value: CHANGE_CHANGED = 4;
+   */
+  CHANGED = 4,
+}
+
+/**
+ * Describes the enum admin.v1.Change.
+ */
+export const ChangeSchema: GenEnum<Change> = /*@__PURE__*/
+  enumDesc(file_admin_v1_common, 2);
 

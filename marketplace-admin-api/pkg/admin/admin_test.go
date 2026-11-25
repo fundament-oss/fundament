@@ -542,6 +542,9 @@ func TestGetPluginVersionDerivesReviewPayload(t *testing.T) {
 	assert.Equal(t, "Read", version.GetPermissions()[0].GetAccess())
 	assert.Equal(t, "deployments", version.GetPermissions()[1].GetResource())
 	assert.Equal(t, "Read and write", version.GetPermissions()[1].GetAccess())
+
+	// The manifest travels verbatim, so the reviewer reads what was hashed.
+	assert.Equal(t, []byte(testManifest), version.GetManifest())
 }
 
 // A corrupt manifest must be distinguishable from one that declares nothing:
@@ -584,6 +587,50 @@ func TestListPublishersIncludesUnpublishedPublishers(t *testing.T) {
 	assert.Contains(t, ids, seeded.organizationID.String())
 }
 
+// seedReviewer creates a DCIM staff user, the store reviewers come from.
+func seedReviewer(t *testing.T, env *testEnv, name string) uuid.UUID {
+	t.Helper()
+
+	userID := uuid.New()
+	_, err := env.superPool.Exec(context.Background(),
+		`INSERT INTO dcim.users (id, name, email) VALUES ($1, $2, $2 || '@fundament.test')`, userID, name)
+	require.NoError(t, err)
+
+	return userID
+}
+
+func TestListReviewersResolvesDecidingStaff(t *testing.T) {
+	env := newTestEnv(t)
+	first := seedPendingSubmission(t, env, "cert-manager")
+	second := seedPendingSubmission(t, env, "postgres-operator")
+	alice := seedReviewer(t, env, "Alice")
+	bob := seedReviewer(t, env, "Bob")
+	// Staff who never decided anything are not listed.
+	seedReviewer(t, env, "Carol")
+
+	_, err := newClient(t, env, authFor(t, alice)).ApproveSubmission(context.Background(),
+		adminv1.ApproveSubmissionRequest_builder{SubmissionId: first.submissionID.String()}.Build())
+	require.NoError(t, err)
+	_, err = newClient(t, env, authFor(t, bob)).ApproveSubmission(context.Background(),
+		adminv1.ApproveSubmissionRequest_builder{SubmissionId: second.submissionID.String()}.Build())
+	require.NoError(t, err)
+
+	// Bob has left since: he still made the decision, so he still resolves.
+	_, err = env.superPool.Exec(context.Background(),
+		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, bob)
+	require.NoError(t, err)
+
+	resp, err := newReviewer(t, env).ListReviewers(context.Background(),
+		adminv1.ListReviewersRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	names := make(map[string]string, len(resp.GetReviewers()))
+	for _, reviewer := range resp.GetReviewers() {
+		names[reviewer.GetId()] = reviewer.GetName()
+	}
+	assert.Equal(t, map[string]string{alice.String(): "Alice", bob.String(): "Bob"}, names)
+}
+
 func TestListCategoriesServesVocabulary(t *testing.T) {
 	env := newTestEnv(t)
 
@@ -594,4 +641,117 @@ func TestListCategoriesServesVocabulary(t *testing.T) {
 
 	// db/seed/0101-appstore-catalog.sql ships the vocabulary.
 	assert.NotEmpty(t, resp.GetCategories())
+}
+
+// completeAnalysis records a finished analysis for a version, as the worker
+// would.
+func completeAnalysis(t *testing.T, env *testEnv, versionID uuid.UUID, packages, files string) {
+	t.Helper()
+
+	_, err := env.superPool.Exec(context.Background(), `
+		INSERT INTO appstore.plugin_image_analyses
+			(plugin_definition_id, status, image_digest, platform, packages, files, sbom, analyzed)
+		VALUES ($1, 'completed', 'sha256:img', 'linux/amd64', $2, $3, '{"bomFormat":"CycloneDX"}', now())
+		ON CONFLICT ON CONSTRAINT plugin_image_analyses_uq_plugin_definition_id DO UPDATE SET
+			status = 'completed', image_digest = 'sha256:img', platform = 'linux/amd64',
+			packages = EXCLUDED.packages, files = EXCLUDED.files, sbom = EXCLUDED.sbom, analyzed = now()`,
+		versionID, packages, files)
+	require.NoError(t, err)
+}
+
+func TestGetImageAnalysisDiffsAgainstBase(t *testing.T) {
+	env := newTestEnv(t)
+	seeded := seedPendingSubmission(t, env, "cert-manager")
+	baseID := seedVersion(t, env, seeded.pluginID, "1.0.0", "approved")
+	completeAnalysis(t, env, baseID,
+		`[{"purl":"pkg:deb/debian/openssl@3.0.13","name":"openssl","version":"3.0.13","type":"deb","licenses":[]},
+		  {"purl":"pkg:deb/debian/zlib@1.3","name":"zlib","version":"1.3","type":"deb","licenses":[]}]`,
+		`[{"path":"/a","size":1,"mode":420,"sha256":"1"},{"path":"/b","size":1,"mode":420,"sha256":"2"},
+		  {"path":"/c","size":1,"mode":420,"sha256":"3"}]`)
+	completeAnalysis(t, env, seeded.versionID,
+		`[{"purl":"pkg:deb/debian/openssl@3.0.14","name":"openssl","version":"3.0.14","type":"deb","licenses":["Apache-2.0"]},
+		  {"purl":"pkg:deb/debian/zlib@1.3","name":"zlib","version":"1.3","type":"deb","licenses":[]}]`,
+		`[{"path":"/a","size":1,"mode":420,"sha256":"1"},{"path":"/b","size":2,"mode":420,"sha256":"changed"},
+		  {"path":"/d","size":1,"mode":420,"sha256":"4"},{"path":"/e","size":1,"mode":420,"sha256":"5"}]`)
+
+	client := newReviewer(t, env)
+	resp, err := client.GetImageAnalysis(context.Background(), adminv1.GetImageAnalysisRequest_builder{
+		PluginVersionId:     seeded.versionID.String(),
+		BasePluginVersionId: baseID.String(),
+		FilesChangesOnly:    true,
+		FilesPageSize:       2,
+	}.Build())
+	require.NoError(t, err)
+
+	assert.True(t, resp.GetCompared())
+	assert.Equal(t, adminv1.ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_COMPLETED, resp.GetAnalysis().GetStatus())
+	assert.Equal(t, adminv1.ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_COMPLETED, resp.GetBase().GetStatus())
+
+	// Packages are served whole, the files filtered.
+	require.Len(t, resp.GetPackages(), 2)
+	assert.Equal(t, "openssl", resp.GetPackages()[0].GetName())
+	assert.Equal(t, "3.0.14", resp.GetPackages()[0].GetVersion())
+	assert.Equal(t, "3.0.13", resp.GetPackages()[0].GetBaseVersion())
+	assert.Equal(t, adminv1.Change_CHANGE_CHANGED, resp.GetPackages()[0].GetChange())
+	assert.Equal(t, adminv1.Change_CHANGE_UNCHANGED, resp.GetPackages()[1].GetChange())
+	assert.Equal(t, int32(1), resp.GetPackageSummary().GetUnchanged())
+	assert.Equal(t, int32(1), resp.GetPackageSummary().GetChanged())
+
+	// /b changed, /c removed, /d and /e added: four of them, two per page.
+	assert.Equal(t, int32(4), resp.GetFilesMatching())
+	assert.Equal(t, int32(2), resp.GetFileSummary().GetAdded())
+	paths := []string{}
+	for _, f := range resp.GetFiles() {
+		paths = append(paths, f.GetPath())
+	}
+	assert.Equal(t, []string{"/b", "/c"}, paths)
+	require.NotEmpty(t, resp.GetNextFilesPageToken())
+
+	next, err := client.GetImageAnalysis(context.Background(), adminv1.GetImageAnalysisRequest_builder{
+		PluginVersionId:     seeded.versionID.String(),
+		BasePluginVersionId: baseID.String(),
+		FilesChangesOnly:    true,
+		FilesPageSize:       2,
+		FilesPageToken:      resp.GetNextFilesPageToken(),
+	}.Build())
+	require.NoError(t, err)
+	paths = paths[:0]
+	for _, f := range next.GetFiles() {
+		paths = append(paths, f.GetPath())
+	}
+	assert.Equal(t, []string{"/d", "/e"}, paths)
+	assert.Empty(t, next.GetNextFilesPageToken())
+}
+
+// A submission queues its analysis (the trigger), so a fresh version reads as
+// pending, and its lists are empty until the worker is done.
+func TestGetImageAnalysisWhilePending(t *testing.T) {
+	env := newTestEnv(t)
+	seeded := seedPendingSubmission(t, env, "cert-manager")
+
+	resp, err := newReviewer(t, env).GetImageAnalysis(context.Background(), adminv1.GetImageAnalysisRequest_builder{
+		PluginVersionId: seeded.versionID.String(),
+	}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, adminv1.ImageAnalysisStatus_IMAGE_ANALYSIS_STATUS_PENDING, resp.GetAnalysis().GetStatus())
+	assert.False(t, resp.GetCompared())
+	assert.Empty(t, resp.GetPackages())
+	assert.Empty(t, resp.GetFiles())
+}
+
+func TestGetSbomServesCompletedAnalysis(t *testing.T) {
+	env := newTestEnv(t)
+	seeded := seedPendingSubmission(t, env, "cert-manager")
+	client := newReviewer(t, env)
+
+	_, err := client.GetSbom(context.Background(),
+		adminv1.GetSbomRequest_builder{PluginVersionId: seeded.versionID.String()}.Build())
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+
+	completeAnalysis(t, env, seeded.versionID, `[]`, `[]`)
+	resp, err := client.GetSbom(context.Background(),
+		adminv1.GetSbomRequest_builder{PluginVersionId: seeded.versionID.String()}.Build())
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"bomFormat":"CycloneDX"}`, string(resp.GetSbom()))
 }
