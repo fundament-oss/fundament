@@ -478,10 +478,11 @@ func (b0 GetClusterWorkloadMetricsRequest_builder) Build() *GetClusterWorkloadMe
 
 // GetClusterWorkloadMetricsResponse contains current workload metrics for a cluster.
 type GetClusterWorkloadMetricsResponse struct {
-	state                         protoimpl.MessageState  `protogen:"opaque.v1"`
-	xxx_hidden_Totals             *ResourceUsageInfo      `protobuf:"bytes,10,opt,name=totals"`
-	xxx_hidden_Nodes              *[]*NodeWorkloadMetrics `protobuf:"bytes,20,rep,name=nodes"`
-	xxx_hidden_MetricsUnavailable bool                    `protobuf:"varint,40,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	state                         protoimpl.MessageState       `protogen:"opaque.v1"`
+	xxx_hidden_Totals             *ResourceUsageInfo           `protobuf:"bytes,10,opt,name=totals"`
+	xxx_hidden_Nodes              *[]*NodeWorkloadMetrics      `protobuf:"bytes,20,rep,name=nodes"`
+	xxx_hidden_Namespaces         *[]*NamespaceWorkloadMetrics `protobuf:"bytes,30,rep,name=namespaces"`
+	xxx_hidden_MetricsUnavailable bool                         `protobuf:"varint,40,opt,name=metrics_unavailable,json=metricsUnavailable"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -527,6 +528,15 @@ func (x *GetClusterWorkloadMetricsResponse) GetNodes() []*NodeWorkloadMetrics {
 	return nil
 }
 
+func (x *GetClusterWorkloadMetricsResponse) GetNamespaces() []*NamespaceWorkloadMetrics {
+	if x != nil {
+		if x.xxx_hidden_Namespaces != nil {
+			return *x.xxx_hidden_Namespaces
+		}
+	}
+	return nil
+}
+
 func (x *GetClusterWorkloadMetricsResponse) GetMetricsUnavailable() bool {
 	if x != nil {
 		return x.xxx_hidden_MetricsUnavailable
@@ -540,6 +550,10 @@ func (x *GetClusterWorkloadMetricsResponse) SetTotals(v *ResourceUsageInfo) {
 
 func (x *GetClusterWorkloadMetricsResponse) SetNodes(v []*NodeWorkloadMetrics) {
 	x.xxx_hidden_Nodes = &v
+}
+
+func (x *GetClusterWorkloadMetricsResponse) SetNamespaces(v []*NamespaceWorkloadMetrics) {
+	x.xxx_hidden_Namespaces = &v
 }
 
 func (x *GetClusterWorkloadMetricsResponse) SetMetricsUnavailable(v bool) {
@@ -564,6 +578,10 @@ type GetClusterWorkloadMetricsResponse_builder struct {
 	Totals *ResourceUsageInfo
 	// Per-node breakdown
 	Nodes []*NodeWorkloadMetrics
+	// Per tenant namespace (tnt-*), empty without
+	// gardener-extension-tenant-metrics on the seed. Requests and limits stay
+	// zero: Gardener's kube-state-metrics only covers kube-system.
+	Namespaces []*NamespaceWorkloadMetrics
 	// True when the cluster's metrics backend could not be reached; the
 	// usage fields are then zero and should be rendered as unavailable
 	// rather than as real zeros.
@@ -576,6 +594,7 @@ func (b0 GetClusterWorkloadMetricsResponse_builder) Build() *GetClusterWorkloadM
 	_, _ = b, x
 	x.xxx_hidden_Totals = b.Totals
 	x.xxx_hidden_Nodes = &b.Nodes
+	x.xxx_hidden_Namespaces = &b.Namespaces
 	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
@@ -2159,13 +2178,15 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" GetClusterWorkloadMetricsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\xde\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\x97\x02\n" +
 	"!GetClusterWorkloadMetricsResponse\x12:\n" +
 	"\x06totals\x18\n" +
 	" \x01(\v2\".organization.v1.ResourceUsageInfoR\x06totals\x12:\n" +
-	"\x05nodes\x18\x14 \x03(\v2$.organization.v1.NodeWorkloadMetricsR\x05nodes\x12/\n" +
-	"\x13metrics_unavailable\x18( \x01(\bR\x12metricsUnavailableJ\x04\b\x1e\x10\x1fR\n" +
-	"namespaces\"\xc7\x01\n" +
+	"\x05nodes\x18\x14 \x03(\v2$.organization.v1.NodeWorkloadMetricsR\x05nodes\x12I\n" +
+	"\n" +
+	"namespaces\x18\x1e \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
+	"namespaces\x12/\n" +
+	"\x13metrics_unavailable\x18( \x01(\bR\x12metricsUnavailable\"\xc7\x01\n" +
 	"\x13NodeWorkloadMetrics\x12\x12\n" +
 	"\x04node\x18\n" +
 	" \x01(\tR\x04node\x120\n" +
@@ -2295,57 +2316,58 @@ var file_v1_metrics_proto_depIdxs = []int32{
 	18, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
 	19, // 6: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
 	5,  // 7: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
-	20, // 8: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 9: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
-	20, // 10: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
-	18, // 11: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 13: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	9,  // 14: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
-	20, // 15: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
-	20, // 16: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
-	20, // 17: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
-	18, // 18: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 19: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 20: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	2,  // 21: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	18, // 22: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 23: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	18, // 24: organization.v1.StreamOrgWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 25: organization.v1.StreamOrgWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
-	18, // 26: organization.v1.StreamClusterWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 27: organization.v1.StreamClusterWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
-	18, // 28: organization.v1.StreamProjectWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
-	18, // 29: organization.v1.StreamProjectWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
-	19, // 30: organization.v1.StreamWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
-	9,  // 31: organization.v1.StreamWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
-	5,  // 32: organization.v1.StreamWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
-	2,  // 33: organization.v1.StreamWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	0,  // 34: organization.v1.StreamWorkloadMetricsResponse.time_series:type_name -> organization.v1.GetWorkloadTimeSeriesResponse
-	18, // 35: organization.v1.StreamWorkloadMetricsResponse.refreshed_at:type_name -> google.protobuf.Timestamp
-	3,  // 36: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
-	6,  // 37: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
-	7,  // 38: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
-	10, // 39: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
-	11, // 40: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
-	13, // 41: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
-	14, // 42: organization.v1.MetricsService.StreamOrgWorkloadMetrics:input_type -> organization.v1.StreamOrgWorkloadMetricsRequest
-	15, // 43: organization.v1.MetricsService.StreamClusterWorkloadMetrics:input_type -> organization.v1.StreamClusterWorkloadMetricsRequest
-	16, // 44: organization.v1.MetricsService.StreamProjectWorkloadMetrics:input_type -> organization.v1.StreamProjectWorkloadMetricsRequest
-	4,  // 45: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
-	0,  // 46: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	8,  // 47: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
-	0,  // 48: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	12, // 49: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
-	0,  // 50: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	17, // 51: organization.v1.MetricsService.StreamOrgWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
-	17, // 52: organization.v1.MetricsService.StreamClusterWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
-	17, // 53: organization.v1.MetricsService.StreamProjectWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
-	45, // [45:54] is the sub-list for method output_type
-	36, // [36:45] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	2,  // 8: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	20, // 9: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 10: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
+	20, // 11: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
+	18, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 14: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	9,  // 15: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
+	20, // 16: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 17: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
+	20, // 18: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
+	18, // 19: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 20: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 21: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	2,  // 22: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	18, // 23: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 24: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 25: organization.v1.StreamOrgWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 26: organization.v1.StreamOrgWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 27: organization.v1.StreamClusterWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 28: organization.v1.StreamClusterWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 29: organization.v1.StreamProjectWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 30: organization.v1.StreamProjectWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 31: organization.v1.StreamWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	9,  // 32: organization.v1.StreamWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
+	5,  // 33: organization.v1.StreamWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
+	2,  // 34: organization.v1.StreamWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	0,  // 35: organization.v1.StreamWorkloadMetricsResponse.time_series:type_name -> organization.v1.GetWorkloadTimeSeriesResponse
+	18, // 36: organization.v1.StreamWorkloadMetricsResponse.refreshed_at:type_name -> google.protobuf.Timestamp
+	3,  // 37: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
+	6,  // 38: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
+	7,  // 39: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
+	10, // 40: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
+	11, // 41: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
+	13, // 42: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
+	14, // 43: organization.v1.MetricsService.StreamOrgWorkloadMetrics:input_type -> organization.v1.StreamOrgWorkloadMetricsRequest
+	15, // 44: organization.v1.MetricsService.StreamClusterWorkloadMetrics:input_type -> organization.v1.StreamClusterWorkloadMetricsRequest
+	16, // 45: organization.v1.MetricsService.StreamProjectWorkloadMetrics:input_type -> organization.v1.StreamProjectWorkloadMetricsRequest
+	4,  // 46: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
+	0,  // 47: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	8,  // 48: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
+	0,  // 49: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	12, // 50: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
+	0,  // 51: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	17, // 52: organization.v1.MetricsService.StreamOrgWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	17, // 53: organization.v1.MetricsService.StreamClusterWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	17, // 54: organization.v1.MetricsService.StreamProjectWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	46, // [46:55] is the sub-list for method output_type
+	37, // [37:46] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_v1_metrics_proto_init() }

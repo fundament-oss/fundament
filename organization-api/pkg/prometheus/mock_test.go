@@ -300,3 +300,13 @@ func TestMockGenerate_NodeUsageQueries(t *testing.T) {
 		}
 	}
 }
+
+func TestMockGenerate_PodsCountedFromContainers(t *testing.T) {
+	q := `count(count(container_memory_working_set_bytes{type="shoot",namespace=~"tnt-.+",container!=""}) by (namespace, pod)) by (namespace)`
+	samples := mockGenerate(q, time.Now(), testClusters)
+	require.NotEmpty(t, samples)
+	for _, s := range samples {
+		assert.NotEmpty(t, s.Labels["namespace"])
+		assert.Less(t, s.Value, mockMaxPodsPerNode*10, "a pod count, not bytes")
+	}
+}
