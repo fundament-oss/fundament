@@ -595,6 +595,16 @@ export class OrganizationDataService {
   }
 
   /**
+   * Drop a membership the server has just ended, for when the reload after it
+   * failed: the list and the sidebar's count should not go on showing it. A
+   * list asked for before this no longer counts, since it may still hold it.
+   */
+  forgetMember(id: string): void {
+    this.appliedMemberList = this.memberListRequests;
+    this.members.update((members) => members.filter((m) => m.id !== id));
+  }
+
+  /**
    * Update the cached organization name without a full reload
    */
   updateOrganizationAlias(organizationId: string, alias: string) {

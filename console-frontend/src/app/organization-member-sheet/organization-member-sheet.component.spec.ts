@@ -52,6 +52,7 @@ const ME = create(MemberSchema, {
 async function build(
   memberId: string,
   members: Member[] = [ALICE, BOB_INVITED, CAROL_DECLINED, ME],
+  { listFails = false } = {},
 ) {
   const notifications = { success: vi.fn(), error: vi.fn() };
   const memberClient = {
@@ -60,6 +61,17 @@ async function build(
   };
   const router = { navigate: vi.fn() };
   const membersSignal = signal(members);
+  const organizationData = {
+    members: membersSignal,
+    reloadMembers: vi.fn(async () => {
+      if (listFails) throw new Error('unreachable');
+      return membersSignal();
+    }),
+    forgetMember: vi.fn((id: string) =>
+      membersSignal.update((list) => list.filter((m) => m.id !== id)),
+    ),
+    currentOrganizationDisplayName: signal('Acme'),
+  };
 
   TestBed.configureTestingModule({
     imports: [OrganizationMemberSheetComponent],
@@ -68,14 +80,7 @@ async function build(
       { provide: Router, useValue: router },
       { provide: MEMBER, useValue: memberClient },
       { provide: NotificationService, useValue: notifications },
-      {
-        provide: OrganizationDataService,
-        useValue: {
-          members: membersSignal,
-          reloadMembers: vi.fn(async () => membersSignal()),
-          currentOrganizationDisplayName: signal('Acme'),
-        },
-      },
+      { provide: OrganizationDataService, useValue: organizationData },
       { provide: AuthnApiService, useValue: { currentUser$: of({ id: 'user-me' }) } },
     ],
   });
@@ -84,7 +89,7 @@ async function build(
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
-  return { fixture, notifications, memberClient, router };
+  return { fixture, notifications, memberClient, router, organizationData };
 }
 
 /** The sheet portals itself to the body (SheetSyncDirective), so it is looked
@@ -141,6 +146,39 @@ describe('OrganizationMemberSheetComponent', () => {
     expect(notifications.success).toHaveBeenCalledWith(
       "Invitation for 'bob@example.com' cancelled",
     );
+    expect(router.navigate).toHaveBeenCalled();
+  });
+
+  it('says the list did not load, not that the member is gone, when the cache is empty', async () => {
+    const { fixture, organizationData } = await build('membership-alice', [], {
+      listFails: true,
+    });
+
+    const dialog = find('nldd-inline-dialog');
+    expect(dialog?.getAttribute('text')).toBe('Member not loaded');
+    expect(dialog?.getAttribute('supporting-text')).toBe('unreachable');
+    expect(find('nldd-button[text="Try again"]')).not.toBeNull();
+
+    await fixture.componentInstance.load();
+    expect(organizationData.reloadMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('still shows a member the cache holds when the reload fails', async () => {
+    const { fixture } = await build('membership-alice', undefined, { listFails: true });
+
+    expect(fixture.componentInstance.member()?.id).toBe('membership-alice');
+    expect(text()).toContain('Remove Alice from organization');
+  });
+
+  it('drops a removed member from the cache when the reload after it fails', async () => {
+    const { fixture, organizationData, router } = await build('membership-alice', undefined, {
+      listFails: true,
+    });
+
+    await fixture.componentInstance.confirmRemove();
+
+    expect(organizationData.forgetMember).toHaveBeenCalledWith('membership-alice');
+    expect(organizationData.members().map((m) => m.id)).not.toContain('membership-alice');
     expect(router.navigate).toHaveBeenCalled();
   });
 

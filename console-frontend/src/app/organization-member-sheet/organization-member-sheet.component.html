@@ -19,6 +19,27 @@
           show-text
           text="Loading member..."
         ></nldd-activity-indicator>
+      } @else if (!member() && loadError()) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Member not loaded"
+          [attr.supporting-text]="loadError()"
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="load()"
+            text="Try again"
+            appearance="primary"
+          ></nldd-button>
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="onClose()"
+            text="Close"
+            appearance="secondary"
+          ></nldd-button>
+        </nldd-inline-dialog>
       } @else if (!member()) {
         <nldd-inline-dialog
           variant="alert"

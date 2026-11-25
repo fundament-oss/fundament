@@ -320,6 +320,22 @@ describe('OrganizationDataService members', () => {
     expect(service.memberCount()).toBe(1);
   });
 
+  it('forgets a removed member, and the list asked for before the removal', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    // A list was on its way when the removal went through and the reload
+    // after it failed.
+    server.holdMembers = true;
+    const before = service.reloadMembers();
+    service.forgetMember('ann');
+    server.pendingMembers[0].answer(server.members);
+    await before;
+
+    expect(service.members().map((m) => m.id)).toEqual(['bob', 'cas', 'dee']);
+    expect(service.memberCount()).toBe(2);
+  });
+
   it('drops a list that comes back after the organization is gone', async () => {
     const { service, server } = build([alpha]);
     await loaded(service);

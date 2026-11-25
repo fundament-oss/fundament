@@ -154,6 +154,8 @@ const routes: Routes = [
               import('./organization-member-sheet/organization-member-sheet.component').then(
                 (m) => m.default,
               ),
+            // The sheet reads the ID once, as it opens.
+            data: { remountOnParamChange: true },
           },
         ],
       },

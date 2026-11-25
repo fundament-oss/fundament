@@ -80,6 +80,11 @@ export default class OrganizationMemberSheetComponent implements OnInit {
 
   isLoading = signal(true);
 
+  /** Why the member list could not be fetched. Shown only when the cache has
+   *  no copy of this member either, so a failed load never reads as "not
+   *  found". */
+  loadError = signal<string | null>(null);
+
   saving = signal(false);
 
   showRemoveModal = signal(false);
@@ -138,11 +143,13 @@ export default class OrganizationMemberSheetComponent implements OnInit {
 
   async load() {
     this.isLoading.set(true);
+    this.loadError.set(null);
     try {
       // Through the shared cache, so the sidebar's count is of this same list.
       await this.organizationData.reloadMembers();
-    } catch {
-      // The cache keeps what it had; "Member not found" covers a failed load.
+    } catch (err) {
+      // The cache keeps what it had, so a member it holds is still shown.
+      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.isLoading.set(false);
     }
@@ -196,7 +203,13 @@ export default class OrganizationMemberSheetComponent implements OnInit {
       this.notificationService.success(
         invitation ? `Invitation for '${who}' cancelled` : `'${who}' removed from the organization`,
       );
-      await this.organizationData.reloadMembers().catch(() => null);
+      try {
+        await this.organizationData.reloadMembers();
+      } catch {
+        // The removal went through; only the refresh failed. Without this the
+        // list behind the sheet would show them again as it closes.
+        this.organizationData.forgetMember(member.id);
+      }
       this.onClose();
     } catch (err) {
       this.showRemoveModal.set(false);
