@@ -11,6 +11,11 @@ import {
   toProtoRejectionReason,
 } from '../status/submission-status';
 import { type Submission, type Plugin as ReviewPlugin } from '../../generated/admin/v1/common_pb';
+import {
+  type ImageAnalysisPage,
+  type ImageAnalysisQuery,
+  fromProtoImageAnalysis,
+} from './image-analysis';
 
 // Fundament backoffice, backed by admin.v1.ReviewService. The service acts on
 // submissions from every publishing organization, so it authorizes "is a
@@ -38,6 +43,11 @@ export interface PluginSubmission {
   // The version under review. Resolved on the detail page only: the queue lists
   // submissions, and a version lookup per row would be an N+1.
   version?: string;
+  // The image the version runs (digest-pinned), the definition's hash and the
+  // definition.yaml itself. Detail page only, like version.
+  image?: string;
+  definitionHash?: string;
+  manifest?: string;
   // The publishing organization. Submission carries submitter_user_id, and
   // nothing resolves a user identifier today (FUN-20), so the organization is
   // the closest thing to a name that is actually resolvable.
@@ -47,10 +57,12 @@ export interface PluginSubmission {
   status: SubmissionStatus;
   // Set once a decision is made.
   reviewedAt?: string; // ISO date
-  // Raw reviewer_user_id: a dcim.users id — reviewers authenticate against
-  // the staff IDP (FUN-20). Nothing resolves staff ids to a person yet, and it
-  // is not in the same namespace as submitterUserId.
+  // The reviewer's name, resolved through ListReviewers; the raw id when the
+  // lookup misses.
   reviewedBy?: string;
+  // Raw reviewer_user_id: a dcim.users id, since reviewers authenticate against
+  // the staff IDP (FUN-20). Not in the same namespace as submitterUserId.
+  reviewerUserId?: string;
   // Present only when status === 'rejected'.
   rejectionReason?: RejectionReasonValue;
   feedback?: string;
@@ -64,8 +76,49 @@ export interface SubmissionHistoryEntry {
   version: string;
   status: SubmissionStatus;
   submittedAt: string; // ISO date
+  // The same instant for ordering: a day is too coarse a key.
+  submittedMs: number;
   reviewedAt?: string; // ISO date
+  // The reviewer's name, or the raw id when the lookup misses.
+  reviewedBy?: string;
 }
+
+// The version a submission is compared with: the most recently approved other
+// version of the plugin that was first submitted before this one. Not the
+// newest approved version overall, which for an older round opened from the
+// history would be a version that came after it.
+export function baseVersionFor(
+  history: SubmissionHistoryEntry[],
+  pluginVersionId: string,
+): SubmissionHistoryEntry | undefined {
+  const firstSubmitted = new Map<string, number>();
+  history.forEach((entry) => {
+    const known = firstSubmitted.get(entry.pluginVersionId);
+    if (known === undefined || entry.submittedMs < known) {
+      firstSubmitted.set(entry.pluginVersionId, entry.submittedMs);
+    }
+  });
+  const own = firstSubmitted.get(pluginVersionId);
+  if (own === undefined) return undefined;
+
+  let base: SubmissionHistoryEntry | undefined;
+  let baseSubmitted = -Infinity;
+  history.forEach((entry) => {
+    const submitted = firstSubmitted.get(entry.pluginVersionId) ?? Infinity;
+    if (
+      entry.status === 'approved' &&
+      entry.pluginVersionId !== pluginVersionId &&
+      submitted < own &&
+      submitted > baseSubmitted
+    ) {
+      base = entry;
+      baseSubmitted = submitted;
+    }
+  });
+  return base;
+}
+
+const manifestDecoder = new TextDecoder();
 
 export interface RejectDecision {
   reason: RejectionReasonValue;
@@ -82,6 +135,8 @@ export default class AdminReviewService {
   private publishers?: Promise<Map<string, string>>;
 
   private categories?: Promise<Map<string, string>>;
+
+  private reviewers?: Promise<Map<string, string>>;
 
   async listSubmissions(): Promise<PluginSubmission[]> {
     // ReviewService.ListPlugins resolves every listing in the queue in one
@@ -109,18 +164,29 @@ export default class AdminReviewService {
     const submission = response.submission;
     if (!submission) return null;
 
-    const [plugin, version, publishers, categories] = await Promise.all([
+    const [plugin, version, publishers, categories, reviewers] = await Promise.all([
       firstValueFrom(this.client.getPlugin({ pluginId: submission.pluginId })),
       firstValueFrom(this.client.getPluginVersion({ pluginVersionId: submission.pluginVersionId })),
       this.loadPublishers(),
       this.loadCategories(),
+      this.resolveReviewers([submission.reviewerUserId]),
     ]);
 
     return {
       ...AdminReviewService.toSubmission(submission, plugin.plugin, publishers, categories),
+      reviewedBy: AdminReviewService.reviewerName(submission.reviewerUserId, reviewers),
       version: version.version?.version ?? '',
       menuIcons: (version.version?.menuIcons ?? []).filter(isCustomIcon),
+      image: version.version?.image ?? '',
+      definitionHash: version.version?.definitionHash ?? '',
+      manifest: manifestDecoder.decode(version.version?.manifest),
     };
+  }
+
+  // The definition.yaml of another version, for the manifest diff.
+  async getVersionManifest(pluginVersionId: string): Promise<string> {
+    const response = await firstValueFrom(this.client.getPluginVersion({ pluginVersionId }));
+    return manifestDecoder.decode(response.version?.manifest);
   }
 
   // Every review round of a plugin, newest first.
@@ -140,11 +206,14 @@ export default class AdminReviewService {
     // to load only loses its label (the page shows "Unknown version"), not
     // the whole timeline.
     const versionIds = [...new Set(rounds.map((round) => round.pluginVersionId))];
-    const lookups = await Promise.allSettled(
-      versionIds.map((pluginVersionId) =>
-        firstValueFrom(this.client.getPluginVersion({ pluginVersionId })),
+    const [lookups, reviewers] = await Promise.all([
+      Promise.allSettled(
+        versionIds.map((pluginVersionId) =>
+          firstValueFrom(this.client.getPluginVersion({ pluginVersionId })),
+        ),
       ),
-    );
+      this.resolveReviewers(rounds.map((round) => round.reviewerUserId)),
+    ]);
     const versions = new Map(
       versionIds.map((pluginVersionId, index) => {
         const lookup = lookups[index];
@@ -161,8 +230,30 @@ export default class AdminReviewService {
       version: versions.get(round.pluginVersionId) ?? '',
       status: fromProtoStatus(round.status),
       submittedAt: toIsoDate(round.submitted),
+      submittedMs: toEpochMs(round.submitted),
       reviewedAt: toIsoDate(round.reviewed) || undefined,
+      reviewedBy: AdminReviewService.reviewerName(round.reviewerUserId, reviewers),
     }));
+  }
+
+  // The version's image analysis against a base, one page of files at a time.
+  async getImageAnalysis(query: ImageAnalysisQuery): Promise<ImageAnalysisPage> {
+    const response = await firstValueFrom(
+      this.client.getImageAnalysis({
+        pluginVersionId: query.pluginVersionId,
+        basePluginVersionId: query.basePluginVersionId ?? '',
+        filesChangesOnly: query.filesChangesOnly,
+        filesQuery: query.filesQuery.trim(),
+        filesPageToken: query.filesPageToken ?? '',
+      }),
+    );
+    return fromProtoImageAnalysis(response, query.pluginVersionId);
+  }
+
+  // The CycloneDX SBOM, verbatim.
+  async getSbom(pluginVersionId: string): Promise<Uint8Array> {
+    const response = await firstValueFrom(this.client.getSbom({ pluginVersionId }));
+    return response.sbom;
   }
 
   async approve(id: string): Promise<void> {
@@ -218,6 +309,53 @@ export default class AdminReviewService {
     return this.categories;
   }
 
+  // Names for the given reviewer ids. A reviewer who decided after the list was
+  // first loaded (often the person on the page) is missing from the memoized
+  // list, so a miss refetches once. A failed lookup is no reason to fail the
+  // page: the caller falls back to the raw id. A failed refetch keeps the
+  // names the first list had.
+  private async resolveReviewers(ids: string[]): Promise<Map<string, string>> {
+    const wanted = ids.filter((id) => id);
+    if (wanted.length === 0) return new Map();
+    let reviewers: Map<string, string>;
+    try {
+      reviewers = await this.loadReviewers();
+    } catch {
+      return new Map();
+    }
+    if (wanted.some((id) => !reviewers.has(id))) {
+      this.reviewers = undefined;
+      try {
+        reviewers = await this.loadReviewers();
+      } catch {
+        // The names already loaded are better than none.
+      }
+    }
+    return reviewers;
+  }
+
+  private loadReviewers(): Promise<Map<string, string>> {
+    this.reviewers ??= firstValueFrom(this.client.listReviewers({}))
+      .then(
+        (response) => new Map(response.reviewers.map((reviewer) => [reviewer.id, reviewer.name])),
+      )
+      .catch((err: unknown) => {
+        // Memoized to coalesce concurrent callers, but a failure must not be,
+        // or every later caller fails for the life of the page.
+        this.reviewers = undefined;
+        throw err;
+      });
+    return this.reviewers;
+  }
+
+  private static reviewerName(
+    reviewerUserId: string,
+    reviewers: Map<string, string>,
+  ): string | undefined {
+    if (!reviewerUserId) return undefined;
+    return reviewers.get(reviewerUserId) || reviewerUserId;
+  }
+
   private static toSubmission(
     submission: Submission,
     plugin: ReviewPlugin | undefined,
@@ -243,7 +381,8 @@ export default class AdminReviewService {
       submittedAt: toIsoDate(submission.submitted),
       status,
       reviewedAt: toIsoDate(submission.reviewed) || undefined,
-      reviewedBy: submission.reviewerUserId || undefined,
+      // Resolved to a name by getSubmission; the queue does not show it.
+      reviewerUserId: submission.reviewerUserId || undefined,
       rejectionReason:
         status === 'rejected' ? fromProtoRejectionReason(submission.rejectionReason) : undefined,
       feedback: submission.feedback || undefined,

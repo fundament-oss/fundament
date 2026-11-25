@@ -1,0 +1,256 @@
+@if (errorMessage(); as error) {
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-4 text-lg font-semibold">Image analysis</h2>
+      <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+      </div>
+    </div>
+  </nldd-card>
+} @else if (page(); as page) {
+  @if (page.analysis.status !== 'completed') {
+    <!-- One card until there is something to list: both lists come from the same analysis -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6" data-testid="analysis-state">
+        <h2 class="mb-1 text-lg font-semibold">Image analysis</h2>
+        @switch (page.analysis.status) {
+          @case ('none') {
+            <p class="text-gray-600 dark:text-gray-300">
+              This version has not been queued for analysis yet. The analysis worker picks it up on
+              its next sweep.
+            </p>
+          }
+          @case ('retrying') {
+            <p class="text-gray-600 dark:text-gray-300">
+              Analyzing the image. The last attempt failed and will be retried:
+              {{ page.analysis.statusInfo }}
+            </p>
+          }
+          @case ('failed') {
+            <div class="bg-danger-50 dark:bg-danger-950 mt-3 rounded-md p-4">
+              <p class="text-danger-800 dark:text-danger-200 font-medium">
+                The image could not be analyzed.
+              </p>
+              <p class="text-danger-800 dark:text-danger-200 mt-1">
+                {{ page.analysis.statusInfo }}
+              </p>
+            </div>
+          }
+          @default {
+            <p class="text-gray-600 dark:text-gray-300">
+              Analyzing the image. This page checks again every 10 seconds.
+            </p>
+          }
+        }
+      </div>
+    </nldd-card>
+  } @else {
+    <!-- Dependencies: the packages in the SBOM Trivy made of the image -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold">
+            Dependencies
+            @if (compared()) {
+              <span
+                class="ml-2 text-base font-normal text-gray-600 dark:text-gray-300"
+                data-testid="package-summary"
+                >{{ summaryText(page.packageSummary) }}</span
+              >
+            }
+          </h2>
+          <nldd-button
+            text="Download SBOM"
+            start-icon="download"
+            appearance="secondary"
+            size="sm"
+            (click)="downloadSbom()"
+          ></nldd-button>
+        </div>
+        <p class="mb-1 text-gray-600 dark:text-gray-300" data-testid="comparison-note">
+          {{ comparisonNote() }}
+        </p>
+        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          Analyzed {{ page.analysis.platform }} image
+          <span class="font-mono break-all">{{ page.analysis.imageDigest }}</span>
+          @if (otherPlatforms().length > 0) {
+            · The image also offers {{ otherPlatforms().join(', ') }}, which
+            {{ otherPlatforms().length === 1 ? 'was' : 'were' }} not analyzed.
+          }
+        </p>
+        <div class="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <nldd-search-field
+            class="w-full max-w-sm"
+            width="full"
+            placeholder="Search name or package URL"
+            accessible-label="Search dependencies"
+            [value]="packageQuery()"
+            (input)="onPackageQuery($event)"
+          ></nldd-search-field>
+          @if (compared()) {
+            <nldd-checkbox-field
+              label="Show changes only"
+              [checked]="packagesChangesOnly()"
+              (change)="onPackagesChangesOnly($event)"
+            ></nldd-checkbox-field>
+          }
+        </div>
+        @if (visiblePackages().length === 0) {
+          <p class="text-gray-600 dark:text-gray-300">
+            @if (page.packages.length === 0) {
+              Trivy found no packages in this image.
+            } @else {
+              No dependencies match.
+            }
+          </p>
+        } @else {
+          <div class="table-container max-h-[32rem] overflow-y-auto">
+            <table class="table" data-testid="packages">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Version</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">License</th>
+                  @if (compared()) {
+                    <th scope="col">Change</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (pkg of visiblePackages(); track $index) {
+                  <tr>
+                    <td class="font-medium" [title]="pkg.purl">{{ pkg.name }}</td>
+                    <td class="font-mono text-sm">
+                      @switch (pkg.change) {
+                        @case ('changed') {
+                          {{ pkg.baseVersion }} → {{ pkg.version }}
+                        }
+                        @case ('removed') {
+                          <span class="line-through">{{ pkg.baseVersion }}</span>
+                        }
+                        @default {
+                          {{ pkg.version }}
+                        }
+                      }
+                    </td>
+                    <td>{{ pkg.type }}</td>
+                    <td>{{ pkg.licenses.join(', ') }}</td>
+                    @if (compared()) {
+                      <td>
+                        <nldd-tag
+                          [color]="changeTagColor(pkg.change)"
+                          [text]="changeLabel(pkg.change)"
+                        ></nldd-tag>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </nldd-card>
+
+    <!-- Image contents: the flattened filesystem the plugin runs from -->
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">
+          Image contents
+          @if (compared()) {
+            <span
+              class="ml-2 text-base font-normal text-gray-600 dark:text-gray-300"
+              data-testid="file-summary"
+              >{{ summaryText(page.fileSummary) }}</span
+            >
+          }
+        </h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          Every file and link in the image, with its size and permissions.
+          @if (page.analysis.filesTruncated || page.base?.filesTruncated) {
+            The file list stopped at its limit, so files past it may show as added or removed.
+          }
+        </p>
+        <div class="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <nldd-search-field
+            class="w-full max-w-sm"
+            width="full"
+            placeholder="Search path"
+            accessible-label="Search files by path"
+            [value]="filesQuery()"
+            (input)="onFilesQuery($event)"
+          ></nldd-search-field>
+          @if (compared()) {
+            <nldd-checkbox-field
+              label="Show changes only"
+              [checked]="filesChangesOnly()"
+              (change)="onFilesChangesOnly($event)"
+            ></nldd-checkbox-field>
+          }
+        </div>
+        @if (files().length === 0) {
+          <p class="text-gray-600 dark:text-gray-300">No files match.</p>
+        } @else {
+          <div class="table-container max-h-[32rem] overflow-y-auto">
+            <table class="table" data-testid="files">
+              <thead>
+                <tr>
+                  <th scope="col">Path</th>
+                  <th scope="col">Size</th>
+                  <th scope="col">Mode</th>
+                  @if (compared()) {
+                    <th scope="col">Change</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of files(); track file.path) {
+                  <tr>
+                    <td class="font-mono text-sm">
+                      {{ file.path }}
+                      @if (file.link) {
+                        <span class="text-gray-500 dark:text-gray-400">→ {{ file.link }}</span>
+                      }
+                    </td>
+                    <td>{{ file.link ? '' : formatSize(file.size) }}</td>
+                    <td class="font-mono text-sm">{{ formatMode(file.mode) }}</td>
+                    @if (compared()) {
+                      <td>
+                        <nldd-tag
+                          [color]="changeTagColor(file.change)"
+                          [text]="changeLabel(file.change)"
+                        ></nldd-tag>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+              Showing {{ files().length }} of {{ page.filesMatching }}
+            </p>
+            @if (nextFilesPageToken()) {
+              <nldd-button
+                text="Load more"
+                appearance="secondary"
+                size="sm"
+                [attr.disabled]="loadingMore() ? '' : null"
+                (click)="loadMoreFiles()"
+              ></nldd-button>
+            }
+          </div>
+        }
+      </div>
+    </nldd-card>
+  }
+} @else {
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-1 text-lg font-semibold">Image analysis</h2>
+      <p class="text-gray-600 dark:text-gray-300">Loading image analysis...</p>
+    </div>
+  </nldd-card>
+}

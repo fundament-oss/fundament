@@ -441,6 +441,56 @@ jobs:
         working-directory: marketplace-admin-api
         run: go test ./... -count=1
 
+  marketplace-analysis-worker:
+    runs-on: ubuntu-24.04
+    # Its own database root, like the other marketplace jobs.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-analysis-worker
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.6
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-analysis-worker-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.6
+
+      # The Trivy the worker image ships: the same digest as its Dockerfile and
+      # image-scan.yml (which verifies its signature), so TestTrivyProducesSBOM
+      # runs the real SBOM step instead of skipping.
+      - name: Install Trivy
+        env:
+          TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          id=$(docker create "$TRIVY_IMAGE")
+          docker cp "$id:/usr/local/bin/trivy" "$HOME/.local/bin/trivy"
+          docker rm "$id" >/dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests (marketplace-analysis-worker)
+        working-directory: marketplace-analysis-worker
+        run: go test ./... -count=1
+
   platform-api:
     runs-on: ubuntu-24.04
     # Its own database root. The overview and fleet packages each start a
@@ -503,7 +553,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authn-api|authz-worker|cluster-worker|common|funops|dcim-api|dcim-authn-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api|platform-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authn-api|authz-worker|cluster-worker|common|funops|dcim-api|dcim-authn-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api|marketplace-analysis-worker|platform-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04

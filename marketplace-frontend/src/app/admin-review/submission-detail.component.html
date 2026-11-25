@@ -170,8 +170,10 @@
             <dd class="mt-2 text-gray-600 dark:text-gray-300">
               {{ submission.reviewedAt }}
               @if (submission.reviewedBy; as reviewer) {
-                ·
-                <span class="font-mono text-sm" title="Reviewer user id">{{ reviewer }}</span>
+                · by
+                <span [title]="'Reviewer user id ' + submission.reviewerUserId">{{
+                  reviewer
+                }}</span>
               }
             </dd>
           </div>
@@ -294,6 +296,69 @@
     </div>
   </nldd-card>
 
+  <!-- The definition.yaml, as a diff against the version before it -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <div class="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">Manifest</h2>
+        @if (manifestDiff()) {
+          <nldd-segmented-control
+            size="sm"
+            accessible-label="Show the manifest as"
+            [attr.value]="manifestView()"
+            (change)="onManifestViewChange($event)"
+          >
+            <nldd-segmented-control-item
+              value="changes"
+              text="Changes"
+            ></nldd-segmented-control-item>
+            <nldd-segmented-control-item
+              value="full"
+              text="Full manifest"
+            ></nldd-segmented-control-item>
+          </nldd-segmented-control>
+        }
+      </div>
+      @if (manifestNote(); as note) {
+        <p class="mb-4 text-gray-600 dark:text-gray-300" data-testid="manifest-note">
+          {{ note }}
+        </p>
+      }
+      <dl class="mb-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+        <div class="min-w-0">
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Image</dt>
+          <dd class="mt-1 font-mono text-sm break-all">{{ submission.image || 'None' }}</dd>
+        </div>
+        <div class="min-w-0">
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Definition hash</dt>
+          <dd class="mt-1 font-mono text-sm break-all">
+            {{ submission.definitionHash || 'None' }}
+          </dd>
+        </div>
+      </dl>
+      @if (!submission.manifest) {
+        <p class="text-gray-600 dark:text-gray-300">This version has no stored manifest.</p>
+      } @else if (manifestDiff() && manifestView() === 'changes') {
+        <nldd-code-viewer language="yaml" diff wrap max-height="32rem">{{
+          manifestDiff()
+        }}</nldd-code-viewer>
+      } @else {
+        <nldd-code-viewer language="yaml" wrap max-height="32rem">{{
+          submission.manifest
+        }}</nldd-code-viewer>
+      }
+    </div>
+  </nldd-card>
+
+  <!-- Packages and files of the image, against the same base as the manifest -->
+  <app-image-analysis
+    [pluginVersionId]="submission.pluginVersionId"
+    [pluginName]="submission.title"
+    [version]="submission.version ?? ''"
+    [base]="baseVersion()"
+    [baseUnavailable]="historyError() !== null"
+  />
+
   <!-- Every review round of this plugin, each linking to its submission -->
   <nldd-card class="mb-6 block">
     <div class="p-6">
@@ -331,6 +396,7 @@
                   'Submitted ' +
                   row.submittedAt +
                   (row.reviewedAt ? ' · Reviewed ' + row.reviewedAt : '') +
+                  (row.reviewedBy ? ' by ' + row.reviewedBy : '') +
                   (row.id === submission.id ? ' · You are viewing this round' : '')
                 "
               ></nldd-text-cell>

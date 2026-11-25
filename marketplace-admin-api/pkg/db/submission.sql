@@ -107,3 +107,17 @@ UPDATE appstore.plugin_definitions SET status = sqlc.arg('status')::text
 WHERE id = sqlc.arg('id')::uuid
   AND status = 'pending'
   AND deleted IS NULL;
+
+-- name: ReviewerList :many
+-- The staff who decided a round, so a Submission's reviewer_user_id resolves
+-- to a name. Soft-deleted users stay in: someone who has since left still made
+-- the decision. The role can read dcim.users.id and name only, not email.
+SELECT dcim.users.id, dcim.users.name
+FROM dcim.users
+WHERE dcim.users.id IN (
+	SELECT appstore.submissions.reviewer_user_id
+	FROM appstore.submissions
+	WHERE appstore.submissions.reviewer_user_id IS NOT NULL
+	  AND appstore.submissions.deleted IS NULL
+)
+ORDER BY dcim.users.name, dcim.users.id;

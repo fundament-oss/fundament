@@ -62,6 +62,14 @@ const (
 	// ReviewServiceListPublishersProcedure is the fully-qualified name of the ReviewService's
 	// ListPublishers RPC.
 	ReviewServiceListPublishersProcedure = "/admin.v1.ReviewService/ListPublishers"
+	// ReviewServiceListReviewersProcedure is the fully-qualified name of the ReviewService's
+	// ListReviewers RPC.
+	ReviewServiceListReviewersProcedure = "/admin.v1.ReviewService/ListReviewers"
+	// ReviewServiceGetImageAnalysisProcedure is the fully-qualified name of the ReviewService's
+	// GetImageAnalysis RPC.
+	ReviewServiceGetImageAnalysisProcedure = "/admin.v1.ReviewService/GetImageAnalysis"
+	// ReviewServiceGetSbomProcedure is the fully-qualified name of the ReviewService's GetSbom RPC.
+	ReviewServiceGetSbomProcedure = "/admin.v1.ReviewService/GetSbom"
 )
 
 // ReviewServiceClient is a client for the admin.v1.ReviewService service.
@@ -92,6 +100,16 @@ type ReviewServiceClient interface {
 	// GetOrganization is RLS-scoped to members, and a reviewer is not a member
 	// of the organization under review.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Fundament staff who decided a submission, so a Submission's
+	// reviewer_user_id resolves to a name. Includes staff who have since left:
+	// they still made the decision.
+	ListReviewers(context.Context, *v1.ListReviewersRequest) (*v1.ListReviewersResponse, error)
+	// What the version's container image contains, packages and files, as a
+	// diff against a base version (FUN-24). The diff, its filtering and the
+	// paging of the file list happen here: a file list runs to 200k entries.
+	GetImageAnalysis(context.Context, *v1.GetImageAnalysisRequest) (*v1.GetImageAnalysisResponse, error)
+	// The CycloneDX SBOM the analysis produced, verbatim, for download.
+	GetSbom(context.Context, *v1.GetSbomRequest) (*v1.GetSbomResponse, error)
 }
 
 // NewReviewServiceClient constructs a client for the admin.v1.ReviewService service. By default, it
@@ -165,6 +183,24 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(reviewServiceMethods.ByName("ListPublishers")),
 			connect.WithClientOptions(opts...),
 		),
+		listReviewers: connect.NewClient[v1.ListReviewersRequest, v1.ListReviewersResponse](
+			httpClient,
+			baseURL+ReviewServiceListReviewersProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("ListReviewers")),
+			connect.WithClientOptions(opts...),
+		),
+		getImageAnalysis: connect.NewClient[v1.GetImageAnalysisRequest, v1.GetImageAnalysisResponse](
+			httpClient,
+			baseURL+ReviewServiceGetImageAnalysisProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("GetImageAnalysis")),
+			connect.WithClientOptions(opts...),
+		),
+		getSbom: connect.NewClient[v1.GetSbomRequest, v1.GetSbomResponse](
+			httpClient,
+			baseURL+ReviewServiceGetSbomProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("GetSbom")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -180,6 +216,9 @@ type reviewServiceClient struct {
 	getPluginVersion  *connect.Client[v1.GetPluginVersionRequest, v1.GetPluginVersionResponse]
 	listCategories    *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
 	listPublishers    *connect.Client[v1.ListPublishersRequest, v1.ListPublishersResponse]
+	listReviewers     *connect.Client[v1.ListReviewersRequest, v1.ListReviewersResponse]
+	getImageAnalysis  *connect.Client[v1.GetImageAnalysisRequest, v1.GetImageAnalysisResponse]
+	getSbom           *connect.Client[v1.GetSbomRequest, v1.GetSbomResponse]
 }
 
 // ListSubmissions calls admin.v1.ReviewService.ListSubmissions.
@@ -272,6 +311,33 @@ func (c *reviewServiceClient) ListPublishers(ctx context.Context, req *v1.ListPu
 	return nil, err
 }
 
+// ListReviewers calls admin.v1.ReviewService.ListReviewers.
+func (c *reviewServiceClient) ListReviewers(ctx context.Context, req *v1.ListReviewersRequest) (*v1.ListReviewersResponse, error) {
+	response, err := c.listReviewers.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// GetImageAnalysis calls admin.v1.ReviewService.GetImageAnalysis.
+func (c *reviewServiceClient) GetImageAnalysis(ctx context.Context, req *v1.GetImageAnalysisRequest) (*v1.GetImageAnalysisResponse, error) {
+	response, err := c.getImageAnalysis.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// GetSbom calls admin.v1.ReviewService.GetSbom.
+func (c *reviewServiceClient) GetSbom(ctx context.Context, req *v1.GetSbomRequest) (*v1.GetSbomResponse, error) {
+	response, err := c.getSbom.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // ReviewServiceHandler is an implementation of the admin.v1.ReviewService service.
 type ReviewServiceHandler interface {
 	// The review queue, optionally filtered by status.
@@ -300,6 +366,16 @@ type ReviewServiceHandler interface {
 	// GetOrganization is RLS-scoped to members, and a reviewer is not a member
 	// of the organization under review.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Fundament staff who decided a submission, so a Submission's
+	// reviewer_user_id resolves to a name. Includes staff who have since left:
+	// they still made the decision.
+	ListReviewers(context.Context, *v1.ListReviewersRequest) (*v1.ListReviewersResponse, error)
+	// What the version's container image contains, packages and files, as a
+	// diff against a base version (FUN-24). The diff, its filtering and the
+	// paging of the file list happen here: a file list runs to 200k entries.
+	GetImageAnalysis(context.Context, *v1.GetImageAnalysisRequest) (*v1.GetImageAnalysisResponse, error)
+	// The CycloneDX SBOM the analysis produced, verbatim, for download.
+	GetSbom(context.Context, *v1.GetSbomRequest) (*v1.GetSbomResponse, error)
 }
 
 // NewReviewServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -369,6 +445,24 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(reviewServiceMethods.ByName("ListPublishers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	reviewServiceListReviewersHandler := connect.NewUnaryHandlerSimple(
+		ReviewServiceListReviewersProcedure,
+		svc.ListReviewers,
+		connect.WithSchema(reviewServiceMethods.ByName("ListReviewers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	reviewServiceGetImageAnalysisHandler := connect.NewUnaryHandlerSimple(
+		ReviewServiceGetImageAnalysisProcedure,
+		svc.GetImageAnalysis,
+		connect.WithSchema(reviewServiceMethods.ByName("GetImageAnalysis")),
+		connect.WithHandlerOptions(opts...),
+	)
+	reviewServiceGetSbomHandler := connect.NewUnaryHandlerSimple(
+		ReviewServiceGetSbomProcedure,
+		svc.GetSbom,
+		connect.WithSchema(reviewServiceMethods.ByName("GetSbom")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/admin.v1.ReviewService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReviewServiceListSubmissionsProcedure:
@@ -391,6 +485,12 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 			reviewServiceListCategoriesHandler.ServeHTTP(w, r)
 		case ReviewServiceListPublishersProcedure:
 			reviewServiceListPublishersHandler.ServeHTTP(w, r)
+		case ReviewServiceListReviewersProcedure:
+			reviewServiceListReviewersHandler.ServeHTTP(w, r)
+		case ReviewServiceGetImageAnalysisProcedure:
+			reviewServiceGetImageAnalysisHandler.ServeHTTP(w, r)
+		case ReviewServiceGetSbomProcedure:
+			reviewServiceGetSbomHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -438,4 +538,16 @@ func (UnimplementedReviewServiceHandler) ListCategories(context.Context, *v1.Lis
 
 func (UnimplementedReviewServiceHandler) ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("admin.v1.ReviewService.ListPublishers is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) ListReviewers(context.Context, *v1.ListReviewersRequest) (*v1.ListReviewersResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("admin.v1.ReviewService.ListReviewers is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) GetImageAnalysis(context.Context, *v1.GetImageAnalysisRequest) (*v1.GetImageAnalysisResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("admin.v1.ReviewService.GetImageAnalysis is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) GetSbom(context.Context, *v1.GetSbomRequest) (*v1.GetSbomResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("admin.v1.ReviewService.GetSbom is not implemented"))
 }

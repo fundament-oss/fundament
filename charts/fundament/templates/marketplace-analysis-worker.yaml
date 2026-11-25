@@ -1,0 +1,155 @@
+{{- if $.Values.marketplaceAnalysisWorker.enabled }}
+{{- $cfg := $.Values.marketplaceAnalysisWorker }}
+---
+# Analyzes the container image of each submitted plugin version for the review
+# backoffice (FUN-24). It fetches publisher-chosen image references, so it runs
+# locked down: no privileges, a read-only root, a bounded scratch volume, and
+# the NetworkPolicy below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketplace-analysis-worker
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-analysis-worker" "component" "worker") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  # Several replicas are safe: claims skip locked rows and a lease covers the
+  # analysis itself.
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-analysis-worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "marketplace-analysis-worker" "component" "worker") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: marketplace-analysis-worker
+          image: {{ $.Values.images.marketplaceAnalysisWorker }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          ports:
+            - name: health
+              containerPort: 8098
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-fun-marketplace-analysis-worker
+                  key: uri
+            - name: LOG_LEVEL
+              value: {{ $cfg.logLevel }}
+            - name: JOB_TIMEOUT
+              value: {{ $cfg.jobTimeout | quote }}
+            - name: MAX_RETRIES
+              value: {{ $cfg.maxRetries | quote }}
+            - name: MAX_IMAGE_BYTES
+              value: {{ $cfg.maxImageBytes | int64 | quote }}
+            - name: MAX_FILES
+              value: {{ $cfg.maxFiles | quote }}
+            - name: WORK_DIR
+              value: /work
+            # Trivy and Go both put temporary files here.
+            - name: TMPDIR
+              value: /work/tmp
+            {{- with $cfg.registryRewrites }}
+            - name: REGISTRY_REWRITES
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with $cfg.insecureRegistries }}
+            - name: INSECURE_REGISTRIES
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with $cfg.allowedPrivateRegistries }}
+            - name: ALLOWED_PRIVATE_REGISTRIES
+              value: {{ join "," . | quote }}
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: work
+              mountPath: /work
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.resources" (dict "resources" $cfg.resources "indent" 10) }}
+      volumes:
+        # The image tarball and Trivy's cache. The limit evicts the pod rather
+        # than let one image fill the node's disk.
+        - name: work
+          emptyDir:
+            sizeLimit: {{ $cfg.workDirSizeLimit }}
+{{- if $cfg.networkPolicy.enabled }}
+---
+# The worker reaches out to registries the publisher chose, so its egress is
+# limited to DNS, the database and public addresses over https. The worker
+# refuses non-public addresses itself as well (FUN-24); this is the second
+# fence, and the one that holds if the first has a bug.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: marketplace-analysis-worker
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-analysis-worker" "component" "worker") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-analysis-worker") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  # Nothing calls in; kubelet probes are not subject to NetworkPolicy.
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ include "fundament.db.name" . }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              {{- toYaml $cfg.networkPolicy.refusedCidrs | nindent 14 }}
+        - ipBlock:
+            cidr: ::/0
+            except:
+              # The IPv6 ranges of the worker's refusedPrefixes.
+              - ::/128
+              - ::1/128
+              - 64:ff9b::/96
+              - 64:ff9b:1::/48
+              - 2001::/32
+              - 2002::/16
+              - fc00::/7
+              - fe80::/10
+              - ff00::/8
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- with $cfg.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

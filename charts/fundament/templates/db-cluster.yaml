@@ -90,6 +90,10 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-marketplace-install-api
+      - name: fun_marketplace_analysis_worker
+        login: true
+        passwordSecret:
+          name: db-fun-marketplace-analysis-worker
       - name: fun_platform_public_api
         login: true
         passwordSecret:

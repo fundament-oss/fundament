@@ -303,6 +303,14 @@ const (
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
 	// ConstraintPluginFeaturesFkPlugin is defined on appstore.plugin_features.
 	ConstraintPluginFeaturesFkPlugin = "plugin_features_fk_plugin"
+	// ConstraintPluginImageAnalysesCkAnalyzed is defined on appstore.plugin_image_analyses.
+	ConstraintPluginImageAnalysesCkAnalyzed = "plugin_image_analyses_ck_analyzed"
+	// ConstraintPluginImageAnalysesCkStatus is defined on appstore.plugin_image_analyses.
+	ConstraintPluginImageAnalysesCkStatus = "plugin_image_analyses_ck_status"
+	// ConstraintPluginImageAnalysesFkPluginDefinition is defined on appstore.plugin_image_analyses.
+	ConstraintPluginImageAnalysesFkPluginDefinition = "plugin_image_analyses_fk_plugin_definition"
+	// ConstraintPluginImageAnalysesUqPluginDefinitionId is defined on appstore.plugin_image_analyses.
+	ConstraintPluginImageAnalysesUqPluginDefinitionId = "plugin_image_analyses_uq_plugin_definition_id"
 	// ConstraintPluginLabelsCkName is defined on appstore.plugin_labels.
 	ConstraintPluginLabelsCkName = "plugin_labels_ck_name"
 	// ConstraintPluginLabelsFkPlugin is defined on appstore.plugin_labels.
