@@ -11,11 +11,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { ConnectError } from '@connectrpc/connect';
 import { MEMBER } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
+import OrganizationChangedError from '../organization-changed-error';
 import AuthnApiService from '../authn-api.service';
 import InvitationEmailComponent from '../invitation-email/invitation-email.component';
 import { formatTimeAgo } from '../utils/date-format';
@@ -149,7 +151,8 @@ export default class OrganizationMemberSheetComponent implements OnInit {
       await this.organizationData.reloadMembers();
     } catch (err) {
       // The cache keeps what it had, so a member it holds is still shown.
-      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
+      // rawMessage leaves out the "[code]" prefix ConnectError's message has.
+      this.loadError.set(ConnectError.from(err).rawMessage);
     } finally {
       this.isLoading.set(false);
     }
@@ -205,10 +208,14 @@ export default class OrganizationMemberSheetComponent implements OnInit {
       );
       try {
         await this.organizationData.reloadMembers();
-      } catch {
+      } catch (err) {
         // The removal went through; only the refresh failed. Without this the
-        // list behind the sheet would show them again as it closes.
-        this.organizationData.forgetMember(member.id);
+        // list behind the sheet would show them again as it closes. Unless the
+        // organization changed meanwhile: the cache is no longer the one they
+        // were in, and the new organization's list is on its way.
+        if (!(err instanceof OrganizationChangedError)) {
+          this.organizationData.forgetMember(member.id);
+        }
       }
       this.onClose();
     } catch (err) {

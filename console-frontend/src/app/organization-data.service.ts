@@ -4,6 +4,7 @@ import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT, MEMBER } from '../connect/tokens';
 import OrganizationContextService from './organization-context.service';
+import OrganizationChangedError from './organization-changed-error';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
@@ -573,9 +574,10 @@ export class OrganizationDataService {
    * after an invitation or a removal, so the sidebar's count follows. Resolves
    * to what the cache holds once the response is in: the response itself, or
    * the newer list that overtook it on the way, never one the cache dropped.
-   * Throws when the list could not be fetched, so a page can say so, and when
-   * the organization changed while it was on its way, since the cache then
-   * belongs to another organization; it keeps what it had in both cases.
+   * Throws when the list could not be fetched, so a page can say so, and an
+   * OrganizationChangedError when the organization changed while it was on its
+   * way, since the cache then belongs to another organization; it keeps what it
+   * had in both cases.
    */
   async reloadMembers(): Promise<Member[]> {
     const ticket = this.beginMemberListFetch();
@@ -583,7 +585,7 @@ export class OrganizationDataService {
       this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
     );
     if (ticket.generation !== this.generation) {
-      throw new Error('The organization changed while its members were being listed');
+      throw new OrganizationChangedError();
     }
     // A list asked for later has landed first: this one is behind the cache,
     // not ahead of it.
@@ -599,6 +601,9 @@ export class OrganizationDataService {
    * Drop a membership the server has just ended, for when the reload after it
    * failed: the list and the sidebar's count should not go on showing it. A
    * list asked for before this no longer counts, since it may still hold it.
+   * Only for a reload that failed in the same organization: after an
+   * OrganizationChangedError the lists on their way are the new
+   * organization's, and this would drop them.
    */
   forgetMember(id: string): void {
     this.appliedMemberList = this.memberListRequests;

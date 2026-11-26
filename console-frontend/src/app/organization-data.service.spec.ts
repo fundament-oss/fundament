@@ -4,6 +4,7 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { type Observable, of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OrganizationDataService } from './organization-data.service';
+import OrganizationChangedError from './organization-changed-error';
 import { CLUSTER, ORGANIZATION, PROJECT, MEMBER } from '../connect/tokens';
 import {
   GetOrganizationResponseSchema,
@@ -345,7 +346,7 @@ describe('OrganizationDataService members', () => {
     service.clearAll();
     server.pendingMembers[0].answer(server.members);
 
-    await expect(listing).rejects.toThrow('organization changed');
+    await expect(listing).rejects.toBeInstanceOf(OrganizationChangedError);
     expect(service.members()).toEqual([]);
     expect(service.memberCount()).toBeNull();
   });

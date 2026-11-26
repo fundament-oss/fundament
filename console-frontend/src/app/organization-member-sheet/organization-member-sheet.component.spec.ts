@@ -4,10 +4,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import OrganizationMemberSheetComponent from './organization-member-sheet.component';
 import { MEMBER } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
+import OrganizationChangedError from '../organization-changed-error';
 import AuthnApiService from '../authn-api.service';
 import { MemberSchema, type Member } from '../../generated/v1/member_pb';
 
@@ -52,7 +54,10 @@ const ME = create(MemberSchema, {
 async function build(
   memberId: string,
   members: Member[] = [ALICE, BOB_INVITED, CAROL_DECLINED, ME],
-  { listFails = false } = {},
+  {
+    listFails = false,
+    listError = (): Error => new ConnectError('unreachable', Code.Unavailable),
+  } = {},
 ) {
   const notifications = { success: vi.fn(), error: vi.fn() };
   const memberClient = {
@@ -64,7 +69,7 @@ async function build(
   const organizationData = {
     members: membersSignal,
     reloadMembers: vi.fn(async () => {
-      if (listFails) throw new Error('unreachable');
+      if (listFails) throw listError();
       return membersSignal();
     }),
     forgetMember: vi.fn((id: string) =>
@@ -179,6 +184,19 @@ describe('OrganizationMemberSheetComponent', () => {
 
     expect(organizationData.forgetMember).toHaveBeenCalledWith('membership-alice');
     expect(organizationData.members().map((m) => m.id)).not.toContain('membership-alice');
+    expect(router.navigate).toHaveBeenCalled();
+  });
+
+  it('leaves the cache alone when the organization changed during the reload', async () => {
+    const { fixture, organizationData, router } = await build('membership-alice', undefined, {
+      listFails: true,
+      listError: () => new OrganizationChangedError(),
+    });
+
+    await fixture.componentInstance.confirmRemove();
+
+    // The cache, and any list on its way to it, is the new organization's.
+    expect(organizationData.forgetMember).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalled();
   });
 

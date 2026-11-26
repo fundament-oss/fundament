@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import ProjectMemberSheetComponent from './project-member-sheet.component';
 import { PROJECT } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
@@ -37,7 +38,9 @@ async function build(memberId: string, { listFails = false } = {}) {
   const router = { navigate: vi.fn() };
   const projectClient = {
     listProjectMembers: vi.fn(() =>
-      listFails ? throwError(() => new Error('unreachable')) : of({ members: [ALICE] }),
+      listFails
+        ? throwError(() => new ConnectError('unreachable', Code.Unavailable))
+        : of({ members: [ALICE] }),
     ),
     updateProjectMemberRole: vi.fn(() => of({})),
     removeProjectMember: vi.fn(() => of({})),
@@ -105,7 +108,9 @@ describe('ProjectMemberSheetComponent', () => {
     const view = fixture.componentInstance.member();
     expect(view).not.toBeNull();
 
-    projectClient.listProjectMembers.mockReturnValue(throwError(() => new Error('unreachable')));
+    projectClient.listProjectMembers.mockReturnValue(
+      throwError(() => new ConnectError('unreachable', Code.Unavailable)),
+    );
     await fixture.componentInstance.togglePermission(view!);
 
     expect(fixture.componentInstance.member()?.member.id).toBe('pm-alice');
