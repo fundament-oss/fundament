@@ -220,6 +220,11 @@ spec:
       default: "quay.io/ceph/ceph:v19.2.3"
       advanced: true
       description: Ceph container image. v19+ is required on arm64 (v18 segfaults on Apple Silicon).
+    - name: DOMAIN
+      type: string
+      required: true
+      placeholder: cluster.example.org
+      description: Base domain of the cluster.
 ```
 
 Each entry's `type` is one of `string`, `int`, `bool` or `enum` (`enum` requires
@@ -241,7 +246,12 @@ optional `-`, digits, within int64). `string`,
 may omit both `default` and `required`: an omitted key falls back to whatever
 default the plugin binary's own env parsing applies. `advanced: true` collapses
 the key under an "advanced" toggle in the install form instead of showing it by
-default.
+default. `placeholder` is an example value that the console shows in an empty
+text field. Use it to show the expected format of a key that has no sensible
+default. Only a `string` or `int` key without a `default` can have a
+placeholder, and an `int` placeholder must be a valid int. The console never
+submits the placeholder. The description stays the place for the full
+explanation.
 
 The schema is closed: `spec.config` in the `PluginInstallation` may only set
 keys declared here. The one exception is the SDK's own keys — `LOG_LEVEL` and

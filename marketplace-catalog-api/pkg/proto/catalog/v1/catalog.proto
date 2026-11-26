@@ -216,6 +216,10 @@ message ConfigSchemaEntry {
   // Human-readable label for the console form; empty means the console
   // derives one from name.
   string display_name = 80;
+  // Example value the console shows in an empty text field; never
+  // submitted. plugin-sdk accepts it at publish time only on string and
+  // int keys without a default.
+  string placeholder = 90;
 }
 
 // Mirrors the manifest's configSchema type strings.

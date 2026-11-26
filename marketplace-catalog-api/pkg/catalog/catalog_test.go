@@ -455,6 +455,10 @@ const testManifestWithConfigSchema = testManifest + `  configSchema:
       type: enum
       values: [host, osd]
       required: true
+    - name: DOMAIN
+      type: string
+      required: true
+      placeholder: cluster.example.org
 `
 
 func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
@@ -469,7 +473,7 @@ func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
 	require.NoError(t, err)
 
 	entries := resp.GetConfigSchema()
-	require.Len(t, entries, 2)
+	require.Len(t, entries, 3)
 	assert.Equal(t, "MON_COUNT", entries[0].GetName())
 	assert.Equal(t, "Monitor count", entries[0].GetDisplayName())
 	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_INT, entries[0].GetType())
@@ -480,6 +484,8 @@ func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
 	assert.Equal(t, []string{"host", "osd"}, entries[1].GetValues())
 	assert.True(t, entries[1].GetRequired())
 	assert.False(t, entries[1].GetAdvanced(), "a required entry cannot be advanced")
+	assert.Empty(t, entries[0].GetPlaceholder())
+	assert.Equal(t, "cluster.example.org", entries[2].GetPlaceholder())
 }
 
 // A manifest carrying fields from a newer plugin-sdk must NOT lose its config
