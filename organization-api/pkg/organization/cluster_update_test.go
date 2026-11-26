@@ -201,7 +201,8 @@ func Test_Cluster_Update_Deleted(t *testing.T) {
 		KubernetesVersion: new("1.29"),
 	}.Build())
 
+	// Still being deleted: refused as such, not reported missing.
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
-	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
 }

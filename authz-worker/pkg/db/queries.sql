@@ -74,7 +74,7 @@ FROM tenant.project_members
 WHERE id = @id;
 
 -- name: GetClusterByID :one
-SELECT id, organization_id, deleted
+SELECT id, organization_id, deleted, shoot_status
 FROM tenant.clusters
 WHERE id = @id;
 

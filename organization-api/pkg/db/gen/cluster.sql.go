@@ -174,6 +174,29 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 	return result.RowsAffected(), nil
 }
 
+const clusterDeletionConfirmed = `-- name: ClusterDeletionConfirmed :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = $1
+      AND tenant.clusters.deleted IS NOT NULL
+      AND tenant.clusters.shoot_status = 'deleted'
+)::boolean
+`
+
+type ClusterDeletionConfirmedParams struct {
+	ClusterID uuid.UUID
+}
+
+// Whether the cluster is deleted and Gardener confirmed its Shoot is gone: the
+// point from which the authz-worker removes the cluster's tuple.
+func (q *Queries) ClusterDeletionConfirmed(ctx context.Context, arg ClusterDeletionConfirmedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, clusterDeletionConfirmed, arg.ClusterID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT
     tenant.clusters.id,
@@ -280,7 +303,8 @@ SELECT
     )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
-WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL
+WHERE tenant.clusters.name = $1
+    AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
 `
 
 type ClusterGetByNameParams struct {
@@ -306,7 +330,9 @@ type ClusterGetByNameRow struct {
 	ReachedGardener    bool
 }
 
-// Sync state as in ClusterList.
+// Includes a deleted cluster until Gardener confirms its deletion, as
+// ClusterList does; ClusterCreate keeps its name taken until then, so at most
+// one row matches. Sync state as in ClusterList.
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetByName, arg.Name)
 	var i ClusterGetByNameRow
@@ -513,4 +539,27 @@ func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (i
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const nodePoolClusterDeletionConfirmed = `-- name: NodePoolClusterDeletionConfirmed :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.node_pools
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
+    WHERE tenant.node_pools.id = $1
+      AND tenant.clusters.deleted IS NOT NULL
+      AND tenant.clusters.shoot_status = 'deleted'
+)::boolean
+`
+
+type NodePoolClusterDeletionConfirmedParams struct {
+	NodePoolID uuid.UUID
+}
+
+// ClusterDeletionConfirmed for the cluster of a node pool.
+func (q *Queries) NodePoolClusterDeletionConfirmed(ctx context.Context, arg NodePoolClusterDeletionConfirmedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, nodePoolClusterDeletionConfirmed, arg.NodePoolID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }

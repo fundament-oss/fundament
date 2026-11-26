@@ -418,6 +418,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   });
 
   /** The button stays enabled either way: blocked means "explain", not "ignore". */
+  /** Being deleted: the page shows it until Gardener has removed it, without
+   *  the actions a cluster that is going away no longer takes. */
+  isClusterDeleting(): boolean {
+    return this.clusterData.status === ClusterStatus.DELETING;
+  }
+
   onDeleteClusterClick(): void {
     if (this.deleteBlockedReason()) {
       this.showDeleteBlockedModal.set(true);
@@ -601,14 +607,22 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  while the cluster sits still. */
   private pollTick = 0;
 
+  /** Numbers the status polls, as nodePoolsRequest does the pool loads; a
+   *  delete takes a number too, so a poll sent before it cannot put the old
+   *  status back. */
+  private statusRequest = 0;
+
   private async pollClusterStatus() {
     const clusterId = this.clusterData.basics.id;
+    this.statusRequest += 1;
+    const ticket = this.statusRequest;
     try {
       const request = create(GetClusterRequestSchema, { clusterId });
       const response = await firstValueFrom(this.client.getCluster(request));
+      if (ticket !== this.statusRequest) return;
 
       if (!response.cluster) {
-        this.handleClusterDeleted();
+        await this.handleClusterDeleted();
         return;
       }
 
@@ -624,7 +638,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // side, and an idle tab must not fire that every 5 seconds.
       this.pollTick += 1;
       if (statusChanged || shouldPollStatus(response.cluster.status) || this.pollTick % 6 === 0) {
-        this.loadNodePools(clusterId).catch(() => {});
+        // A cluster being deleted keeps its pools as they are, and their
+        // refresh asks the shoot's Prometheus, which is going away with it.
+        if (response.cluster.status !== ClusterStatus.DELETING) {
+          this.loadNodePools(clusterId).catch(() => {});
+        }
         this.loadClusterEvents(clusterId).catch(() => {});
       }
       // The usage card loads once on init; when the cluster finishes
@@ -638,14 +656,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // Anything else (network blip, API rollout, expired session) is
       // transient as far as this page is concerned; the next tick retries.
       if (error instanceof ConnectError && error.code === Code.NotFound) {
-        this.handleClusterDeleted();
+        await this.handleClusterDeleted();
       }
     }
   }
 
-  private handleClusterDeleted() {
+  private async handleClusterDeleted() {
     this.stopPolling();
     this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+    // The cache still holds the cluster as deleting; the clusters page would
+    // report it gone a second time when its first poll no longer lists it.
+    await this.organizationDataService.reloadClusters();
     this.pageNav.goTo('/clusters');
   }
 
@@ -812,10 +833,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       await firstValueFrom(this.client.deleteCluster(request));
 
       // The cluster is soft-deleted, so the list still holds it, now DELETING.
-      // Awaited before the page turns: the clusters page takes its list from the
-      // cache as it mounts and only starts polling when something in that list
-      // is still moving, so a reload landing after it would be both unseen and
-      // too late to start the poll.
+      // Awaited so the clusters page, should the user go there, starts from a
+      // list that already shows it deleting and polls it.
       await this.organizationDataService.reloadClusters({
         id: this.clusterData.basics.id,
         name: this.clusterData.basics.name,
@@ -826,7 +845,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.notificationService.info(
         `The cluster '${this.clusterData.basics.name}' is being deleted`,
       );
-      this.pageNav.goTo('/clusters');
+      // The page stays: GetCluster returns the cluster as deleting until
+      // Gardener has removed it, and the status poll leaves the page once it
+      // answers not found (handleClusterDeleted).
+      this.statusRequest += 1;
+      this.clusterData.status = ClusterStatus.DELETING;
+      this.cdr.markForCheck();
     } catch (error) {
       if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
         // A project was added after the page loaded: show what blocks the
@@ -1058,8 +1082,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
     // isDeleting is deliberately left alone: a DeleteCluster still out from
-    // before the dialog was closed (Escape) must keep the button disabled, or a
-    // second one goes out and comes back not found.
+    // before the dialog was closed (Escape) keeps the button disabled until it
+    // settles. A second one would be harmless (the API accepts a repeat delete
+    // while the cluster is being deleted), but it would show a second notice.
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

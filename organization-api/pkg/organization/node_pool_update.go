@@ -44,9 +44,13 @@ func (s *Server) UpdateNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock cluster: %w", err))
 	}
 
+	if cluster.Deleted.Valid {
+		return nil, failedPrecondition(msgClusterDeleting)
+	}
+
 	// A live cluster keeps a pool that can run nodes (see node_pool_guard.go):
 	// its last such pool cannot shrink to a maximum of 0.
-	if req.GetAutoscaleMax() == 0 && !cluster.Deleted.Valid {
+	if req.GetAutoscaleMax() == 0 {
 		others, err := otherActivePools(ctx, qtx, cluster.ID, pgtype.UUID{Bytes: nodePoolID, Valid: true})
 		if err != nil {
 			return nil, err

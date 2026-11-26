@@ -57,7 +57,7 @@ func (s *Server) UpdateClusterDefaults(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cluster defaults: %w", err))
 	}
 	if rows == 0 {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
+		return nil, s.clusterWriteMissed(ctx, clusterID)
 	}
 
 	s.logger.InfoContext(ctx, "cluster defaults updated", "cluster_id", clusterID)

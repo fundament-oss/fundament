@@ -22,14 +22,19 @@ func (s *Server) ListNodePools(
 	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanListNodePools(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
+		return nil, s.clusterGoneOr(ctx, clusterID, err)
 	}
 
-	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+	}
+	// A deleting cluster's pools are listed as GetCluster returns the cluster.
+	if clusterDeletionConfirmed(cluster.Deleted, cluster.ShootStatus) {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
 	nodePools, err := s.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: clusterID})

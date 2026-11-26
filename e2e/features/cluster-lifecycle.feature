@@ -15,5 +15,6 @@ Feature: Cluster lifecycle against a real Gardener
     And its Gardener shoot was created successfully
     And the cluster's kubeconfig lists the namespace "kube-system"
     When I delete the cluster
-    Then within 15 minutes the cluster is no longer listed
+    Then the cluster and its node pools stay readable while it is deleting
+    And within 15 minutes the cluster is gone
     And its Gardener shoot is gone

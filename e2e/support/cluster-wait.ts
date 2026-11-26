@@ -101,9 +101,8 @@ export async function waitForClusterRunning(
 }
 
 /**
- * Wait until Gardener has removed the cluster's shoot. GetCluster reports the
- * cluster as not found as soon as its deletion is requested; ListClusters keeps
- * listing it until the shoot is gone.
+ * Wait until Gardener has removed the cluster's shoot. GetCluster returns a
+ * deleted cluster as deleting until then, and answers not_found after.
  */
 export async function waitForClusterDeleted(
   service: ClusterService,
@@ -111,16 +110,24 @@ export async function waitForClusterDeleted(
   deadlineMs: number,
 ): Promise<void> {
   let last = 'no status read';
-  const read = tolerant(() => service.listClusters());
+  const read = tolerant(async () => {
+    try {
+      return await service.getCluster(clusterId);
+    } catch (err) {
+      if (err instanceof ConnectRpcError && err.code === 'not_found') {
+        return null;
+      }
+      throw err;
+    }
+  });
   try {
     await pollUntil(deadlineMs, `cluster ${clusterId} to be deleted`, async () => {
-      const clusters = await read();
-      if (!clusters) {
-        return undefined;
-      }
-      const cluster = clusters.find((c) => c.id === clusterId);
-      if (!cluster) {
+      const cluster = await read();
+      if (cluster === null) {
         return true;
+      }
+      if (!cluster) {
+        return undefined;
       }
       last = describe(cluster.status, cluster.syncState);
       syncGivenUp(cluster.syncState, 'deleting the cluster');

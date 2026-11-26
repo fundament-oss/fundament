@@ -23,7 +23,7 @@ func (s *Server) GetNodePool(
 	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.NodePool(nodePoolID)); err != nil {
-		return nil, err
+		return nil, s.nodePoolGoneOr(ctx, nodePoolID, err)
 	}
 
 	nodePool, err := s.queries.NodePoolGetByID(ctx, db.NodePoolGetByIDParams{ID: nodePoolID})
@@ -32,6 +32,16 @@ func (s *Server) GetNodePool(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
+	}
+
+	// The pools of a cluster Gardener confirmed gone go with it, as in
+	// ListNodePools and DeleteNodePool.
+	gone, err := s.queries.NodePoolClusterDeletionConfirmed(ctx, db.NodePoolClusterDeletionConfirmedParams{NodePoolID: nodePoolID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check the node pool's cluster: %w", err))
+	}
+	if gone {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("node pool not found"))
 	}
 
 	// The by-ID row has the list row's columns.

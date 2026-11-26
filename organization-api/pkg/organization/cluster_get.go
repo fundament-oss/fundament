@@ -35,7 +35,7 @@ func (s *Server) GetClusterByName(
 	// This does leave us open for enumeration attacks because attackers can distinguish between not found and permission denied.
 	// We could always return cluster not found instead of permission errors.
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(cluster.ID)); err != nil {
-		return nil, err
+		return nil, s.clusterGoneOr(ctx, cluster.ID, err)
 	}
 
 	// The by-name row has the by-ID row's columns; converting it whole keeps
@@ -55,7 +55,7 @@ func (s *Server) GetCluster(
 	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
+		return nil, s.clusterGoneOr(ctx, clusterID, err)
 	}
 
 	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
@@ -68,7 +68,9 @@ func (s *Server) GetCluster(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if cluster.Deleted.Valid {
+	// A deleted cluster is returned, DELETING, until Gardener confirms it is
+	// gone (see cluster_deletion.go).
+	if clusterDeletionConfirmed(cluster.Deleted, cluster.ShootStatus) {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 

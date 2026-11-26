@@ -70,7 +70,8 @@ func Test_Cluster_Delete(t *testing.T) {
 	_, err = client.DeleteCluster(deleteCtx, deleteReq)
 	require.NoError(t, err)
 
-	// Soft delete: the cluster must no longer be visible via GetCluster.
+	// Soft delete: GetCluster reports the cluster as deleting until Gardener
+	// confirms it is gone (Test_Cluster_Deleting_ReadableUntilGardenerConfirms).
 	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
 	}.Build()
@@ -78,15 +79,13 @@ func Test_Cluster_Delete(t *testing.T) {
 	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.GetCluster(getCtx, getReq)
-	var connectErr *connect.Error
-	require.ErrorAs(t, err, &connectErr)
-	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+	got, err := client.GetCluster(getCtx, getReq)
+	require.NoError(t, err)
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, got.GetCluster().GetStatus())
 
-	// Deleting the same cluster again must return not found.
+	// Deleting the same cluster again while it is being deleted is no error.
 	_, err = client.DeleteCluster(deleteCtx, deleteReq)
-	require.ErrorAs(t, err, &connectErr)
-	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+	require.NoError(t, err)
 }
 
 // Covers the API only. The console flow on top of it (the blocked dialog that

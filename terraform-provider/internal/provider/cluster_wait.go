@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
+
+	"connectrpc.com/connect"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -164,41 +165,70 @@ func clusterRunning(cluster *organizationv1.ClusterDetails, changed bool) (bool,
 	}
 }
 
-// waitForClusterDeleted polls ListClusters until Gardener has removed the
-// cluster's Shoot. GetCluster cannot tell: it reports a cluster as not found
-// as soon as its deletion is requested, while ListClusters keeps listing it
-// until Gardener confirms the Shoot is gone.
+// waitForClusterDeleted polls GetCluster until Gardener has removed the
+// cluster's Shoot: GetCluster returns a deleted cluster as deleting until then,
+// and reports it as not found after. Where GetCluster refuses, listedCluster
+// tells whether it is still there.
 func waitForClusterDeleted(ctx context.Context, client *FundamentClient, clusterID string) error {
-	var last *organizationv1.ListClustersResponse_ClusterSummary
+	desc := "no status read"
 
 	err := pollWithBackoff(ctx, clusterPollInterval, clusterWaitMaxConsecutiveErrors, func(ctx context.Context) (bool, bool, error) {
-		resp, err := client.ClusterService.ListClusters(ctx, organizationv1.ListClustersRequest_builder{}.Build())
+		resp, err := client.ClusterService.GetCluster(ctx, organizationv1.GetClusterRequest_builder{
+			ClusterId: clusterID,
+		}.Build())
 		if err != nil {
-			return false, false, fmt.Errorf("polling cluster status: %w", err)
+			code := connect.CodeOf(err)
+			if code != connect.CodeNotFound && code != connect.CodePermissionDenied {
+				return false, false, fmt.Errorf("polling cluster status: %w", err)
+			}
+			listed, listErr := listedCluster(ctx, client, clusterID)
+			if listErr != nil {
+				return false, false, listErr
+			}
+			if listed == nil {
+				return true, false, nil
+			}
+			if code == connect.CodePermissionDenied && listed.GetStatus() != organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING {
+				return false, true, fmt.Errorf("polling cluster status: %w", err)
+			}
+			desc = describeClusterState(listed.GetStatus(), listed.GetSyncState())
+			if err := syncGivenUp(listed.GetSyncState(), "deleting the cluster"); err != nil {
+				return false, true, err
+			}
+			return false, false, nil
 		}
 
-		idx := slices.IndexFunc(resp.GetClusters(), func(c *organizationv1.ListClustersResponse_ClusterSummary) bool {
-			return c.GetId() == clusterID
-		})
-		if idx < 0 {
-			return true, false, nil
-		}
-
-		last = resp.GetClusters()[idx]
-		if err := syncGivenUp(last.GetSyncState(), "deleting the cluster"); err != nil {
+		cluster := resp.GetCluster()
+		desc = describeClusterState(cluster.GetStatus(), cluster.GetSyncState())
+		if err := syncGivenUp(cluster.GetSyncState(), "deleting the cluster"); err != nil {
 			return false, true, err
 		}
 		return false, false, nil
 	})
 
 	if err != nil {
-		desc := "no status read"
-		if last != nil {
-			desc = describeClusterState(last.GetStatus(), last.GetSyncState())
-		}
 		return waitError(ctx, err, "to be deleted", desc)
 	}
 	return nil
+}
+
+// listedCluster returns the cluster as ListClusters lists it, or nil when it
+// is not listed. It backs GetCluster up where GetCluster refuses: an
+// organization-api from before fundament#707 refuses a cluster as soon as its
+// deletion is requested, while ListClusters keeps listing it until Gardener
+// has removed it. The provider is released apart from the servers it talks
+// to; drop this once none of them predates that change.
+func listedCluster(ctx context.Context, client *FundamentClient, clusterID string) (*organizationv1.ListClustersResponse_ClusterSummary, error) {
+	listResp, err := client.ClusterService.ListClusters(ctx, organizationv1.ListClustersRequest_builder{}.Build())
+	if err != nil {
+		return nil, fmt.Errorf("unable to list clusters: %w", err)
+	}
+	for _, c := range listResp.GetClusters() {
+		if c.GetId() == clusterID {
+			return c, nil
+		}
+	}
+	return nil, nil
 }
 
 // syncGivenUp returns an error once cluster-worker has stopped retrying to

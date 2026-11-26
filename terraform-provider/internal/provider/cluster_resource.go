@@ -260,19 +260,19 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		ClusterId: state.ID.ValueString(),
 	}.Build()
 
+	// A cluster being deleted is returned as deleting until Gardener has
+	// removed it; it stays in state as such, so the next destroy waits for it
+	// and the next apply replaces it (see ModifyPlan). Not found: it is gone.
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
-		// Check if the cluster was deleted (not found)
-		// Connect errors include the code in the error message
-		// The API answers both for a cluster whose deletion was requested.
 		if code := connect.CodeOf(err); code == connect.CodeNotFound || code == connect.CodePermissionDenied {
-			r.readMissingCluster(ctx, &state, err, resp)
+			r.readRefusedCluster(ctx, &state, err, resp)
 			return
 		}
 
 		resp.Diagnostics.AddError(
 			"Unable to Read Cluster",
-			fmt.Sprintf("Unable to read cluster: %s", err.Error()),
+			fmt.Sprintf("Unable to read cluster %q: %s", state.Name.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -318,14 +318,12 @@ func (r *ClusterResource) existingClusterHint(ctx context.Context, name string) 
 		"tofu import <address of this resource> %s", resp.GetCluster().GetId())
 }
 
-// readMissingCluster handles a cluster GetCluster no longer returns. That
-// happens as soon as its deletion is requested, while Gardener still removes
-// it: such a cluster stays in state as deleting, so the next destroy waits
-// for it and the next apply replaces it (see ModifyPlan). A cluster that is
-// gone leaves the state. A cluster listed with another status was refused
-// for another reason, such as a lost permission, which getErr reports.
-func (r *ClusterResource) readMissingCluster(ctx context.Context, state *ClusterResourceModel, getErr error, resp *resource.ReadResponse) {
-	listed, err := r.listedCluster(ctx, state.ID.ValueString())
+// readRefusedCluster handles a cluster GetCluster refuses. listedCluster says
+// whether it is gone (it leaves the state) or being deleted on a server from
+// before fundament#707 (it stays in state as deleting); a cluster listed with
+// another status was refused for another reason, which getErr reports.
+func (r *ClusterResource) readRefusedCluster(ctx context.Context, state *ClusterResourceModel, getErr error, resp *resource.ReadResponse) {
+	listed, err := listedCluster(ctx, r.client, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Cluster", err.Error())
 		return
@@ -343,21 +341,6 @@ func (r *ClusterResource) readMissingCluster(ctx context.Context, state *Cluster
 	tflog.Info(ctx, "Cluster is being deleted", map[string]any{"id": state.ID.ValueString()})
 	state.Status = types.StringValue(clusterStatusToString(listed.GetStatus()))
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
-}
-
-// listedCluster returns the cluster as ListClusters lists it, or nil when it
-// is not listed. ListClusters keeps a cluster until Gardener has removed it.
-func (r *ClusterResource) listedCluster(ctx context.Context, clusterID string) (*organizationv1.ListClustersResponse_ClusterSummary, error) {
-	listResp, err := r.client.ClusterService.ListClusters(ctx, organizationv1.ListClustersRequest_builder{}.Build())
-	if err != nil {
-		return nil, fmt.Errorf("unable to list clusters: %w", err)
-	}
-	for _, c := range listResp.GetClusters() {
-		if c.GetId() == clusterID {
-			return c, nil
-		}
-	}
-	return nil, nil
 }
 
 // ModifyPlan replaces a cluster that is being deleted: the apply then waits
@@ -559,10 +542,10 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeNotFound, connect.CodePermissionDenied:
-			// Once a deletion is requested, for example by a destroy that timed
-			// out, the API answers like this for the cluster. Only a cluster
-			// that is listed and not being deleted is a real refusal.
-			listed, listErr := r.listedCluster(ctx, state.ID.ValueString())
+			// Gone, or being deleted on a server from before fundament#707,
+			// which refuses a repeat delete; the wait below follows it. Only a
+			// cluster that is listed and not being deleted is a real refusal.
+			listed, listErr := listedCluster(ctx, r.client, state.ID.ValueString())
 			if listErr != nil {
 				resp.Diagnostics.AddError("Unable to Delete Cluster", listErr.Error())
 				return
@@ -571,7 +554,7 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 				resp.Diagnostics.AddError("Unable to Delete Cluster", fmt.Sprintf("Unable to delete cluster %q: %s", state.Name.ValueString(), err.Error()))
 				return
 			}
-			tflog.Info(ctx, "Cluster deletion already requested", map[string]any{
+			tflog.Info(ctx, "Cluster gone or its deletion already requested", map[string]any{
 				"id": state.ID.ValueString(),
 			})
 		case connect.CodeFailedPrecondition:

@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -23,7 +24,7 @@ func (s *Server) DeleteCluster(
 	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
+		return nil, s.clusterGoneOr(ctx, clusterID, err)
 	}
 
 	rowsAffected, err := s.queries.ClusterDelete(ctx, db.ClusterDeleteParams{ID: clusterID})
@@ -44,6 +45,15 @@ func (s *Server) DeleteCluster(
 	}
 
 	if rowsAffected != 1 {
+		// Asking again while Gardener tears the cluster down is no error: the
+		// cluster is still there, being deleted (see cluster_deletion.go).
+		cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
+		if err == nil && cluster.Deleted.Valid && !clusterDeletionConfirmed(cluster.Deleted, cluster.ShootStatus) {
+			return organizationv1.DeleteClusterResponse_builder{}.Build(), nil
+		}
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+		}
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
