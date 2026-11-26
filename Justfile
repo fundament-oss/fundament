@@ -153,9 +153,20 @@ _wait-helm-deployments namespace +deployments:
 dev *flags:
     skaffold dev --kube-context k3d-fundament --profile env-local --default-repo=localhost:5111 --cleanup=false {{ flags }}
 
-# Like dev, but syncs edits into running containers; only adding, moving or deleting a file redeploys
+# Like dev, but hot-reloads; FUNDAMENT_DEV_DISABLED_HOTRELOAD=<deployments> runs those from their production image
 dev-hotreload *flags:
-    @just dev --profile hotreload {{ flags }}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    config=skaffold.yaml
+    if [ -n "${FUNDAMENT_DEV_DISABLED_HOTRELOAD:-}" ]; then
+        # Drop the hotreload patches of the listed images, looked up by name
+        config=skaffold.dev-hotreload.yaml
+        yq '.build.artifacts as $a | (strenv(FUNDAMENT_DEV_DISABLED_HOTRELOAD) | split(",")) as $off
+            | (.profiles[] | select(.name == "hotreload").patches) |= map(select(((.path | capture("^/build/artifacts/(?P<i>[0-9]+)/")
+            | $a[.i | to_number].image) // "") as $img | $off | any_c(. == $img) | not))' \
+            skaffold.yaml > "$config"
+    fi
+    just dev --filename "$config" --profile hotreload {{ flags }}
 
 # Deploy with hot-reload and kube-api-proxy debugger (dlv on localhost:2345)
 dev-debug:

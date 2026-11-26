@@ -1,4 +1,8 @@
-FROM oven/bun:1.4.3-alpine
+# Run `astro dev` on Node instead of Bun because V8 can be told to keep its heaps small
+FROM oven/bun:1.4.3-alpine AS bun
+
+FROM node:24.22-alpine
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
 # Copy package files
@@ -27,4 +31,5 @@ EXPOSE 80
 
 # Start development server with hot reload
 # Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["sh", "-c", "bun scripts/sync-docs.mjs --source /tmp/docs --watch & exec bun start --host 0.0.0.0 --port 80"]
+# --optimize-for-size makes V8 grow slowly and return memory
+CMD ["sh", "-c", "bun scripts/sync-docs.mjs --source /tmp/docs --watch & exec node --optimize-for-size node_modules/astro/bin/astro.mjs dev --host 0.0.0.0 --port 80"]
