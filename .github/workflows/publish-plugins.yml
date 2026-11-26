@@ -23,6 +23,7 @@ on:
           - gateway-api/envoy-gateway
           - gateway-api/istio
           - storage/ceph-rook
+          - zot
       submit:
         description: Open a review round for the published version
         type: boolean

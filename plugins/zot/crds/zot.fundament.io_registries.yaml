@@ -1,0 +1,74 @@
+# The console sidebar lists only CRDs, and the organization section only
+# cluster-scoped ones. zot has no CRDs, so the plugin keeps this one for the
+# console. It drives nothing: the plugin writes zot's status into the single
+# Registry `zot`, so the console shows it without access to the zot namespace.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registries.zot.fundament.io
+  labels:
+    app.kubernetes.io/managed-by: zot-plugin
+spec:
+  group: zot.fundament.io
+  scope: Cluster
+  names:
+    kind: Registry
+    listKind: RegistryList
+    plural: registries
+    singular: registry
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+        - name: Address
+          type: string
+          jsonPath: .status.address
+        - name: Available
+          type: string
+          jsonPath: .status.available
+        - name: Image
+          type: string
+          jsonPath: .status.image
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: The zot registry that the zot plugin installs. The plugin writes the status; the object drives nothing.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                chartVersion:
+                  type: string
+                  description: The version of the zot Helm chart that the plugin installs.
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: The plugin phase, such as running, degraded or installing.
+                message:
+                  type: string
+                address:
+                  type: string
+                  description: Where workloads in the cluster reach the registry.
+                image:
+                  type: string
+                  description: The zot image of the Deployment.
+                available:
+                  type: string
+                  description: Available replicas out of the wanted replicas, such as 1/1.
