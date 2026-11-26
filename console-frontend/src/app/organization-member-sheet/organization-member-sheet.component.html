@@ -121,7 +121,7 @@
             ></nldd-text-cell>
             <!-- Nobody changes their own role, just as their row has no role
                  actions. -->
-            @if (!isCurrentUser()) {
+            @if (canAct()) {
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-icon-button
@@ -198,7 +198,7 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
-        @if (!isCurrentUser()) {
+        @if (canAct()) {
           <nldd-spacer size="24"></nldd-spacer>
           <nldd-box background="critical">
             <nldd-container padding="16">

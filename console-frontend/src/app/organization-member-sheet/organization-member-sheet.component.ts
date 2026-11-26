@@ -11,7 +11,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { ConnectError } from '@connectrpc/connect';
 import { MEMBER } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -109,6 +108,11 @@ export default class OrganizationMemberSheetComponent implements OnInit {
     return !!userId && this.member()?.userId === userId;
   });
 
+  /** Role and removal actions: not on your own membership, and not before it
+   *  is known whose this is. The signed-in user is undefined until authn has
+   *  answered, and a link to your own membership would show Remove until then. */
+  canAct = computed(() => !!this.currentUser()?.id && !this.isCurrentUser());
+
   /** An invitation has no name of its own yet: the address is what it is called. */
   displayName = computed(() => {
     const member = this.member();
@@ -148,11 +152,10 @@ export default class OrganizationMemberSheetComponent implements OnInit {
     this.loadError.set(null);
     try {
       // Through the shared cache, so the sidebar's count is of this same list.
-      await this.organizationData.reloadMembers();
+      await this.organizationData.reloadCurrentMembers();
     } catch (err) {
       // The cache keeps what it had, so a member it holds is still shown.
-      // rawMessage leaves out the "[code]" prefix ConnectError's message has.
-      this.loadError.set(ConnectError.from(err).rawMessage);
+      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.isLoading.set(false);
     }
@@ -202,6 +205,8 @@ export default class OrganizationMemberSheetComponent implements OnInit {
     this.saving.set(true);
     try {
       await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
+      // Lists asked for from here on were answered without them.
+      const askedBefore = this.organizationData.memberListsAskedFor();
       this.showRemoveModal.set(false);
       this.notificationService.success(
         invitation ? `Invitation for '${who}' cancelled` : `'${who}' removed from the organization`,
@@ -214,7 +219,7 @@ export default class OrganizationMemberSheetComponent implements OnInit {
         // organization changed meanwhile: the cache is no longer the one they
         // were in, and the new organization's list is on its way.
         if (!(err instanceof OrganizationChangedError)) {
-          this.organizationData.forgetMember(member.id);
+          this.organizationData.forgetMember(member.id, askedBefore);
         }
       }
       this.onClose();

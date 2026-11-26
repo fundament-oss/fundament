@@ -82,10 +82,20 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 			"user_name": schema.StringAttribute{
 				Description: "The name of the user.",
 				Computed:    true,
+				// Read refreshes it before every plan, so a permission change
+				// need not show it as known after apply.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"email": schema.StringAttribute{
 				Description: "The email address of the user.",
 				Computed:    true,
+				// Read refreshes it before every plan, so a permission change
+				// need not show it as known after apply.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created": schema.StringAttribute{
 				Description: "The timestamp when the member was added.",

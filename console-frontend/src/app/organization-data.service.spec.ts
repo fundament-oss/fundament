@@ -50,6 +50,10 @@ class PendingMembers {
     this.response.next(create(ListMembersResponseSchema, { members }));
     this.response.complete();
   }
+
+  fail(error: Error) {
+    this.response.error(error);
+  }
 }
 
 function organizationResponse(): Observable<GetOrganizationResponse> {
@@ -329,12 +333,64 @@ describe('OrganizationDataService members', () => {
     // after it failed.
     server.holdMembers = true;
     const before = service.reloadMembers();
-    service.forgetMember('ann');
+    service.forgetMember('ann', service.memberListsAskedFor());
     server.pendingMembers[0].answer(server.members);
     await before;
 
     expect(service.members().map((m) => m.id)).toEqual(['bob', 'cas', 'dee']);
     expect(service.memberCount()).toBe(2);
+  });
+
+  it('lets a list asked for after the removal land', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    // One list was on its way during the removal; another page asked for one
+    // once it was confirmed, after an invitation went out.
+    server.holdMembers = true;
+    const before = service.reloadMembers();
+    const askedBefore = service.memberListsAskedFor();
+    const after = service.reloadMembers();
+    service.forgetMember('ann', askedBefore);
+    const [first, second] = server.pendingMembers;
+    second.answer([member('bob', 'accepted'), member('eve', 'pending')]);
+    first.answer(server.members);
+    await Promise.all([before, after]);
+
+    expect(service.members().map((m) => m.id)).toEqual(['bob', 'eve']);
+    expect(service.memberCount()).toBe(1);
+  });
+
+  it('reports an organization change for a list that failed meanwhile', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    server.holdMembers = true;
+    const listing = service.reloadMembers();
+    service.clearAll();
+    server.pendingMembers[0].fail(new Error('unreachable'));
+
+    await expect(listing).rejects.toBeInstanceOf(OrganizationChangedError);
+  });
+
+  it('asks again for the current list when the organization is loaded meanwhile', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    // A page opened by a link asks before the shell has loaded the
+    // organization, and that load overtakes it.
+    server.holdMembers = true;
+    const listing = service.reloadCurrentMembers();
+    const load = service.loadOrganizationData(ORGANIZATION_ID);
+    server.pendingMembers[0].answer(server.members);
+
+    // The organization's own list, and this one asked again.
+    await vi.waitFor(() => expect(server.pendingMembers).toHaveLength(3));
+    const fresh = [member('eve', 'accepted')];
+    server.pendingMembers.slice(1).forEach((pending) => pending.answer(fresh));
+
+    expect((await listing).map((m) => m.id)).toEqual(['eve']);
+    await load;
   });
 
   it('drops a list that comes back after the organization is gone', async () => {

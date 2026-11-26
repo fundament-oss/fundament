@@ -576,14 +576,20 @@ export class OrganizationDataService {
    * the newer list that overtook it on the way, never one the cache dropped.
    * Throws when the list could not be fetched, so a page can say so, and an
    * OrganizationChangedError when the organization changed while it was on its
-   * way, since the cache then belongs to another organization; it keeps what it
-   * had in both cases.
+   * way, answered or not, since the cache then belongs to another organization;
+   * it keeps what it had in both cases.
    */
   async reloadMembers(): Promise<Member[]> {
     const ticket = this.beginMemberListFetch();
-    const response = await firstValueFrom(
-      this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
-    );
+    let response;
+    try {
+      response = await firstValueFrom(
+        this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
+      );
+    } catch (error) {
+      if (ticket.generation !== this.generation) throw new OrganizationChangedError();
+      throw error;
+    }
     if (ticket.generation !== this.generation) {
       throw new OrganizationChangedError();
     }
@@ -598,15 +604,38 @@ export class OrganizationDataService {
   }
 
   /**
-   * Drop a membership the server has just ended, for when the reload after it
-   * failed: the list and the sidebar's count should not go on showing it. A
-   * list asked for before this no longer counts, since it may still hold it.
-   * Only for a reload that failed in the same organization: after an
-   * OrganizationChangedError the lists on their way are the new
-   * organization's, and this would drop them.
+   * reloadMembers(), asked again when the organization changed on the way: for
+   * a page that wants the list of whichever organization is current. A page
+   * opened by a link asks while the shell is still loading the organization,
+   * and that load would otherwise make its first list fail.
    */
-  forgetMember(id: string): void {
-    this.appliedMemberList = this.memberListRequests;
+  async reloadCurrentMembers(): Promise<Member[]> {
+    try {
+      return await this.reloadMembers();
+    } catch (error) {
+      if (error instanceof OrganizationChangedError) return this.reloadCurrentMembers();
+      throw error;
+    }
+  }
+
+  /** How many member lists have been asked for so far. Read once the server
+   *  has confirmed a removal, and hand it to forgetMember(): a list asked for
+   *  after that point was answered without the member. */
+  memberListsAskedFor(): number {
+    return this.memberListRequests;
+  }
+
+  /**
+   * Drop a membership the server has just ended, for when the reload after it
+   * failed: the list and the sidebar's count should not go on showing it.
+   * `askedBefore` is memberListsAskedFor() from once the removal was confirmed:
+   * a list asked for up to then no longer counts, since it may still hold the
+   * member, while one asked for later still lands. Only for a reload that
+   * failed in the same organization: after an OrganizationChangedError the
+   * lists on their way are the new organization's.
+   */
+  forgetMember(id: string, askedBefore: number): void {
+    this.appliedMemberList = Math.max(this.appliedMemberList, askedBefore);
     this.members.update((members) => members.filter((m) => m.id !== id));
   }
 

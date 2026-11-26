@@ -59,7 +59,7 @@ async function build(members: Member[] = [ALICE, BOB_INVITED, ME]) {
         provide: OrganizationDataService,
         useValue: {
           members: membersSignal,
-          reloadMembers: vi.fn(async () => membersSignal()),
+          reloadCurrentMembers: vi.fn(async () => membersSignal()),
           currentOrganizationDisplayName: signal('Acme'),
         },
       },

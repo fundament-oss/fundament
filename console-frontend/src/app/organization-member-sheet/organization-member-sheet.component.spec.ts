@@ -1,10 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { type Observable, of, Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { create } from '@bufbuild/protobuf';
-import { Code, ConnectError } from '@connectrpc/connect';
 import OrganizationMemberSheetComponent from './organization-member-sheet.component';
 import { MEMBER } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
@@ -56,7 +55,8 @@ async function build(
   members: Member[] = [ALICE, BOB_INVITED, CAROL_DECLINED, ME],
   {
     listFails = false,
-    listError = (): Error => new ConnectError('unreachable', Code.Unavailable),
+    listError = (): Error => new Error('unreachable'),
+    currentUser$ = of({ id: 'user-me' }) as Observable<{ id: string } | undefined>,
   } = {},
 ) {
   const notifications = { success: vi.fn(), error: vi.fn() };
@@ -72,7 +72,12 @@ async function build(
       if (listFails) throw listError();
       return membersSignal();
     }),
-    forgetMember: vi.fn((id: string) =>
+    reloadCurrentMembers: vi.fn(async () => {
+      if (listFails) throw listError();
+      return membersSignal();
+    }),
+    memberListsAskedFor: vi.fn(() => 7),
+    forgetMember: vi.fn((id: string, _askedBefore: number) =>
       membersSignal.update((list) => list.filter((m) => m.id !== id)),
     ),
     currentOrganizationDisplayName: signal('Acme'),
@@ -86,7 +91,7 @@ async function build(
       { provide: MEMBER, useValue: memberClient },
       { provide: NotificationService, useValue: notifications },
       { provide: OrganizationDataService, useValue: organizationData },
-      { provide: AuthnApiService, useValue: { currentUser$: of({ id: 'user-me' }) } },
+      { provide: AuthnApiService, useValue: { currentUser$ } },
     ],
   });
 
@@ -165,7 +170,7 @@ describe('OrganizationMemberSheetComponent', () => {
     expect(find('nldd-button[text="Try again"]')).not.toBeNull();
 
     await fixture.componentInstance.load();
-    expect(organizationData.reloadMembers).toHaveBeenCalledTimes(2);
+    expect(organizationData.reloadCurrentMembers).toHaveBeenCalledTimes(2);
   });
 
   it('still shows a member the cache holds when the reload fails', async () => {
@@ -182,7 +187,8 @@ describe('OrganizationMemberSheetComponent', () => {
 
     await fixture.componentInstance.confirmRemove();
 
-    expect(organizationData.forgetMember).toHaveBeenCalledWith('membership-alice');
+    // Only lists asked for before the delete was confirmed are dropped.
+    expect(organizationData.forgetMember).toHaveBeenCalledWith('membership-alice', 7);
     expect(organizationData.members().map((m) => m.id)).not.toContain('membership-alice');
     expect(router.navigate).toHaveBeenCalled();
   });
@@ -198,6 +204,22 @@ describe('OrganizationMemberSheetComponent', () => {
     // The cache, and any list on its way to it, is the new organization's.
     expect(organizationData.forgetMember).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalled();
+  });
+
+  it('offers no actions until it is known who is signed in', async () => {
+    // Until authn answers, this could be your own membership.
+    const currentUser$ = new Subject<{ id: string } | undefined>();
+    const { fixture } = await build('membership-alice', undefined, { currentUser$ });
+
+    expect(fixture.componentInstance.canAct()).toBe(false);
+    expect(text()).not.toContain('Remove Alice from organization');
+    expect(find('[accessible-label="Role actions"]')).toBeNull();
+
+    currentUser$.next({ id: 'user-me' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAct()).toBe(true);
+    expect(text()).toContain('Remove Alice from organization');
   });
 
   it('offers no actions on your own membership', async () => {

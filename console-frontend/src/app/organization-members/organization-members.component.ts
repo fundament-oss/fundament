@@ -313,7 +313,7 @@ export default class OrganizationMembersComponent implements OnInit {
     this.error.set(null);
 
     try {
-      await this.organizationDataService.reloadMembers();
+      await this.organizationDataService.reloadCurrentMembers();
     } catch (err) {
       this.error.set(
         err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',

@@ -4,7 +4,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { create } from '@bufbuild/protobuf';
-import { Code, ConnectError } from '@connectrpc/connect';
 import ProjectMemberSheetComponent from './project-member-sheet.component';
 import { PROJECT } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
@@ -38,16 +37,14 @@ async function build(memberId: string, { listFails = false } = {}) {
   const router = { navigate: vi.fn() };
   const projectClient = {
     listProjectMembers: vi.fn(() =>
-      listFails
-        ? throwError(() => new ConnectError('unreachable', Code.Unavailable))
-        : of({ members: [ALICE] }),
+      listFails ? throwError(() => new Error('unreachable')) : of({ members: [ALICE] }),
     ),
     updateProjectMemberRole: vi.fn(() => of({})),
     removeProjectMember: vi.fn(() => of({})),
   };
   const organizationData = {
     membersChanged: signal(0),
-    reloadMembers: vi.fn(async () => ORG_MEMBERS),
+    reloadCurrentMembers: vi.fn(async () => ORG_MEMBERS),
     getProjectById: () => undefined,
   };
 
@@ -108,9 +105,7 @@ describe('ProjectMemberSheetComponent', () => {
     const view = fixture.componentInstance.member();
     expect(view).not.toBeNull();
 
-    projectClient.listProjectMembers.mockReturnValue(
-      throwError(() => new ConnectError('unreachable', Code.Unavailable)),
-    );
+    projectClient.listProjectMembers.mockReturnValue(throwError(() => new Error('unreachable')));
     await fixture.componentInstance.togglePermission(view!);
 
     expect(fixture.componentInstance.member()?.member.id).toBe('pm-alice');

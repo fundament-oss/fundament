@@ -210,7 +210,7 @@ export default class ProjectMembersComponent implements OnInit {
       const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
         // Through the shared cache, so the sidebar's count is of this same list.
-        this.organizationData.reloadMembers(),
+        this.organizationData.reloadCurrentMembers(),
       ]);
 
       // Build a map of org member id → org role string

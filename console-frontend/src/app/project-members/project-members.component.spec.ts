@@ -56,7 +56,7 @@ async function build() {
   const listProjectMembers = vi.fn(() => of({ members: PROJECT_MEMBERS }));
   const organizationData = {
     membersChanged: signal(0),
-    reloadMembers: vi.fn(async () => ORG_MEMBERS),
+    reloadCurrentMembers: vi.fn(async () => ORG_MEMBERS),
     getProjectById: () => undefined,
   };
 

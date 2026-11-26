@@ -10,7 +10,6 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { ConnectError } from '@connectrpc/connect';
 import { PROJECT } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -138,7 +137,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
       const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
         // Through the shared cache, so the sidebar's count is of this same list.
-        this.organizationData.reloadMembers(),
+        this.organizationData.reloadCurrentMembers(),
       ]);
 
       const orgRoleByUserId = new Map(
@@ -163,9 +162,8 @@ export default class ProjectMemberSheetComponent implements OnInit {
       );
     } catch (err) {
       // Keeps the member it had, say after a role change, rather than calling
-      // them gone. rawMessage leaves out the "[code]" prefix ConnectError's
-      // message has.
-      this.loadError.set(ConnectError.from(err).rawMessage);
+      // them gone.
+      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.isLoading.set(false);
     }
