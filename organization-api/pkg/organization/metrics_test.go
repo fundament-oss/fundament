@@ -1,6 +1,9 @@
 package organization
 
 import (
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,26 +172,6 @@ func TestBuildNodeMetrics_DropsUnnamedNode(t *testing.T) {
 	assert.Equal(t, "n1", nodes[0].GetNode())
 }
 
-// ---- cluster-wide queries ----
-
-// Gardener federates the shoot's control-plane pods from the seed under
-// namespace="shoot-control-plane"; every query that reads pod or container
-// series must exclude them, or the seed's nodes reach organization admins.
-func TestClusterQueries_ExcludeControlPlane(t *testing.T) {
-	for name, q := range map[string]string{
-		"cpu used":       queryCPUUsed,
-		"mem used":       queryMemUsed,
-		"pods used":      queryPodsUsed,
-		"net rx":         queryNetRx,
-		"net tx":         queryNetTx,
-		"node cpu used":  queryNodeCPUUsed,
-		"node mem used":  queryNodeMemUsed,
-		"node pods used": queryNodePodsUsed,
-	} {
-		assert.Contains(t, q, `namespace!="shoot-control-plane"`, name)
-	}
-}
-
 // ---- buildNamespaceMetrics ----
 
 func TestBuildNamespaceMetrics(t *testing.T) {
@@ -215,4 +198,24 @@ func TestBuildNamespaceMetrics(t *testing.T) {
 	if r.GetPods() != 5 {
 		t.Errorf("pods = %v, want 5", r.GetPods())
 	}
+}
+
+// Gardener's per-shoot Prometheus also holds the shoot's control plane
+// (type="seed"); every selector we send must pick the shoot's own series.
+func TestMetricsQueriesSelectShootSeries(t *testing.T) {
+	src, err := os.ReadFile("metrics.go")
+	require.NoError(t, err)
+
+	selector := regexp.MustCompile(`\b(node_|kube_|kubelet_|container_)[a-zA-Z_]+(\{[^}]*\})?`)
+	var checked int
+	for line := range strings.SplitSeq(string(src), "\n") {
+		if !strings.Contains(line, "`") || strings.HasPrefix(strings.TrimSpace(line), "//") {
+			continue
+		}
+		for _, m := range selector.FindAllString(line, -1) {
+			checked++
+			assert.Contains(t, m, `type="shoot"`, "selector without type=\"shoot\" in: %s", strings.TrimSpace(line))
+		}
+	}
+	assert.Greater(t, checked, 20)
 }

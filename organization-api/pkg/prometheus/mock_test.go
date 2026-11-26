@@ -280,3 +280,23 @@ func TestMockClient_QueryRange_ReturnsPointsPerStep(t *testing.T) {
 		t.Errorf("expected 3 data points, got %d", len(series[0].Samples))
 	}
 }
+
+// The usage queries of the organization and cluster views read node metrics.
+func TestMockGenerate_NodeUsageQueries(t *testing.T) {
+	nodes := mockClusterNodes(testCluster)
+	for _, q := range []string{
+		`sum(rate(node_cpu_seconds_total{type="shoot",mode!~"idle|iowait|steal"}[5m]))`,
+		`sum(node_memory_MemTotal_bytes{type="shoot"} - node_memory_MemAvailable_bytes{type="shoot"})`,
+		`sum(kubelet_running_pods{type="shoot"})`,
+	} {
+		scalar := mockGenerate(q, time.Now(), testClusters)
+		require.Len(t, scalar, 1, q)
+		assert.Positive(t, scalar[0].Value, q)
+
+		perNode := mockGenerate(q+" by (node)", time.Now(), testClusters)
+		require.Len(t, perNode, len(nodes), q)
+		for _, s := range perNode {
+			assert.NotEmpty(t, s.Labels["node"], q)
+		}
+	}
+}
