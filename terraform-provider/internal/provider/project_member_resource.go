@@ -82,6 +82,20 @@ func (r *ProjectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 			"user_name": schema.StringAttribute{
 				Description: "The name of the user.",
 				Computed:    true,
+				// Read refreshes it before every plan, so a permission change
+				// need not show it as known after apply.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"email": schema.StringAttribute{
+				Description: "The email address of the user.",
+				Computed:    true,
+				// Read refreshes it before every plan, so a permission change
+				// need not show it as known after apply.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created": schema.StringAttribute{
 				Description: "The timestamp when the member was added.",
@@ -208,6 +222,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	plan.ProjectID = types.StringValue(m.GetProjectId())
 	plan.UserID = types.StringValue(m.GetUserId())
 	plan.UserName = types.StringValue(m.GetUserName())
+	plan.Email = projectMemberEmail(m)
 	plan.Permission = types.StringValue(permissionStr)
 	plan.Created = timestampValue(m.GetCreated())
 
@@ -480,6 +495,7 @@ func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, mo
 	model.ProjectID = types.StringValue(member.GetProjectId())
 	model.UserID = types.StringValue(member.GetUserId())
 	model.UserName = types.StringValue(member.GetUserName())
+	model.Email = projectMemberEmail(member)
 	model.Permission = types.StringValue(permissionStr)
 	if member.HasCreated() {
 		model.Created = timestampValue(member.GetCreated())

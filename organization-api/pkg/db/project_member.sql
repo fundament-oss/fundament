@@ -11,7 +11,8 @@ SELECT
     project_members.role,
     project_members.created,
     users.name as user_name,
-    users.external_ref as user_external_ref
+    users.external_ref as user_external_ref,
+    users.email
 FROM tenant.project_members
 INNER JOIN tenant.users
   ON users.id = project_members.user_id
@@ -26,7 +27,8 @@ SELECT
     project_members.user_id,
     project_members.role,
     project_members.created,
-    users.name as user_name
+    users.name as user_name,
+    users.email
 FROM tenant.project_members
 INNER JOIN tenant.users
   ON users.id = project_members.user_id

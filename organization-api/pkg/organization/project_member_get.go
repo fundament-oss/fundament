@@ -39,7 +39,7 @@ func (s *Server) GetProjectMember(
 }
 
 func projectMemberFromGetRow(row *db.ProjectMemberGetByIDRow) *organizationv1.ProjectMember {
-	return organizationv1.ProjectMember_builder{
+	member := organizationv1.ProjectMember_builder{
 		Id:        row.ID.String(),
 		ProjectId: row.ProjectID.String(),
 		UserId:    row.UserID.String(),
@@ -47,4 +47,10 @@ func projectMemberFromGetRow(row *db.ProjectMemberGetByIDRow) *organizationv1.Pr
 		Role:      projectMemberRoleFromDB(row.Role),
 		Created:   timestamppb.New(row.Created.Time),
 	}.Build()
+
+	if row.Email.Valid {
+		member.SetEmail(row.Email.String)
+	}
+
+	return member
 }

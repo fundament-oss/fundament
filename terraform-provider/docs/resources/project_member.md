@@ -39,6 +39,7 @@ resource "fundament_project_member" "example" {
 ### Read-Only
 
 - `created` (String) The timestamp when the member was added.
+- `email` (String) The email address of the user.
 - `id` (String) The unique identifier of the project member.
 - `user_name` (String) The name of the user.
 

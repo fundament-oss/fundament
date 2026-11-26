@@ -951,15 +951,18 @@ func (b0 DeleteProjectResponse_builder) Build() *DeleteProjectResponse {
 
 // Project member information
 type ProjectMember struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_ProjectId string                 `protobuf:"bytes,20,opt,name=project_id,json=projectId"`
-	xxx_hidden_UserId    string                 `protobuf:"bytes,30,opt,name=user_id,json=userId"`
-	xxx_hidden_UserName  string                 `protobuf:"bytes,40,opt,name=user_name,json=userName"`
-	xxx_hidden_Role      ProjectMemberRole      `protobuf:"varint,50,opt,name=role,enum=organization.v1.ProjectMemberRole"`
-	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_ProjectId   string                 `protobuf:"bytes,20,opt,name=project_id,json=projectId"`
+	xxx_hidden_UserId      string                 `protobuf:"bytes,30,opt,name=user_id,json=userId"`
+	xxx_hidden_UserName    string                 `protobuf:"bytes,40,opt,name=user_name,json=userName"`
+	xxx_hidden_Role        ProjectMemberRole      `protobuf:"varint,50,opt,name=role,enum=organization.v1.ProjectMemberRole"`
+	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
+	xxx_hidden_Email       *string                `protobuf:"bytes,70,opt,name=email"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ProjectMember) Reset() {
@@ -1029,6 +1032,16 @@ func (x *ProjectMember) GetCreated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ProjectMember) GetEmail() string {
+	if x != nil {
+		if x.xxx_hidden_Email != nil {
+			return *x.xxx_hidden_Email
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *ProjectMember) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -1053,6 +1066,11 @@ func (x *ProjectMember) SetCreated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Created = v
 }
 
+func (x *ProjectMember) SetEmail(v string) {
+	x.xxx_hidden_Email = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 7)
+}
+
 func (x *ProjectMember) HasCreated() bool {
 	if x == nil {
 		return false
@@ -1060,8 +1078,20 @@ func (x *ProjectMember) HasCreated() bool {
 	return x.xxx_hidden_Created != nil
 }
 
+func (x *ProjectMember) HasEmail() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
 func (x *ProjectMember) ClearCreated() {
 	x.xxx_hidden_Created = nil
+}
+
+func (x *ProjectMember) ClearEmail() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_Email = nil
 }
 
 type ProjectMember_builder struct {
@@ -1073,6 +1103,9 @@ type ProjectMember_builder struct {
 	UserName  string
 	Role      ProjectMemberRole
 	Created   *timestamppb.Timestamp
+	// email is the user's email address. It is absent when the identity
+	// provider sent no email claim.
+	Email *string
 }
 
 func (b0 ProjectMember_builder) Build() *ProjectMember {
@@ -1085,6 +1118,10 @@ func (b0 ProjectMember_builder) Build() *ProjectMember {
 	x.xxx_hidden_UserName = b.UserName
 	x.xxx_hidden_Role = b.Role
 	x.xxx_hidden_Created = b.Created
+	if b.Email != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 7)
+		x.xxx_hidden_Email = b.Email
+	}
 	return m0
 }
 
@@ -2037,7 +2074,7 @@ const file_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\x17\n" +
-	"\x15DeleteProjectResponse\"\xe2\x01\n" +
+	"\x15DeleteProjectResponse\"\xff\x01\n" +
 	"\rProjectMember\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1d\n" +
@@ -2046,7 +2083,8 @@ const file_v1_project_proto_rawDesc = "" +
 	"\auser_id\x18\x1e \x01(\tR\x06userId\x12\x1b\n" +
 	"\tuser_name\x18( \x01(\tR\buserName\x126\n" +
 	"\x04role\x182 \x01(\x0e2\".organization.v1.ProjectMemberRoleR\x04role\x124\n" +
-	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"D\n" +
+	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12\x1b\n" +
+	"\x05email\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x05email\"D\n" +
 	"\x19ListProjectMembersRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +

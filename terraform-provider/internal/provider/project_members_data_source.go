@@ -72,6 +72,10 @@ func (d *ProjectMembersDataSource) Schema(ctx context.Context, req datasource.Sc
 							Description: "The name of the user.",
 							Computed:    true,
 						},
+						"email": schema.StringAttribute{
+							Description: "The email address of the user.",
+							Computed:    true,
+						},
 						"permission": schema.StringAttribute{
 							Description: "The permission of the project member.",
 							Computed:    true,
@@ -172,6 +176,7 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 			ProjectID:  types.StringValue(member.GetProjectId()),
 			UserID:     types.StringValue(member.GetUserId()),
 			UserName:   types.StringValue(member.GetUserName()),
+			Email:      projectMemberEmail(member),
 			Permission: types.StringValue(permissionStr),
 			Created:    created,
 		}

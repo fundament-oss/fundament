@@ -21,6 +21,8 @@ import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
+import copyWithNotice from '../utils/copy-with-notice';
+import emailsByUserId from '../utils/emails-by-user-id';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/box';
@@ -28,9 +30,11 @@ import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/container';
 import '@nldd/design-system/icon-button';
+import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
+import '@nldd/design-system/list-item-segment';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/page';
@@ -47,6 +51,8 @@ interface ProjectMemberView {
   member: ProjectMember;
   /** 'org' when the project role equals the organization role. */
   source: 'org' | 'project';
+  /** From the organization member list, which this sheet loads anyway. */
+  email?: string;
 }
 
 /** Locked: an organization admin is admin here too, and this page cannot change
@@ -96,6 +102,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   isLoading = signal(true);
 
+  /** Why the member could not be fetched. Shown only when there is no member
+   *  to show, so a failed load never reads as "not found". */
+  loadError = signal<string | null>(null);
+
   saving = signal(false);
 
   showRemoveModal = signal(false);
@@ -122,11 +132,12 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   async load() {
     this.isLoading.set(true);
+    this.loadError.set(null);
     try {
       const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
         // Through the shared cache, so the sidebar's count is of this same list.
-        this.organizationData.reloadMembers(),
+        this.organizationData.reloadCurrentMembers(),
       ]);
 
       const orgRoleByUserId = new Map(
@@ -137,6 +148,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
         found
           ? {
               member: found,
+              email: emailsByUserId(orgMembers).get(found.userId),
               source:
                 // The organization permission is a bare string ("admin" /
                 // "viewer"), so this compares values, not the labels the tags
@@ -148,8 +160,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
             }
           : null,
       );
-    } catch {
-      this.member.set(null);
+    } catch (err) {
+      // Keeps the member it had, say after a role change, rather than calling
+      // them gone.
+      this.loadError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.isLoading.set(false);
     }
@@ -169,6 +183,9 @@ export default class ProjectMemberSheetComponent implements OnInit {
       this.notificationService.success(
         `${view.member.userName} is now ${projectRoleLabel(role).toLowerCase()}`,
       );
+      // The list stays mounted behind this sheet, so it hears about the change
+      // from here.
+      this.organizationData.membersChanged.update((count) => count + 1);
       await this.load();
     } catch (err) {
       this.notificationService.error(
@@ -187,6 +204,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await firstValueFrom(this.projectClient.removeProjectMember({ memberId: view.member.id }));
       this.notificationService.success(`${view.member.userName} removed from the project`);
       this.showRemoveModal.set(false);
+      this.organizationData.membersChanged.update((count) => count + 1);
       this.onClose();
     } catch (err) {
       this.showRemoveModal.set(false);
@@ -196,13 +214,23 @@ export default class ProjectMemberSheetComponent implements OnInit {
     }
   }
 
+  copyUserId(view: ProjectMemberView): Promise<void> {
+    return copyWithNotice(this.notificationService, view.member.userId, 'User ID');
+  }
+
+  copyEmail(view: ProjectMemberView): Promise<void> {
+    if (!view.email) return Promise.resolve();
+    return copyWithNotice(this.notificationService, view.email, 'Email address');
+  }
+
   openOrganizationMembers(event: Event): void {
     if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo('/members');
   }
 
-  /** Back to the list, which reloads and picks up whatever changed here. */
+  /** Back to the list, which has already heard about a change made here
+   *  through membersChanged: it stays mounted, so it does not reload on its own. */
   onClose(): void {
     this.router.navigate(['..'], { relativeTo: this.route });
   }

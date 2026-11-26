@@ -4,6 +4,7 @@ import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT, MEMBER } from '../connect/tokens';
 import OrganizationContextService from './organization-context.service';
+import OrganizationChangedError from './organization-changed-error';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
@@ -62,7 +63,8 @@ export class OrganizationDataService {
   readonly namespacesChanged = signal(0);
 
   /** The same, for members: inviting someone and adding someone to a project
-   *  both happen in a sheet the shell owns. */
+   *  both happen in a sheet the shell owns, and the project member sheet, which
+   *  changes a role or removes someone, is a child route over the list. */
   readonly membersChanged = signal(0);
 
   /** And for node pools, which are edited in a sheet over the cluster page that
@@ -572,17 +574,24 @@ export class OrganizationDataService {
    * after an invitation or a removal, so the sidebar's count follows. Resolves
    * to what the cache holds once the response is in: the response itself, or
    * the newer list that overtook it on the way, never one the cache dropped.
-   * Throws when the list could not be fetched, so a page can say so, and when
-   * the organization changed while it was on its way, since the cache then
-   * belongs to another organization; it keeps what it had in both cases.
+   * Throws when the list could not be fetched, so a page can say so, and an
+   * OrganizationChangedError when the organization changed while it was on its
+   * way, answered or not, since the cache then belongs to another organization;
+   * it keeps what it had in both cases.
    */
   async reloadMembers(): Promise<Member[]> {
     const ticket = this.beginMemberListFetch();
-    const response = await firstValueFrom(
-      this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
-    );
+    let response;
+    try {
+      response = await firstValueFrom(
+        this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
+      );
+    } catch (error) {
+      if (ticket.generation !== this.generation) throw new OrganizationChangedError();
+      throw error;
+    }
     if (ticket.generation !== this.generation) {
-      throw new Error('The organization changed while its members were being listed');
+      throw new OrganizationChangedError();
     }
     // A list asked for later has landed first: this one is behind the cache,
     // not ahead of it.
@@ -592,6 +601,42 @@ export class OrganizationDataService {
       this.membersLoaded.set(true);
     }
     return this.members();
+  }
+
+  /**
+   * reloadMembers(), asked again when the organization changed on the way: for
+   * a page that wants the list of whichever organization is current. A page
+   * opened by a link asks while the shell is still loading the organization,
+   * and that load would otherwise make its first list fail.
+   */
+  async reloadCurrentMembers(): Promise<Member[]> {
+    try {
+      return await this.reloadMembers();
+    } catch (error) {
+      if (error instanceof OrganizationChangedError) return this.reloadCurrentMembers();
+      throw error;
+    }
+  }
+
+  /** How many member lists have been asked for so far. Read once the server
+   *  has confirmed a removal, and hand it to forgetMember(): a list asked for
+   *  after that point was answered without the member. */
+  memberListsAskedFor(): number {
+    return this.memberListRequests;
+  }
+
+  /**
+   * Drop a membership the server has just ended, for when the reload after it
+   * failed: the list and the sidebar's count should not go on showing it.
+   * `askedBefore` is memberListsAskedFor() from once the removal was confirmed:
+   * a list asked for up to then no longer counts, since it may still hold the
+   * member, while one asked for later still lands. Only for a reload that
+   * failed in the same organization: after an OrganizationChangedError the
+   * lists on their way are the new organization's.
+   */
+  forgetMember(id: string, askedBefore: number): void {
+    this.appliedMemberList = Math.max(this.appliedMemberList, askedBefore);
+    this.members.update((members) => members.filter((m) => m.id !== id));
   }
 
   /**

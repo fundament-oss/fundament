@@ -205,7 +205,8 @@ export type Member = Message<"organization.v1.Member"> & {
   externalRef: string;
 
   /**
-   * email is set for invited members
+   * email is the user's email address, for members and invitations alike. It
+   * is absent when the identity provider sent no email claim.
    *
    * @generated from field: string email = 50 [features.field_presence = EXPLICIT];
    */

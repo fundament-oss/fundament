@@ -146,6 +146,17 @@ const routes: Routes = [
             loadComponent: () =>
               import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
           },
+          {
+            // After `invite` and `permissions`, or a member ID would have to
+            // be told apart from them. The ID is the membership's, Member.id.
+            path: ':memberId',
+            loadComponent: () =>
+              import('./organization-member-sheet/organization-member-sheet.component').then(
+                (m) => m.default,
+              ),
+            // The sheet reads the ID once, as it opens.
+            data: { remountOnParamChange: true },
+          },
         ],
       },
       {
@@ -344,6 +355,8 @@ const routes: Routes = [
               import('./project-member-sheet/project-member-sheet.component').then(
                 (m) => m.default,
               ),
+            // The sheet reads the project and member IDs once, as it opens.
+            data: { remountOnParamChange: true },
           },
         ],
       },

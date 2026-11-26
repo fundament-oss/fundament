@@ -9,6 +9,7 @@ import {
 import { buildInvitationEmail } from '../utils/invitation-email';
 import AutofocusDirective from '../autofocus.directive';
 import { NotificationService } from '../notification.service';
+import copyToClipboard from '../utils/clipboard';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
@@ -69,21 +70,7 @@ export default class InvitationEmailComponent {
     const { body } = this.message();
 
     try {
-      // The clipboard API needs a secure context. The console is served over
-      // HTTPS everywhere it is deployed, but a plain-HTTP port-forward for
-      // debugging is not, and losing copy there loses the only way through.
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(body);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = body;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+      await copyToClipboard(body);
       this.notificationService.success('Message copied to clipboard');
     } catch {
       this.notificationService.error('Failed to copy the message. Please copy it manually.');

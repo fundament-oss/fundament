@@ -171,6 +171,9 @@ message ProjectMember {
   string user_name = 40;
   ProjectMemberRole role = 50;
   google.protobuf.Timestamp created = 60;
+  // email is the user's email address. It is absent when the identity
+  // provider sent no email claim.
+  string email = 70 [features.field_presence = EXPLICIT];
 }
 
 // List project members request

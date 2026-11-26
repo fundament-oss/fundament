@@ -41,6 +41,7 @@ func Test_Project_Create(t *testing.T) {
 		WithUser(&UserArgs{
 			ID:     userID,
 			Name:   "test-user",
+			Email:  "test-user@example.com",
 			OrgIDs: []uuid.UUID{orgID},
 		}),
 	)
@@ -89,6 +90,8 @@ func Test_Project_Create(t *testing.T) {
 	require.Len(t, members, 1)
 	assert.Equal(t, userID.String(), members[0].GetUserId())
 	assert.Equal(t, organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, members[0].GetRole())
+	assert.True(t, members[0].HasEmail())
+	assert.Equal(t, "test-user@example.com", members[0].GetEmail())
 }
 
 func Test_Project_Create_DuplicateName(t *testing.T) {

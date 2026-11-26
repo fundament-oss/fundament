@@ -1,0 +1,300 @@
+<nldd-sheet
+  appSheetSync
+  [show]="true"
+  accessible-label="Organization member"
+  placement="right"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="displayName()"
+      collapse-anchor="organization-member-title"
+      dismiss-text="Close"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (isLoading() && !member()) {
+        <nldd-activity-indicator
+          show-text
+          text="Loading member..."
+        ></nldd-activity-indicator>
+      } @else if (!member() && loadError()) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Member not loaded"
+          [attr.supporting-text]="loadError()"
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="load()"
+            text="Try again"
+            appearance="primary"
+          ></nldd-button>
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="onClose()"
+            text="Close"
+            appearance="secondary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else if (!member()) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Member not found"
+          supporting-text="They may have been removed from this organization, or their invitation was cancelled or declined."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="onClose()"
+            text="Close"
+            appearance="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else if (member(); as member) {
+        <nldd-title
+          id="organization-member-title"
+          size="3"
+        >
+          <h1>{{ displayName() }}</h1>
+        </nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-list
+          appearance="box-tinted"
+          accessible-label="Member details"
+        >
+          <!-- The ID functl, Terraform and the API take; an invitation has one
+               too, and keeps it when it is accepted. -->
+          <nldd-list-item>
+            <nldd-text-cell text="User ID"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+            >
+              <span class="font-mono">{{ member.userId }}</span>
+            </nldd-text-cell>
+            <nldd-list-item-segment
+              button
+              accessible-label="Copy user ID"
+              (click)="copyUserId(member)"
+            >
+              <nldd-icon-cell
+                icon="copy"
+                size="20"
+              ></nldd-icon-cell>
+            </nldd-list-item-segment>
+          </nldd-list-item>
+          <!-- No row without an address: the identity provider does not have
+               to send one. -->
+          @if (member.email) {
+            <nldd-list-item>
+              <nldd-text-cell text="Email address"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="member.email"
+              ></nldd-text-cell>
+              <nldd-list-item-segment
+                button
+                accessible-label="Copy email address"
+                (click)="copyEmail(member)"
+              >
+                <nldd-icon-cell
+                  icon="copy"
+                  size="20"
+                ></nldd-icon-cell>
+              </nldd-list-item-segment>
+            </nldd-list-item>
+          }
+          <nldd-list-item>
+            <nldd-text-cell text="Organization role"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="permissionLabel(member.permission)"
+            ></nldd-text-cell>
+            <!-- Nobody changes their own role, just as their row has no role
+                 actions. -->
+            @if (canAct()) {
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-icon-button
+                  icon="more"
+                  size="sm"
+                  appearance="secondary"
+                  popup-type="menu"
+                  accessible-label="Role actions"
+                  [attr.loading]="saving() ? '' : null"
+                >
+                  <nldd-menu slot="popup">
+                    <!-- The organization viewer role is temporarily disabled:
+                         an admin cannot be made viewer, so the item stays
+                         visible but switched off, as it does in the row. -->
+                    @if (isInvitation()) {
+                      <nldd-menu-item
+                        icon="user-admin"
+                        [attr.text]="
+                          member.permission === 'admin'
+                            ? 'Switch to organization viewer'
+                            : 'Switch to organization admin'
+                        "
+                        [attr.disabled]="member.permission === 'admin' ? '' : null"
+                        [attr.details]="
+                          member.permission === 'admin' ? 'Temporarily unavailable' : null
+                        "
+                        (select)="setPermission(member)"
+                      ></nldd-menu-item>
+                      @if (member.email) {
+                        <nldd-menu-item
+                          text="Send invitation email…"
+                          icon="envelope"
+                          (select)="showInvitationEmail.set(true)"
+                        ></nldd-menu-item>
+                      }
+                    } @else {
+                      <nldd-menu-item
+                        icon="user-admin"
+                        [attr.text]="
+                          member.permission === 'admin'
+                            ? 'Make organization viewer'
+                            : 'Make organization admin'
+                        "
+                        [attr.disabled]="member.permission === 'admin' ? '' : null"
+                        [attr.details]="
+                          member.permission === 'admin' ? 'Temporarily unavailable' : null
+                        "
+                        (select)="setPermission(member)"
+                      ></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-icon-button>
+              </nldd-cell>
+            }
+          </nldd-list-item>
+          @if (isInvitation()) {
+            <nldd-list-item>
+              <nldd-text-cell text="Status"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                text="Invited"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+          <nldd-list-item>
+            <nldd-text-cell [attr.text]="dateLabel()"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="dateText()"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+        @if (canAct()) {
+          <nldd-spacer size="24"></nldd-spacer>
+          <nldd-box background="critical">
+            <nldd-container padding="16">
+              @if (isInvitation()) {
+                <nldd-title size="5">
+                  <h2>Cancel invitation for {{ displayName() }}</h2>
+                </nldd-title>
+                <nldd-spacer size="8"></nldd-spacer>
+                <nldd-rich-text spacing="flat">
+                  <p>
+                    They can no longer join with this invitation. You can invite them again later.
+                  </p>
+                </nldd-rich-text>
+                <nldd-spacer size="16"></nldd-spacer>
+                <!-- No confirmation, as in the row's menu: nothing was granted
+                     yet, and inviting again undoes it. -->
+                <nldd-button
+                  type="button"
+                  (click)="confirmRemove()"
+                  [attr.loading]="saving() ? '' : null"
+                  text="Cancel invitation"
+                  start-icon="delete"
+                  appearance="destructive"
+                ></nldd-button>
+              } @else {
+                <nldd-title size="5">
+                  <h2>Remove {{ displayName() }} from organization</h2>
+                </nldd-title>
+                <nldd-spacer size="8"></nldd-spacer>
+                <nldd-rich-text spacing="flat">
+                  <p>
+                    They lose access to all organization resources, including every project they are
+                    a member of.
+                  </p>
+                </nldd-rich-text>
+                <nldd-spacer size="16"></nldd-spacer>
+                <nldd-button
+                  type="button"
+                  (click)="showRemoveModal.set(true)"
+                  text="Remove member"
+                  start-icon="delete"
+                  appearance="destructive"
+                ></nldd-button>
+              }
+            </nldd-container>
+          </nldd-box>
+        }
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+<nldd-modal-dialog
+  appDialogSync
+  [show]="showRemoveModal()"
+  [attr.text]="removeMemberTitle()"
+  supporting-text="This revokes their access to all organization resources, including every project they are a member of."
+  accessible-label="Confirm member removal"
+  variant="alert"
+  (close)="showRemoveModal.set(false)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showRemoveModal.set(false)"
+    text="Keep member"
+    appearance="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemove()"
+    [attr.loading]="saving() ? '' : null"
+    text="Remove member"
+    appearance="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>
+<nldd-modal-dialog
+  appDialogSync
+  [show]="showInvitationEmail()"
+  [attr.text]="'Invitation for ' + displayName()"
+  accessible-label="Invitation email"
+  (close)="showInvitationEmail.set(false)"
+>
+  @if (showInvitationEmail() && member(); as member) {
+    <app-invitation-email
+      [email]="member.email || ''"
+      [permission]="member.permission"
+      [organization]="organizationName()"
+      idleText="Invitation pending"
+    />
+  }
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showInvitationEmail.set(false)"
+    text="Done"
+    appearance="primary"
+  ></nldd-button>
+</nldd-modal-dialog>

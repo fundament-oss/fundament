@@ -760,7 +760,8 @@ type Member_builder struct {
 	Name   string
 	// external_ref is empty for pending invitations
 	ExternalRef *string
-	// email is set for invited members
+	// email is the user's email address, for members and invitations alike. It
+	// is absent when the identity provider sent no email claim.
 	Email *string
 	// permission is "viewer" or "admin"
 	Permission string
