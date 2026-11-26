@@ -24,9 +24,9 @@ describe('kindToLabel', () => {
   });
 
   it('keeps a leading acronym intact', () => {
-    // Splitting on every capital gave "F S C Installations"; not splitting at all
-    // gave "Fscinstallations".
-    expect(kindToLabel('FSCInstallation')).toBe('FSC Installations');
+    // Splitting on every capital gave "T L S Routes"; not splitting at all
+    // gave "Tlsroutes".
+    expect(kindToLabel('TLSRoute')).toBe('TLS Routes');
     expect(kindToLabel('DNSEndpoint')).toBe('DNS Endpoints');
   });
 
@@ -45,7 +45,7 @@ describe('kindToLabel', () => {
     // Pluralizing first gave "HTTPs", which no longer reads as an acronym, so
     // deciding the case afterwards wrote "Cluster Https".
     expect(kindToLabel('ClusterHTTP')).toBe('Cluster HTTPs');
-    expect(kindToLabel('FSC')).toBe('FSCs');
+    expect(kindToLabel('TLS')).toBe('TLSs');
   });
 
   it('returns an empty string for an empty kind', () => {
@@ -60,7 +60,7 @@ describe('kindToSingularLabel', () => {
   });
 
   it('keeps acronyms intact', () => {
-    expect(kindToSingularLabel('FSCInstallation')).toBe('FSC Installation');
+    expect(kindToSingularLabel('TLSRoute')).toBe('TLS Route');
     expect(kindToSingularLabel('ClusterHTTPRoute')).toBe('Cluster HTTP Route');
   });
 
@@ -73,7 +73,7 @@ describe('crdRefToLabel', () => {
   it('drops the API group and does not pluralize again', () => {
     // kindToLabel gave "certificates.cert-manager.ios" here.
     expect(crdRefToLabel('certificates.cert-manager.io')).toBe('Certificates');
-    expect(crdRefToLabel('fscinstallations.openfsc.fundament.io')).toBe('Fscinstallations');
+    expect(crdRefToLabel('dnsendpoints.externaldns.k8s.io')).toBe('Dnsendpoints');
   });
 
   it('accepts a bare plural', () => {
@@ -90,14 +90,14 @@ describe('labelMidSentence', () => {
     // A plain toLowerCase() wrote "no dns endpoints found".
     expect(labelMidSentence('DNS Endpoints')).toBe('DNS endpoints');
     expect(labelMidSentence('Certificate Requests')).toBe('certificate requests');
-    expect(labelMidSentence('FSC Installations')).toBe('FSC installations');
+    expect(labelMidSentence('TLS Routes')).toBe('TLS routes');
   });
 
   it('keeps a pluralized acronym intact', () => {
     // The plural "s" kindToLabel appends leaves the acronym an acronym; reading
     // "HTTPs" as an ordinary word wrote "cluster https".
     expect(labelMidSentence(kindToLabel('ClusterHTTP'))).toBe('cluster HTTPs');
-    expect(labelMidSentence(kindToLabel('FSC'))).toBe('FSCs');
+    expect(labelMidSentence(kindToLabel('TLS'))).toBe('TLSs');
     expect(labelMidSentence(kindToLabel('ClusterHTTPRoute'))).toBe('cluster HTTP routes');
   });
 });
@@ -155,7 +155,7 @@ describe('resourceSingularLabelMidSentence', () => {
 
   it('falls back to the kind, keeping acronyms', () => {
     expect(resourceSingularLabelMidSentence(undefined, 'DiskPool')).toBe('disk pool');
-    expect(resourceSingularLabelMidSentence(undefined, 'FSCInstallation')).toBe('FSC installation');
+    expect(resourceSingularLabelMidSentence(undefined, 'TLSRoute')).toBe('TLS route');
   });
 });
 

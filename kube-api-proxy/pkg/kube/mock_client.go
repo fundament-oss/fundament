@@ -16,7 +16,6 @@ import (
 type MockClient struct {
 	mu               sync.Mutex
 	installByCluster map[string][]map[string]any
-	fscByCluster     map[string][]map[string]any
 	seq              int
 }
 
@@ -38,77 +37,6 @@ func (m *MockClient) installItemsForCluster(clusterID string) []map[string]any {
 		return m.installByCluster[clusterID]
 	}
 	return items
-}
-
-func (m *MockClient) fscItemsForCluster(clusterID string) []map[string]any {
-	if m.fscByCluster == nil {
-		m.fscByCluster = map[string][]map[string]any{}
-	}
-	return m.fscByCluster[clusterID]
-}
-
-// fscInstallationListJSON merges the static FSCInstallation fixtures with any
-// installations created in-memory this session for the given cluster, so the
-// list and detail views reflect a create round-trip in mock mode. With nothing
-// created it returns the static fixture verbatim.
-func (m *MockClient) fscInstallationListJSON(clusterID string) string {
-	m.mu.Lock()
-	created := append([]map[string]any(nil), m.fscItemsForCluster(clusterID)...)
-	m.mu.Unlock()
-	if len(created) == 0 {
-		return mockFSCInstallationListJSON
-	}
-
-	var list struct {
-		APIVersion string           `json:"apiVersion"`
-		Kind       string           `json:"kind"`
-		Metadata   map[string]any   `json:"metadata"`
-		Items      []map[string]any `json:"items"`
-	}
-	if err := json.Unmarshal([]byte(mockFSCInstallationListJSON), &list); err != nil {
-		return mockFSCInstallationListJSON
-	}
-	list.Items = append(list.Items, created...)
-	b, err := json.Marshal(list)
-	if err != nil {
-		return mockFSCInstallationListJSON
-	}
-	return string(b)
-}
-
-// createFSCInstallation handles a POST to the namespaced fscinstallations
-// collection: it fills the server-set metadata/status the console reads back,
-// stores the object in-memory for the cluster, and echoes it as a 201.
-func (m *MockClient) createFSCInstallation(clusterID, path string, body io.Reader, r func(string) io.ReadCloser) (int, io.ReadCloser, error) {
-	var obj map[string]any
-	if err := json.NewDecoder(body).Decode(&obj); err != nil {
-		return 400, r(`{"message":"invalid body"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
-	}
-
-	meta, _ := obj["metadata"].(map[string]any)
-	if meta == nil {
-		meta = map[string]any{}
-		obj["metadata"] = meta
-	}
-	if _, ok := meta["namespace"]; !ok {
-		if ns := resourceNamespaceFromPath(path); ns != "" {
-			meta["namespace"] = ns
-		}
-	}
-
-	m.mu.Lock()
-	m.seq++
-	meta["uid"] = fmt.Sprintf("fsci-mock-%d", m.seq)
-	meta["creationTimestamp"] = time.Now().UTC().Format(time.RFC3339)
-	obj["status"] = map[string]any{"phase": "Pending"}
-	m.fscByCluster[clusterID] = append(m.fscItemsForCluster(clusterID), obj)
-	m.mu.Unlock()
-
-	b, err := json.Marshal(obj)
-	if err != nil {
-		return 500, r(`{"message":"mock marshal error"}`), nil //nolint:nilerr // mock reports failures as an HTTP status, like the apiserver
-	}
-	return 201, r(string(b)), nil
 }
 
 func (m *MockClient) installationsListJSON(clusterID string) string {
@@ -242,12 +170,6 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		return 200, r(mockDemoItemListJSON), nil
 	case isResourceGet(path, "demo.fundament.io", "v1", "demoitems"):
 		return resourceGetResponse(mockDemoItemListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
-	case isResourceList(path, "openfsc.fundament.io", "v1", "fscinstallations") && method == http.MethodPost:
-		return m.createFSCInstallation(clusterID, path, body, r)
-	case isResourceList(path, "openfsc.fundament.io", "v1", "fscinstallations"):
-		return 200, r(m.fscInstallationListJSON(clusterID)), nil
-	case isResourceGet(path, "openfsc.fundament.io", "v1", "fscinstallations"):
-		return resourceGetResponse(m.fscInstallationListJSON(clusterID), resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	default:
 		return 200, r(mockEmptyList), nil
 	}

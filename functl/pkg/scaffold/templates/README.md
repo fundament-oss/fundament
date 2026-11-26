@@ -36,4 +36,4 @@ sync. When the SDK's JS API or the NLDD loading convention changes, update both:
 | `plugin-helm/`      | `plugins/cert-manager/plugin.go`                |
 | `base/definition.yaml.tmpl` (helm RBAC) | `plugins/cert-manager/definition.yaml` |
 | `console-vanilla/`  | `plugins/cert-manager/console/`                 |
-| `console-vite/`     | `plugins/openfsc/console-ui/`                   |
+| `console-vite/`     | `plugins/gateway-api/envoy-gateway/console-ui/` |

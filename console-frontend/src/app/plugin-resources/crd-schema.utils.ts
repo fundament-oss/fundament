@@ -238,10 +238,10 @@ function pluralize(word: string): string {
 /**
  * Split a camelCase / PascalCase identifier into words, keeping runs of capitals
  * (acronyms) intact. Splitting on every capital instead would shatter them:
- * "FSCInstallation" → "F S C Installation", "peerID" → "peer I D".
+ * "TLSRoute" → "T L S Route", "peerID" → "peer I D".
  *
- * Examples: "ClusterIssuer" → ["Cluster", "Issuer"], "FSCInstallation" → ["FSC",
- * "Installation"], "peerID" → ["peer", "ID"], "HTTPRoute" → ["HTTP", "Route"]
+ * Examples: "ClusterIssuer" → ["Cluster", "Issuer"], "TLSRoute" → ["TLS",
+ * "Route"], "peerID" → ["peer", "ID"], "HTTPRoute" → ["HTTP", "Route"]
  */
 function splitWords(name: string): string[] {
   return name
@@ -276,7 +276,7 @@ function titleCase(words: string[]): string[] {
  * Convert a CRD kind (PascalCase) to a human-readable singular label, one word
  * per case transition and acronyms intact.
  * Examples: "Certificate" → "Certificate", "ClusterIssuer" → "Cluster Issuer",
- * "FSCInstallation" → "FSC Installation"
+ * "TLSRoute" → "TLS Route"
  */
 export function kindToSingularLabel(kind: string): string {
   return titleCase(splitWords(kind)).join(' ');
@@ -286,13 +286,13 @@ export function kindToSingularLabel(kind: string): string {
  * Convert a CRD kind (PascalCase) to a human-readable plural label, one word per
  * case transition and acronyms intact.
  * Examples: "Certificate" → "Certificates", "CertificateRequest" → "Certificate
- * Requests", "DNSEndpoint" → "DNS Endpoints", "FSCInstallation" → "FSC Installations"
+ * Requests", "DNSEndpoint" → "DNS Endpoints", "TLSRoute" → "TLS Routes"
  */
 export function kindToLabel(kind: string): string {
   const words = titleCase(splitWords(kind));
   if (words.length === 0) return '';
   // Pluralized after the case of every word is settled, on the word as written:
-  // "FSC" and "FSCs" are the same acronym, but only the first says so by its
+  // "TLS" and "TLSs" are the same acronym, but only the first says so by its
   // shape alone.
   const last = words.length - 1;
   words[last] = pluralize(words[last]);

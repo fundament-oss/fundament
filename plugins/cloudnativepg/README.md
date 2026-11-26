@@ -30,7 +30,7 @@ Not yet: fetching the catalog at runtime, so fixes do not wait for a plugin rele
 
 ## Operator ownership
 
-A cluster runs one CloudNativePG operator, and every operator version change restarts every database on the cluster. The plugin does not share the operator, so that no other writer changes its version at a moment the plugin does not know about. It installs its own release, `fundament-cloudnativepg`, rather than the chart's usual `cnpg`, which openfsc installs (`cnpg/`):
+A cluster runs one CloudNativePG operator, and every operator version change restarts every database on the cluster. The plugin does not share the operator, so that no other writer changes its version at a moment the plugin does not know about. It installs its own release, `fundament-cloudnativepg`, rather than the chart's usual `cnpg` (`cnpg/`):
 
 - On every start and every reconcile it checks that the operator is its own: the Helm annotations on every `postgresql.cnpg.io` CRD name its release (Helm refuses the install when any of the chart's CRDs names another), and no other Deployment runs the operator image. No CRD, or its own: it installs, upgrades or repairs as below. CRDs kept from its own uninstall still carry its annotations, so a reinstall counts as its own.
 - Someone else's at start: the plugin reports Failed, names the owner and how to hand the operator over (below), and retries every 30 seconds, so it goes ahead once the hand-over is done. Removing the other install alone is not enough: its kept CRDs still name its release, and the plugin does not take them over by itself. Someone else's later: it reports Degraded, names the owner, and stops repairing and upgrading.
@@ -41,7 +41,7 @@ A cluster runs one CloudNativePG operator, and every operator version change res
 
 This cannot prevent a takeover: organization admins are cluster-admin on the cluster, and `kubectl apply` of the CNPG manifests or `helm install --take-ownership` skip Helm's ownership check. It makes one visible, and the plugin does not fight it.
 
-openfsc and this plugin are mutually exclusive on one cluster until openfsc stops bundling CloudNativePG ([miscellaneous#1289](https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1289)). To hand an operator someone else installed over to the plugin, remove the other install, then point the kept CRDs at the plugin's release. Helm adopts an existing object only when it carries the release's annotations and Helm's `managed-by` label:
+To hand an operator someone else installed over to the plugin, remove the other install, then point the kept CRDs at the plugin's release. Helm adopts an existing object only when it carries the release's annotations and Helm's `managed-by` label:
 
 ```shell
 helm -n cnpg-system uninstall cnpg   # the CRDs and databases stay

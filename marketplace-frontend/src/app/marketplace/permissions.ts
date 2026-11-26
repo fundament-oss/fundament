@@ -149,7 +149,6 @@ const WORDS: Record<string, string> = {
   endpoint: 'endpoint',
   file: 'file',
   filesystem: 'file system',
-  fsc: 'FSC',
   gateway: 'gateway',
   grant: 'grant',
   grpc: 'gRPC',

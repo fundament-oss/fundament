@@ -147,8 +147,8 @@ func TestOperatorPresent(t *testing.T) {
 
 func TestForeignOwner(t *testing.T) {
 	t.Parallel()
-	openfscCRD := ourCRD(CRDNames[0])
-	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	foreignCRD := ourCRD(CRDNames[0])
+	foreignCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
 	kubectlCRD := ourCRD(CRDNames[0])
 	kubectlCRD.Annotations = nil
 	otherOperator := deployment("cnpg-system", "cnpg-controller-manager", "ghcr.io/cloudnative-pg/cloudnative-pg:1.25.1")
@@ -161,7 +161,7 @@ func TestForeignOwner(t *testing.T) {
 		{"ours", []client.Object{ourCRD(CRDNames[0]), ourDeployment()}, ""},
 		// Kept from our own uninstall: a reinstall adopts it.
 		{"our CRD without operator", []client.Object{ourCRD(CRDNames[0])}, ""},
-		{"openfsc's release", []client.Object{openfscCRD}, "CRD clusters.postgresql.cnpg.io belongs to Helm release cnpg-system/cnpg"},
+		{"another release", []client.Object{foreignCRD}, "CRD clusters.postgresql.cnpg.io belongs to Helm release cnpg-system/cnpg"},
 		{"plain manifests", []client.Object{kubectlCRD}, "CRD clusters.postgresql.cnpg.io was not installed with Helm"},
 		// kubectl apply of the manifests over our CRDs keeps our annotations,
 		// but adds a second operator.
@@ -191,9 +191,9 @@ func TestForeignOwner(t *testing.T) {
 // all an organization admin sees in the console.
 func TestForeignOwnerHandOver(t *testing.T) {
 	t.Parallel()
-	openfscCRD := ourCRD(CRDNames[0])
-	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
-	kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(openfscCRD).Build()
+	foreignCRD := ourCRD(CRDNames[0])
+	foreignCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(foreignCRD).Build()
 
 	got, err := ForeignOwner(context.Background(), kube)
 	require.NoError(t, err)

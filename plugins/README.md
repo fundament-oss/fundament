@@ -38,7 +38,6 @@ plugins/
 | [External DNS](external-dns/README.md) | `external-dns` | `external-dns` |
 | [Gateway API (Envoy Gateway)](gateway-api/envoy-gateway/README.md) | `gateway-api/envoy-gateway` | `envoy-gateway` |
 | [Gateway API (Istio)](gateway-api/istio/README.md) | `gateway-api/istio` | none |
-| [OpenFSC](openfsc/README.md) | `openfsc` | `openfsc` |
 | [Ceph Storage (Rook)](../docs/developer/plugins/example-ceph-rook.md) | `storage/ceph-rook` | `ceph-rook` |
 
 ## Images

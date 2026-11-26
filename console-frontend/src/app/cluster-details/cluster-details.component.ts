@@ -136,7 +136,7 @@ interface ResourceMetric {
   accessibleLabel: string;
 }
 
-/** `plugin.name` is the install identifier (e.g. "openfsc") that names the
+/** `plugin.name` is the install identifier (e.g. "cert-manager") that names the
  *  PluginInstallation resource, so it is never what a user should read. */
 const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
 

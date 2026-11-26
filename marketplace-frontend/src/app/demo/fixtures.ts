@@ -75,7 +75,6 @@ export const categories = [
 // listing advertises; a plugin without one reads as "not published yet".
 const VERSIONS: Record<string, string[]> = {
   'cert-manager': ['v1.17.2', 'v1.17.1', 'v1.16.3'],
-  openfsc: ['v4.0.0', 'v3.2.1'],
   'istio-gateway': ['v0.1.0'],
   'sealed-secrets': ['v0.27.1', 'v0.26.3'],
   grafana: ['v11.4.0', 'v11.3.1'],
@@ -116,16 +115,6 @@ export const plugins: PluginSummary[] = [
     tags: ['tls', 'certificates'],
     labels: [PluginLabel.CORE, PluginLabel.SUPPORT_9_TO_17],
     ...published('cert-manager', 6),
-  }),
-  create(PluginSummarySchema, {
-    id: 'pl-openfsc',
-    name: 'openfsc',
-    displayName: 'OpenFSC',
-    descriptionShort: 'Federated Service Connectivity voor teams.',
-    categoryIds: [CATEGORY_IDS.networking],
-    tags: ['fsc', 'connectivity'],
-    labels: [PluginLabel.CORE, PluginLabel.RIJKSOVERHEID],
-    ...published('openfsc', 12),
   }),
   create(PluginSummarySchema, {
     id: 'pl-istio-gateway',
@@ -269,15 +258,6 @@ const DETAILS: Record<
       { title: 'Broncode', urlName: 'GitHub', url: 'https://github.com/cert-manager/cert-manager' },
     ],
   },
-  openfsc: {
-    description:
-      'Federated Service Connectivity (FSC) voor teams. Installeert de openfsc-operator; elk team declareert een FSCInstallation in zijn eigen namespace om daar een OpenFSC-peer te draaien.',
-    capabilities: ['internet_access'],
-    permissions: [
-      { resource: 'fscinstallations', access: 'Read and write' },
-      { resource: 'services', access: 'Read' },
-    ],
-  },
   'istio-gateway': {
     description:
       'Gateway API-implementatie op basis van Istio. Beheert Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes en TLSRoutes voor het verkeer je cluster in.',
@@ -378,16 +358,6 @@ const AUTHORED: {
       { version: 'v1.17.2', status: SubmissionStatus.APPROVED, ageDays: 14 },
       { version: 'v1.17.1', status: SubmissionStatus.APPROVED, ageDays: 59 },
     ],
-  },
-  {
-    id: 'pl-openfsc',
-    name: 'openfsc',
-    displayName: 'OpenFSC',
-    descriptionShort: 'Federated Service Connectivity voor teams.',
-    description: DETAILS['openfsc'].description,
-    categoryId: CATEGORY_IDS.networking,
-    tags: ['fsc', 'connectivity'],
-    versions: [{ version: 'v4.0.0', status: SubmissionStatus.APPROVED, ageDays: 12 }],
   },
   {
     id: 'pl-istio-gateway',

@@ -275,9 +275,9 @@ func TestUserRolesGrantNoModification(t *testing.T) {
 func TestReconcileLeavesForeignOperator(t *testing.T) {
 	t.Parallel()
 	plugin := newTestPlugin(t)
-	openfscCRD := ourCRD(cnpg.CRDNames[0])
-	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
-	kube := newFakeClient(t, openfscCRD)
+	foreignCRD := ourCRD(cnpg.CRDNames[0])
+	foreignCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	kube := newFakeClient(t, foreignCRD)
 	plugin.kube.Store(&kube)
 	host := sdktesting.NewMockHost()
 

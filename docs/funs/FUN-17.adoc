@@ -97,7 +97,7 @@ In-cluster, `PluginInstallation.spec.definitionRef` carries `organizationName` a
 
 Because `metadata.name` is already the unique pair, every namespace-scoped child resource inside a plugin's namespace — the ServiceAccount, RoleBinding, Deployment, Service, and the container itself — is named with the constant `plugin` (`kubename.PluginChildName`), not `plugin-<installationName>`. Only the *namespace* needs to disambiguate installations, and it is derived by the shared `kubename.PluginNamespace` helper: `plugin-<metadata.name>` verbatim when that fits a 63-character DNS label, and a deterministic truncate-plus-hash of the full name otherwise. `plugin-controller`, `kube-api-proxy`, and `plugin-proxy` all derive the namespace through this one helper so the three cannot drift apart. `PluginInstallation.status.namespace` publishes the resolved namespace, since a hashed namespace cannot be read back off `metadata.name`.
 
-The first-party catalog (cert-manager and the rest of the plugins Fundament ships) is owned by the seeded `system` organization, so its installations are named `system--cert-manager`, `system--openfsc`, and so on.
+The first-party catalog (cert-manager and the rest of the plugins Fundament ships) is owned by the seeded `system` organization, so its installations are named `system--cert-manager`, `system--cloudnativepg`, and so on.
 
 == Delivering the token
 

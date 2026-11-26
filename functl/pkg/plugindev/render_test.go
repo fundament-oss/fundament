@@ -74,14 +74,14 @@ func TestRenderStandaloneKeepsProjectIgnore(t *testing.T) {
 
 func TestRenderInRepo(t *testing.T) {
 	out := renderTo(t, &Layout{
-		ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/openfsc", Name: "openfsc",
-		SourceDirs: []string{"openfsc-operator", "plugin-sdk", "plugins/openfsc"},
+		ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/example", Name: "example",
+		SourceDirs: []string{"example-operator", "plugin-sdk", "plugins/example"},
 	})
 
 	ignore := readFile(t, out, "Dockerfile.dockerignore")
-	assert.Contains(t, ignore, "!openfsc-operator/")
+	assert.Contains(t, ignore, "!example-operator/")
 	assert.Contains(t, ignore, "!plugin-sdk/")
-	assert.Contains(t, ignore, "!plugins/openfsc/")
+	assert.Contains(t, ignore, "!plugins/example/")
 	assert.Contains(t, ignore, "!go.mod")
 	assert.Contains(t, ignore, "!go.sum")
 	assert.NotContains(t, ignore, "!plugins/\n")

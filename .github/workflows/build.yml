@@ -216,9 +216,6 @@ jobs:
           - image-name: dcim-authn-api
             dockerfile: dcim-authn-api/Dockerfile
             context: "."
-          - image-name: openfsc-operator
-            dockerfile: openfsc-operator/Dockerfile
-            context: "."
           - image-name: marketplace-catalog-api
             dockerfile: marketplace-catalog-api/Dockerfile
             context: "."
@@ -281,8 +278,6 @@ jobs:
             dockerfile: plugins/gateway-api/envoy-gateway/Dockerfile
           - image-name: gateway-api-istio-plugin
             dockerfile: plugins/gateway-api/istio/Dockerfile
-          - image-name: openfsc-plugin
-            dockerfile: plugins/openfsc/Dockerfile
           - image-name: ceph-rook-plugin
             dockerfile: plugins/storage/ceph-rook/Dockerfile
     permissions:
