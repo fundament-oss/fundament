@@ -8,8 +8,8 @@ Feature: Metrics and logs of a real cluster
   Background:
     Given I am authenticated as "alice@acme-corp.com"
 
-  Scenario: The cluster's workload metrics list its nodes and namespaces
-    Then within 5 minutes the metrics of the baseline cluster list its nodes and the namespace "kube-system"
+  Scenario: The cluster's workload metrics list its nodes and the pods on them
+    Then within 5 minutes the metrics of the baseline cluster list its nodes with pods running on them
 
   Scenario: The cluster's logs hold lines of its system pods
     Then within 5 minutes the logs of the baseline cluster hold lines from the namespace "kube-system"

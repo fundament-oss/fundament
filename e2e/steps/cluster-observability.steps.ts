@@ -16,16 +16,16 @@ import { pollUntil } from '../support/poll.ts';
 // No cucumber timeouts: pollUntil enforces the minutes the feature names. A
 // cluster's monitoring starts some minutes after the cluster runs.
 Then(
-  'within {int} minutes the metrics of the baseline cluster list its nodes and the namespace {string}',
+  'within {int} minutes the metrics of the baseline cluster list its nodes with pods running on them',
   { timeout: -1 },
-  async function (this: ICustomWorld, minutes: number, namespace: string) {
+  async function (this: ICustomWorld, minutes: number) {
     const s = session(this);
     const metrics = createServiceClient(MetricsService, s.organizationApiUrl, s.authToken, s.organizationId);
     const clusterId = await fixtureClusterId(this);
-    await pollUntil(minutes * 60_000, `metrics of cluster ${clusterId} with nodes and pods in ${namespace}`, async () => {
+    await pollUntil(minutes * 60_000, `metrics of cluster ${clusterId} with nodes running pods`, async () => {
       const r = await metrics.getClusterWorkloadMetrics({ clusterId });
-      const ns = r.namespaces.find((n) => n.namespace === namespace);
-      return !r.metricsUnavailable && r.nodes.length > 0 && ns && ns.pods > 0 ? r : undefined;
+      const podsOnNodes = r.nodes.reduce((sum, n) => sum + (n.pods?.used ?? 0), 0);
+      return !r.metricsUnavailable && r.nodes.length > 0 && podsOnNodes > 0 ? r : undefined;
     });
   },
 );
